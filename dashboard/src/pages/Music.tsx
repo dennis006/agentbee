@@ -866,13 +866,13 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        success('🎵 Musik-Einstellungen erfolgreich gespeichert!');
+        showSuccess('Musik Einstellungen', '🎵 Musik-Einstellungen erfolgreich gespeichert!');
       } else {
-        error('❌ Fehler beim Speichern der Einstellungen');
+        showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
       }
     } catch (err) {
       console.error('Speicherfehler:', err);
-      error('❌ Netzwerkfehler beim Speichern');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler beim Speichern');
     } finally {
       setSaving(false);
     }
@@ -889,7 +889,7 @@ const Music: React.FC = () => {
         setSearchResults(data.results);
       }
     } catch (err) {
-      error('❌ Fehler bei der YouTube-Suche');
+      showError('YouTube Suche', '❌ Fehler bei der YouTube-Suche');
     } finally {
       setSearching(false);
     }
@@ -897,7 +897,7 @@ const Music: React.FC = () => {
 
   const addToQueue = async (song: Song) => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -909,19 +909,19 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        success(`🎵 "${song.title}" zur Queue hinzugefügt!`);
+        showSuccess('Queue Update', `🎵 "${song.title}" zur Queue hinzugefügt!`);
         loadData(); // Refresh queue
       } else {
-        error('❌ Fehler beim Hinzufügen zur Queue');
+        showError('Queue Fehler', '❌ Fehler beim Hinzufügen zur Queue');
       }
     } catch (err) {
-      error('❌ Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
   const controlPlayback = async (action: string) => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -932,20 +932,20 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(data.message || `🎵 ${action} ausgeführt!`);
+        showSuccess('Player Kontrolle', data.message || `🎵 ${action} ausgeführt!`);
         loadData(); // Refresh queue
       } else {
         const errorData = await response.json();
-        error(errorData.error || `❌ Fehler bei ${action}`);
+        showError('Player Fehler', errorData.error || `❌ Fehler bei ${action}`);
       }
     } catch (err) {
-      error('❌ Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
   const joinVoiceChannel = async (channelId: string) => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -958,12 +958,12 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(data.message);
+        showSuccess('Voice Channel', data.message);
       } else {
-        error('❌ Fehler beim Beitreten des Voice-Channels');
+        showError('Voice Fehler', '❌ Fehler beim Beitreten des Voice-Channels');
       }
     } catch (err) {
-      error('❌ Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
