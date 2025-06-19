@@ -324,7 +324,338 @@ const Music: React.FC = () => {
   // API Base URL
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   
-  const { toasts, success, error, removeToast } = useToast();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('player');
+  
+import { useState, useEffect } from 'react';
+import { Music as MusicIcon, Play, Pause, SkipForward, Volume2, List, Settings, Plus, Trash2, Search, Mic, Users, Shuffle, Radio, Save } from 'lucide-react';
+import { useToast, ToastContainer } from '../components/ui/toast';
+
+// Matrix Blocks Komponente
+const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
+  const blocks = Array.from({ length: density }, (_, i) => (
+    <div
+      key={i}
+      className="matrix-block"
+      style={{
+        left: `${Math.random() * 100}%`,
+        animationDelay: `${Math.random() * 5}s`,
+        animationDuration: `${2 + Math.random() * 3}s`
+      }}
+    />
+  ));
+  return <div className="matrix-blocks">{blocks}</div>;
+};
+
+// Badge component
+const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?: string }> = ({ children, className = '', variant = 'default' }) => (
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variant === 'outline' ? 'border border-purple-primary text-purple-primary bg-transparent' : 'bg-purple-primary text-white'} ${className}`}>
+    {children}
+  </span>
+);
+
+
+
+// Tabs components
+const Tabs: React.FC<{ children: React.ReactNode; defaultValue?: string; className?: string }> = ({ children, defaultValue, className = '' }) => (
+  <div className={className} data-default-value={defaultValue}>
+    {children}
+  </div>
+);
+
+const TabsList: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`inline-flex h-10 items-center justify-center rounded-md bg-dark-surface/50 p-1 ${className}`}>
+    {children}
+  </div>
+);
+
+const TabsTrigger: React.FC<{ children: React.ReactNode; value: string; className?: string; onClick?: () => void }> = ({ children, value, className = '', onClick }) => (
+  <button
+    className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-purple-primary/20 text-dark-text ${className}`}
+    data-value={value}
+    onClick={onClick}
+  >
+    {children}
+  </button>
+);
+
+const TabsContent: React.FC<{ children: React.ReactNode; value: string; className?: string; activeTab?: string }> = ({ children, value, className = '', activeTab }) => (
+  activeTab === value ? (
+    <div className={`mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${className}`} data-value={value}>
+      {children}
+    </div>
+  ) : null
+);
+
+// Switch component
+const Switch: React.FC<{ checked: boolean; onCheckedChange: (checked: boolean) => void; className?: string; id?: string }> = ({ checked, onCheckedChange, className = '', id }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    id={id}
+    onClick={() => onCheckedChange(!checked)}
+    className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-purple-primary' : 'bg-dark-bg'} ${className}`}
+  >
+    <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+  </button>
+);
+
+// Tooltip component
+const Tooltip: React.FC<{ content: React.ReactNode; title?: string }> = ({ content, title }) => (
+  <div className="relative group">
+    <button
+      type="button"
+      className="text-blue-400 hover:text-blue-300 text-xs transition-colors duration-200"
+    >
+      ❓
+    </button>
+    
+    {/* Tooltip */}
+    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-dark-surface border border-purple-primary/30 rounded-lg text-xs text-dark-text opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 shadow-lg min-w-max">
+      {title && <div className="font-medium text-blue-400 mb-1">{title}</div>}
+      <div>{content}</div>
+      {/* Arrow */}
+      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-dark-surface"></div>
+    </div>
+  </div>
+);
+
+// Card components
+const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 shadow-purple-glow rounded-lg ${className}`}>
+    {children}
+  </div>
+);
+
+const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`p-6 pb-4 ${className}`}>
+    {children}
+  </div>
+);
+
+const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <h3 className={`text-xl font-bold text-dark-text ${className}`}>
+    {children}
+  </h3>
+);
+
+const CardDescription: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <p className={`text-dark-muted text-sm mt-1 ${className}`}>
+    {children}
+  </p>
+);
+
+const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`p-6 pt-0 ${className}`}>
+    {children}
+  </div>
+);
+
+// Button component
+const Button: React.FC<{ 
+  children: React.ReactNode; 
+  onClick?: () => void; 
+  className?: string; 
+  disabled?: boolean;
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+}> = ({ children, onClick, className = '', disabled = false, variant = 'default' }) => {
+  const baseClasses = "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
+  
+  const variantClasses = {
+    default: "bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white shadow-neon hover:scale-105",
+    destructive: "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-neon hover:scale-105",
+    outline: "border border-purple-primary/30 bg-transparent hover:bg-purple-primary/20 text-dark-text",
+    secondary: "bg-dark-surface/50 hover:bg-dark-surface text-dark-text",
+    ghost: "hover:bg-purple-primary/20 text-dark-text",
+    link: "text-purple-primary underline-offset-4 hover:underline"
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseClasses} ${variantClasses[variant]} px-4 py-2 ${className}`}
+    >
+      {children}
+    </button>
+  );
+};
+
+// Input component
+const Input: React.FC<{ 
+  type?: string; 
+  placeholder?: string; 
+  value?: string | number; 
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  className?: string;
+  min?: string | number;
+  max?: string | number;
+  step?: string | number;
+  id?: string;
+}> = ({ type = 'text', placeholder, value, onChange, onKeyPress, className = '', ...props }) => (
+  <input
+    type={type}
+    placeholder={placeholder}
+    value={value}
+    onChange={onChange}
+    onKeyPress={onKeyPress}
+    className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-colors duration-200 ${className}`}
+    {...props}
+  />
+);
+
+// Interfaces
+interface MusicSettings {
+  enabled: boolean;
+  defaultVolume: number;
+  maxQueueLength: number;
+  autoJoinVoice: boolean;
+  voiceChannels: {
+    autoJoin: string[];
+    preferred: string;
+    blacklist: string[];
+  };
+  commands: {
+    enabled: boolean;
+    prefix: string;
+    djRole: string;
+    allowEveryone: boolean;
+  };
+  queue: {
+    autoplay: boolean;
+    shuffle: boolean;
+    repeat: string;
+    clearOnEmpty: boolean;
+  };
+  filters: {
+    bass: boolean;
+    nightcore: boolean;
+    vaporwave: boolean;
+    lowpass: boolean;
+  };
+  youtube: {
+    quality: string;
+    maxLength: number;
+    playlistLimit: number;
+  };
+  announcements: {
+    nowPlaying: boolean;
+    queueAdd: boolean;
+    channelId: string;
+  };
+  embedColor: string;
+  songRequests: {
+    enabled: boolean;
+    channels: string[];
+    prefix: string;
+    embedColor: string;
+    requireDJRole: boolean;
+    maxRequestsPerUser: number;
+    cooldownMinutes: number;
+    rateLimit: {
+      enabled: boolean;
+      maxRequests: number;
+      timeWindow: number; // in minutes
+      timeUnit: 'minutes' | 'hours' | 'days';
+    };
+    interactivePanel: {
+      enabled: boolean;
+      channelId: string;
+      messageId: string;
+      autoUpdate: boolean;
+      showQueue: boolean;
+      maxQueueDisplay: number;
+      requireDJForControls: boolean;
+      autoJoinLeave: boolean;
+      adminRole: string;
+    };
+  };
+  radio?: {
+    enabled: boolean;
+    stations: RadioStation[];
+    defaultStation: string;
+    autoStop: boolean;
+    showNowPlaying: boolean;
+    embedColor: string;
+  };
+}
+
+interface Song {
+  title: string;
+  url: string;
+  duration: number;
+  thumbnail: string;
+  author: string;
+  requestedBy?: string;
+}
+
+interface Queue {
+  currentSong: Song | null;
+  songs: Song[];
+  volume: number;
+  repeat: string;
+  shuffle: boolean;
+}
+
+interface Channel {
+  id: string;
+  name: string;
+  type: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface RequestTrackingData {
+  userId: string;
+  username: string;
+  requestsUsed: number;
+  remainingRequests: number;
+  resetTime: number | null;
+  lastRequest: number | null;
+}
+
+interface RadioStation {
+  id: string;
+  name: string;
+  url: string;
+  genre: string;
+  country: string;
+  description: string;
+  logo: string;
+}
+
+interface RadioStatus {
+  isPlaying: boolean;
+  currentStation: RadioStation | null;
+}
+
+// CSS Animation für Progress Bar
+const progressBarStyles = `
+  @keyframes progressSlide {
+    0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateX(400%) skewX(-12deg); opacity: 0; }
+  }
+  
+  @keyframes progressGlow {
+    0%, 100% { box-shadow: 0 0 15px rgba(147, 51, 234, 0.8), 0 0 30px rgba(147, 51, 234, 0.4); }
+    50% { box-shadow: 0 0 25px rgba(147, 51, 234, 1), 0 0 50px rgba(147, 51, 234, 0.6); }
+  }
+`;
+
+const Music: React.FC = () => {
+  // API Base URL
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('player');
@@ -467,7 +798,7 @@ const Music: React.FC = () => {
       }
 
       if (!currentGuildId) {
-        error('❌ Keine Guild-ID gefunden. Bot möglicherweise offline.');
+        showError('Guild Fehler', '❌ Keine Guild-ID gefunden. Bot möglicherweise offline.');
         return;
       }
 
@@ -504,7 +835,7 @@ const Music: React.FC = () => {
 
     } catch (err) {
       console.error('Fehler beim Laden der Daten:', err);
-      error('Fehler beim Laden der Daten');
+      showError('Lade Fehler', 'Fehler beim Laden der Daten');
     } finally {
       setLoading(false);
     }
