@@ -1025,8 +1025,11 @@ let currentBotStatus = {
     startTime: null
 };
 
-// Health Check Endpoint für Railway
+// Enhanced Health Check Endpoint für Railway
 app.get('/api/health', (req, res) => {
+    const botStatus = client?.isReady() ? 'online' : 'starting';
+    const uptime = client?.readyAt ? Date.now() - client.readyAt.getTime() : 0;
+    
     res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -1034,8 +1037,40 @@ app.get('/api/health', (req, res) => {
         version: '1.0.20',
         environment: process.env.NODE_ENV || 'development',
         bot: {
-            connected: client && client.isReady(),
-            guilds: client ? client.guilds.cache.size : 0
+            status: botStatus,
+            connected: client?.isReady() || false,
+            guilds: client?.guilds?.cache?.size || 0,
+            uptime: formatDuration(uptime),
+            readyAt: client?.readyAt?.toISOString() || null,
+            user: client?.user ? {
+                id: client.user.id,
+                tag: client.user.tag,
+                username: client.user.username
+            } : null
+        },
+        system: {
+            platform: process.platform,
+            nodeVersion: process.version,
+            memory: {
+                used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+                total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+                rss: Math.round(process.memoryUsage().rss / 1024 / 1024)
+            },
+            cpu: {
+                uptime: Math.round(process.uptime()),
+                loadavg: require('os').loadavg()
+            }
+        },
+        railway: {
+            environment: process.env.RAILWAY_ENVIRONMENT || null,
+            staticUrl: process.env.RAILWAY_STATIC_URL || null,
+            hasEnvironment: !!process.env.RAILWAY_ENVIRONMENT,
+            deploymentId: process.env.RAILWAY_DEPLOYMENT_ID || null
+        },
+        api: {
+            cors: process.env.NODE_ENV === 'production' ? 'enabled' : 'development',
+            host: process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost',
+            port: process.env.PORT || 3001
         }
     });
 });

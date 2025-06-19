@@ -436,34 +436,93 @@ const Dashboard = () => {
     }
   };
 
-  // Status-Updates holen
+  // Status-Updates mit verbesserter Fehlerbehandlung
   useEffect(() => {
-    const fetchStatus = async (retryCount = 3) => {
+    let retryDelay = 1000; // Start mit 1 Sekunde
+    const maxRetryDelay = 30000; // Max 30 Sekunden
+    let consecutiveFailures = 0;
+    
+    const fetchStatus = async () => {
       try {
-        const response = await fetch(`${apiUrl}/api/bot/status`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+        
+        const response = await fetch(`${apiUrl}/api/bot/status`, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        
         if (response.ok) {
           const data = await response.json();
           setBotStatus(data);
-        } else if (retryCount > 0) {
-          setTimeout(() => fetchStatus(retryCount - 1), 1000);
+          
+          // Reset retry delay bei erfolgreichem Request
+          retryDelay = 1000;
+          consecutiveFailures = 0;
+        } else if (response.status === 502) {
+          // 502 Bad Gateway - Railway startet noch
+          console.log('🚂 Railway Container startet noch (502 Bad Gateway)');
+          setBotStatus(prev => ({ 
+            ...prev, 
+            status: 'starting', 
+            isRunning: false 
+          }));
+          consecutiveFailures++;
+        } else {
+          console.error(`❌ HTTP ${response.status}: ${response.statusText}`);
+          consecutiveFailures++;
         }
       } catch (error) {
-        console.error('Fehler beim Laden des Bot-Status:', error);
-        if (retryCount > 0) {
-          setTimeout(() => fetchStatus(retryCount - 1), 1000);
+        if (error.name === 'AbortError') {
+          console.log('⏱️ Request timeout - Railway möglicherweise überlastet');
         } else {
-          setBotStatus(prev => ({ ...prev, status: 'offline', isRunning: false }));
+          console.error('❌ Fehler beim Laden des Bot-Status:', error);
         }
+        
+        consecutiveFailures++;
+        
+        // Nach vielen Fehlern auf offline setzen
+        if (consecutiveFailures >= 5) {
+          setBotStatus(prev => ({ 
+            ...prev, 
+            status: 'offline', 
+            isRunning: false 
+          }));
+        } else {
+          setBotStatus(prev => ({ 
+            ...prev, 
+            status: 'connecting', 
+            isRunning: false 
+          }));
+        }
+      }
+      
+      // Exponential backoff bei Fehlern
+      if (consecutiveFailures > 0) {
+        retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
       }
     };
 
-    setTimeout(() => fetchStatus(), 2000);
-    const interval = setInterval(() => fetchStatus(), 3000);
+    // Initial fetch mit Verzögerung
+    const initialTimeout = setTimeout(() => fetchStatus(), 2000);
     
-    // Commands laden
+    // Polling interval mit dynamischem Delay
+    const interval = setInterval(() => {
+      fetchStatus();
+    }, consecutiveFailures > 0 ? retryDelay : 5000); // 5s normal, exponential bei Fehlern
+    
+    // Commands laden (mit eigener Fehlerbehandlung)
     fetchCommands();
     
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, []);
 
   const getStatusColor = (status: string) => {
