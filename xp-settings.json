@@ -1,0 +1,156 @@
+{
+  "enabled": true,
+  "messageXP": {
+    "min": 5,
+    "max": 15,
+    "cooldown": 60000
+  },
+  "voiceXP": {
+    "baseXP": 2,
+    "afkChannelXP": 0,
+    "soloChannelXP": 1,
+    "cooldown": 60000,
+    "intervalMinutes": 1
+  },
+  "levelSystem": {
+    "baseXP": 100,
+    "multiplier": 1.5,
+    "maxLevel": 100
+  },
+  "channels": {
+    "levelUpChannel": "level-up",
+    "leaderboardChannel": "leaderboard",
+    "xpBlacklist": [],
+    "voiceBlacklist": []
+  },
+  "autoLeaderboard": {
+    "enabled": true,
+    "time": "00:00",
+    "timezone": "Europe/Berlin",
+    "channelName": "leaderboard",
+    "types": [
+      "level"
+    ],
+    "limit": 10,
+    "lastPosted": 1750329094210,
+    "autoDeleteOld": true,
+    "lastMessageIds": [
+      "1385205352622063626"
+    ]
+  },
+  "rewards": {
+    "levelRoles": [
+      {
+        "level": 5,
+        "roleId": "1383131386013024379",
+        "roleName": "🔥 Level 5"
+      },
+      {
+        "level": 10,
+        "roleId": "1383131387917373482",
+        "roleName": "⚡ Level 10"
+      },
+      {
+        "level": 15,
+        "roleId": "1383131389406216303",
+        "roleName": "💫 Level 15"
+      },
+      {
+        "level": 20,
+        "roleId": "1383131390543138816",
+        "roleName": "🌟 Level 20"
+      },
+      {
+        "level": 25,
+        "roleId": "1383131391994106027",
+        "roleName": "🚀 Level 25"
+      },
+      {
+        "level": 30,
+        "roleId": "1383131393344798740",
+        "roleName": "🎯 Level 30"
+      },
+      {
+        "level": 40,
+        "roleId": "1383131394884239360",
+        "roleName": "💎 Level 40"
+      },
+      {
+        "level": 50,
+        "roleId": "1383131396498915389",
+        "roleName": "👑 Level 50"
+      },
+      {
+        "level": 75,
+        "roleId": "1383131397715398787",
+        "roleName": "🏆 Level 75"
+      },
+      {
+        "level": 100,
+        "roleId": "1383131399145521363",
+        "roleName": "🔮 Level 100"
+      }
+    ],
+    "milestoneRewards": [
+      {
+        "xp": 500,
+        "reward": "🌱 Newcomer"
+      },
+      {
+        "xp": 1000,
+        "reward": "💬 Aktives Mitglied"
+      },
+      {
+        "xp": 2500,
+        "reward": "⭐ Erfahrener User"
+      },
+      {
+        "xp": 5000,
+        "reward": "🎯 Server-Veteran"
+      },
+      {
+        "xp": 10000,
+        "reward": "👑 Elite Member"
+      },
+      {
+        "xp": 25000,
+        "reward": "🏆 Server-Legende"
+      },
+      {
+        "xp": 50000,
+        "reward": "💎 Diamond Member"
+      }
+    ]
+  },
+  "announcements": {
+    "levelUp": true,
+    "milestones": true,
+    "newRecord": true
+  },
+  "display": {
+    "showRank": true,
+    "showProgress": true,
+    "embedColor": "0x2ECC71",
+    "leaderboardSize": 10
+  },
+  "levelUpEmbed": {
+    "enabled": true,
+    "title": "🎉 Level Up!",
+    "color": "0x00FF7F",
+    "animation": {
+      "enabled": true,
+      "style": "celebration",
+      "duration": 5000
+    },
+    "fields": {
+      "showStats": true,
+      "showNextLevel": true,
+      "showRank": true,
+      "customMessage": ""
+    },
+    "footer": {
+      "enabled": true,
+      "text": "🎉 Herzlichen Glückwunsch!"
+    }
+  }
+}

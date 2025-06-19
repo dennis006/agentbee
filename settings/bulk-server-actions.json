@@ -1,0 +1,60 @@
+{
+  "bulkActions": {
+    "maxConcurrentActions": 5,
+    "delayBetweenActions": 1000,
+    "retryAttempts": 3,
+    "enableConfirmation": true,
+    "logAllActions": true
+  },
+  "templates": {
+    "autoApplyCategories": true,
+    "preserveExistingChannels": false,
+    "autoCreateRoles": true,
+    "enablePermissionSync": true
+  },
+  "optimization": {
+    "autoOptimize": false,
+    "optimizationSchedule": "weekly",
+    "enableRecommendations": true,
+    "minServerAge": 7
+  },
+  "actionHistory": [
+    {
+      "id": "template_1750333150716",
+      "type": "apply_template",
+      "guildIds": [
+        "1203994020779532348"
+      ],
+      "templateId": "gamingCommunity",
+      "timestamp": 1750333150716,
+      "status": "completed",
+      "results": [
+        {
+          "guildId": "1203994020779532348",
+          "templateId": "gamingCommunity",
+          "categories": [
+            {
+              "name": "📋 Information",
+              "success": false,
+              "error": "Invalid Form Body\nname[BASE_TYPE_REQUIRED]: This field is required"
+            }
+          ],
+          "channels": [],
+          "roles": [
+            {
+              "name": "Admin",
+              "success": false,
+              "error": "Invalid bitfield flag or number: ADMINISTRATOR."
+            }
+          ],
+          "settings": {
+            "success": false,
+            "error": "Invalid Form Body\ndefault_message_notifications[NUMBER_TYPE_COERCE]: Value \"mentions\" is not int32."
+          },
+          "errors": []
+        }
+      ]
+    }
+  ],
+  "lastUpdated": 1750333150716
+}

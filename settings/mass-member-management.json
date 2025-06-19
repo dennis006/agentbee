@@ -1,0 +1,18 @@
+{
+  "operationHistory": [],
+  "memberGroups": {},
+  "automationRules": [],
+  "settings": {
+    "maxBatchSize": 100,
+    "operationDelay": 1000,
+    "requireConfirmation": true,
+    "logOperations": true,
+    "enableUndo": true,
+    "undoTimeLimit": 3600000
+  },
+  "statistics": {
+    "totalOperations": 0,
+    "totalMembersProcessed": 0,
+    "lastOperation": null
+  }
+}

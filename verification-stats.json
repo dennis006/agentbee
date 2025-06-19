@@ -1,0 +1,30 @@
+{
+  "totalVerifications": 6,
+  "todayVerifications": 2,
+  "failedAttempts": 0,
+  "popularGames": [
+    {
+      "game": "valorant",
+      "count": 6
+    },
+    {
+      "game": "world-of-warcraft",
+      "count": 2
+    },
+    {
+      "game": "league-of-legends",
+      "count": 2
+    },
+    {
+      "game": "fragpunk",
+      "count": 1
+    }
+  ],
+  "platformStats": [
+    {
+      "platform": "pc",
+      "count": 6
+    }
+  ],
+  "lastDay": "Mon Jun 16 2025"
+}

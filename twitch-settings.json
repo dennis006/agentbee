@@ -1,0 +1,39 @@
+{
+  "enabled": true,
+  "checkInterval": 1,
+  "clientId": "",
+  "clientSecret": "",
+  "channels": {
+    "notificationChannel": "live-streams",
+    "roleToMention": "",
+    "mentionEveryone": false
+  },
+  "embed": {
+    "color": "0x9146FF",
+    "showThumbnail": true,
+    "showViewerCount": true,
+    "showCategory": true,
+    "showUptime": true,
+    "customMessage": "🔴 **{{streamer}}** ist jetzt LIVE!",
+    "includeEmojis": true,
+    "customEmojis": [
+      "🎮",
+      "🔥",
+      "💜",
+      "⭐",
+      "🚀"
+    ]
+  },
+  "notifications": {
+    "onlyFirstTime": false,
+    "cooldown": 30,
+    "offlineNotification": false,
+    "streamEndedMessage": "📴 **{{streamer}}** hat den Stream beendet!"
+  },
+  "filters": {
+    "minViewers": 0,
+    "allowedCategories": [],
+    "blockedCategories": [],
+    "onlyFollowers": false
+  }
+}

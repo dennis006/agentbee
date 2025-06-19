@@ -1,0 +1,29 @@
+{
+  "botName": "AgentBee",
+  "botStatus": "online",
+  "activityType": "playing",
+  "activityText": "Valorant",
+  "prefix": "!",
+  "autoModeration": true,
+  "antiSpam": true,
+  "maxWarnings": 3,
+  "muteRole": "Muted",
+  "logChannel": "mod-log",
+  "welcomeEnabled": true,
+  "leveling": false,
+  "economyEnabled": false,
+  "musicEnabled": true,
+  "adminRoles": [
+    "Admin",
+    "Owner"
+  ],
+  "moderatorRoles": [
+    "Moderator",
+    "Helper"
+  ],
+  "djRole": "DJ",
+  "commandCooldown": 3,
+  "deleteCommands": false,
+  "dmCommands": true,
+  "debugMode": false
+}

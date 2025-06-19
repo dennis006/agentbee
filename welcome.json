@@ -1,0 +1,47 @@
+{
+  "enabled": true,
+  "channelName": "willkommen",
+  "title": "🎉 Willkommen auf dem Server!",
+  "description": "Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊",
+  "color": "0x00FF7F",
+  "thumbnail": "custom",
+  "customThumbnail": "/images/welcome/welcome-1749589225312-301946294.png",
+  "fields": [
+    {
+      "name": "📋 Erste Schritte",
+      "value": "Schaue dir unsere Regeln an und werde Teil der Community!",
+      "inline": false
+    },
+    {
+      "name": "💬 Support",
+      "value": "Bei Fragen wende dich an unsere Moderatoren!",
+      "inline": true
+    },
+    {
+      "name": "🎮 Viel Spaß",
+      "value": "Wir freuen uns auf dich!",
+      "inline": true
+    }
+  ],
+  "footer": "Mitglied #{memberCount} • {server}",
+  "autoRole": "",
+  "mentionUser": true,
+  "deleteAfter": 0,
+  "dmMessage": {
+    "enabled": false,
+    "message": "Willkommen! Schau gerne im Server vorbei! 😊"
+  },
+  "imageRotation": {
+    "enabled": true,
+    "mode": "random"
+  },
+  "leaveMessage": {
+    "enabled": true,
+    "channelName": "willkommen",
+    "title": "👋 Tschüss!",
+    "description": "**{user}** hat den Server verlassen. Auf Wiedersehen! 🖐️",
+    "color": "0xD63031",
+    "mentionUser": false,
+    "deleteAfter": 0
+  }
+}

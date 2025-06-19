@@ -1,0 +1,55 @@
+{
+  "users": [
+    {
+      "discordId": "1253944624695869534",
+      "username": "xmethface",
+      "discriminator": "0",
+      "avatar": null,
+      "games": [
+        "valorant"
+      ],
+      "platform": "pc",
+      "agents": [
+        "Killjoy"
+      ],
+      "assignedRoles": [
+        "Member",
+        "verify",
+        "Valorant",
+        "🖥️PC",
+        "Bot Updates",
+        "Sentinel",
+        "Valorant",
+        "Killjoy"
+      ],
+      "verificationDate": "2025-06-16T21:02:20.462Z",
+      "guildId": "1203994020779532348",
+      "guildName": "Gaming Cave",
+      "wantsBotUpdates": true
+    },
+    {
+      "discordId": "306523854233403393",
+      "username": "methface",
+      "discriminator": "0",
+      "avatar": "b864e48b6ea41ebed5def0bc9c4447e1",
+      "games": [
+        "valorant"
+      ],
+      "platform": "pc",
+      "agents": [],
+      "assignedRoles": [
+        "Member",
+        "verify",
+        "Valorant",
+        "🖥️PC",
+        "Bot Updates"
+      ],
+      "verificationDate": "2025-06-14T19:09:23.567Z",
+      "guildId": "1203994020779532348",
+      "guildName": "Gaming Cave",
+      "wantsBotUpdates": true
+    }
+  ],
+  "lastUpdated": "2025-06-16T21:02:20.462Z",
+  "totalCount": 2
+}

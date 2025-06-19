@@ -1,0 +1,179 @@
+{
+  "analyses": [
+    {
+      "guildId": "1203994020779532348",
+      "guildName": "Gaming Cave",
+      "timestamp": 1750337863449,
+      "suggestions": [
+        {
+          "type": "moderation",
+          "priority": "high",
+          "title": "Log-Channel einrichten",
+          "description": "Keine Log-Channels gefunden. Moderations-Logs sind wichtig für Transparenz und Nachverfolgung.",
+          "impact": "Hoch",
+          "confidence": 0.9,
+          "effort": "Niedrig",
+          "action": "setup_logging",
+          "data": {
+            "hasLogs": false
+          }
+        },
+        {
+          "type": "growth",
+          "priority": "high",
+          "title": "Community-Wachstum fördern",
+          "description": "Kleiner Server mit Wachstumspotenzial. Gezielte Marketing-Strategien können helfen.",
+          "impact": "Sehr hoch",
+          "confidence": 0.85,
+          "effort": "Hoch",
+          "action": "boost_growth",
+          "data": {
+            "currentSize": 5,
+            "targetSize": 500
+          }
+        },
+        {
+          "type": "moderation",
+          "priority": "medium",
+          "title": "Moderator-Team erweitern",
+          "description": "Nur wenige Moderator-Rollen gefunden. Ein größeres Moderator-Team verbessert die Serverqualität.",
+          "impact": "Mittel",
+          "confidence": 0.8,
+          "effort": "Mittel",
+          "action": "expand_moderation",
+          "data": {
+            "currentMods": 0
+          }
+        },
+        {
+          "type": "engagement",
+          "priority": "medium",
+          "title": "Voice-Aktivität fördern",
+          "description": "Voice Channels werden selten genutzt. Spezielle Events oder Gaming-Sessions können das ändern.",
+          "impact": "Mittel",
+          "confidence": 0.75,
+          "effort": "Mittel",
+          "action": "promote_voice",
+          "data": {
+            "currentUsage": 0
+          }
+        },
+        {
+          "type": "moderation",
+          "priority": "medium",
+          "title": "Verifikations-Level erhöhen",
+          "description": "Niedrige Verifikations-Anforderungen können zu Spam führen. Höhere Sicherheit empfohlen.",
+          "impact": "Mittel",
+          "confidence": 0.75,
+          "effort": "Niedrig",
+          "action": "increase_verification",
+          "data": {
+            "currentLevel": 0
+          }
+        },
+        {
+          "type": "technical",
+          "priority": "low",
+          "title": "Rollen-Hierarchie optimieren",
+          "description": "Viele Rollen können die Verwaltung erschweren. Überprüfe auf redundante Rollen.",
+          "impact": "Niedrig",
+          "confidence": 0.6,
+          "effort": "Hoch",
+          "action": "optimize_roles",
+          "data": {
+            "roleCount": 72
+          }
+        }
+      ],
+      "serverHealth": {
+        "overall": 89,
+        "structure": 100,
+        "engagement": 67,
+        "retention": 100,
+        "rating": "Ausgezeichnet"
+      },
+      "confidence": 0.7749999999999999
+    },
+    {
+      "guildId": "1203994020779532348",
+      "guildName": "Gaming Cave",
+      "timestamp": 1750338015556,
+      "suggestions": [
+        {
+          "type": "growth",
+          "priority": "high",
+          "title": "Community-Wachstum fördern",
+          "description": "Kleiner Server mit Wachstumspotenzial. Gezielte Marketing-Strategien können helfen.",
+          "impact": "Sehr hoch",
+          "confidence": 0.85,
+          "effort": "Hoch",
+          "action": "boost_growth",
+          "data": {
+            "currentSize": 5,
+            "targetSize": 500
+          }
+        },
+        {
+          "type": "engagement",
+          "priority": "medium",
+          "title": "Voice-Aktivität fördern",
+          "description": "Voice Channels werden selten genutzt. Spezielle Events oder Gaming-Sessions können das ändern.",
+          "impact": "Mittel",
+          "confidence": 0.75,
+          "effort": "Mittel",
+          "action": "promote_voice",
+          "data": {
+            "currentUsage": 0
+          }
+        },
+        {
+          "type": "moderation",
+          "priority": "medium",
+          "title": "Verifikations-Level erhöhen",
+          "description": "Niedrige Verifikations-Anforderungen können zu Spam führen. Höhere Sicherheit empfohlen.",
+          "impact": "Mittel",
+          "confidence": 0.75,
+          "effort": "Niedrig",
+          "action": "increase_verification",
+          "data": {
+            "currentLevel": 1
+          }
+        },
+        {
+          "type": "technical",
+          "priority": "low",
+          "title": "Rollen-Hierarchie optimieren",
+          "description": "Viele Rollen können die Verwaltung erschweren. Überprüfe auf redundante Rollen.",
+          "impact": "Niedrig",
+          "confidence": 0.6,
+          "effort": "Hoch",
+          "action": "optimize_roles",
+          "data": {
+            "roleCount": 72
+          }
+        }
+      ],
+      "serverHealth": {
+        "overall": 89,
+        "structure": 100,
+        "engagement": 67,
+        "retention": 100,
+        "rating": "Ausgezeichnet"
+      },
+      "confidence": 0.7375
+    }
+  ],
+  "settings": {
+    "autoAnalysisInterval": 86400000,
+    "enableGrowthPredictions": true,
+    "enableOptimizationSuggestions": true,
+    "confidenceThreshold": 0.7,
+    "maxSuggestionsPerCategory": 5
+  },
+  "cache": {},
+  "statistics": {
+    "totalAnalyses": 2,
+    "suggestionsApplied": 4,
+    "avgConfidenceScore": 0.85
+  }
+}

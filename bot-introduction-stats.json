@@ -1,0 +1,18 @@
+{
+  "totalIntroductions": 15,
+  "triggerStats": {
+    "manual": 15,
+    "channelCreate": 0,
+    "channelMention": 0,
+    "keywords": 0,
+    "command": 0
+  },
+  "lastIntroduction": "2025-06-17T19:45:15.495Z",
+  "buttonInteractions": {
+    "help": 2,
+    "commands": 3,
+    "dashboard": 0
+  },
+  "memberResponses": 13,
+  "lastMemberResponse": 1750332119079
+}

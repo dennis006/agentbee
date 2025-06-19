@@ -1,0 +1,18 @@
+# BEELLGROUNDS Welcome Image
+# 
+# Um Ihr eigenes BEELLGROUNDS-Bild in Discord anzuzeigen, laden Sie es auf einen 
+# kostenlosen Image-Hosting-Service hoch:
+#
+# Empfohlene Services:
+# - imgur.com (kostenlos, einfach)
+# - postimg.cc (kostenlos, ohne Anmeldung)
+# - imgbb.com (kostenlos)
+#
+# Schritte:
+# 1. Gehen Sie zu imgur.com
+# 2. Klicken Sie auf "New post"
+# 3. Laden Sie Ihr BEELLGROUNDS-Bild hoch
+# 4. Kopieren Sie die direkte Bild-URL (endet auf .png/.jpg)
+# 5. Fügen Sie diese URL in die Willkommensnachrichten-Einstellungen ein
+#
+# Beispiel URL: https://i.imgur.com/ABC123.png 

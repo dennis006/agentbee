@@ -1,0 +1,45 @@
+{
+  "gamingCommunity": {
+    "name": "Gaming Community",
+    "description": "Vollständiges Setup für Gaming Communities",
+    "icon": "🎮",
+    "categories": [
+      {
+        "name": "📋 Information",
+        "channels": [
+          {
+            "name": "regeln",
+            "type": "text",
+            "topic": "Server Regeln und Richtlinien"
+          },
+          {
+            "name": "ankündigungen",
+            "type": "text",
+            "topic": "Wichtige Server-Updates"
+          },
+          {
+            "name": "news",
+            "type": "text",
+            "topic": "Gaming News und Updates"
+          }
+        ]
+      }
+    ],
+    "roles": [
+      {
+        "name": "Admin",
+        "color": "#ff0000",
+        "permissions": [
+          "ADMINISTRATOR"
+        ],
+        "position": 10
+      }
+    ],
+    "settings": {
+      "verificationLevel": 1,
+      "defaultNotifications": "mentions",
+      "explicitContentFilter": 1,
+      "afkTimeout": 300
+    }
+  }
+}

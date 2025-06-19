@@ -1,0 +1,44 @@
+{
+  "enabled": true,
+  "channelName": "bot-updates",
+  "autoPost": true,
+  "notifications": {
+    "newFeatures": true,
+    "improvements": true,
+    "bugFixes": true,
+    "breaking": true
+  },
+  "embed": {
+    "title": "🤖 Bot Update",
+    "color": "0x00FF7F",
+    "footer": "Bot Updates • {timestamp}",
+    "thumbnail": "bot",
+    "author": {
+      "enabled": true,
+      "name": "Bot Development Team",
+      "iconUrl": ""
+    }
+  },
+  "automation": {
+    "enabled": true,
+    "triggers": {
+      "onBotStart": false,
+      "onFileChange": true,
+      "scheduled": false,
+      "webhookTrigger": true
+    },
+    "schedule": {
+      "interval": "daily",
+      "time": "09:00"
+    },
+    "smartFiltering": {
+      "enabled": true,
+      "minImportanceLevel": 3,
+      "ignoreMinorChanges": true,
+      "maxUpdatesPerHour": 2
+    },
+    "lastBotStart": null,
+    "lastUpdateTime": 1750172836915
+  },
+  "updateHistory": []
+}

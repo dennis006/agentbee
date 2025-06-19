@@ -1,0 +1,164 @@
+@keyframes bounce-subtle {
+  0%, 100% { 
+    transform: translateY(0px); 
+  }
+  50% { 
+    transform: translateY(-2px); 
+  }
+}
+
+@keyframes ping-slow {
+  0% { 
+    transform: scale(1); 
+    opacity: 0.3; 
+  }
+  50% { 
+    transform: scale(1.2); 
+    opacity: 0.1; 
+  }
+  100% { 
+    transform: scale(1.4); 
+    opacity: 0; 
+  }
+}
+
+@keyframes shadowPulse {
+  0% { 
+    transform: translateX(-50%) scale(0.8); 
+  }
+  100% { 
+    transform: translateX(-50%) scale(1.2); 
+  }
+}
+
+@keyframes wing-flutter {
+  0%, 100% { 
+    transform: scaleX(1) scaleY(1); 
+  }
+  50% { 
+    transform: scaleX(1.1) scaleY(0.9); 
+  }
+}
+
+.bee-bounce-subtle {
+  animation: bounce-subtle 0.8s ease-in-out infinite;
+}
+
+.bee-ping-slow {
+  animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.bee-shadow-pulse {
+  animation: shadowPulse 0.5s ease-in-out infinite alternate;
+}
+
+.bee-wing-flutter {
+  animation: wing-flutter 0.3s ease-in-out infinite;
+}
+
+/* Zusätzliche Hover-Effekte für interaktive Elemente */
+.bee-container:hover .bee-bounce-subtle {
+  animation-duration: 0.4s;
+}
+
+/* Trail-Effekt für noch mehr Leben */
+@keyframes trail-fade {
+  0% { 
+    opacity: 0.6; 
+    transform: scale(1); 
+  }
+  100% { 
+    opacity: 0; 
+    transform: scale(0.5); 
+  }
+}
+
+.bee-trail {
+  animation: trail-fade 1s ease-out forwards;
+}
+
+/* Celebration Animationen */
+@keyframes celebration-fly {
+  0% { transform: translateX(0) translateY(0) rotate(0deg); }
+  25% { transform: translateX(100px) translateY(-50px) rotate(45deg); }
+  50% { transform: translateX(200px) translateY(20px) rotate(-30deg); }
+  75% { transform: translateX(150px) translateY(-30px) rotate(60deg); }
+  100% { transform: translateX(300px) translateY(50px) rotate(0deg); }
+}
+
+@keyframes celebration-bounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.2) rotate(10deg); }
+  50% { transform: scale(1.1) rotate(-10deg); }
+  75% { transform: scale(1.3) rotate(5deg); }
+}
+
+@keyframes celebration-sparkle {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+}
+
+.animate-celebration-fly {
+  animation: celebration-fly 4s ease-in-out infinite;
+}
+
+.animate-celebration-bounce {
+  animation: celebration-bounce 1s ease-in-out infinite;
+}
+
+.animate-celebration-sparkle {
+  animation: celebration-sparkle 2s ease-in-out infinite;
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall 4s linear infinite;
+}
+
+/* Orbit Animation für Header-Biene - Perfekter Kreis um Text */
+@keyframes orbit {
+  0% { 
+    transform: rotate(0deg) translateX(100px) rotate(0deg) scale(1);
+  }
+  25% { 
+    transform: rotate(90deg) translateX(100px) rotate(-90deg) scale(1.05);
+  }
+  50% { 
+    transform: rotate(180deg) translateX(100px) rotate(-180deg) scale(1);
+  }
+  75% { 
+    transform: rotate(270deg) translateX(100px) rotate(-270deg) scale(1.05);
+  }
+  100% { 
+    transform: rotate(360deg) translateX(100px) rotate(-360deg) scale(1);
+  }
+}
+
+@keyframes orbit-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 8px #8B5CF6);
+  }
+  50% { 
+    filter: drop-shadow(0 0 15px #06B6D4);
+  }
+}
+
+.animate-orbit {
+  animation: orbit 10s linear infinite, orbit-glow 3s ease-in-out infinite;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  transform: translate(-50%, -50%);
+}
+
+/* Container für bessere Positionierung */
+.orbit-container {
+  min-height: 120px;
+  display: inline-block;
+  position: relative;
+} 

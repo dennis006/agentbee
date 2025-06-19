@@ -1,0 +1,98 @@
+{
+  "liveEventSettings": {
+    "maxBufferSize": 500,
+    "eventTypes": [
+      "memberJoin",
+      "memberLeave",
+      "messageCreate",
+      "voiceStateUpdate",
+      "roleUpdate",
+      "channelCreate",
+      "messageReactionAdd"
+    ],
+    "autoCleanupInterval": 3600000,
+    "realTimeEnabled": true
+  },
+  "voiceVisualizerSettings": {
+    "trackVoiceActivity": true,
+    "recordSessionData": true,
+    "visualizationType": "heatmap",
+    "dataRetention": 30,
+    "updateInterval": 30000
+  },
+  "memberJourneySettings": {
+    "trackingEnabled": true,
+    "milestones": [
+      {
+        "name": "Erster Schritt",
+        "type": "join",
+        "threshold": 1,
+        "icon": "👋",
+        "color": "#22c55e"
+      },
+      {
+        "name": "Erste Nachricht",
+        "type": "message",
+        "threshold": 1,
+        "icon": "💬",
+        "color": "#3b82f6"
+      },
+      {
+        "name": "Aktiver Teilnehmer",
+        "type": "message",
+        "threshold": 10,
+        "icon": "🎯",
+        "color": "#8b5cf6"
+      },
+      {
+        "name": "Community Mitglied",
+        "type": "message",
+        "threshold": 50,
+        "icon": "⭐",
+        "color": "#f59e0b"
+      },
+      {
+        "name": "Voice Nutzer",
+        "type": "voice",
+        "threshold": 3600000,
+        "icon": "🎤",
+        "color": "#ef4444"
+      },
+      {
+        "name": "Voice Regular",
+        "type": "voice",
+        "threshold": 36000000,
+        "icon": "🎵",
+        "color": "#06b6d4"
+      },
+      {
+        "name": "Reaktions-Fan",
+        "type": "reaction",
+        "threshold": 100,
+        "icon": "❤️",
+        "color": "#ec4899"
+      },
+      {
+        "name": "Server Veteran",
+        "type": "days",
+        "threshold": 30,
+        "icon": "👑",
+        "color": "#fbbf24"
+      }
+    ],
+    "engagementCategories": [
+      "newcomer",
+      "casual",
+      "active",
+      "engaged",
+      "veteran",
+      "champion"
+    ],
+    "churnPredictionEnabled": true
+  },
+  "historicalData": {
+    "voiceChannels": {},
+    "memberJourneys": {},
+    "dailySnapshots": {}
+  }
+}

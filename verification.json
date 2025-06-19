@@ -1,0 +1,78 @@
+{
+  "enabled": true,
+  "requireCaptcha": true,
+  "allowedGames": [
+    {
+      "id": "valorant",
+      "label": "Valorant",
+      "emoji": "🎯",
+      "role": "Valorant"
+    },
+    {
+      "id": "world-of-warcraft",
+      "label": "World Of Warcraft",
+      "emoji": "⚔️",
+      "role": "World of Warcraft"
+    },
+    {
+      "id": "league-of-legends",
+      "label": "League of Legends",
+      "emoji": "⭐",
+      "role": "League of Legends"
+    },
+    {
+      "id": "fragpunk",
+      "label": "Fragpunk",
+      "emoji": "🔞"
+    }
+  ],
+  "defaultRoles": [
+    "Member",
+    "verify"
+  ],
+  "welcomeMessage": "Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.",
+  "logChannel": "verify-logs",
+  "autoAssignRoles": true,
+  "gameRoles": {
+    "valorant": "Valorant Player",
+    "lol": "LoL Player",
+    "minecraft": "Minecraft Player",
+    "fortnite": "Fortnite Player",
+    "cs2": "CS2 Player",
+    "apex": "Apex Player"
+  },
+  "platformRoles": {
+    "pc": "PC Gamer",
+    "ps5": "PlayStation Gamer",
+    "xbox": "Xbox Gamer",
+    "switch": "Switch Gamer",
+    "mobile": "Mobile Gamer"
+  },
+  "allowedPlatforms": [
+    {
+      "id": "pc",
+      "label": "PC",
+      "emoji": "💻",
+      "role": "🖥️PC"
+    },
+    {
+      "id": "xbox",
+      "label": "Xbox",
+      "emoji": "❎",
+      "role": "❎Xbox"
+    },
+    {
+      "id": "ps5",
+      "label": "PS5",
+      "emoji": "🎮",
+      "role": "🎮PS5"
+    }
+  ],
+  "verificationChannel": "verify",
+  "botUpdates": {
+    "enabled": true,
+    "optInText": "📢 Ich möchte Bot-Updates und Neuigkeiten erhalten",
+    "updatesRole": "Bot Updates",
+    "channelName": "bot-updates"
+  }
+}

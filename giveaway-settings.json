@@ -1,0 +1,41 @@
+{
+  "enabled": true,
+  "defaultChannel": "giveaways",
+  "embedColor": "0x2ECC71",
+  "endedEmbedColor": "0x32CD32",
+  "winnerDmColor": "0x00FF00",
+  "managerRoles": [
+    "Admin",
+    "Moderator"
+  ],
+  "notifications": {
+    "newGiveaway": true,
+    "giveawayEnd": true,
+    "giveawayWin": true
+  },
+  "limits": {
+    "maxActiveGiveaways": 5,
+    "maxWinners": 10,
+    "minDuration": 60000,
+    "maxDuration": 2592000000
+  },
+  "antiCheat": {
+    "preventSelfInvite": true,
+    "preventBotAccounts": true,
+    "minAccountAge": 0,
+    "preventMultipleEntries": true,
+    "preventDuplicateIPs": true
+  },
+  "leaderboard": {
+    "updateInterval": 60,
+    "autoPost": {
+      "enabled": true,
+      "time": "20:00",
+      "timezone": "Europe/Berlin",
+      "channelName": "leaderboard",
+      "limit": 10,
+      "lastPosted": 1750137868431,
+      "autoDeleteOld": true
+    }
+  }
+}

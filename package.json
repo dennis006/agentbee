@@ -1,0 +1,57 @@
+{
+  "name": "discord-bot",
+  "version": "1.0.20",
+  "description": "Ein Discord-Bot mit Web-Dashboard",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "bot": "node index.js",
+    "dashboard": "cd dashboard && npm run dev",
+    "dashboard-build": "cd dashboard && npm run build",
+    "dashboard-preview": "cd dashboard && npm run preview",
+    "setup": "npm install && cd dashboard && npm install",
+    "dev-all": "concurrently \"npm run dev\" \"npm run dashboard\"",
+    "build": "npm run dashboard-build"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "javascript",
+    "dashboard",
+    "react"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/voice": "^0.18.0",
+    "@distube/ytdl-core": "^4.16.12",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-dropdown-menu": "^2.1.15",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-select": "^2.2.5",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-tabs": "^1.1.12",
+    "@radix-ui/react-toast": "^1.2.14",
+    "axios": "^1.9.0",
+    "canvas": "^3.1.0",
+    "cors": "^2.8.5",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ffmpeg-static": "^5.2.0",
+    "fs-extra": "^11.3.0",
+    "multer": "^2.0.1",
+    "node-fetch": "^2.7.0",
+    "openai": "^5.3.0",
+    "opusscript": "^0.0.8",
+    "play-dl": "^1.9.7",
+    "yt-search": "^2.13.1",
+    "ytdl-core": "^4.11.5"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  }
+}

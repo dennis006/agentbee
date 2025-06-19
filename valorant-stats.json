@@ -1,0 +1,186 @@
+{
+  "totalSearches": 28,
+  "activeTracking": 0,
+  "totalPlayers": 2,
+  "apiCalls": 0,
+  "systemEnabled": false,
+  "lastUpdate": "2025-06-19T10:44:33.501Z",
+  "dailySearches": 1,
+  "weeklySearches": 28,
+  "topRegions": {
+    "eu": 28,
+    "na": 0,
+    "ap": 0,
+    "kr": 0
+  },
+  "searchHistory": [
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-19T10:44:33.501Z",
+      "success": true
+    },
+    {
+      "player": "Beellgrounder#1996",
+      "region": "eu",
+      "timestamp": "2025-06-18T19:12:13.476Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-17T20:50:20.845Z",
+      "success": true
+    },
+    {
+      "player": "Beellgrounder#1996",
+      "region": "eu",
+      "timestamp": "2025-06-14T19:58:02.506Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:53:39.129Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:52:11.344Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:44:22.092Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:43:37.943Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:41:45.848Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:40:30.786Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:37:58.989Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:19:23.178Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:18:50.020Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T16:02:28.004Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:59:29.990Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:41:03.755Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:33:41.775Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:27:21.099Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:20:25.563Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:15:10.141Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:13:20.724Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T15:05:37.779Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-14T14:35:45.946Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-13T22:07:25.949Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-13T21:44:57.296Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-13T21:42:51.614Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-13T21:42:16.753Z",
+      "success": true
+    },
+    {
+      "player": "Cracko#1907",
+      "region": "eu",
+      "timestamp": "2025-06-13T21:37:09.692Z",
+      "success": true
+    }
+  ]
+}

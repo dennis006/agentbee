@@ -1,0 +1,179 @@
+{
+  "enabled": true,
+  "channelName": "vorstellungen",
+  "autoPost": true,
+  "triggers": {
+    "onChannelCreate": true,
+    "onChannelMention": true,
+    "onKeywords": true,
+    "onCommand": true,
+    "manual": true
+  },
+  "keywords": [
+    "bot vorstellen",
+    "bot introduction",
+    "wer bist du",
+    "stell dich vor"
+  ],
+  "cooldown": {
+    "enabled": false,
+    "duration": 3600000,
+    "perChannel": true
+  },
+  "embed": {
+    "title": "🤖 Hallo! Ich bin {botName}",
+    "description": "Dein intelligenter Discord-Assistent für Gaming, Moderation und Entertainment! Ich bringe deinen Server auf das nächste Level! 🚀",
+    "color": "0x00FF7F",
+    "thumbnail": "bot",
+    "customThumbnail": "",
+    "footer": "Entwickelt mit ❤️ • Version 1.2.0 • {timestamp}",
+    "author": {
+      "enabled": true,
+      "name": "{botName} - Dein Discord Assistent",
+      "iconUrl": ""
+    },
+    "fields": [
+      {
+        "name": "🎯 Meine Hauptfunktionen",
+        "value": "• **Moderation** - Auto-Filter, Warns & Mutes\n• **XP-System** - Level-Belohnungen & Leaderboards\n• **Musik-Bot** - YouTube, Spotify, Radio & Playlists\n• **Valorant** - Rang-Tracking & Match-History\n• **Giveaways** - Faire Verlosungen mit Anti-Cheat\n• **Twitch-Alerts** - Live-Stream Benachrichtigungen",
+        "inline": false
+      },
+      {
+        "name": "⚡ Weitere Features",
+        "value": "• **Welcome-System** - Personalisierte Begrüßungen\n• **Ticket-System** - Support-Channels\n• **Verifizierung** - Captcha & Game-Check\n• **AI-Integration** - Smart-Responses",
+        "inline": true
+      },
+      {
+        "name": "📊 Statistiken",
+        "value": "• **Server-Stats** - Live-Channels\n• **Analytics** - Detaillierte Logs\n• **Voice-Tracking** - Activity-Monitoring",
+        "inline": true
+      }
+    ]
+  },
+  "buttons": {
+    "enabled": false,
+    "buttons": []
+  },
+  "personalizedGreeting": {
+    "enabled": true,
+    "useUserName": true,
+    "greetingVariations": [
+      "Hallo {user}! 👋",
+      "Hey {user}! Schön dich zu sehen! 😊",
+      "Hi {user}! Willkommen! 🎉",
+      "Servus {user}! 🤖",
+      "Moin {user}! Wie geht's? 😄"
+    ]
+  },
+  "statistics": {
+    "showInEmbed": true,
+    "fields": {
+      "serverCount": true,
+      "memberCount": true,
+      "uptime": true,
+      "commandsExecuted": false,
+      "version": true
+    }
+  },
+  "aiIntegration": {
+    "enabled": false,
+    "generatePersonalizedMessage": false,
+    "useContextFromChannel": false,
+    "maxTokens": 150
+  },
+  "memberIntroductionResponse": {
+    "enabled": true,
+    "autoReact": true,
+    "autoReply": true,
+    "reactions": [
+      "👋",
+      "🎉",
+      "😊",
+      "🤖",
+      "🔥",
+      "💜",
+      "✨",
+      "🎊",
+      "🙌",
+      "❤️"
+    ],
+    "maxReactions": 3,
+    "customResponses": [
+      "Hallo {user}! 👋 Herzlich willkommen auf **{server}**! Schön, dass du dich vorgestellt hast. Wir freuen uns, dich in unserer Community begrüßen zu dürfen! Falls du Fragen hast oder Hilfe brauchst, zögere nicht zu fragen. Viel Spaß beim Entdecken unseres Servers! 🎉",
+      "Hey {user}! 😊 Super, dass du zu **{server}** gefunden hast! Es ist immer toll, neue Gesichter in unserer Community zu sehen. Nimm dir gerne die Zeit, dich umzuschauen und lerne die anderen Mitglieder kennen. Bei Fragen sind wir alle da um zu helfen. Willkommen im Team! ✨",
+      "Hi {user}! 🤖 Willkommen auf **{server}**! Deine Vorstellung war sehr nett zu lesen. Wir haben hier eine tolle Gemeinschaft und ich bin sicher, du wirst dich schnell einleben. Scheue dich nicht, in den verschiedenen Channels aktiv zu werden. Viel Spaß! 🚀",
+      "Servus {user}! 🎊 Was für eine schöne Vorstellung! Wir heißen dich herzlich auf **{server}** willkommen. Hier gibt es viel zu entdecken und tolle Leute kennenzulernen. Falls du dich irgendwo nicht zurechtfindest oder Fragen hast, melde dich einfach. Schön, dass du da bist! 💜",
+      "Willkommen {user}! 🎮 Awesome, dass du Teil von **{server}** werden möchtest! Hier findest du Gaming-Buddies, spannende Diskussionen und jede Menge Spaß. Lass uns gemeinsam zocken und eine gute Zeit haben! Game on! 🔥",
+      "Moin {user}! 🌟 Nice to meet you! **{server}** hat einen neuen Star bekommen! Deine Vorstellung klingt super interessant. Wir sind gespannt auf deine Geschichten und freuen uns auf viele coole Momente mit dir. Welcome to the crew! 🤝",
+      "Hey hey {user}! 🎯 **{server}** wird immer besser - jetzt wo du hier bist! Deine Vorstellung war richtig cool zu lesen. Hier wartet eine mega Community auf dich mit vielen Aktivitäten und Events. Lass uns zusammen abhängen! 😎",
+      "Hallo {user}! 🌈 Schön dich kennenzulernen! **{server}** ist wie eine große Familie und du gehörst jetzt dazu! 👨‍👩‍👧‍👦 Hier findest du immer jemanden zum Quatschen, Zocken oder einfach nur Chillen. Fühl dich wie zu Hause! ❤️",
+      "Hi {user}! ⚡ BOOM! Neue Power für **{server}**! Deine Vorstellung hat uns alle begeistert. Hier gibt's immer was los - von Gaming-Sessions bis zu coolen Talks. Spring rein und mach mit! Let's go! 🚀",
+      "Willkommen {user}! 🎨 **{server}** hat einen kreativen Kopf dazubekommen! Deine Interessen passen perfekt zu unserer vielfältigen Community. Hier kannst du dich voll entfalten und neue Leidenschaften entdecken. Wir freuen uns auf dich! ✨",
+      "Servus {user}! 🎪 Welcome to the show! **{server}** wird nie langweilig und mit dir wird's noch bunter! Deine Vorstellung war unterhaltsam zu lesen. Hier erlebst du täglich neue Abenteuer mit coolen Leuten. Enjoy the ride! 🎢",
+      "Hey {user}! 🌙 Schönen guten Tag! **{server}** freut sich riesig über dich! Du scheinst ein richtig sympathischer Mensch zu sein. Hier findest du Freunde fürs Leben und unvergessliche Momente. Welcome home! 🏠",
+      "Hallo {user}! 🔮 Magic happens - du bist jetzt Teil von **{server}**! Deine Vorstellung war wie ein Fenster in deine Welt. Wir sind neugierig auf mehr und freuen uns auf viele spannende Gespräche mit dir! ✨",
+      "Hi {user}! 🎊 Party time! **{server}** feiert deine Ankunft! Du bringst bestimmt frischen Wind in unsere Community. Hier ist immer was los und jeder Tag bringt neue Überraschungen. Let's celebrate! 🥳",
+      "Willkommen {user}! 🌺 **{server}** blüht auf mit dir! Deine Vorstellung war herzerwärmend zu lesen. Hier findest du eine offene und freundliche Atmosphäre, in der jeder willkommen ist. Genieße deine Zeit bei uns! 🌸",
+      "Moin {user}! 🎯 Volltreffer! **{server}** hat den perfekten neuen Member gefunden! Deine Hobbys und Interessen passen super zu uns. Hier kannst du richtig durchstarten und neue Challenges meistern! 🏆",
+      "Hey {user}! 🎮 Level up! Du hast erfolgreich **{server}** erreicht! Achievement unlocked: Awesome Community Member! Hier erwarten dich epische Quests, coole Raids und legendary Freundschaften! 🗡️",
+      "Hallo {user}! 🌟 Strahlend wie ein Stern erleuchtest du **{server}**! Deine Vorstellung war inspirierend. Hier teilen wir Träume, Ziele und haben einfach eine fantastische Zeit zusammen. Shine bright! ⭐",
+      "Hi {user}! 🔥 Hot arrival! **{server}** wird gerade noch cooler! Deine Energie spürt man schon durch deine Vorstellung. Hier brennt das Feuer der Leidenschaft für Gaming und Gemeinschaft. Welcome to the fire! 🌋",
+      "Willkommen {user}! 🌍 Ein neuer Entdecker betritt **{server}**! Deine Neugier und Offenheit sind genau das, was unsere Community ausmacht. Hier gibt es unendlich viel zu entdecken. Adventure awaits! 🗺️"
+    ],
+    "detectionKeywords": [
+      "hallo",
+      "hi",
+      "hey",
+      "moin",
+      "servus",
+      "guten tag",
+      "nabend",
+      "ich bin",
+      "mein name",
+      "heiße",
+      "vorstellen",
+      "stelle mich vor",
+      "neu hier",
+      "neues mitglied",
+      "gerade beigetreten",
+      "bin neu",
+      "freue mich",
+      "schön hier zu sein",
+      "grüße",
+      "liebe grüße",
+      "komme aus",
+      "wohne in",
+      "bin aus",
+      "lebe in",
+      "hobbys",
+      "interessen",
+      "mag gerne",
+      "spiele gerne",
+      "alter",
+      "jahre alt",
+      "bin",
+      "student",
+      "arbeite",
+      "discord",
+      "server",
+      "community",
+      "kennenlernen"
+    ],
+    "minimumWordCount": 3,
+    "cooldown": {
+      "enabled": true,
+      "duration": 60000,
+      "perUser": true
+    },
+    "xpBonus": {
+      "enabled": true,
+      "amount": 100,
+      "onlyFirstTime": true,
+      "message": "🎉 Bonus! Du hast {amount} XP für deine erste Vorstellung erhalten!",
+      "autoDelete": {
+        "enabled": true,
+        "delaySeconds": 10
+      }
+    }
+  }
+}

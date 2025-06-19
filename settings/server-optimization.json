@@ -1,0 +1,44 @@
+{
+  "reports": {
+    "1203994020779532348": {
+      "guildId": "1203994020779532348",
+      "guildName": "Gaming Cave",
+      "timestamp": 1750336935126,
+      "scores": {
+        "structure": 100,
+        "activity": 70,
+        "security": 100,
+        "engagement": 60,
+        "performance": 65
+      },
+      "recommendations": [
+        {
+          "type": "performance",
+          "priority": "low",
+          "title": "Rollen-Anzahl reduzieren",
+          "description": "Server hat 72 Rollen. 68 Bot-Feature-Rollen (werden ignoriert): ❎Xbox, Valorant Silver 1, 🏆 Server-Legende, +65 weitere",
+          "action": "cleanup_roles",
+          "details": {
+            "totalRoles": 72,
+            "botFeatureRoles": 68,
+            "unusedRoles": [],
+            "duplicateRoles": [],
+            "recommendation": "Überprüfe Rollen auf Duplikate"
+          }
+        }
+      ],
+      "metrics": {
+        "memberCount": 5,
+        "channelCount": 31,
+        "roleCount": 72,
+        "boostLevel": 0,
+        "boostCount": 0,
+        "verificationLevel": 1,
+        "createdAt": 1707124943681
+      },
+      "optimizationPotential": 21,
+      "overallScore": 79
+    }
+  },
+  "lastUpdated": 1750336935131
+}

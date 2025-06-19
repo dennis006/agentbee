@@ -1,0 +1,1010 @@
+[
+  {
+    "id": "1749938401735",
+    "timestamp": "2025-06-14T22:00:01.735Z",
+    "action": "daily_reset",
+    "targetUser": {
+      "id": "system",
+      "username": "System",
+      "displayName": "Daily Reset System",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Täglicher Reset: 0 Warnungen von 0 Usern zurückgesetzt",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "resetStats": {
+      "totalWarnings": 0,
+      "usersWithWarnings": 0,
+      "date": "Sat Jun 14 2025"
+    }
+  },
+  {
+    "id": "1749737589676",
+    "timestamp": "2025-06-12T14:13:09.676Z",
+    "action": "manual_reset",
+    "targetUser": {
+      "id": "admin",
+      "username": "Admin",
+      "displayName": "Dashboard Admin",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Manueller Reset via Dashboard: Keine aktiven Warnungen vorhanden (Reset-Datum aktualisiert)",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "manualReset": true,
+    "totalWarnings": 0,
+    "usersWithWarnings": 0,
+    "noWarnings": true
+  },
+  {
+    "id": "1749675015541",
+    "timestamp": "2025-06-11T20:50:15.541Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 4,
+    "content": "8"
+  },
+  {
+    "id": "1749675014780",
+    "timestamp": "2025-06-11T20:50:14.780Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 5,
+    "content": "9"
+  },
+  {
+    "id": "1749675014751",
+    "timestamp": "2025-06-11T20:50:14.751Z",
+    "action": "mute",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "3 Verwarnungen erreicht",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "duration": 7200000,
+    "formattedDuration": "2 Stunden",
+    "warningCount": 4
+  },
+  {
+    "id": "1749675014330",
+    "timestamp": "2025-06-11T20:50:14.330Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 4,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749675013957",
+    "timestamp": "2025-06-11T20:50:13.957Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 3,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674996818",
+    "timestamp": "2025-06-11T20:49:56.818Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 4,
+    "content": "3"
+  },
+  {
+    "id": "1749674996544",
+    "timestamp": "2025-06-11T20:49:56.544Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 5,
+    "content": "4"
+  },
+  {
+    "id": "1749674996355",
+    "timestamp": "2025-06-11T20:49:56.355Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 2,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674996258",
+    "timestamp": "2025-06-11T20:49:56.258Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 1,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674955833",
+    "timestamp": "2025-06-11T20:49:15.833Z",
+    "action": "unmute",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Manually unmuted via dashboard",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "unmuteReason": "Dashboard Admin Action"
+  },
+  {
+    "id": "1749674581624",
+    "timestamp": "2025-06-11T20:43:01.624Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 7 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 7,
+    "content": "s"
+  },
+  {
+    "id": "1749674581318",
+    "timestamp": "2025-06-11T20:43:01.318Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 6,
+    "content": "ds"
+  },
+  {
+    "id": "1749674581216",
+    "timestamp": "2025-06-11T20:43:01.216Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 7 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 14,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674580949",
+    "timestamp": "2025-06-11T20:43:00.949Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 13,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674580923",
+    "timestamp": "2025-06-11T20:43:00.923Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 6,
+    "content": "g"
+  },
+  {
+    "id": "1749674580508",
+    "timestamp": "2025-06-11T20:43:00.508Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 12,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674575193",
+    "timestamp": "2025-06-11T20:42:55.193Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 4,
+    "content": "fd"
+  },
+  {
+    "id": "1749674574953",
+    "timestamp": "2025-06-11T20:42:54.953Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 11,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674574783",
+    "timestamp": "2025-06-11T20:42:54.783Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 5,
+    "content": "g"
+  },
+  {
+    "id": "1749674574477",
+    "timestamp": "2025-06-11T20:42:54.477Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 6,
+    "content": "fd"
+  },
+  {
+    "id": "1749674574472",
+    "timestamp": "2025-06-11T20:42:54.472Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 10,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674574070",
+    "timestamp": "2025-06-11T20:42:54.070Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 9,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674568604",
+    "timestamp": "2025-06-11T20:42:48.604Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 4,
+    "content": "ggg"
+  },
+  {
+    "id": "1749674568227",
+    "timestamp": "2025-06-11T20:42:48.227Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 8,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674550241",
+    "timestamp": "2025-06-11T20:42:30.241Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 8 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 8,
+    "content": "f"
+  },
+  {
+    "id": "1749674549761",
+    "timestamp": "2025-06-11T20:42:29.761Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 8 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 7,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674538247",
+    "timestamp": "2025-06-11T20:42:18.247Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 5,
+    "content": "fffd"
+  },
+  {
+    "id": "1749674537880",
+    "timestamp": "2025-06-11T20:42:17.880Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 6,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674513547",
+    "timestamp": "2025-06-11T20:41:53.547Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 7 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 7,
+    "content": "fdfdf"
+  },
+  {
+    "id": "1749674513220",
+    "timestamp": "2025-06-11T20:41:53.220Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 7 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 5,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674501199",
+    "timestamp": "2025-06-11T20:41:41.199Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 5,
+    "content": "fddf"
+  },
+  {
+    "id": "1749674500791",
+    "timestamp": "2025-06-11T20:41:40.791Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 5 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 4,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674497369",
+    "timestamp": "2025-06-11T20:41:37.369Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 4,
+    "content": "df"
+  },
+  {
+    "id": "1749674496565",
+    "timestamp": "2025-06-11T20:41:36.565Z",
+    "action": "mute",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "3 Verwarnungen erreicht",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "duration": 1800000,
+    "formattedDuration": "30 Minuten",
+    "warningCount": 3
+  },
+  {
+    "id": "1749674495844",
+    "timestamp": "2025-06-11T20:41:35.844Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 4 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 3,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674495373",
+    "timestamp": "2025-06-11T20:41:35.373Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "message_spam",
+    "messageCount": 6,
+    "content": "fd"
+  },
+  {
+    "id": "1749674495084",
+    "timestamp": "2025-06-11T20:41:35.084Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: 6 Nachrichten in 3 Sekunden",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 2,
+    "maxWarnings": 3
+  },
+  {
+    "id": "1749674490357",
+    "timestamp": "2025-06-11T20:41:30.357Z",
+    "action": "spam_delete",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "system",
+      "username": "System",
+      "displayName": "AutoMod System",
+      "avatarURL": null
+    },
+    "reason": "Spam erkannt: Identische Nachrichten wiederholt",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "spamType": "identical_spam",
+    "messageCount": 2,
+    "content": "test"
+  },
+  {
+    "id": "1749674489948",
+    "timestamp": "2025-06-11T20:41:29.948Z",
+    "action": "warn",
+    "targetUser": {
+      "id": "1253944624695869534",
+      "username": "xmethface",
+      "displayName": "Ichbinwiederda",
+      "avatarURL": null
+    },
+    "moderator": {
+      "id": "1325057674169286749",
+      "username": "AgentBee 🐝",
+      "displayName": "AgentBee 🐝",
+      "avatarURL": "https://cdn.discordapp.com/avatars/1325057674169286749/fe10ee1a1eaa964374fe3019f8df3dbc.webp"
+    },
+    "reason": "Spam erkannt: Identische Nachrichten wiederholt",
+    "guild": {
+      "id": "1203994020779532348",
+      "name": "Gaming Cave"
+    },
+    "warningCount": 1,
+    "maxWarnings": 3
+  }
+]

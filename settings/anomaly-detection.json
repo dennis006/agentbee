@@ -1,0 +1,118 @@
+{
+  "alerts": [
+    {
+      "type": "channel_flooding",
+      "severity": "medium",
+      "title": "🌊 Channel-Flooding erkannt",
+      "description": "37 Nachrichten in #willkommen in 1 Minute",
+      "channel": "willkommen",
+      "value": 37,
+      "timestamp": 1750329742352,
+      "guildId": "1203994020779532348"
+    },
+    {
+      "type": "channel_flooding",
+      "severity": "medium",
+      "title": "🌊 Channel-Flooding erkannt",
+      "description": "36 Nachrichten in #willkommen in 1 Minute",
+      "channel": "willkommen",
+      "value": 36,
+      "timestamp": 1750329682339,
+      "guildId": "1203994020779532348"
+    },
+    {
+      "type": "channel_flooding",
+      "severity": "medium",
+      "title": "🌊 Channel-Flooding erkannt",
+      "description": "37 Nachrichten in #leaderboard in 1 Minute",
+      "channel": "leaderboard",
+      "value": 37,
+      "timestamp": 1750329622330,
+      "guildId": "1203994020779532348"
+    },
+    {
+      "type": "channel_flooding",
+      "severity": "medium",
+      "title": "🌊 Channel-Flooding erkannt",
+      "description": "39 Nachrichten in #willkommen in 1 Minute",
+      "channel": "willkommen",
+      "value": 39,
+      "timestamp": 1750329562316,
+      "guildId": "1203994020779532348"
+    },
+    {
+      "type": "channel_flooding",
+      "severity": "medium",
+      "title": "🌊 Channel-Flooding erkannt",
+      "description": "34 Nachrichten in #rules in 1 Minute",
+      "channel": "rules",
+      "value": 34,
+      "timestamp": 1750329502314,
+      "guildId": "1203994020779532348"
+    }
+  ],
+  "patterns": {},
+  "settings": {
+    "enabledDetections": [
+      "rapidJoins",
+      "massLeaves",
+      "spamMessages",
+      "suspiciousActivity",
+      "unusualVoiceActivity",
+      "channelFlooding",
+      "botActivity"
+    ],
+    "alertChannels": {},
+    "autoActions": {
+      "enabled": false,
+      "quarantineRole": null,
+      "lockChannels": false,
+      "notifyModerators": true
+    },
+    "sensitivity": "medium",
+    "learningMode": true,
+    "thresholds": {
+      "rapidJoins": {
+        "count": 10,
+        "timeWindow": 300000,
+        "suspicionThreshold": 0.6
+      },
+      "massLeaves": {
+        "count": 15,
+        "timeWindow": 600000
+      },
+      "spamMessages": {
+        "count": 20,
+        "timeWindow": 60000
+      },
+      "channelFlooding": {
+        "messagesPerMinute": 30
+      },
+      "voiceActivity": {
+        "changesPerMinute": 10
+      }
+    },
+    "notifications": {
+      "discord": true,
+      "email": false,
+      "webhook": null
+    }
+  },
+  "messageStats": {
+    "1203994020779532348": {
+      "totalMessages": 4,
+      "recentMessages": 1,
+      "lastReset": 1750339608702
+    }
+  },
+  "voiceStateChanges": {
+    "1203994020779532348": [
+      {
+        "userId": "306523854233403393",
+        "oldChannelId": null,
+        "newChannelId": "1382473264839917788",
+        "timestamp": 1750339628881
+      }
+    ]
+  }
+}

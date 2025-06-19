@@ -1,0 +1,51 @@
+{
+  "enabled": true,
+  "categoryId": "",
+  "supportRoles": [],
+  "staffRoles": [
+    "Admin"
+  ],
+  "autoClose": {
+    "enabled": true,
+    "inactivityTime": 86400000,
+    "warningTime": 7200000
+  },
+  "embed": {
+    "title": "🎫 Support Ticket System",
+    "description": "Brauchst du Hilfe? Erstelle ein Ticket und unser Team wird dir helfen!",
+    "color": "0x2ECC71",
+    "footer": "Klicke auf einen Button um ein Ticket zu erstellen"
+  },
+  "buttons": [
+    {
+      "id": "general_support",
+      "label": "Allgemeine Hilfe",
+      "emoji": "❓",
+      "style": "PRIMARY"
+    },
+    {
+      "id": "technical_support",
+      "label": "Technischer Support",
+      "emoji": "🔧",
+      "style": "SECONDARY"
+    },
+    {
+      "id": "report_user",
+      "label": "User Melden",
+      "emoji": "⚠️",
+      "style": "DANGER"
+    }
+  ],
+  "transcripts": {
+    "enabled": true,
+    "channelId": ""
+  },
+  "notifications": {
+    "newTicket": {
+      "enabled": true,
+      "channelId": "",
+      "mention": true
+    }
+  },
+  "_loadTimestamp": "2025-06-15T11:14:20.255Z"
+}

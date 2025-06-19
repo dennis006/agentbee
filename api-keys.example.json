@@ -1,0 +1,20 @@
+{
+  "discord": {
+    "token": "YOUR_DISCORD_BOT_TOKEN_HERE",
+    "clientId": "YOUR_DISCORD_CLIENT_ID_HERE",
+    "clientSecret": "YOUR_DISCORD_CLIENT_SECRET_HERE"
+  },
+  "openai": {
+    "apiKey": "YOUR_OPENAI_API_KEY_HERE"
+  },
+  "twitch": {
+    "clientId": "YOUR_TWITCH_CLIENT_ID_HERE",
+    "clientSecret": "YOUR_TWITCH_CLIENT_SECRET_HERE"
+  },
+  "valorant": {
+    "apiKey": "YOUR_VALORANT_API_KEY_HERE"
+  },
+  "youtube": {
+    "apiKey": "YOUR_YOUTUBE_API_KEY_HERE"
+  }
+} 
