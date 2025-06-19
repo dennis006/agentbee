@@ -969,7 +969,7 @@ const Music: React.FC = () => {
 
   const leaveVoiceChannel = async () => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -979,16 +979,16 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        success('👋 Voice-Channel verlassen');
+        showSuccess('Voice Channel', '👋 Voice-Channel verlassen');
       }
     } catch (err) {
-      error('❌ Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
   
   const updateVolume = async (newVolume: number) => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -1002,13 +1002,13 @@ const Music: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setQueue(prev => ({ ...prev, volume: newVolume }));
-        success(`🔊 ${data.message}`);
+        showSuccess('Lautstärke', `🔊 ${data.message}`);
       } else {
         const errorData = await response.json();
-        error(errorData.error || '❌ Fehler beim Ändern der Lautstärke');
+        showError('Lautstärke Fehler', errorData.error || '❌ Fehler beim Ändern der Lautstärke');
       }
     } catch (err) {
-      error('❌ Netzwerkfehler beim Ändern der Lautstärke');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler beim Ändern der Lautstärke');
     }
   };
 
@@ -1031,7 +1031,7 @@ const Music: React.FC = () => {
 
   const createDJRole = async () => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -1042,20 +1042,20 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(`🎭 ${data.message}`);
+        showSuccess('DJ Rolle', `🎭 ${data.message}`);
         loadData(); // Reload roles
       } else {
         const errorData = await response.json();
-        error(errorData.error || '❌ Fehler beim Erstellen der DJ-Rolle');
+        showError('DJ Rolle Fehler', errorData.error || '❌ Fehler beim Erstellen der DJ-Rolle');
       }
     } catch (err) {
-      error('❌ Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
   const testPopularSong = async () => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -1066,20 +1066,20 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(`🧪 ${data.message}`);
+        showSuccess('Test Song', `🧪 ${data.message}`);
         loadData(); // Reload queue
       } else {
         const errorData = await response.json();
-        error(errorData.error || '❌ Test-Song fehlgeschlagen');
+        showError('Test Song Fehler', errorData.error || '❌ Test-Song fehlgeschlagen');
       }
     } catch (err) {
-      error('❌ Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
   const reconnectVoice = async () => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -1091,7 +1091,7 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(`🔄 ${data.message}`);
+        showSuccess('Voice Reconnect', `🔄 ${data.message}`);
         // Reload queue and progress after reconnect
         setTimeout(() => {
           updateProgress();
@@ -1099,10 +1099,10 @@ const Music: React.FC = () => {
         }, 2000);
       } else {
         const errorData = await response.json();
-        error(errorData.error || '❌ Voice-Reconnect fehlgeschlagen');
+        showError('Voice Reconnect Fehler', errorData.error || '❌ Voice-Reconnect fehlgeschlagen');
       }
     } catch (err) {
-      error('❌ Netzwerkfehler beim Voice-Reconnect');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler beim Voice-Reconnect');
     } finally {
       setSaving(false);
     }
