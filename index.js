@@ -1173,15 +1173,26 @@ app.post('/api/bot/restart', (req, res) => {
                     
                     // 3. Re-login
                     currentBotStatus.status = 'starting';
+                    console.log('🚀 Starting bot re-login process...');
                     await client.login(apiKeys.discord.bot_token);
                     console.log('✅ Bot successfully restarted in Railway');
                     
-                    // 4. Force status update nach restart
-                    setTimeout(() => {
-                        updateBotStatus();
-                        sendStatusToAPI();
-                        console.log('🟢 Status nach Railway-Restart force-updated');
-                    }, 2000);
+                    // 4. Warte auf ready Event und dann force status update
+                    const waitForReady = () => {
+                        if (client.isReady() && client.user) {
+                            console.log('🟢 Bot is confirmed ready after restart');
+                            currentBotStatus.status = 'online';
+                            currentBotStatus.isRunning = true;
+                            updateBotStatus();
+                            sendStatusToAPI();
+                            console.log('🟢 Status nach Railway-Restart force-updated');
+                        } else {
+                            console.log('⏳ Waiting for bot to be ready...');
+                            setTimeout(waitForReady, 1000);
+                        }
+                    };
+                    
+                    setTimeout(waitForReady, 1000);
                     
                 } catch (error) {
                     console.error('❌ Railway Safe Restart failed:', error);
@@ -2928,7 +2939,7 @@ async function logModerationAction(guild, action, user, moderator, reason, extra
 // Twitch-System Setup
 let twitchAPI = null;
 
-// Event: Bot ist bereit
+// Event: Bot ist bereit (initial startup)
 client.once(Events.ClientReady, async readyClient => {
     console.log(`✅ Bot ist bereit! Angemeldet als ${readyClient.user.tag}`);
     
@@ -3174,6 +3185,21 @@ try {
             console.error('❌ Fehler beim Bot-Setup:', error);
         }
     }, 3000);
+});
+
+// Event: Bot reconnected (für Railway Restart Fix)
+client.on(Events.ClientReady, async readyClient => {
+    // Nur bei Reconnect-Events (nicht initial startup)
+    if (currentBotStatus.status === 'restarting' || currentBotStatus.status === 'starting') {
+        console.log(`🔄 Bot reconnected nach Restart: ${readyClient.user.tag}`);
+        
+        // Sofortiger Status-Update nach Reconnect
+        currentBotStatus.status = 'online';
+        currentBotStatus.isRunning = true;
+        updateBotStatus();
+        sendStatusToAPI();
+        console.log('🟢 Bot Status nach Reconnect aktualisiert');
+    }
 });
 
 // Prüfe Bot Permissions
@@ -5140,9 +5166,9 @@ function sendStatusToAPI() {
     req.end();
 }
 
-// Bot Status direkt updaten
+// Bot Status direkt updaten mit besserer Restart-Erkennung
 function updateBotStatus() {
-    if (client.isReady()) {
+    if (client.isReady() && client.user) {
         // Berechne Uptime
         let uptimeString = '0s';
         if (currentBotStatus.startTime) {
@@ -5163,6 +5189,7 @@ function updateBotStatus() {
             }
         }
         
+        const previousStatus = currentBotStatus.status;
         currentBotStatus = {
             isRunning: true,
             status: 'online',
@@ -5171,10 +5198,25 @@ function updateBotStatus() {
             uptime: uptimeString,
             startTime: currentBotStatus.startTime || Date.now()
         };
+        
+        // Log Status-Änderungen
+        if (previousStatus !== 'online') {
+            console.log(`🟢 Bot Status changed: ${previousStatus} → online`);
+        }
     } else {
-        // Bot ist nicht bereit
-        currentBotStatus.status = 'offline';
-        currentBotStatus.isRunning = false;
+        // Prüfe ob Bot im Restart-Modus ist
+        if (currentBotStatus.status === 'restarting') {
+            // Behalte restarting Status bei, bis Bot wirklich ready ist
+        } else {
+            // Bot ist nicht bereit - setze auf offline
+            const previousStatus = currentBotStatus.status;
+            currentBotStatus.status = 'offline';
+            currentBotStatus.isRunning = false;
+            
+            if (previousStatus !== 'offline') {
+                console.log(`🔴 Bot Status changed: ${previousStatus} → offline`);
+            }
+        }
     }
 }
 
