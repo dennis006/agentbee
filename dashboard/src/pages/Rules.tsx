@@ -44,9 +44,12 @@ interface Rules {
 }
 
 const Rules = () => {
-  const { toasts, success, error, removeToast } = useToast()
+  const { toasts, showSuccess, showError, removeToast } = useToast()
   const [emojiPickerOpen, setEmojiPickerOpen] = useState<string | null>(null)
   const [currentRuleIndex, setCurrentRuleIndex] = useState<number | null>(null)
+  
+  // API Base URL
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   
   const [rules, setRules] = useState<Rules>({
     title: "📜 SERVERREGELN",
@@ -84,7 +87,7 @@ const Rules = () => {
         updatedRules = rules;
       }
 
-      const response = await fetch('/api/rules', {
+      const response = await fetch(`${apiUrl}/api/rules`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,22 +100,24 @@ const Rules = () => {
         setRulesJson(JSON.stringify(updatedRules, null, 2));
         
         // Trigger automatisches Neu-Posten im Bot
-        const repostResponse = await fetch('/api/rules/repost', {
+        const repostResponse = await fetch(`${apiUrl}/api/rules/repost`, {
           method: 'POST'
         });
         
         if (repostResponse.ok) {
           const result = await repostResponse.json();
-          success(`🎉 Regeln gespeichert und automatisch in ${result.repostedCount} Server(n) neu gepostet!`);
+          showSuccess('Regeln gespeichert!', `Automatisch in ${result.repostedCount} Server(n) neu gepostet!`);
         } else {
-          success('✅ Regeln gespeichert! (Neu-Posten fehlgeschlagen - Bot eventuell offline)');
+          showSuccess('✅ Regeln gespeichert!', 'Neu-Posten fehlgeschlagen - Bot eventuell offline');
         }
       } else {
-        error('❌ Fehler beim Speichern der Regeln');
+        showError('Speichern fehlgeschlagen', 'Fehler beim Speichern der Regeln');
       }
     } catch (error) {
-      console.error('Fehler beim Speichern:', error);
-      error('❌ Ungültiges JSON oder Netzwerkfehler');
+      if (import.meta.env.DEV) {
+        console.error('Fehler beim Speichern:', error);
+      }
+      showError('Speichern fehlgeschlagen', 'Ungültiges JSON oder Netzwerkfehler');
     }
   };
 
@@ -143,14 +148,17 @@ const Rules = () => {
 
   const loadRules = async () => {
     try {
-      const response = await fetch('/api/rules');
+      const response = await fetch(`${apiUrl}/api/rules`);
       if (response.ok) {
         const data = await response.json();
         setRules(data);
         setRulesJson(JSON.stringify(data, null, 2));
       }
     } catch (error) {
-      console.error('Fehler beim Laden der Regeln:', error);
+      // Silent error handling in production
+      if (import.meta.env.DEV) {
+        console.error('Fehler beim Laden der Regeln:', error);
+      }
     }
   };
 
