@@ -162,4 +162,23 @@ export const ENV_INFO = {
 };
 
 // Log Environment Info beim Import
-console.log('🔧 API Configuration:', ENV_INFO); 
+console.log('🔧 API Configuration:', ENV_INFO);
+
+// GLOBAL FETCH OVERRIDE - Automatically redirect relative /api calls to Railway
+const originalFetch = window.fetch;
+window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    // Convert input to string to check if it's a relative API call
+    const url = typeof input === 'string' ? input : input.toString();
+    
+    // If it's a relative API call, redirect to Railway
+    if (url.startsWith('/api/')) {
+        const railwayUrl = `${API_BASE_URL}${url}`;
+        if (import.meta.env.DEV) {
+            console.log(`🔀 Redirecting ${url} → ${railwayUrl}`);
+        }
+        return originalFetch(railwayUrl, init);
+    }
+    
+    // Otherwise, use normal fetch
+    return originalFetch(input, init);
+}; 

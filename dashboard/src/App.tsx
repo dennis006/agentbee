@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast'
 import { Home, FileText, BarChart3, Settings as SettingsIcon, Zap, Heart, Star, Play, Shield, Users, ChevronDown, Target, Key, Bot, Ticket, Activity, Gift, Music, LogOut, User, Server } from 'lucide-react'
 import AuthProvider, { useAuth } from './contexts/AuthContext'
+// Import API library to activate global fetch override
+import './lib/api'
 import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
