@@ -1110,12 +1110,12 @@ const Music: React.FC = () => {
 
   const postInteractivePanel = async () => {
     if (!guildId) {
-      error('❌ Keine Guild-ID verfügbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
     if (!settings.songRequests.interactivePanel.channelId) {
-      error('❌ Kein Channel für Interactive Panel ausgewählt');
+      showError('Channel Fehler', '❌ Kein Channel für Interactive Panel ausgewählt');
       return;
     }
 
@@ -1129,7 +1129,7 @@ const Music: React.FC = () => {
       });
 
       if (!saveResponse.ok) {
-        error('❌ Fehler beim Speichern der Settings');
+        showError('Settings Fehler', '❌ Fehler beim Speichern der Settings');
         return;
       }
 
@@ -1142,15 +1142,15 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(`🎵 ${data.message}`);
+        showSuccess('Interactive Panel', `🎵 ${data.message}`);
         loadData(); // Reload settings to get message ID
       } else {
         const errorData = await response.json();
-        error(errorData.error || '❌ Fehler beim Posten des Interactive Panels');
+        showError('Panel Fehler', errorData.error || '❌ Fehler beim Posten des Interactive Panels');
       }
     } catch (err) {
       console.error('Interactive Panel Post Error:', err);
-      error('❌ Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
@@ -1170,7 +1170,7 @@ const Music: React.FC = () => {
       }
     } catch (err) {
       console.error('Fehler beim Laden der Radio-Sender:', err);
-      error('Fehler beim Laden der Radio-Sender');
+      showError('Radio Stations', 'Fehler beim Laden der Radio-Sender');
     }
   };
 
@@ -1193,7 +1193,7 @@ const Music: React.FC = () => {
 
   const playRadioStation = async (stationId: string) => {
     if (!guildId) {
-      error('Keine Guild-ID verfügbar');
+      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
       return;
     }
 
@@ -1210,15 +1210,15 @@ const Music: React.FC = () => {
       const data = await response.json();
       
       if (response.ok) {
-        success(data.message);
+        showSuccess('Radio', data.message);
         await loadRadioStatus();
         await loadData(); // Aktualisiere Queue
       } else {
-        error(data.error || 'Fehler beim Starten des Radio-Senders');
+        showError('Radio Fehler', data.error || 'Fehler beim Starten des Radio-Senders');
       }
     } catch (err) {
       console.error('Fehler beim Starten des Radio-Senders:', err);
-      error('Fehler beim Starten des Radio-Senders');
+      showError('Radio Fehler', 'Fehler beim Starten des Radio-Senders');
     } finally {
       setRadioLoading(false);
     }
