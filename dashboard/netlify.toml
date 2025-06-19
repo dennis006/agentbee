@@ -1,11 +1,10 @@
 [build]
   base = "dashboard/"
-  command = "npm ci --include=optional && npm run build"
+  command = "npm install && npm run build"
   publish = "dist/"
 
 [build.environment]
   NODE_VERSION = "18"
-  NPM_CONFIG_OPTIONAL = "true"
 
 # SPA redirects - alle Routen zu index.html für React Router
 [[redirects]]
