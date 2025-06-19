@@ -573,7 +573,7 @@ function createIntroductionButtons(settings, context = {}) {
                 buttonsToShow.unshift({
                     label: '📊 Dashboard',
                     style: 'link',
-                    url: 'http://localhost:5173',
+                    url: process.env.FRONTEND_URL || 'http://localhost:5173',
                     emoji: '📊'
                 });
             }

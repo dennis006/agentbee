@@ -1974,7 +1974,9 @@ let xpSystem;
 const rulesMessages = new Map();
 
 // API Server URL
-const API_SERVER_URL = 'http://localhost:3001';
+const API_SERVER_URL = process.env.NODE_ENV === 'production' 
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'agentbee.up.railway.app'}` 
+    : 'http://localhost:3001';
 
 // OpenAI Client initialisieren
 let openai = null;
@@ -4179,7 +4181,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setDescription('Klicke auf den Link unten, um mit der Verifizierung zu beginnen.')
                 .addFields({
                     name: '🔗 Verifizierungs-Link',
-                    value: '[➤ Jetzt verifizieren (Klick hier)](http://localhost:5173/verify)',
+                    value: `[➤ Jetzt verifizieren (Klick hier)](${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify)`,
                     inline: false
                 })
                 .setColor(0x00FF7F)
@@ -4201,7 +4203,7 @@ client.on(Events.InteractionCreate, async interaction => {
             
             // Fallback-Antwort
             await interaction.reply({
-                content: '🚀 **Starte deine Verifizierung hier:**\nhttp://localhost:5173/verify',
+                content: `🚀 **Starte deine Verifizierung hier:**\n${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify`,
                 ephemeral: true
             }).catch(console.error);
         }
@@ -5115,14 +5117,15 @@ app.post('/api/auth/discord/token', async (req, res) => {
         }, 10 * 60 * 1000);
 
         // Bestimme die richtige Redirect-URI
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const allowedRedirectUris = [
-            'http://localhost:5173/verify',    // Für Verification
-            'http://localhost:5173/login'      // Für Dashboard-Login
+            `${frontendUrl}/verify`,    // Für Verification
+            `${frontendUrl}/login`      // Für Dashboard-Login
         ];
         
         const finalRedirectUri = redirectUri && allowedRedirectUris.includes(redirectUri) 
             ? redirectUri 
-            : 'http://localhost:5173/verify'; // Default fallback
+            : `${frontendUrl}/verify`; // Default fallback
 
         console.log('🔑 Discord Token Exchange - Code received:', code.substring(0, 10) + '...');
         console.log('🔀 Using redirect URI:', finalRedirectUri);
