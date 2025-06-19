@@ -1728,66 +1728,156 @@ async function playMusic(guildId, song) {
             }
         }
         
-        // Methode 3: ytdl-core (Nur als letzter Ausweg, mit verbesserter Konfiguration)
+        // Methode 3: Erweiterte yt-dlp Versuche mit verschiedenen Optionen
         if (!streamCreated) {
-            try {
-                console.log('🔄 Letzter Ausweg: Verwende ytdl-core mit speziellen Optionen...');
-                
-                const ytdl = require('@distube/ytdl-core');
-                
-                if (ytdl.validateURL(songData.url)) {
-                    // Verwende spezielle Optionen gegen Bot-Detection
-                    stream = ytdl(songData.url, {
-                        filter: 'audioonly',
-                        quality: 'lowestaudio', // Niedrigere Qualität für bessere Kompatibilität
-                        highWaterMark: 1 << 25,
-                        requestOptions: {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                'Accept-Language': 'en-US,en;q=0.9'
-                            }
-                        }
+            console.log('🔄 Erweiterte yt-dlp Versuche mit verschiedenen Formaten...');
+            
+            // Verschiedene yt-dlp Kommando-Varianten ausprobieren
+            const ytdlpCommands = [
+                `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${songData.url}"`,
+                `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${songData.url}"`,
+                `yt-dlp --format-sort "+size,+br" --get-url "${songData.url}"`,
+                `yt-dlp -f "136/135/134/133/160" --get-url "${songData.url}"`
+            ];
+            
+            for (let i = 0; i < ytdlpCommands.length && !streamCreated; i++) {
+                try {
+                    console.log(`🚀 yt-dlp Versuch ${i + 1}/${ytdlpCommands.length}...`);
+                    
+                    const { stdout, stderr } = await execAsync(ytdlpCommands[i], {
+                        timeout: 12000 // 12 Sekunden Timeout
                     });
                     
-                    console.log('✅ ytdl-core Stream mit Anti-Bot Optionen erstellt');
-                    streamCreated = true;
-                } else {
-                    throw new Error('URL nicht gültig für ytdl-core');
+                    if (stdout && stdout.trim()) {
+                        const streamUrl = stdout.trim();
+                        if (streamUrl.startsWith('http')) {
+                            console.log(`📡 Erstelle Stream von yt-dlp URL (Versuch ${i + 1})...`);
+                            
+                            const fetch = require('node-fetch');
+                            const response = await fetch(streamUrl, {
+                                timeout: 8000,
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                }
+                            });
+                            
+                            if (response.ok) {
+                                stream = response.body;
+                                streamCreated = true;
+                                console.log(`✅ yt-dlp Stream erfolgreich erstellt (Versuch ${i + 1})`);
+                                break;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log(`⚠️ yt-dlp Versuch ${i + 1} fehlgeschlagen: ${error.message}`);
+                    if (i < ytdlpCommands.length - 1) {
+                        console.log('⏳ Warte 1 Sekunde vor nächstem Versuch...');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
                 }
-            } catch (ytdlError) {
-                console.log('❌ ytdl-core fehlgeschlagen:', ytdlError.message);
             }
         }
         
-        // Methode 4: Suche alternative URLs (letzter Ausweg)
+        // Methode 4: Suche alternative URLs und versuche verschiedene Quellen
         if (!streamCreated) {
             console.log('🔄 Suche nach alternativen URLs...');
             
-            const searchResults = await searchYouTube(songData.title);
+            const searchResults = await searchYouTube(songData.title + ' ' + (songData.author || ''));
             if (searchResults.length > 0) {
-                const altUrl = searchResults[0].url;
-                console.log(`🔄 Alternative URL: ${altUrl}`);
-                
-                try {
-                    const streamUrl = await getStreamWithYtDlp(altUrl);
-                    if (streamUrl) {
-                        const fetch = require('node-fetch');
-                        const response = await fetch(streamUrl);
+                // Versuche die ersten 3 Suchergebnisse
+                for (let i = 0; i < Math.min(3, searchResults.length) && !streamCreated; i++) {
+                    const altResult = searchResults[i];
+                    console.log(`🔄 Alternative URL ${i + 1}: ${altResult.title}`);
+                    
+                    try {
+                        // Erste Methode: yt-dlp
+                        const streamUrl = await getStreamWithYtDlp(altResult.url);
+                        if (streamUrl) {
+                            const fetch = require('node-fetch');
+                            const response = await fetch(streamUrl, {
+                                timeout: 6000,
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                }
+                            });
+                            
+                            if (response.ok) {
+                                stream = response.body;
+                                streamCreated = true;
+                                console.log(`✅ Alternative URL ${i + 1} mit yt-dlp erfolgreich`);
+                                // Update songData mit alternativen Informationen
+                                songData.title = altResult.title;
+                                songData.url = altResult.url;
+                                songData.author = altResult.author;
+                                break;
+                            }
+                        }
+                    } catch (ytdlpError) {
+                        console.log(`⚠️ yt-dlp für Alternative ${i + 1} fehlgeschlagen: ${ytdlpError.message}`);
                         
-                        if (response.ok) {
-                            stream = response.body;
-                            streamCreated = true;
-                            console.log('✅ Alternative URL mit yt-dlp erfolgreich');
+                        // Zweite Methode: play-dl für alternative URL
+                        try {
+                            const normalizedAltUrl = normalizeYouTubeURL(altResult.url);
+                            const altStreamValidation = playdl.yt_validate(normalizedAltUrl);
+                            
+                            if (altStreamValidation === 'video') {
+                                const altStreamResult = await playdl.stream(normalizedAltUrl, {
+                                    quality: 2,
+                                    type: 'audio'
+                                });
+                                
+                                if (altStreamResult && altStreamResult.stream) {
+                                    stream = altStreamResult.stream;
+                                    streamCreated = true;
+                                    console.log(`✅ Alternative URL ${i + 1} mit play-dl erfolgreich`);
+                                    // Update songData
+                                    songData.title = altResult.title;
+                                    songData.url = altResult.url;
+                                    songData.author = altResult.author;
+                                    break;
+                                }
+                            }
+                        } catch (playdlError) {
+                            console.log(`⚠️ play-dl für Alternative ${i + 1} fehlgeschlagen: ${playdlError.message}`);
                         }
                     }
-                } catch (altError) {
-                    console.log('❌ Alternative URL fehlgeschlagen:', altError.message);
+                    
+                    if (i < Math.min(3, searchResults.length) - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
                 }
             }
         }
         
         if (!streamCreated) {
-            throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert wahrscheinlich Bot-Zugriff');
+            console.error('❌ Alle Stream-Methoden fehlgeschlagen');
+            
+            // Letzter Versuch: Verwende einen generischen HTTP-Stream falls URL eine direkte Audio-URL ist
+            if (songData.url.match(/\.(mp3|m4a|ogg|webm)(\?.*)?$/i)) {
+                try {
+                    console.log('🎧 Letzter Versuch: Direkter Audio-Stream...');
+                    const fetch = require('node-fetch');
+                    const response = await fetch(songData.url, {
+                        timeout: 5000,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                        }
+                    });
+                    
+                    if (response.ok && response.headers.get('content-type')?.includes('audio')) {
+                        stream = response.body;
+                        streamCreated = true;
+                        console.log('✅ Direkter Audio-Stream erfolgreich');
+                    }
+                } catch (directError) {
+                    console.log('❌ Direkter Audio-Stream fehlgeschlagen:', directError.message);
+                }
+            }
+            
+            if (!streamCreated) {
+                throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert wahrscheinlich Bot-Zugriff. yt-dlp ist jetzt installiert und sollte beim nächsten Versuch funktionieren.');
+            }
         }
         
         // Event-Handler für alle Stream-Typen
