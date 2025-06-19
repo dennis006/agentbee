@@ -685,34 +685,52 @@ const Dashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Control Buttons */}
+          {/* Control Buttons - Coming Soon */}
           <div className="flex flex-wrap gap-4">
             <Button 
-              onClick={startBot}
-              disabled={botStatus.status === 'starting' || botStatus.isRunning}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 hover:shadow-neon-strong disabled:opacity-50"
+              disabled={true}
+              className="bg-gradient-to-r from-gray-500 to-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 opacity-60 cursor-not-allowed"
             >
               <Play className="w-5 h-5 mr-2" />
-              {botStatus.status === 'starting' ? 'Starting...' : 'Start Bot'}
+              🚧 Start Bot - Coming Soon
             </Button>
             
             <Button 
-              onClick={stopBot}
-              disabled={botStatus.status === 'stopping' || !botStatus.isRunning}
-              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 hover:shadow-neon-strong disabled:opacity-50"
+              disabled={true}
+              className="bg-gradient-to-r from-gray-500 to-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 opacity-60 cursor-not-allowed"
             >
               <Square className="w-5 h-5 mr-2" />
-              {botStatus.status === 'stopping' ? 'Stopping...' : 'Stop Bot'}
+              🚧 Stop Bot - Coming Soon
             </Button>
             
             <Button 
-              onClick={restartBot}
-              disabled={botStatus.status === 'starting' || botStatus.status === 'stopping'}
-              className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 hover:shadow-neon-strong disabled:opacity-50"
+              disabled={true}
+              className="bg-gradient-to-r from-gray-500 to-gray-600 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 opacity-60 cursor-not-allowed"
             >
               <RotateCcw className="w-5 h-5 mr-2" />
-              Restart Bot
+              🚧 Restart Bot - Coming Soon
             </Button>
+          </div>
+          
+          {/* Coming Soon Notice */}
+          <div className="mt-4 p-4 bg-gradient-to-r from-yellow-500/20 to-orange-600/20 border border-yellow-500/30 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">🚧</div>
+              <div>
+                <h4 className="text-lg font-bold text-yellow-400 mb-1">
+                  Bot Control Features - Coming Soon!
+                </h4>
+                <p className="text-dark-muted text-sm">
+                  Diese Features erfordern Railway Pro Plan für die "ALWAYS" Restart Policy. 
+                  Aktuell kann der Bot manuell über Railway Dashboard neugestartet werden.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2 text-xs text-yellow-300">
+                  <span className="bg-yellow-500/20 px-2 py-1 rounded-full">💫 Pro Plan Feature</span>
+                  <span className="bg-yellow-500/20 px-2 py-1 rounded-full">🔧 In Entwicklung</span>
+                  <span className="bg-yellow-500/20 px-2 py-1 rounded-full">🎯 Railway Pro erforderlich</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Bot Einladung Section */}
