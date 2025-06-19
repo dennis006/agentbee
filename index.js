@@ -1139,29 +1139,58 @@ app.post('/api/bot/start', (req, res) => {
     }
 });
 
-// Bot Restart API
+// Bot Restart API - Railway Safe Version
 app.post('/api/bot/restart', (req, res) => {
     try {
         console.log('🔄 Bot Restart Request erhalten...');
         
-        // Setze Status auf stopping
-        currentBotStatus.status = 'stopping';
+        // Setze Status auf restarting
+        currentBotStatus.status = 'restarting';
         currentBotStatus.isRunning = false;
         
         res.json({ 
             success: true, 
-            message: 'Bot wird neugestartet...',
+            message: 'Bot wird neugestartet (Railway-Safe)...',
             status: 'restarting' 
         });
         
-        // Restart nach kurzer Verzögerung
-        setTimeout(() => {
-            console.log('🔄 Bot wird neugestartet...');
+        // Railway-Safe Restart nach kurzer Verzögerung
+        setTimeout(async () => {
+            console.log('🔄 Bot wird neugestartet (Railway-Safe)...');
             
-            // In Railway wird process.exit(0) automatisch einen Neustart auslösen
             if (process.env.RAILWAY_ENVIRONMENT) {
-                console.log('🚂 Railway Restart - Exit mit Code 0');
-                process.exit(0);
+                // Railway: Graceful Bot Restart ohne Container Crash
+                console.log('🚂 Railway Safe Restart - Destroy & Re-Login');
+                try {
+                    // 1. Disconnect Bot gracefully
+                    if (client.isReady()) {
+                        await client.destroy();
+                        console.log('✅ Bot Discord Connection destroyed');
+                    }
+                    
+                    // 2. Wait a moment
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // 3. Re-login
+                    currentBotStatus.status = 'starting';
+                    await client.login(apiKeys.discord.bot_token);
+                    console.log('✅ Bot successfully restarted in Railway');
+                    
+                } catch (error) {
+                    console.error('❌ Railway Safe Restart failed:', error);
+                    currentBotStatus.status = 'error';
+                    currentBotStatus.isRunning = false;
+                    
+                    // If safe restart fails, try once more
+                    setTimeout(async () => {
+                        try {
+                            console.log('🔄 Retry bot login after failed restart...');
+                            await client.login(apiKeys.discord.bot_token);
+                        } catch (retryError) {
+                            console.error('❌ Retry also failed:', retryError);
+                        }
+                    }, 5000);
+                }
             } else {
                 // Lokal: Destroy und neu verbinden
                 client.destroy();
@@ -1170,7 +1199,7 @@ app.post('/api/bot/restart', (req, res) => {
                         currentBotStatus.status = 'starting';
                         await client.login(apiKeys.discord.bot_token);
                     } catch (error) {
-                        console.error('❌ Fehler beim Neustart:', error);
+                        console.error('❌ Fehler beim lokalen Neustart:', error);
                         currentBotStatus.status = 'error';
                         currentBotStatus.isRunning = false;
                     }

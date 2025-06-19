@@ -399,27 +399,27 @@ const Dashboard = () => {
     const toastId = showBotRestarting();
     
     try {
-      updateToast(toastId, { progress: 20, message: 'Stoppe Bot...' });
+      updateToast(toastId, { progress: 20, message: 'Graceful Bot Restart...' });
       
-      // Stop Bot
-      const stopResponse = await fetch(`${apiUrl}/api/bot/restart`, { method: 'POST' });
+      // Railway-Safe Restart
+      const restartResponse = await fetch(`${apiUrl}/api/bot/restart`, { method: 'POST' });
       
-      updateToast(toastId, { progress: 60, message: 'Railway Container wird neugestartet...' });
+      updateToast(toastId, { progress: 60, message: 'Bot wird sicher neugestartet...' });
       
-      if (stopResponse.ok) {
-        updateToast(toastId, { progress: 100, message: 'Neustart eingeleitet!' });
+      if (restartResponse.ok) {
+        updateToast(toastId, { progress: 100, message: 'Railway-Safe Restart eingeleitet!' });
         
         setTimeout(() => {
           removeToast(toastId);
-          showSuccess('Bot neugestartet! 🔄', 'Railway startet den Container neu. Das kann 1-2 Minuten dauern.');
+          showSuccess('Bot neugestartet! 🔄', 'Discord-Verbindung wurde sicher neugestartet ohne Container-Crash.');
         }, 500);
       } else {
         removeToast(toastId);
-        showError('Restart fehlgeschlagen', 'Der Bot konnte nicht neugestartet werden.');
+        showError('Restart fehlgeschlagen', 'Der sichere Bot-Restart ist fehlgeschlagen.');
       }
     } catch (error) {
       removeToast(toastId);
-      showError('Verbindungsfehler', 'Keine Verbindung zu Railway möglich.');
+      showError('Verbindungsfehler', 'Railway Container ist möglicherweise gecrasht. Manueller Redeploy nötig.');
     }
   };
 
