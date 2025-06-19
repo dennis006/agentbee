@@ -3,6 +3,7 @@ import { Play, Square, RotateCcw, Activity, Zap, Users, MessageSquare, Shield, X
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
+import { useToast, ToastContainer } from '../components/ui/toast'
 // Matrix Blocks Komponente direkt hier
 
 interface BotStatus {
@@ -300,6 +301,18 @@ const Dashboard = () => {
   // API Base URL
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   
+  // Toast System
+  const {
+    toasts,
+    removeToast,
+    updateToast,
+    showBotStarting,
+    showBotStopping,
+    showBotRestarting,
+    showSuccess,
+    showError
+  } = useToast();
+  
   const [botStatus, setBotStatus] = useState<BotStatus>({
     isRunning: false,
     uptime: '0s',
@@ -324,32 +337,90 @@ const Dashboard = () => {
     window.open(inviteUrl, '_blank', 'width=500,height=700');
   };
 
-  // API-Funktionen
+  // API-Funktionen mit schönen Toasts
   const startBot = async () => {
+    const toastId = showBotStarting();
+    
     try {
+      // Simuliere Progress-Updates
+      updateToast(toastId, { progress: 20 });
+      
       const response = await fetch(`${apiUrl}/api/bot/start`, { method: 'POST' });
+      
+      updateToast(toastId, { progress: 60 });
+      
       if (response.ok) {
-        alert('Bot wird gestartet...');
+        const data = await response.json();
+        updateToast(toastId, { progress: 100 });
+        
+        // Entferne Loading-Toast und zeige Success
+        setTimeout(() => {
+          removeToast(toastId);
+          showSuccess('Bot gestartet! 🚀', 'Der Bot ist erfolgreich online gegangen und bereit für Action!');
+        }, 500);
+      } else {
+        removeToast(toastId);
+        showError('Start fehlgeschlagen', 'Der Bot konnte nicht gestartet werden. Prüfe Railway Logs.');
       }
     } catch (error) {
-      alert('Fehler beim Starten des Bots');
+      removeToast(toastId);
+      showError('Verbindungsfehler', 'Keine Verbindung zu Railway möglich. Prüfe deine Internetverbindung.');
     }
   };
 
   const stopBot = async () => {
+    const toastId = showBotStopping();
+    
     try {
+      updateToast(toastId, { progress: 25 });
+      
       const response = await fetch(`${apiUrl}/api/bot/stop`, { method: 'POST' });
+      
+      updateToast(toastId, { progress: 75 });
+      
       if (response.ok) {
-        alert('Bot wird gestoppt...');
+        updateToast(toastId, { progress: 100 });
+        
+        setTimeout(() => {
+          removeToast(toastId);
+          showSuccess('Bot gestoppt! ✋', 'Der Bot wurde erfolgreich heruntergefahren.');
+        }, 500);
+      } else {
+        removeToast(toastId);
+        showError('Stop fehlgeschlagen', 'Der Bot konnte nicht gestoppt werden.');
       }
     } catch (error) {
-      alert('Fehler beim Stoppen des Bots');
+      removeToast(toastId);
+      showError('Verbindungsfehler', 'Keine Verbindung zu Railway möglich.');
     }
   };
 
   const restartBot = async () => {
-    await stopBot();
-    setTimeout(startBot, 2000);
+    const toastId = showBotRestarting();
+    
+    try {
+      updateToast(toastId, { progress: 20, message: 'Stoppe Bot...' });
+      
+      // Stop Bot
+      const stopResponse = await fetch(`${apiUrl}/api/bot/restart`, { method: 'POST' });
+      
+      updateToast(toastId, { progress: 60, message: 'Railway Container wird neugestartet...' });
+      
+      if (stopResponse.ok) {
+        updateToast(toastId, { progress: 100, message: 'Neustart eingeleitet!' });
+        
+        setTimeout(() => {
+          removeToast(toastId);
+          showSuccess('Bot neugestartet! 🔄', 'Railway startet den Container neu. Das kann 1-2 Minuten dauern.');
+        }, 500);
+      } else {
+        removeToast(toastId);
+        showError('Restart fehlgeschlagen', 'Der Bot konnte nicht neugestartet werden.');
+      }
+    } catch (error) {
+      removeToast(toastId);
+      showError('Verbindungsfehler', 'Keine Verbindung zu Railway möglich.');
+    }
   };
 
   // Commands laden
@@ -621,6 +692,9 @@ const Dashboard = () => {
         onClose={() => setShowCommandsModal(false)}
         commands={commands}
       />
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   )
 }
