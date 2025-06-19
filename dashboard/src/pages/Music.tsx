@@ -321,6 +321,9 @@ const progressBarStyles = `
 `;
 
 const Music: React.FC = () => {
+  // API Base URL
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  
   const { toasts, success, error, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -454,7 +457,7 @@ const Music: React.FC = () => {
       setLoading(true);
       
       // Zuerst Guild-ID laden
-      const guildsRes = await fetch('http://localhost:3001/api/guilds');
+      const guildsRes = await fetch(`${apiUrl}/api/guilds`);
       let currentGuildId = null;
       
       if (guildsRes.ok) {
@@ -470,10 +473,10 @@ const Music: React.FC = () => {
 
       // Load all data in parallel
       const [settingsRes, channelsRes, rolesRes, queueRes] = await Promise.all([
-        fetch('http://localhost:3001/api/music/settings'),
-        fetch('http://localhost:3001/api/channels'),
-        fetch('http://localhost:3001/api/roles'),
-        fetch(`http://localhost:3001/api/music/queue/${currentGuildId}`)
+        fetch(`${apiUrl}/api/music/settings`),
+        fetch(`${apiUrl}/api/channels`),
+        fetch(`${apiUrl}/api/roles`),
+        fetch(`${apiUrl}/api/music/queue/${currentGuildId}`)
       ]);
 
       if (settingsRes.ok) {
@@ -510,7 +513,7 @@ const Music: React.FC = () => {
   const loadRequestTracking = async () => {
     try {
       setTrackingLoading(true);
-      const response = await fetch('http://localhost:3001/api/music/request-tracking');
+      const response = await fetch(`${apiUrl}/api/music/request-tracking`);
       if (response.ok) {
         const data = await response.json();
         setRequestTracking(data.trackingData || []);
@@ -525,7 +528,7 @@ const Music: React.FC = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const response = await fetch('http://localhost:3001/api/music/settings', {
+      const response = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
@@ -549,7 +552,7 @@ const Music: React.FC = () => {
     
     setSearching(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/music/search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${apiUrl}/api/music/search?query=${encodeURIComponent(searchQuery)}`);
       if (response.ok) {
         const data = await response.json();
         setSearchResults(data.results);
@@ -568,7 +571,7 @@ const Music: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/queue/${guildId}/add`, {
+      const response = await fetch(`${apiUrl}/api/music/queue/${guildId}/add`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: song.url, requestedBy: 'Dashboard' })
@@ -592,7 +595,7 @@ const Music: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/control/${guildId}/${action}`, {
+      const response = await fetch(`${apiUrl}/api/music/control/${guildId}/${action}`, {
         method: 'POST'
       });
 
@@ -616,7 +619,7 @@ const Music: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/voice/${guildId}/join`, {
+      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelId })
@@ -640,7 +643,7 @@ const Music: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/voice/${guildId}/leave`, {
+      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/leave`, {
         method: 'POST'
       });
 
@@ -659,7 +662,7 @@ const Music: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/volume/${guildId}`, {
+      const response = await fetch(`${apiUrl}/api/music/volume/${guildId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ volume: newVolume })
@@ -682,7 +685,7 @@ const Music: React.FC = () => {
     if (!guildId) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/voice/${guildId}/status`);
+      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/status`);
       if (response.ok) {
         const data = await response.json();
         if (data.status.progress) {
@@ -702,7 +705,7 @@ const Music: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/create-dj-role/${guildId}`, {
+      const response = await fetch(`${apiUrl}/api/music/create-dj-role/${guildId}`, {
         method: 'POST'
       });
 
@@ -726,7 +729,7 @@ const Music: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/music/test-popular-song/${guildId}`, {
+      const response = await fetch(`${apiUrl}/api/music/test-popular-song/${guildId}`, {
         method: 'POST'
       });
 
@@ -751,7 +754,7 @@ const Music: React.FC = () => {
 
     try {
       setSaving(true);
-      const response = await fetch(`http://localhost:3001/api/music/reconnect/${guildId}`, {
+      const response = await fetch(`${apiUrl}/api/music/reconnect/${guildId}`, {
         method: 'POST'
       });
 
@@ -788,7 +791,7 @@ const Music: React.FC = () => {
     try {
       // First save the current settings to ensure channelId is saved
       console.log('🔄 Speichere Settings vor Panel-Post...');
-      const saveResponse = await fetch('http://localhost:3001/api/music/settings', {
+      const saveResponse = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
@@ -802,7 +805,7 @@ const Music: React.FC = () => {
       console.log('✅ Settings gespeichert, poste Interactive Panel...');
 
       // Then post the interactive panel
-      const response = await fetch(`http://localhost:3001/api/music/interactive-panel/${guildId}/post`, {
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
         method: 'POST'
       });
 
@@ -829,7 +832,7 @@ const Music: React.FC = () => {
   // Radio Functions
   const loadRadioStations = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/music/radio/stations');
+      const response = await fetch(`${apiUrl}/api/music/radio/stations`);
       if (response.ok) {
         const data = await response.json();
         setRadioStations(data.stations || []);
@@ -844,7 +847,7 @@ const Music: React.FC = () => {
     if (!guildId) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/music/radio/${guildId}/status`);
+      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/status`);
       if (response.ok) {
         const data = await response.json();
         setRadioStatus({
@@ -865,7 +868,7 @@ const Music: React.FC = () => {
 
     try {
       setRadioLoading(true);
-      const response = await fetch(`http://localhost:3001/api/music/radio/${guildId}/play`, {
+      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/play`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -898,7 +901,7 @@ const Music: React.FC = () => {
 
     try {
       setRadioLoading(true);
-      const response = await fetch(`http://localhost:3001/api/music/radio/${guildId}/stop`, {
+      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/stop`, {
         method: 'POST',
       });
 
@@ -927,7 +930,7 @@ const Music: React.FC = () => {
 
     try {
       setRadioLoading(true);
-      const response = await fetch('http://localhost:3001/api/music/radio/stations', {
+      const response = await fetch(`${apiUrl}/api/music/radio/stations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -962,7 +965,7 @@ const Music: React.FC = () => {
   const removeRadioStation = async (stationId: string) => {
     try {
       setRadioLoading(true);
-      const response = await fetch(`http://localhost:3001/api/music/radio/stations/${stationId}`, {
+      const response = await fetch(`${apiUrl}/api/music/radio/stations/${stationId}`, {
         method: 'DELETE',
       });
 
@@ -1005,7 +1008,7 @@ const Music: React.FC = () => {
       
       try {
         // Nur Queue-Daten laden, NICHT die ganze loadData() Funktion
-        const queueRes = await fetch(`http://localhost:3001/api/music/queue/${guildId}`);
+        const queueRes = await fetch(`${apiUrl}/api/music/queue/${guildId}`);
         if (queueRes.ok) {
           const data = await queueRes.json();
           setQueue(data.queue);
@@ -1038,7 +1041,7 @@ const Music: React.FC = () => {
       if (!guildId) return;
       
       try {
-        const response = await fetch(`http://localhost:3001/api/music/queue/${guildId}`);
+        const response = await fetch(`${apiUrl}/api/music/queue/${guildId}`);
         if (response.ok) {
           const data = await response.json();
           
