@@ -1,6 +1,6 @@
 [build]
   base = "dashboard/"
-  command = "npm install && npm run build"
+  command = "npm ci && npm install @rollup/rollup-linux-x64-gnu --no-save && npm run build"
   publish = "dist/"
 
 [build.environment]
