@@ -1176,6 +1176,13 @@ app.post('/api/bot/restart', (req, res) => {
                     await client.login(apiKeys.discord.bot_token);
                     console.log('✅ Bot successfully restarted in Railway');
                     
+                    // 4. Force status update nach restart
+                    setTimeout(() => {
+                        updateBotStatus();
+                        sendStatusToAPI();
+                        console.log('🟢 Status nach Railway-Restart force-updated');
+                    }, 2000);
+                    
                 } catch (error) {
                     console.error('❌ Railway Safe Restart failed:', error);
                     currentBotStatus.status = 'error';
@@ -2983,7 +2990,7 @@ try {
         }
     }
     
-    // Bot Status initialisieren
+    // Bot Status initialisieren und sofort updaten
     currentBotStatus = {
         isRunning: true,
         status: 'online',
@@ -2993,19 +3000,27 @@ try {
         startTime: Date.now()
     };
     
-    // Status an API Server senden
+    // Sofortiger Status-Update (wichtig für Railway Restart Fix)
+    updateBotStatus();
     sendStatusToAPI();
+    console.log('🟢 Bot Status sofort aktualisiert - Railway-Restart berücksichtigt');
     
     // Prüfe Bot Permissions nach 1 Sekunde
     setTimeout(() => {
         checkBotPermissions();
     }, 1000);
     
-    // Periodische Status-Updates alle 10 Sekunden für bessere Uptime
-    setInterval(() => {
+    // Periodische Status-Updates alle 5 Sekunden für bessere Responsivität
+    const statusInterval = setInterval(() => {
         updateBotStatus();
         sendStatusToAPI();
-    }, 10000);
+    }, 5000);
+    
+    // Cleanup für Status-Interval
+    client.once('disconnect', () => {
+        clearInterval(statusInterval);
+        console.log('🔄 Status-Updates gestoppt (disconnect)');
+    });
     
     // Automatisch Regeln posten nach 2 Sekunden
     setTimeout(async () => {

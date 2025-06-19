@@ -511,10 +511,10 @@ const Dashboard = () => {
     // Initial fetch mit Verzögerung
     const initialTimeout = setTimeout(() => fetchStatus(), 2000);
     
-    // Polling interval mit dynamischem Delay
-    const interval = setInterval(() => {
-      fetchStatus();
-    }, consecutiveFailures > 0 ? retryDelay : 5000); // 5s normal, exponential bei Fehlern
+         // Polling interval mit dynamischem Delay (häufiger für bessere Bot Status Updates)
+     const interval = setInterval(() => {
+       fetchStatus();
+     }, consecutiveFailures > 0 ? retryDelay : 3000); // 3s normal für schnellere Updates, exponential bei Fehlern
     
     // Commands laden (mit eigener Fehlerbehandlung)
     fetchCommands();
