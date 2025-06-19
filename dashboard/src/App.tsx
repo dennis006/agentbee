@@ -328,8 +328,6 @@ const DashboardLayout = () => {
     
     const fetchBotStatus = async () => {
       try {
-        console.log(`🔍 [App.tsx] Fetching bot status from: ${apiUrl}/api/bot/status`);
-        
         const response = await fetch(`${apiUrl}/api/bot/status`, {
           headers: {
             'Accept': 'application/json',
@@ -339,21 +337,22 @@ const DashboardLayout = () => {
         
         if (response.ok) {
           const data = await response.json()
-          console.log('✅ [App.tsx] Bot Status Response:', data);
           setSystemStatus({
             isOnline: data.isRunning && data.status === 'online',
             status: data.status,
             uptime: data.uptime
           })
         } else {
-          console.warn(`⚠️ [App.tsx] HTTP ${response.status}: ${response.statusText}`);
           setSystemStatus({
             isOnline: false,
             status: 'offline'
           })
         }
       } catch (error) {
-        console.error('❌ [App.tsx] Fehler beim Laden des Bot-Status:', error)
+        // Silent error handling - only log in development
+        if (import.meta.env.DEV) {
+          console.error('App.tsx Bot Status Error:', error)
+        }
         setSystemStatus({
           isOnline: false,
           status: 'offline'

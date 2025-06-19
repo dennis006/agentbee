@@ -64,7 +64,7 @@ const LoginPage = () => {
       const loginRedirectUri = `${window.location.origin}/login`;
       const userData = await discordAuth.authenticateWithCode(code, loginRedirectUri);
       
-      console.log('🔍 Discord User Data:', userData);
+      // Auth success - user data received
       setUser(userData);
       setIsAuthenticated(true);
       
@@ -84,8 +84,7 @@ const LoginPage = () => {
   const checkAdminStatus = async (userId: string) => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      console.log(`🔍 Checking admin status for userId: ${userId}`);
-      console.log(`🔍 API URL: ${apiUrl}/api/auth/check-admin`);
+      // Check admin status for user
       
       const response = await fetch(`${apiUrl}/api/auth/check-admin`, {
         method: 'POST',
@@ -97,7 +96,7 @@ const LoginPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔍 Admin check response:', data);
+        // Admin check successful
         
         if (data.isAdmin) {
           setIsAdmin(true);

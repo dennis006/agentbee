@@ -444,8 +444,6 @@ const Dashboard = () => {
     
     const fetchStatus = async () => {
       try {
-        console.log(`🔍 Fetching bot status from: ${apiUrl}/api/bot/status`);
-        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
         
@@ -459,25 +457,22 @@ const Dashboard = () => {
         
         clearTimeout(timeoutId);
         
-        console.log(`📡 Response Status: ${response.status} ${response.statusText}`);
-        console.log(`📄 Response Headers:`, response.headers.get('content-type'));
-        
         if (response.ok) {
           // Prüfe Content-Type vor JSON parsing
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const data = await response.json();
-            console.log('✅ Erfolgreiche JSON Response:', data);
             setBotStatus(data);
             
             // Reset retry delay bei erfolgreichem Request
             retryDelay = 1000;
             consecutiveFailures = 0;
           } else {
-            // HTML Response statt JSON
-            const htmlText = await response.text();
-            console.error('❌ Erhaltene HTML statt JSON:', htmlText.substring(0, 200) + '...');
-            console.error('🚨 Railway sendet HTML-Fehlerseite!');
+            // HTML Response statt JSON - only log in development
+            if (import.meta.env.DEV) {
+              const htmlText = await response.text();
+              console.error('Railway HTML Error:', htmlText.substring(0, 200) + '...');
+            }
             
             setBotStatus(prev => ({ 
               ...prev, 
@@ -488,7 +483,6 @@ const Dashboard = () => {
           }
         } else if (response.status === 502) {
           // 502 Bad Gateway - Railway startet noch
-          console.log('🚂 Railway Container startet noch (502 Bad Gateway)');
           setBotStatus(prev => ({ 
             ...prev, 
             status: 'starting', 
@@ -497,7 +491,6 @@ const Dashboard = () => {
           consecutiveFailures++;
         } else if (response.status === 503) {
           // 503 Service Unavailable
-          console.log('⚠️ Railway Service temporär nicht verfügbar (503)');
           setBotStatus(prev => ({ 
             ...prev, 
             status: 'connecting', 
@@ -505,27 +498,28 @@ const Dashboard = () => {
           }));
           consecutiveFailures++;
         } else {
-          // Andere HTTP Fehler - Lass uns sehen was zurückkommt
-          const errorText = await response.text();
-          console.error(`❌ HTTP ${response.status}: ${response.statusText}`);
-          console.error('📄 Error Response Body:', errorText.substring(0, 300) + '...');
+          // Andere HTTP Fehler
+          if (import.meta.env.DEV) {
+            const errorText = await response.text();
+            console.error(`HTTP ${response.status}:`, errorText.substring(0, 300) + '...');
+          }
           consecutiveFailures++;
         }
       } catch (error) {
         if (error.name === 'AbortError') {
-          console.log('⏱️ Request timeout - Railway möglicherweise überlastet');
+          // Silent timeout handling
         } else if (error.message.includes('Unexpected token')) {
-          console.error('🚨 JSON Parse Error - Railway sendet HTML statt JSON!');
-          console.error('💡 Lösung: Railway Container manuell neustarten');
-        } else {
-          console.error('❌ Fehler beim Laden des Bot-Status:', error);
+          if (import.meta.env.DEV) {
+            console.error('JSON Parse Error - Railway HTML response');
+          }
+        } else if (import.meta.env.DEV) {
+          console.error('Bot Status Error:', error);
         }
         
         consecutiveFailures++;
         
         // Nach vielen Fehlern auf offline setzen
         if (consecutiveFailures >= 5) {
-          console.log('🔴 Zu viele Fehler - Status auf offline gesetzt');
           setBotStatus(prev => ({ 
             ...prev, 
             status: 'offline', 
@@ -543,7 +537,6 @@ const Dashboard = () => {
       // Exponential backoff bei Fehlern
       if (consecutiveFailures > 0) {
         retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
-        console.log(`⏰ Nächster Retry in ${retryDelay}ms (Attempt ${consecutiveFailures})`);
       }
     };
 
@@ -552,8 +545,7 @@ const Dashboard = () => {
     
     const safeFetchStatus = async () => {
       if (isFetching) {
-        console.log('⏸️ Fetch bereits im Gange - überspringe Aufruf');
-        return;
+        return; // Silent skip if already fetching
       }
       
       isFetching = true;
