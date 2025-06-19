@@ -27,8 +27,8 @@ class DiscordAuth {
 
   // Token Exchange über Backend-API
   async authenticateWithCode(code: string, redirectUri?: string): Promise<DiscordUser> {
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-    const response = await fetch(`${apiUrl}/auth/discord/token`, {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const response = await fetch(`${apiUrl}/api/auth/discord/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,8 +51,8 @@ class DiscordAuth {
   // Verifizierungsdaten an Bot-API senden
   async submitVerification(data: VerificationData): Promise<boolean> {
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${apiUrl}/verification`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
