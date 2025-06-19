@@ -1734,10 +1734,16 @@ async function playMusic(guildId, song) {
         
         // Methode 2: yt-dlp (Nur wenn verfügbar - für lokale Entwicklung)
         if (!streamCreated) {
-            try {
-                console.log(`🚀 Versuche yt-dlp Stream für: ${songData.title}`);
-                
-                const streamUrl = await getStreamWithYtDlp(songData.url);
+                    try {
+            const safeTitle = songData?.title || song?.title || 'Unknown';
+            console.log(`🚀 Versuche yt-dlp Stream für: ${safeTitle}`);
+            
+            const safeUrl = songData?.url || song?.url;
+            if (!safeUrl) {
+                throw new Error('Keine URL für yt-dlp verfügbar');
+            }
+            
+            const streamUrl = await getStreamWithYtDlp(safeUrl);
                 if (streamUrl) {
                     console.log('📡 Erstelle Stream von yt-dlp URL...');
                     
@@ -1765,12 +1771,18 @@ async function playMusic(guildId, song) {
                 
                 console.log('🔄 Erweiterte yt-dlp Versuche mit verschiedenen Formaten...');
                 
-                // Verschiedene yt-dlp Kommando-Varianten ausprobieren
+                // Verschiedene yt-dlp Kommando-Varianten ausprobieren (mit sicherer URL)
+                const safeUrl = songData?.url || song?.url || '';
+                if (!safeUrl) {
+                    console.log('❌ Keine URL für yt-dlp verfügbar');
+                    return;
+                }
+                
                 const ytdlpCommands = [
-                    `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${songData.url}"`,
-                    `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${songData.url}"`,
-                    `yt-dlp --format-sort "+size,+br" --get-url "${songData.url}"`,
-                    `yt-dlp -f "136/135/134/133/160" --get-url "${songData.url}"`
+                    `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${safeUrl}"`,
+                    `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${safeUrl}"`,
+                    `yt-dlp --format-sort "+size,+br" --get-url "${safeUrl}"`,
+                    `yt-dlp -f "136/135/134/133/160" --get-url "${safeUrl}"`
                 ];
                 
                 for (let i = 0; i < ytdlpCommands.length && !streamCreated; i++) {
@@ -1819,7 +1831,9 @@ async function playMusic(guildId, song) {
         if (!streamCreated) {
             console.log('🔄 Suche nach alternativen URLs...');
             
-            const searchResults = await searchYouTube(songData.title + ' ' + (songData.author || ''));
+            const searchTitle = songData?.title || song?.title || 'Unknown';
+            const searchAuthor = songData?.author || song?.author || '';
+            const searchResults = await searchYouTube(searchTitle + ' ' + searchAuthor);
             if (searchResults.length > 0) {
                 // Versuche die ersten 3 Suchergebnisse
                 for (let i = 0; i < Math.min(3, searchResults.length) && !streamCreated; i++) {
@@ -1842,10 +1856,12 @@ async function playMusic(guildId, song) {
                                 stream = response.body;
                                 streamCreated = true;
                                 console.log(`✅ Alternative URL ${i + 1} mit yt-dlp erfolgreich`);
-                                // Update songData mit alternativen Informationen
-                                songData.title = altResult.title;
-                                songData.url = altResult.url;
-                                songData.author = altResult.author;
+                                // Update songData mit alternativen Informationen (sichere Zuweisung)
+                                if (songData) {
+                                    songData.title = altResult.title;
+                                    songData.url = altResult.url;
+                                    songData.author = altResult.author;
+                                }
                                 break;
                             }
                         }
@@ -1867,10 +1883,12 @@ async function playMusic(guildId, song) {
                                     stream = altStreamResult.stream;
                                     streamCreated = true;
                                     console.log(`✅ Alternative URL ${i + 1} mit play-dl erfolgreich`);
-                                    // Update songData
-                                    songData.title = altResult.title;
-                                    songData.url = altResult.url;
-                                    songData.author = altResult.author;
+                                    // Update songData (sichere Zuweisung)
+                                    if (songData) {
+                                        songData.title = altResult.title;
+                                        songData.url = altResult.url;
+                                        songData.author = altResult.author;
+                                    }
                                     break;
                                 }
                             }
@@ -1889,12 +1907,13 @@ async function playMusic(guildId, song) {
         if (!streamCreated) {
             console.error('❌ Alle Stream-Methoden fehlgeschlagen');
             
-            // Letzter Versuch: Verwende einen generischen HTTP-Stream falls URL eine direkte Audio-URL ist
-            if (songData.url.match(/\.(mp3|m4a|ogg|webm)(\?.*)?$/i)) {
+            // Methode 5: Letzter Versuch - Direkter Audio-Stream falls URL eine direkte Audio-URL ist
+            const testUrl = songData?.url || song?.url;
+            if (testUrl && testUrl.match(/\.(mp3|m4a|ogg|webm)(\?.*)?$/i)) {
                 try {
                     console.log('🎧 Letzter Versuch: Direkter Audio-Stream...');
                     const fetch = require('node-fetch');
-                    const response = await fetch(songData.url, {
+                    const response = await fetch(testUrl, {
                         timeout: 5000,
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -1911,8 +1930,81 @@ async function playMusic(guildId, song) {
                 }
             }
             
+            // Methode 6: Letztes Fallback - Verwende Radio-Stream wenn verfügbar
+            if (!streamCreated && musicSettings.radio?.enabled) {
+                try {
+                    console.log('📻 Letztes Fallback: Verwende einen passenden Radio-Sender...');
+                    
+                    const requestedGenres = [
+                        { genre: ['pop', 'hits', 'musik'], station: '1live' },
+                        { genre: ['deutsch', 'rap', 'hip-hop'], station: 'deutschrap1' },
+                        { genre: ['electronic', 'dance', 'edm'], station: 'sunshine' },
+                        { genre: ['chill', 'lofi', 'relax'], station: 'lofi' },
+                        { genre: ['house', 'techno'], station: 'deephouse' }
+                    ];
+                    
+                    const songTitle = (songData?.title || song?.title || '').toLowerCase();
+                    let fallbackStation = null;
+                    
+                    // Versuche passenden Sender zu finden basierend auf Song-Titel
+                    for (const genreMap of requestedGenres) {
+                        if (genreMap.genre.some(genre => songTitle.includes(genre))) {
+                            fallbackStation = getRadioStation(genreMap.station);
+                            break;
+                        }
+                    }
+                    
+                    // Falls kein passender Sender gefunden, nutze Standard-Sender
+                    if (!fallbackStation) {
+                        fallbackStation = getRadioStation('1live') || getRadioStations()[0];
+                    }
+                    
+                    if (fallbackStation && !fallbackStation.url.includes('youtube')) {
+                        console.log(`📻 Verwende Fallback-Radio-Sender: ${fallbackStation.name}`);
+                        
+                        // Erstelle temporären Radio-Song
+                        const fallbackSong = {
+                            title: `📻 ${fallbackStation.name} (Fallback für: ${songData?.title || song?.title || 'Unknown'})`,
+                            url: fallbackStation.url,
+                            duration: 0,
+                            thumbnail: fallbackStation.logo,
+                            author: fallbackStation.description,
+                            isRadio: true,
+                            isFallback: true,
+                            originalRequest: songData?.title || song?.title,
+                            radioStation: fallbackStation,
+                            requestedBy: songData?.requestedBy || song?.requestedBy || 'System'
+                        };
+                        
+                        // Versuche Radio-Stream
+                        const fetch = require('node-fetch');
+                        const response = await fetch(fallbackStation.url, {
+                            timeout: 5000,
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            stream = response.body;
+                            streamCreated = true;
+                            console.log(`✅ Radio-Fallback erfolgreich: ${fallbackStation.name}`);
+                            
+                            // Update songData für korrekte Anzeige
+                            if (songData) {
+                                Object.assign(songData, fallbackSong);
+                            } else if (song) {
+                                Object.assign(song, fallbackSong);
+                            }
+                        }
+                    }
+                } catch (radioError) {
+                    console.log('❌ Radio-Fallback fehlgeschlagen:', radioError.message);
+                }
+            }
+            
             if (!streamCreated) {
-                throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert wahrscheinlich Bot-Zugriff. play-dl und alternative Methoden konnten den Stream nicht erstellen.');
+                throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert Bot-Zugriff und keine Fallback-Quellen verfügbar.');
             }
         }
         
@@ -2002,6 +2094,28 @@ async function playMusic(guildId, song) {
             errorTitle = '🤖 YouTube Bot-Erkennung';
             
             console.log('🔄 YouTube Bot-Blockierung erkannt, versuche alternative Streaming-Methoden...');
+            
+            // Sende Info über Fallback-Versuche
+            if (musicSettings.announcements.channelId && global.client) {
+                try {
+                    const channel = global.client.channels.cache.get(musicSettings.announcements.channelId);
+                    if (channel) {
+                        await channel.send({
+                            embeds: [{
+                                color: 0xFFA500, // Orange
+                                title: '🔄 YouTube-Blockierung erkannt',
+                                description: `YouTube blockiert den Song **${safeSongData?.title || 'Unknown'}**\n\n🔍 Versuche alternative Quellen und Fallback-Optionen...`,
+                                footer: {
+                                    text: 'Falls alle Versuche fehlschlagen, wird ein passender Radio-Sender als Fallback verwendet'
+                                },
+                                timestamp: new Date().toISOString()
+                            }]
+                        });
+                    }
+                } catch (notifyError) {
+                    console.log('⚠️ Fehler beim Senden der Fallback-Benachrichtigung:', notifyError.message);
+                }
+            }
             
             // Versuche mit alternativer Suche (nur wenn safeSongData verfügbar)
             if (safeSongData && safeSongData.title && safeSongData.title !== 'Unknown') {
