@@ -197,9 +197,12 @@ async function getAudioStream(songData) {
     return { stream, method, songData };
 }
 
-// 🎵 YOUTUBE AUDIO-STREAM (Verbessert für Spotify-Queries)
+// 🎵 YOUTUBE AUDIO-STREAM (Anti-Bot-Optimiert)
 async function getYouTubeAudioStream(searchQuery) {
     try {
+        // Anti-Detection Delay
+        await antiDetectionStrategies.randomWait();
+        
         // Erst YouTube-Video finden
         const searchResults = await yts(searchQuery);
         
@@ -212,28 +215,18 @@ async function getYouTubeAudioStream(searchQuery) {
         
         console.log(`🔗 YouTube Video gefunden: ${video.title}`);
         
-        // play-dl Stream-Versuch
+        // 1. YT-DLP PRIMÄR (100% Anti-Bot)
         try {
-            const streamResult = await playdl.stream(videoUrl, { quality: 1 });
-            
-            if (streamResult && streamResult.stream) {
-                return {
-                    stream: streamResult.stream,
-                    method: 'play-dl'
-                };
-            }
-        } catch (playdlError) {
-            console.log('⚠️ play-dl fehlgeschlagen:', playdlError.message);
-        }
-        
-        // yt-dlp Fallback (falls verfügbar)
-        try {
+            console.log('🎵 Versuche yt-dlp (Anti-Bot Primär)...');
             const streamUrl = await getStreamWithYtDlp(videoUrl);
             if (streamUrl) {
                 const fetch = require('node-fetch');
-                const response = await fetch(streamUrl);
+                const response = await fetch(streamUrl, {
+                    headers: antiDetectionStrategies.getAntiDetectionHeaders()
+                });
                 
                 if (response.ok) {
+                    console.log('✅ yt-dlp Stream erfolgreich');
                     return {
                         stream: response.body,
                         method: 'yt-dlp'
@@ -242,6 +235,55 @@ async function getYouTubeAudioStream(searchQuery) {
             }
         } catch (ytdlpError) {
             console.log('⚠️ yt-dlp fehlgeschlagen:', ytdlpError.message);
+        }
+        
+        // 2. Alternative URLs probieren
+        console.log('🔄 Versuche alternative YouTube URLs...');
+        const alternativeUrls = createAlternativeYouTubeURLs(videoUrl);
+        
+        for (let i = 0; i < alternativeUrls.length && i < 3; i++) {
+            try {
+                await antiDetectionStrategies.randomWait();
+                
+                const streamUrl = await getStreamWithYtDlp(alternativeUrls[i]);
+                if (streamUrl) {
+                    const fetch = require('node-fetch');
+                    const response = await fetch(streamUrl, {
+                        headers: antiDetectionStrategies.getAntiDetectionHeaders()
+                    });
+                    
+                    if (response.ok) {
+                        console.log(`✅ Alternative URL ${i+1} erfolgreich`);
+                        return {
+                            stream: response.body,
+                            method: 'yt-dlp-alt'
+                        };
+                    }
+                }
+            } catch (altError) {
+                console.log(`⚠️ Alternative URL ${i+1} fehlgeschlagen:`, altError.message);
+            }
+        }
+        
+        // 3. play-dl als letzter Fallback (nur für alte Videos)
+        try {
+            console.log('🎵 play-dl Fallback...');
+            await antiDetectionStrategies.randomWait();
+            
+            const streamResult = await playdl.stream(videoUrl, { 
+                quality: 1,
+                htmldata: false // Weniger Bot-Detection
+            });
+            
+            if (streamResult && streamResult.stream) {
+                console.log('✅ play-dl Fallback erfolgreich');
+                return {
+                    stream: streamResult.stream,
+                    method: 'play-dl-fallback'
+                };
+            }
+        } catch (playdlError) {
+            console.log('⚠️ play-dl Fallback fehlgeschlagen:', playdlError.message);
         }
         
         return null;
@@ -792,7 +834,7 @@ function normalizeYouTubeURL(url) {
     return url;
 }
 
-// yt-dlp Integration für robuste YouTube-Streams (mit Railway-Fallback)
+// yt-dlp Integration für robuste YouTube-Streams (Anti-Bot Enhanced)
 async function getStreamWithYtDlp(url) {
     try {
         console.log(`🚀 Verwende yt-dlp für: ${url}`);
@@ -805,15 +847,32 @@ async function getStreamWithYtDlp(url) {
             throw new Error('yt-dlp nicht installiert oder nicht verfügbar');
         }
         
-        // yt-dlp Command mit hochwertigen Audio-Optionen
-        const command = `yt-dlp -f "bestaudio/best" --get-url "${url}"`;
+        // Erweiterte Anti-Bot yt-dlp Command
+        const randomAgent = antiDetectionStrategies.getRandomUserAgent();
+        const command = `yt-dlp -f "bestaudio[ext=m4a]/bestaudio/best" --user-agent "${randomAgent}" --extractor-args "youtube:player_client=android" --get-url "${url}"`;
         
         const { stdout, stderr } = await execAsync(command, {
-            timeout: 15000 // 15 Sekunden Timeout
+            timeout: 20000 // 20 Sekunden Timeout
         });
         
         if (stderr && !stdout) {
-            throw new Error(`yt-dlp Fehler: ${stderr}`);
+            // Fallback mit Web Player Client
+            console.log('🔄 Versuche Web Player Client...');
+            const fallbackCommand = `yt-dlp -f "bestaudio/best" --user-agent "${randomAgent}" --extractor-args "youtube:player_client=web" --get-url "${url}"`;
+            
+            const { stdout: fallbackStdout } = await execAsync(fallbackCommand, {
+                timeout: 20000
+            });
+            
+            if (!fallbackStdout) {
+                throw new Error(`yt-dlp Fehler: ${stderr}`);
+            }
+            
+            const streamUrl = fallbackStdout.trim();
+            if (streamUrl && streamUrl.startsWith('http')) {
+                console.log(`✅ yt-dlp Fallback Stream-URL erhalten`);
+                return streamUrl;
+            }
         }
         
         const streamUrl = stdout.trim();
