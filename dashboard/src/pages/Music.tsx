@@ -79,7 +79,7 @@ const Tooltip: React.FC<{ content: React.ReactNode; title?: string }> = ({ conte
       type="button"
       className="text-blue-400 hover:text-blue-300 text-xs transition-colors duration-200"
     >
-      ���
+      ÔØô
     </button>
     
     {/* Tooltip */}
@@ -306,7 +306,7 @@ interface RadioStatus {
   currentStation: RadioStation | null;
 }
 
-// CSS Animation f++r Progress Bar
+// CSS Animation f├╝r Progress Bar
 const progressBarStyles = `
   @keyframes progressSlide {
     0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
@@ -467,7 +467,7 @@ const Music: React.FC = () => {
       }
 
       if (!currentGuildId) {
-        showError('Guild Fehler', '��� Keine Guild-ID gefunden. Bot m+�glicherweise offline.');
+        showError('Guild Fehler', 'ÔØî Keine Guild-ID gefunden. Bot m├Âglicherweise offline.');
         return;
       }
 
@@ -503,7 +503,7 @@ const Music: React.FC = () => {
       await loadRequestTracking();
 
     } catch (err) {
-      console.showError('Fehler beim Laden der Daten:', err);
+      console.error('Fehler beim Laden der Daten:', err);
       showError('Lade Fehler', 'Fehler beim Laden der Daten');
     } finally {
       setLoading(false);
@@ -519,7 +519,7 @@ const Music: React.FC = () => {
         setRequestTracking(data.trackingData || []);
       }
     } catch (error) {
-      console.showError('Fehler beim Laden der Request-Tracking Daten:', error);
+      console.error('Fehler beim Laden der Request-Tracking Daten:', error);
     } finally {
       setTrackingLoading(false);
     }
@@ -535,13 +535,13 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        showSuccess('Musik Einstellungen', '���� Musik-Einstellungen erfolgreich gespeichert!');
+        showSuccess('Musik Einstellungen', '­ƒÄÁ Musik-Einstellungen erfolgreich gespeichert!');
       } else {
-        showError('Speicher Fehler', '��� Fehler beim Speichern der Einstellungen');
+        showError('Speicher Fehler', 'ÔØî Fehler beim Speichern der Einstellungen');
       }
     } catch (err) {
-      console.showError('Speicherfehler:', err);
-      showError('Netzwerk Fehler', '��� Netzwerkfehler beim Speichern');
+      console.error('Speicherfehler:', err);
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler beim Speichern');
     } finally {
       setSaving(false);
     }
@@ -558,7 +558,7 @@ const Music: React.FC = () => {
         setSearchResults(data.results);
       }
     } catch (err) {
-      showError('YouTube Suche', '��� Fehler bei der YouTube-Suche');
+      showError('YouTube Suche', 'ÔØî Fehler bei der YouTube-Suche');
     } finally {
       setSearching(false);
     }
@@ -566,7 +566,7 @@ const Music: React.FC = () => {
 
   const addToQueue = async (song: Song) => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -578,19 +578,19 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        showSuccess('Queue Update', `���� "${song.title}" zur Queue hinzugef++gt!`);
+        showSuccess('Queue Update', `­ƒÄÁ "${song.title}" zur Queue hinzugef├╝gt!`);
         loadData(); // Refresh queue
       } else {
-        showError('Queue Fehler', '��� Fehler beim Hinzuf++gen zur Queue');
+        showError('Queue Fehler', 'ÔØî Fehler beim Hinzuf├╝gen zur Queue');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
     }
   };
 
   const controlPlayback = async (action: string) => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -601,20 +601,20 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('Player Kontrolle', data.message || `���� ${action} ausgef++hrt!`);
+        showSuccess('Player Kontrolle', data.message || `­ƒÄÁ ${action} ausgef├╝hrt!`);
         loadData(); // Refresh queue
       } else {
         const errorData = await response.json();
-        showError('Player Fehler', errorData.error || `��� Fehler bei ${action}`);
+        showError('Player Fehler', errorData.error || `ÔØî Fehler bei ${action}`);
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
     }
   };
 
   const joinVoiceChannel = async (channelId: string) => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -629,16 +629,16 @@ const Music: React.FC = () => {
         const data = await response.json();
         showSuccess('Voice Channel', data.message);
       } else {
-        showError('Voice Fehler', '��� Fehler beim Beitreten des Voice-Channels');
+        showError('Voice Fehler', 'ÔØî Fehler beim Beitreten des Voice-Channels');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
     }
   };
 
   const leaveVoiceChannel = async () => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -648,16 +648,16 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        showSuccess('Voice Channel', '���� Voice-Channel verlassen');
+        showSuccess('Voice Channel', '­ƒæï Voice-Channel verlassen');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
     }
   };
   
   const updateVolume = async (newVolume: number) => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -671,13 +671,13 @@ const Music: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setQueue(prev => ({ ...prev, volume: newVolume }));
-        showSuccess('Lautst+�rke', `���� ${data.message}`);
+        showSuccess('Lautst├ñrke', `­ƒöè ${data.message}`);
       } else {
         const errorData = await response.json();
-        showError('Lautst+�rke Fehler', errorData.error || '��� Fehler beim +�ndern der Lautst+�rke');
+        showError('Lautst├ñrke Fehler', errorData.error || 'ÔØî Fehler beim ├ändern der Lautst├ñrke');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler beim +�ndern der Lautst+�rke');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler beim ├ändern der Lautst├ñrke');
     }
   };
 
@@ -700,7 +700,7 @@ const Music: React.FC = () => {
 
   const createDJRole = async () => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -711,20 +711,20 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('DJ Rolle', `��ġ ${data.message}`);
+        showSuccess('DJ Rolle', `­ƒÄ¡ ${data.message}`);
         loadData(); // Reload roles
       } else {
         const errorData = await response.json();
-        showError('DJ Rolle Fehler', errorData.error || '��� Fehler beim Erstellen der DJ-Rolle');
+        showError('DJ Rolle Fehler', errorData.error || 'ÔØî Fehler beim Erstellen der DJ-Rolle');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
     }
   };
 
   const testPopularSong = async () => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -735,20 +735,20 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('Test Song', `���� ${data.message}`);
+        showSuccess('Test Song', `­ƒº¬ ${data.message}`);
         loadData(); // Reload queue
       } else {
         const errorData = await response.json();
-        showError('Test Song Fehler', errorData.error || '��� Test-Song fehlgeschlagen');
+        showError('Test Song Fehler', errorData.error || 'ÔØî Test-Song fehlgeschlagen');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
     }
   };
 
   const reconnectVoice = async () => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -760,7 +760,7 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('Voice Reconnect', `���� ${data.message}`);
+        showSuccess('Voice Reconnect', `­ƒöä ${data.message}`);
         // Reload queue and progress after reconnect
         setTimeout(() => {
           updateProgress();
@@ -768,10 +768,10 @@ const Music: React.FC = () => {
         }, 2000);
       } else {
         const errorData = await response.json();
-        showError('Voice Reconnect Fehler', errorData.error || '��� Voice-Reconnect fehlgeschlagen');
+        showError('Voice Reconnect Fehler', errorData.error || 'ÔØî Voice-Reconnect fehlgeschlagen');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', '��� Netzwerkfehler beim Voice-Reconnect');
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler beim Voice-Reconnect');
     } finally {
       setSaving(false);
     }
@@ -779,18 +779,18 @@ const Music: React.FC = () => {
 
   const postInteractivePanel = async () => {
     if (!guildId) {
-      showError('Guild Fehler', '��� Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
       return;
     }
 
     if (!settings.songRequests.interactivePanel.channelId) {
-      showError('Channel Fehler', '��� Kein Channel f++r Interactive Panel ausgew+�hlt');
+      showError('Channel Fehler', 'ÔØî Kein Channel f├╝r Interactive Panel ausgew├ñhlt');
       return;
     }
 
     try {
       // First save the current settings to ensure channelId is saved
-      console.log('���� Speichere Settings vor Panel-Post...');
+      console.log('­ƒöä Speichere Settings vor Panel-Post...');
       const saveResponse = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -798,11 +798,11 @@ const Music: React.FC = () => {
       });
 
       if (!saveResponse.ok) {
-        showError('Settings Fehler', '��� Fehler beim Speichern der Settings');
+        showError('Settings Fehler', 'ÔØî Fehler beim Speichern der Settings');
         return;
       }
 
-      console.log('ԣ� Settings gespeichert, poste Interactive Panel...');
+      console.log('Ô£à Settings gespeichert, poste Interactive Panel...');
 
       // Then post the interactive panel
       const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
@@ -811,15 +811,15 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('Interactive Panel', `���� ${data.message}`);
+        showSuccess('Interactive Panel', `­ƒÄÁ ${data.message}`);
         loadData(); // Reload settings to get message ID
       } else {
         const errorData = await response.json();
-        showError('Panel Fehler', errorData.error || '��� Fehler beim Posten des Interactive Panels');
+        showError('Panel Fehler', errorData.error || 'ÔØî Fehler beim Posten des Interactive Panels');
       }
     } catch (err) {
-      console.showError('Interactive Panel Post Error:', err);
-      showError('Netzwerk Fehler', '��� Netzwerkfehler');
+      console.error('Interactive Panel Post Error:', err);
+      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
     }
   };
 
@@ -838,7 +838,7 @@ const Music: React.FC = () => {
         setRadioStations(data.stations || []);
       }
     } catch (err) {
-      console.showError('Fehler beim Laden der Radio-Sender:', err);
+      console.error('Fehler beim Laden der Radio-Sender:', err);
       showError('Radio Stations', 'Fehler beim Laden der Radio-Sender');
     }
   };
@@ -856,13 +856,13 @@ const Music: React.FC = () => {
         });
       }
     } catch (err) {
-      console.showError('Fehler beim Laden des Radio-Status:', err);
+      console.error('Fehler beim Laden des Radio-Status:', err);
     }
   };
 
   const playRadioStation = async (stationId: string) => {
     if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -886,7 +886,7 @@ const Music: React.FC = () => {
         showError('Radio Fehler', data.error || 'Fehler beim Starten des Radio-Senders');
       }
     } catch (err) {
-      console.showError('Fehler beim Starten des Radio-Senders:', err);
+      console.error('Fehler beim Starten des Radio-Senders:', err);
       showError('Radio Fehler', 'Fehler beim Starten des Radio-Senders');
     } finally {
       setRadioLoading(false);
@@ -895,7 +895,7 @@ const Music: React.FC = () => {
 
   const stopRadio = async () => {
     if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verf++gbar');
+      showError('Guild Fehler', 'Keine Guild-ID verf├╝gbar');
       return;
     }
 
@@ -915,7 +915,7 @@ const Music: React.FC = () => {
         showError('Radio Fehler', data.error || 'Fehler beim Stoppen des Radios');
       }
     } catch (err) {
-      console.showError('Fehler beim Stoppen des Radios:', err);
+      console.error('Fehler beim Stoppen des Radios:', err);
       showError('Radio Fehler', 'Fehler beim Stoppen des Radios');
     } finally {
       setRadioLoading(false);
@@ -952,11 +952,11 @@ const Music: React.FC = () => {
         });
         await loadRadioStations();
       } else {
-        showError('Radio Station Fehler', data.error || 'Fehler beim Hinzuf++gen des Radio-Senders');
+        showError('Radio Station Fehler', data.error || 'Fehler beim Hinzuf├╝gen des Radio-Senders');
       }
     } catch (err) {
-      console.showError('Fehler beim Hinzuf++gen des Radio-Senders:', err);
-      showError('Radio Station Fehler', 'Fehler beim Hinzuf++gen des Radio-Senders');
+      console.error('Fehler beim Hinzuf├╝gen des Radio-Senders:', err);
+      showError('Radio Station Fehler', 'Fehler beim Hinzuf├╝gen des Radio-Senders');
     } finally {
       setRadioLoading(false);
     }
@@ -975,11 +975,11 @@ const Music: React.FC = () => {
         showSuccess('Radio Station', data.message);
         await loadRadioStations();
       } else {
-        showError('Radio Station Fehler', data.error || 'Fehler beim Entfernen des Radio-Senders');
+        showError('Radio Fehler', data.error || 'Fehler beim Entfernen des Radio-Senders');
       }
     } catch (err) {
-      console.showError('Fehler beim Entfernen des Radio-Senders:', err);
-      showError('Radio Station Fehler', 'Fehler beim Entfernen des Radio-Senders');
+      console.error('Fehler beim Entfernen des Radio-Senders:', err);
+      showError('Radio Fehler', 'Fehler beim Entfernen des Radio-Senders');
     } finally {
       setRadioLoading(false);
     }
@@ -996,7 +996,7 @@ const Music: React.FC = () => {
     }
   }, [guildId]);
 
-  // Auto-Update System - L+�dt nur Queue-Daten neu (NICHT die ganze Seite)
+  // Auto-Update System - L├ñdt nur Queue-Daten neu (NICHT die ganze Seite)
   useEffect(() => {
     if (!autoUpdateEnabled) return;
     
@@ -1004,7 +1004,7 @@ const Music: React.FC = () => {
       if (!guildId) return;
       
       setAutoUpdateActive(true);
-      console.log('���� Auto-Update: Lade nur Queue-Daten neu...');
+      console.log('­ƒöä Auto-Update: Lade nur Queue-Daten neu...');
       
       try {
         // Nur Queue-Daten laden, NICHT die ganze loadData() Funktion
@@ -1015,16 +1015,16 @@ const Music: React.FC = () => {
         }
         setLastUpdateTime(new Date());
       } catch (error) {
-        console.showError('Auto-Update Error:', error);
+        console.error('Auto-Update Error:', error);
       }
       
       setTimeout(() => setAutoUpdateActive(false), 500);
-    }, 15000); // Noch weniger h+�ufig - alle 15 Sekunden
+    }, 15000); // Noch weniger h├ñufig - alle 15 Sekunden
 
     return () => clearInterval(autoUpdateInterval);
   }, [guildId, autoUpdateEnabled]);
 
-  // Progress Updates - H+�ufiger f++r fl++ssige Progress Bar
+  // Progress Updates - H├ñufiger f├╝r fl├╝ssige Progress Bar
   useEffect(() => {
     const progressInterval = setInterval(() => {
       updateProgress();
@@ -1045,10 +1045,10 @@ const Music: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           
-          // Pr++fe ob sich der aktuelle Song ge+�ndert hat
+          // Pr├╝fe ob sich der aktuelle Song ge├ñndert hat
           if (data.queue.currentSong && queue.currentSong) {
             if (data.queue.currentSong.url !== queue.currentSong.url) {
-              console.log('���� Song-Wechsel erkannt! Aktualisiere nur Queue...');
+              console.log('­ƒÄÁ Song-Wechsel erkannt! Aktualisiere nur Queue...');
               setAutoUpdateActive(true);
               // Nur Queue aktualisieren, NICHT die ganze Seite
               setQueue(data.queue);
@@ -1057,7 +1057,7 @@ const Music: React.FC = () => {
             }
           } else if (data.queue.currentSong !== queue.currentSong) {
             // Song gestartet oder gestoppt
-            console.log('���� Player-Status ge+�ndert! Aktualisiere nur Queue...');
+            console.log('­ƒÄÁ Player-Status ge├ñndert! Aktualisiere nur Queue...');
             setAutoUpdateActive(true);
             setQueue(data.queue);
             setLastUpdateTime(new Date());
@@ -1065,9 +1065,9 @@ const Music: React.FC = () => {
           }
         }
       } catch (error) {
-        console.showError('Song Change Detection Error:', error);
+        console.error('Song Change Detection Error:', error);
       }
-    }, 8000); // Noch weniger h+�ufig - alle 8 Sekunden
+    }, 8000); // Noch weniger h├ñufig - alle 8 Sekunden
 
     return () => clearInterval(songChangeInterval);
   }, [guildId, queue.currentSong, autoUpdateEnabled]);
@@ -1084,7 +1084,7 @@ const Music: React.FC = () => {
 
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
-      {/* CSS Styles f++r Progress Bar Animationen */}
+      {/* CSS Styles f├╝r Progress Bar Animationen */}
       <style dangerouslySetInnerHTML={{ __html: progressBarStyles }} />
       
       {/* Matrix Background Effects */}
@@ -1137,7 +1137,7 @@ const Music: React.FC = () => {
       {/* System Status Badge */}
       <div className="flex justify-center gap-4 items-center">
         <Badge variant={settings.enabled ? "default" : "outline"} className="text-lg py-2 px-4">
-          {settings.enabled ? 'ԣ� Musik-Bot Aktiviert' : '��� Musik-Bot Deaktiviert'}
+          {settings.enabled ? 'Ô£à Musik-Bot Aktiviert' : 'ÔØî Musik-Bot Deaktiviert'}
         </Badge>
         
         {/* Auto-Update Indikator */}
@@ -1152,7 +1152,7 @@ const Music: React.FC = () => {
             className="scale-75"
           />
           <div className="text-xs text-purple-accent">
-            ���� Auto-Sync
+            ­ƒöä Auto-Sync
           </div>
         </div>
       </div>
@@ -1203,13 +1203,13 @@ const Music: React.FC = () => {
                 <Radio className="w-5 h-5 text-purple-accent" />
                 System Status
                 <Tooltip 
-                  title="���� System Status erkl+�rt:"
+                  title="­ƒÄÁ System Status erkl├ñrt:"
                   content={
                     <div>
                       <div>Zeigt den aktuellen Status des Musik-Bots:</div>
-                      <div>��� Bot-Status (Online/Offline)</div>
-                      <div>��� Voice-Channel Verbindung</div>
-                      <div>��� Aktuelle Wiedergabe-Informationen</div>
+                      <div>ÔÇó Bot-Status (Online/Offline)</div>
+                      <div>ÔÇó Voice-Channel Verbindung</div>
+                      <div>ÔÇó Aktuelle Wiedergabe-Informationen</div>
                     </div>
                   }
                 />
@@ -1240,7 +1240,7 @@ const Music: React.FC = () => {
                   <div className="text-neon-purple font-semibold text-lg">{queue.songs.length} Songs</div>
                 </div>
                 <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
-                  <div className="text-dark-muted text-sm">Lautst+�rke</div>
+                  <div className="text-dark-muted text-sm">Lautst├ñrke</div>
                   <div className="text-neon-purple font-semibold text-lg">{queue.volume}%</div>
                 </div>
                 <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
@@ -1258,20 +1258,20 @@ const Music: React.FC = () => {
                 <Play className="w-5 h-5 text-purple-accent" />
                 Player Kontrolle
                 <Tooltip 
-                  title="��ī Player Kontrolle erkl+�rt:"
+                  title="­ƒÄ« Player Kontrolle erkl├ñrt:"
                   content={
                     <div>
                       <div>Steuere die Musik-Wiedergabe:</div>
-                      <div>��� Play/Pause/Skip Buttons</div>
-                      <div>��� Lautst+�rke-Regler</div>
-                      <div>��� Queue-Management</div>
-                      <div>��� Audio-Fix f++r Verbindungsprobleme</div>
+                      <div>ÔÇó Play/Pause/Skip Buttons</div>
+                      <div>ÔÇó Lautst├ñrke-Regler</div>
+                      <div>ÔÇó Queue-Management</div>
+                      <div>ÔÇó Audio-Fix f├╝r Verbindungsprobleme</div>
                     </div>
                   }
                 />
               </CardTitle>
               <CardDescription>
-                Direkte Kontrolle ++ber die Musik-Wiedergabe
+                Direkte Kontrolle ├╝ber die Musik-Wiedergabe
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1368,7 +1368,7 @@ const Music: React.FC = () => {
                     <Play className="w-5 h-5" />
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ��´�� Wiedergabe starten
+                    ÔûÂ´©Å Wiedergabe starten
                   </div>
                 </div>
                 
@@ -1380,7 +1380,7 @@ const Music: React.FC = () => {
                     <Pause className="w-5 h-5" />
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    �ũ��� Wiedergabe pausieren
+                    ÔÅ©´©Å Wiedergabe pausieren
                   </div>
                 </div>
                 
@@ -1392,7 +1392,7 @@ const Music: React.FC = () => {
                     <SkipForward className="w-5 h-5" />
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    �š��� N+�chsten Song ++berspringen
+                    ÔÅ¡´©Å N├ñchsten Song ├╝berspringen
                   </div>
                 </div>
                 
@@ -1404,7 +1404,7 @@ const Music: React.FC = () => {
                     <Shuffle className="w-5 h-5" />
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ���� Queue mischen
+                    ­ƒöÇ Queue mischen
                   </div>
                 </div>
                 
@@ -1417,7 +1417,7 @@ const Music: React.FC = () => {
                     <Trash2 className="w-5 h-5" />
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ���洩� Queue leeren
+                    ­ƒùæ´©Å Queue leeren
                   </div>
                 </div>
                 
@@ -1426,10 +1426,10 @@ const Music: React.FC = () => {
                     onClick={testPopularSong}
                     className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-3 transition-all duration-200 hover:scale-105"
                   >
-                    ����
+                    ­ƒº¬
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ���� Test-Song abspielen
+                    ­ƒº¬ Test-Song abspielen
                   </div>
                 </div>
                 
@@ -1439,10 +1439,10 @@ const Music: React.FC = () => {
                     disabled={saving}
                     className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white p-3 transition-all duration-200 hover:scale-105 disabled:opacity-50"
                   >
-                    {saving ? '����' : '����'}
+                    {saving ? '­ƒöä' : '­ƒöº'}
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ���� Audio-Verbindung reparieren
+                    ­ƒöº Audio-Verbindung reparieren
                   </div>
                 </div>
               </div>
@@ -1456,19 +1456,19 @@ const Music: React.FC = () => {
                 <Search className="w-5 h-5 text-purple-accent" />
                 YouTube Suche
                 <Tooltip 
-                  title="���� YouTube Suche erkl+�rt:"
+                  title="­ƒöì YouTube Suche erkl├ñrt:"
                   content={
                     <div>
-                      <div>Suche und f++ge Songs zur Queue hinzu:</div>
-                      <div>��� Suche nach Song-Titel oder Artist</div>
-                      <div>��� Direkt zur Queue hinzuf++gen</div>
-                      <div>��� Unterst++tzt YouTube URLs</div>
+                      <div>Suche und f├╝ge Songs zur Queue hinzu:</div>
+                      <div>ÔÇó Suche nach Song-Titel oder Artist</div>
+                      <div>ÔÇó Direkt zur Queue hinzuf├╝gen</div>
+                      <div>ÔÇó Unterst├╝tzt YouTube URLs</div>
                     </div>
                   }
                 />
               </CardTitle>
               <CardDescription>
-                Suche nach Songs und f++ge sie zur Wiedergabeliste hinzu
+                Suche nach Songs und f├╝ge sie zur Wiedergabeliste hinzu
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1500,7 +1500,7 @@ const Music: React.FC = () => {
                 />
                 <div className="flex-1">
                   <h4 className="text-white font-semibold text-sm">{song.title}</h4>
-                  <p className="text-purple-200 text-xs">{song.author} ��� {formatDuration(song.duration)}</p>
+                  <p className="text-purple-200 text-xs">{song.author} ÔÇó {formatDuration(song.duration)}</p>
                 </div>
                 <button
                   onClick={() => addToQueue(song)}
@@ -1560,7 +1560,7 @@ const Music: React.FC = () => {
                 Aktuelle Queue ({queue.songs.length} Songs)
               </CardTitle>
               <CardDescription>
-                +�bersicht ++ber alle Songs in der Warteschlange
+                ├£bersicht ├╝ber alle Songs in der Warteschlange
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1582,7 +1582,7 @@ const Music: React.FC = () => {
                       />
                       <div className="flex-1">
                         <h4 className="text-white font-semibold">{song.title}</h4>
-                        <p className="text-purple-200 text-sm">{song.author} ��� {formatDuration(song.duration)}</p>
+                        <p className="text-purple-200 text-sm">{song.author} ÔÇó {formatDuration(song.duration)}</p>
                         {song.requestedBy && (
                           <p className="text-purple-300 text-xs">Angefragt von: {song.requestedBy}</p>
                         )}
@@ -1605,7 +1605,7 @@ const Music: React.FC = () => {
                 Radio Status
                 {radioStatus.isPlaying && (
                   <Badge className="bg-red-500 text-white animate-pulse">
-                    ���� LIVE
+                    ­ƒö┤ LIVE
                   </Badge>
                 )}
               </CardTitle>
@@ -1627,15 +1627,15 @@ const Music: React.FC = () => {
                     />
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-white">
-                        ���+ {radioStatus.currentStation.name}
+                        ­ƒô╗ {radioStatus.currentStation.name}
                       </h3>
                       <p className="text-red-300">{radioStatus.currentStation.description}</p>
                       <div className="flex gap-4 mt-2">
                         <Badge variant="outline" className="text-red-400 border-red-400">
-                          ���� {radioStatus.currentStation.genre}
+                          ­ƒÄÁ {radioStatus.currentStation.genre}
                         </Badge>
                         <Badge variant="outline" className="text-red-400 border-red-400">
-                          ���� {radioStatus.currentStation.country}
+                          ­ƒîì {radioStatus.currentStation.country}
                         </Badge>
                       </div>
                     </div>
@@ -1654,7 +1654,7 @@ const Music: React.FC = () => {
                 <div className="text-center py-8 text-dark-muted">
                   <Radio className="w-12 h-12 mx-auto mb-4 text-gray-500" />
                   <p>Kein Radio-Sender aktiv</p>
-                  <p className="text-sm">W+�hle einen Sender aus der Liste unten</p>
+                  <p className="text-sm">W├ñhle einen Sender aus der Liste unten</p>
                 </div>
               )}
             </CardContent>
@@ -1667,7 +1667,7 @@ const Music: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Radio className="w-5 h-5 text-purple-accent" />
-                  ���+ Radio-Sender
+                  ­ƒô╗ Radio-Sender
                 </CardTitle>
                 <CardDescription>
                   Traditionelle Radio-Streams aus Deutschland und international
@@ -1705,7 +1705,7 @@ const Music: React.FC = () => {
                       
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className="text-xs">
-                          ���� {station.country}
+                          ­ƒîì {station.country}
                         </Badge>
                         
                         <div className="flex items-center gap-2">
@@ -1727,7 +1727,7 @@ const Music: React.FC = () => {
                             )}
                           </Button>
                           
-                          {/* L+�sch-Button nur f++r custom Sender anzeigen (nicht f++r vordefinierte) */}
+                          {/* L├Âsch-Button nur f├╝r custom Sender anzeigen (nicht f├╝r vordefinierte) */}
                           {!['1live', 'swr3', 'antenne', 'bigfm', 'ndr2', 'ffn', 'energy', 'sunshine', 'deutschrap1', 'rapstation', 'hiphopradio', 'urbanradio', 'gtaradio', 'oldschool', 'synthwave', 'phonkradio'].includes(station.id) && (
                             <Button
                               onClick={() => removeRadioStation(station.id)}
@@ -1753,10 +1753,10 @@ const Music: React.FC = () => {
                   <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                   </svg>
-                  ���� YouTube Live-Streams
+                  ­ƒÄÑ YouTube Live-Streams
                 </CardTitle>
                 <CardDescription>
-                  24/7 YouTube Live-Streams f++r verschiedene Musikrichtungen
+                  24/7 YouTube Live-Streams f├╝r verschiedene Musikrichtungen
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1784,7 +1784,7 @@ const Music: React.FC = () => {
                         <div className="flex-1">
                           <h4 className="font-bold text-white flex items-center gap-2">
                             {station.name}
-                            <span className="text-red-500 text-xs">���� LIVE</span>
+                            <span className="text-red-500 text-xs">­ƒö┤ LIVE</span>
                           </h4>
                           <p className="text-sm text-dark-muted">{station.genre}</p>
                         </div>
@@ -1794,7 +1794,7 @@ const Music: React.FC = () => {
                       
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className="text-xs bg-red-500/10 border-red-500/30 text-red-400">
-                          ��ļ {station.country}
+                          ­ƒÄ¼ {station.country}
                         </Badge>
                         
                         <div className="flex items-center gap-2">
@@ -1816,7 +1816,7 @@ const Music: React.FC = () => {
                             )}
                           </Button>
                           
-                          {/* L+�sch-Button nur f++r custom Sender anzeigen (nicht f++r vordefinierte) */}
+                          {/* L├Âsch-Button nur f├╝r custom Sender anzeigen (nicht f├╝r vordefinierte) */}
                           {!['lofi', 'chillhop', 'deephouse', 'trapmusic', 'gaming', 'jazzhop', 'retrowave', 'bassmusic'].includes(station.id) && (
                             <Button
                               onClick={() => removeRadioStation(station.id)}
@@ -1841,10 +1841,10 @@ const Music: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="w-5 h-5 text-green-400" />
-                Eigenen Radio-Sender hinzuf++gen
+                Eigenen Radio-Sender hinzuf├╝gen
               </CardTitle>
               <CardDescription>
-                F++ge deinen eigenen Radio-Stream hinzu
+                F├╝ge deinen eigenen Radio-Stream hinzu
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1923,7 +1923,7 @@ const Music: React.FC = () => {
                   className="flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  {radioLoading ? 'F++ge hinzu...' : 'Radio-Sender hinzuf++gen'}
+                  {radioLoading ? 'F├╝ge hinzu...' : 'Radio-Sender hinzuf├╝gen'}
                 </Button>
               </div>
             </CardContent>
@@ -1939,7 +1939,7 @@ const Music: React.FC = () => {
                 Song-Request System
               </CardTitle>
               <CardDescription>
-                Konfiguriere das Song-Request System f++r deine Community
+                Konfiguriere das Song-Request System f├╝r deine Community
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1949,7 +1949,7 @@ const Music: React.FC = () => {
               <div className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg">
                 <div>
                   <label className="text-white font-medium">Song-Requests aktivieren</label>
-                  <p className="text-purple-300 text-sm">Erlaubt Mitgliedern Songs ++ber Discord-Commands zu requesten</p>
+                  <p className="text-purple-300 text-sm">Erlaubt Mitgliedern Songs ├╝ber Discord-Commands zu requesten</p>
                 </div>
                 <Switch
                   checked={settings.songRequests.enabled}
@@ -1967,8 +1967,8 @@ const Music: React.FC = () => {
                   <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-primary/20">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h4 className="text-white font-medium">��Ļ Interactive Panel</h4>
-                        <p className="text-purple-300 text-sm">Automatisches Embed mit Buttons f++r Song-Requests</p>
+                        <h4 className="text-white font-medium">­ƒÄ» Interactive Panel</h4>
+                        <p className="text-purple-300 text-sm">Automatisches Embed mit Buttons f├╝r Song-Requests</p>
                       </div>
                       <Switch
                         checked={settings.songRequests.interactivePanel.enabled}
@@ -1990,7 +1990,7 @@ const Music: React.FC = () => {
                         {/* Channel Selection */}
                         <div>
                           <label className="block text-purple-200 text-sm font-medium mb-2">
-                            ���� Panel-Channel
+                            ­ƒôì Panel-Channel
                           </label>
                           <select
                             className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
@@ -2006,7 +2006,7 @@ const Music: React.FC = () => {
                               }
                             }))}
                           >
-                            <option value="">Channel ausw+�hlen...</option>
+                            <option value="">Channel ausw├ñhlen...</option>
                             {channels.filter(ch => ch.type === 'text').map(channel => (
                               <option key={channel.id} value={channel.id}>
                                 #{channel.name}
@@ -2018,7 +2018,7 @@ const Music: React.FC = () => {
                         {/* Panel Options */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-purple-200 text-sm">���� Auto-Update</span>
+                            <span className="text-purple-200 text-sm">­ƒöä Auto-Update</span>
                             <Switch
                               checked={settings.songRequests.interactivePanel.autoUpdate}
                               onCheckedChange={(checked) => setSettings(prev => ({
@@ -2035,7 +2035,7 @@ const Music: React.FC = () => {
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <span className="text-purple-200 text-sm">���� Queue anzeigen</span>
+                            <span className="text-purple-200 text-sm">­ƒôï Queue anzeigen</span>
                             <Switch
                               checked={settings.songRequests.interactivePanel.showQueue}
                               onCheckedChange={(checked) => setSettings(prev => ({
@@ -2056,9 +2056,9 @@ const Music: React.FC = () => {
                         <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-primary/20 mt-4">
                           <div>
                             <span className="text-green-200 text-sm font-medium flex items-center gap-2">
-                              ��ܬ Auto Join/Leave Voice-Channel
+                              ­ƒÜ¬ Auto Join/Leave Voice-Channel
                             </span>
-                            <p className="text-green-300 text-xs mt-1">Bot tritt automatisch bei wenn Songs hinzugef++gt werden und verl+�sst bei leerer Queue</p>
+                            <p className="text-green-300 text-xs mt-1">Bot tritt automatisch bei wenn Songs hinzugef├╝gt werden und verl├ñsst bei leerer Queue</p>
                           </div>
                           <Switch
                             checked={settings.songRequests.interactivePanel.autoJoinLeave || false}
@@ -2078,7 +2078,7 @@ const Music: React.FC = () => {
                         {/* Preferred Voice Channel */}
                         <div className="mt-4">
                           <label className="block text-cyan-200 text-sm font-medium mb-2 flex items-center gap-2">
-                            ��Ļ Bevorzugter Voice-Channel
+                            ­ƒÄ» Bevorzugter Voice-Channel
                           </label>
                           <select
                             value={settings.voiceChannels.preferred}
@@ -2091,19 +2091,19 @@ const Music: React.FC = () => {
                             }))}
                             className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-cyan-400 focus:outline-none"
                           >
-                            <option value="">Automatisch w+�hlen</option>
+                            <option value="">Automatisch w├ñhlen</option>
                             {channels.filter(c => c.type === 'voice').map(channel => (
                               <option key={channel.id} value={channel.id}>
-                                ���� {channel.name}
+                                ­ƒöè {channel.name}
                               </option>
                             ))}
                           </select>
                           <p className="text-cyan-300 text-xs mt-2">
-                            ���� Falls kein User in einem Voice-Channel ist, joint der Bot diesem bevorzugten Channel. Leer lassen f++r automatische Auswahl.
+                            ­ƒÆí Falls kein User in einem Voice-Channel ist, joint der Bot diesem bevorzugten Channel. Leer lassen f├╝r automatische Auswahl.
                           </p>
                           {settings.voiceChannels.preferred && (
                             <p className="text-cyan-200 text-xs mt-1 bg-cyan-500/10 rounded p-2 border border-cyan-400/20">
-                              ԣ� Bevorzugter Channel: <span className="text-white font-medium">
+                              Ô£à Bevorzugter Channel: <span className="text-white font-medium">
                                 {channels.find(c => c.id === settings.voiceChannels.preferred)?.name || 'Unbekannter Channel'}
                               </span>
                             </p>
@@ -2114,9 +2114,9 @@ const Music: React.FC = () => {
                         <div className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-primary/20 mt-4">
                           <div>
                             <span className="text-purple-200 text-sm font-medium flex items-center gap-2">
-                              ��ĺ DJ-Rolle f++r Player-Controls
+                              ­ƒÄº DJ-Rolle f├╝r Player-Controls
                             </span>
-                            <p className="text-purple-300 text-xs mt-1">Nur Nutzer mit DJ-Rolle k+�nnen Play/Pause/Skip/Stop verwenden</p>
+                            <p className="text-purple-300 text-xs mt-1">Nur Nutzer mit DJ-Rolle k├Ânnen Play/Pause/Skip/Stop verwenden</p>
                           </div>
                           <Switch
                             checked={settings.songRequests.interactivePanel.requireDJForControls || false}
@@ -2137,7 +2137,7 @@ const Music: React.FC = () => {
                         {settings.songRequests.interactivePanel.requireDJForControls && (
                           <div className="mt-4">
                             <label className="block text-purple-200 text-sm font-medium mb-2">
-                              ��ġ DJ-Rolle ausw+�hlen
+                              ­ƒÄ¡ DJ-Rolle ausw├ñhlen
                             </label>
                             <div className="flex gap-2">
                               <select
@@ -2151,7 +2151,7 @@ const Music: React.FC = () => {
                                 <option value="">Keine DJ-Rolle</option>
                                 {roles.map(role => (
                                   <option key={role.id} value={role.id}>
-                                    {role.name} {role.name.includes('����') ? '' : '����'}
+                                    {role.name} {role.name.includes('­ƒÄÁ') ? '' : '­ƒÄÁ'}
                                   </option>
                                 ))}
                               </select>
@@ -2161,7 +2161,7 @@ const Music: React.FC = () => {
                                     onClick={createDJRole}
                                     className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 whitespace-nowrap"
                                   >
-                                    ��ġ DJ-Rolle erstellen
+                                    ­ƒÄ¡ DJ-Rolle erstellen
                                   </button>
                                 }
                                 title="Erstellt automatisch eine DJ-Rolle mit passenden Permissions"
@@ -2169,7 +2169,7 @@ const Music: React.FC = () => {
                             </div>
                             {settings.commands.djRole && (
                               <p className="text-purple-300 text-xs mt-2">
-                                ԣ� Aktuelle DJ-Rolle: <span className="text-white font-medium">
+                                Ô£à Aktuelle DJ-Rolle: <span className="text-white font-medium">
                                   {roles.find(r => r.id === settings.commands.djRole)?.name || 'Unbekannte Rolle'}
                                 </span>
                               </p>
@@ -2181,7 +2181,7 @@ const Music: React.FC = () => {
                         {settings.songRequests.interactivePanel.requireDJForControls && (
                           <div className="mt-4">
                             <label className="block text-purple-200 text-sm font-medium mb-2">
-                              ���� Admin-Rolle ausw+�hlen (optional)
+                              ­ƒææ Admin-Rolle ausw├ñhlen (optional)
                             </label>
                             <select
                               value={settings.songRequests.interactivePanel.adminRole}
@@ -2200,19 +2200,19 @@ const Music: React.FC = () => {
                               <option value="">Keine Admin-Rolle (nur Discord-Admins)</option>
                               {roles.map(role => (
                                 <option key={role.id} value={role.id}>
-                                  {role.name} {role.name.includes('����') || role.name.toLowerCase().includes('admin') ? '' : '����'}
+                                  {role.name} {role.name.includes('­ƒææ') || role.name.toLowerCase().includes('admin') ? '' : '­ƒææ'}
                                 </option>
                               ))}
                             </select>
                             {settings.songRequests.interactivePanel.adminRole && (
                               <p className="text-purple-300 text-xs mt-2">
-                                ԣ� Aktuelle Admin-Rolle: <span className="text-white font-medium">
+                                Ô£à Aktuelle Admin-Rolle: <span className="text-white font-medium">
                                   {roles.find(r => r.id === settings.songRequests.interactivePanel.adminRole)?.name || 'Unbekannte Rolle'}
                                 </span>
                               </p>
                             )}
                             <p className="text-purple-300 text-xs mt-2">
-                              ���� Admin-Rolle kann Player-Controls nutzen, auch ohne DJ-Rolle. Leer lassen f++r nur Discord-Administrator-Permission.
+                              ­ƒÆí Admin-Rolle kann Player-Controls nutzen, auch ohne DJ-Rolle. Leer lassen f├╝r nur Discord-Administrator-Permission.
                             </p>
                           </div>
                         )}
@@ -2221,7 +2221,7 @@ const Music: React.FC = () => {
                         {settings.songRequests.interactivePanel.showQueue && (
                           <div>
                             <label className="block text-purple-200 text-sm font-medium mb-2">
-                              ���� Max. Songs im Panel anzeigen
+                              ­ƒôè Max. Songs im Panel anzeigen
                             </label>
                             <input
                               type="number"
@@ -2247,8 +2247,8 @@ const Music: React.FC = () => {
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h5 className="text-purple-200 text-sm font-medium">�Ŧ��� Rate Limiting</h5>
-                              <p className="text-purple-300 text-xs">Begrenzt Song-Requests pro User ++ber Zeit</p>
+                              <h5 className="text-purple-200 text-sm font-medium">ÔÅ▒´©Å Rate Limiting</h5>
+                              <p className="text-purple-300 text-xs">Begrenzt Song-Requests pro User ├╝ber Zeit</p>
                             </div>
                             <Switch
                               checked={settings.songRequests.rateLimit?.enabled || false}
@@ -2348,7 +2348,7 @@ const Music: React.FC = () => {
                                 }
                               </p>
                               <p className="text-purple-300 text-xs mt-1">
-                                ���� Tracking erfolgt per Discord User-ID
+                                ­ƒÆí Tracking erfolgt per Discord User-ID
                               </p>
                             </div>
                           )}
@@ -2357,7 +2357,7 @@ const Music: React.FC = () => {
                         {/* Cooldown */}
                         <div>
                           <label className="block text-purple-200 text-sm font-medium mb-2">
-                            �Ŧ Cooldown zwischen Requests (Minuten)
+                            ÔÅ░ Cooldown zwischen Requests (Minuten)
                           </label>
                           <input
                             type="number"
@@ -2378,7 +2378,7 @@ const Music: React.FC = () => {
                         {/* Embed Color */}
                         <div>
                           <div className="flex items-center gap-2 mb-2">
-                            <label className="text-purple-200 text-sm font-medium">��Ŀ Embed Farbe</label>
+                            <label className="text-purple-200 text-sm font-medium">­ƒÄ¿ Embed Farbe</label>
                           </div>
                           <div className="flex gap-3 items-center">
                             {/* Color Picker */}
@@ -2423,7 +2423,7 @@ const Music: React.FC = () => {
                                 filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
                               }}
                             >
-                              ����
+                              ­ƒÄÁ
                             </div>
                           </div>
                           
@@ -2434,7 +2434,7 @@ const Music: React.FC = () => {
                               {[
                                 { name: 'Lila', color: '#8B5CF6' },
                                 { name: 'Blau', color: '#3B82F6' },
-                                { name: 'Gr++n', color: '#10B981' },
+                                { name: 'Gr├╝n', color: '#10B981' },
                                 { name: 'Rot', color: '#EF4444' },
                                 { name: 'Orange', color: '#F97316' },
                                 { name: 'Pink', color: '#EC4899' },
@@ -2468,7 +2468,7 @@ const Music: React.FC = () => {
                             disabled={!settings.songRequests.interactivePanel.channelId}
                             className="w-full bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-700 hover:to-purple-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                           >
-                            ���� Interactive Panel posten
+                            ­ƒÄÁ Interactive Panel posten
                           </button>
                           {settings.songRequests.interactivePanel.messageId && (
                             <p className="text-xs text-purple-300 mt-2 text-center">
@@ -2486,7 +2486,7 @@ const Music: React.FC = () => {
                   <div className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg">
                     <div>
                       <label className="text-white font-medium">DJ-Rolle erforderlich</label>
-                      <p className="text-purple-300 text-sm">Nur Nutzer mit DJ-Rolle k+�nnen Songs requesten</p>
+                      <p className="text-purple-300 text-sm">Nur Nutzer mit DJ-Rolle k├Ânnen Songs requesten</p>
                     </div>
                     <Switch
                       checked={settings.songRequests.requireDJRole}
@@ -2509,7 +2509,7 @@ const Music: React.FC = () => {
                         disabled={trackingLoading}
                         className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white px-3 py-1 rounded-lg text-sm transition-all duration-200 hover:scale-105"
                       >
-                        {trackingLoading ? '����' : '��+'} Aktualisieren
+                        {trackingLoading ? '­ƒöä' : 'Ôå╗'} Aktualisieren
                       </button>
                     </div>
                     
@@ -2533,11 +2533,11 @@ const Music: React.FC = () => {
                                 </div>
                                 <div className="flex items-center gap-4 mt-1 text-xs">
                                   <span className="text-purple-300">
-                                    ���� +�brig: <span className="text-white font-medium">{user.remainingRequests}</span>
+                                    ­ƒôè ├£brig: <span className="text-white font-medium">{user.remainingRequests}</span>
                                   </span>
                                   {user.resetTime && (
                                     <span className="text-purple-300">
-                                      �Ŧ Reset: <span className="text-white font-medium">
+                                      ÔÅ░ Reset: <span className="text-white font-medium">
                                         {new Date(user.resetTime).toLocaleString('de-DE', {
                                           day: '2-digit',
                                           month: '2-digit',
@@ -2568,25 +2568,25 @@ const Music: React.FC = () => {
 
                   {/* Interactive Panel Info */}
                   <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h4 className="text-white font-semibold mb-3">��Ļ Interactive Panel Features</h4>
+                    <h4 className="text-white font-semibold mb-3">­ƒÄ» Interactive Panel Features</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">���� Song Request</span>
-                        <span className="text-purple-300">- +�ffnet Modal f++r Song-Eingabe</span>
+                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">­ƒÄÁ Song Request</span>
+                        <span className="text-purple-300">- ├ûffnet Modal f├╝r Song-Eingabe</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">���� View Queue</span>
+                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">­ƒôï View Queue</span>
                         <span className="text-purple-300">- Zeigt aktuelle Queue privat an</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">�Ż��� Player Controls</span>
+                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">ÔÅ»´©Å Player Controls</span>
                         <span className="text-purple-300">- Play/Pause/Skip/Stop Buttons</span>
                         {settings.songRequests.interactivePanel.requireDJForControls && (
-                          <span className="bg-orange-500/20 text-orange-200 px-2 py-1 rounded text-xs">��ĺ DJ-Only</span>
+                          <span className="bg-orange-500/20 text-orange-200 px-2 py-1 rounded text-xs">­ƒÄº DJ-Only</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="bg-green-500/20 text-green-200 px-2 py-1 rounded">���� Auto-Update</span>
+                        <span className="bg-green-500/20 text-green-200 px-2 py-1 rounded">­ƒöä Auto-Update</span>
                         <span className="text-purple-300">- Panel aktualisiert sich automatisch</span>
                       </div>
                     </div>
@@ -2606,13 +2606,13 @@ const Music: React.FC = () => {
                 <Settings className="w-5 h-5 text-purple-accent" />
                 Erweiterte Einstellungen
                 <Tooltip 
-                  title="��ִ�� Erweiterte Einstellungen erkl+�rt:"
+                  title="ÔÜÖ´©Å Erweiterte Einstellungen erkl├ñrt:"
                   content={
                     <div>
                       <div>Konfiguriere erweiterte Bot-Features:</div>
-                      <div>��� Queue-Verhalten und Limits</div>
-                      <div>��� YouTube-Qualit+�t und L+�nge</div>
-                      <div>��� Autoplay und Auto-Clear</div>
+                      <div>ÔÇó Queue-Verhalten und Limits</div>
+                      <div>ÔÇó YouTube-Qualit├ñt und L├ñnge</div>
+                      <div>ÔÇó Autoplay und Auto-Clear</div>
                     </div>
                   }
                 />
@@ -2627,7 +2627,7 @@ const Music: React.FC = () => {
                 {/* Max Queue Length */}
                 <div>
                   <label className="block text-dark-text text-sm font-medium mb-2">
-                    Maximale Queue-L+�nge
+                    Maximale Queue-L├ñnge
                   </label>
                   <Input
                     type="number"
@@ -2636,19 +2636,19 @@ const Music: React.FC = () => {
                     value={settings.maxQueueLength}
                     onChange={(e) => setSettings(prev => ({ ...prev, maxQueueLength: parseInt(e.target.value) }))}
                   />
-                  <p className="text-dark-muted text-xs mt-1">Maximale Anzahl Songs die in der Queue gespeichert werden k+�nnen</p>
+                  <p className="text-dark-muted text-xs mt-1">Maximale Anzahl Songs die in der Queue gespeichert werden k├Ânnen</p>
                 </div>
 
                               {/* YouTube Settings */}
                 <div className="border-t border-purple-primary/20 pt-6">
                   <h4 className="text-dark-text font-semibold mb-4 flex items-center gap-2">
-                    ���� YouTube Einstellungen
+                    ­ƒÄÑ YouTube Einstellungen
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-dark-text text-sm font-medium mb-2">
-                        Audio-Qualit+�t
+                        Audio-Qualit├ñt
                       </label>
                       <select
                         value={settings.youtube.quality}
@@ -2658,14 +2658,14 @@ const Music: React.FC = () => {
                         }))}
                         className="bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-colors duration-200"
                       >
-                        <option value="highestaudio">H+�chste Qualit+�t</option>
-                        <option value="lowestaudio">Niedrigste Qualit+�t</option>
+                        <option value="highestaudio">H├Âchste Qualit├ñt</option>
+                        <option value="lowestaudio">Niedrigste Qualit├ñt</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-dark-text text-sm font-medium mb-2">
-                        Max. Song-L+�nge (Minuten)
+                        Max. Song-L├ñnge (Minuten)
                       </label>
                       <Input
                         type="number"
@@ -2684,14 +2684,14 @@ const Music: React.FC = () => {
                 {/* Queue Settings */}
                 <div className="border-t border-purple-primary/20 pt-6">
                   <h4 className="text-dark-text font-semibold mb-4 flex items-center gap-2">
-                    ���� Queue Verhalten
+                    ­ƒôï Queue Verhalten
                   </h4>
                   
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
                         <label className="text-dark-text font-medium">Queue bei leerem Channel leeren</label>
-                        <p className="text-dark-muted text-sm">L+�scht automatisch die Queue wenn alle User den Voice-Channel verlassen</p>
+                        <p className="text-dark-muted text-sm">L├Âscht automatisch die Queue wenn alle User den Voice-Channel verlassen</p>
                       </div>
                       <Switch
                         checked={settings.queue.clearOnEmpty}
@@ -2705,7 +2705,7 @@ const Music: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <label className="text-dark-text font-medium">Autoplay aktivieren</label>
-                        <p className="text-dark-muted text-sm">Spielt automatisch +�hnliche Songs wenn Queue leer ist</p>
+                        <p className="text-dark-muted text-sm">Spielt automatisch ├ñhnliche Songs wenn Queue leer ist</p>
                       </div>
                       <Switch
                         checked={settings.queue.autoplay}
@@ -2742,4 +2742,3 @@ const Music: React.FC = () => {
 };
 
 export default Music; 
-
