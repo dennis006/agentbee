@@ -97,6 +97,57 @@ interface ServerStats {
   }>;
 }
 
+interface HealthRecommendation {
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  actions?: string[];
+}
+
+interface OptimizationReport {
+  overallScore: number;
+  scores: {
+    [key: string]: number;
+  };
+  recommendations: Array<{
+    priority: 'high' | 'medium' | 'low';
+    title: string;
+    description: string;
+    details?: any;
+  }>;
+}
+
+interface MemberJourneys {
+  summary?: {
+    categoryDistribution?: {
+      [key: string]: number;
+    };
+    totalMembers?: number;
+    averageEngagement?: number;
+    highChurnRisk?: number;
+  };
+  analytics?: {
+    topPerformers?: Array<{
+      userId: string;
+      username: string;
+      milestones: number;
+      engagementScore: number;
+    }>;
+    atRisk?: Array<{
+      userId: string;
+      username: string;
+      daysSinceActivity: number;
+      churnProbability: number;
+    }>;
+    retention?: {
+      daily?: number;
+      weekly?: number;
+      monthly?: number;
+      day7?: number;
+    };
+  };
+}
+
 interface HealthData {
   guildId: string;
   guildName: string;
@@ -112,7 +163,7 @@ interface HealthData {
     growth: number;
   };
   metrics: any;
-  recommendations: string[];
+  recommendations: HealthRecommendation[];
 }
 
 interface Anomaly {
@@ -143,7 +194,7 @@ const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
 };
 
 const ServerManager: React.FC = () => {
-  const { toasts, success, error: showError, removeToast } = useToast();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -172,10 +223,10 @@ const ServerManager: React.FC = () => {
   // Analytics States
   const [liveEvents, setLiveEvents] = useState<any[]>([]);
   const [voiceVisualization, setVoiceVisualization] = useState<any>(null);
-  const [memberJourneys, setMemberJourneys] = useState<any>(null);
+  const [memberJourneys, setMemberJourneys] = useState<MemberJourneys | null>(null);
   
   // Bulk Management States
-  const [optimizationReport, setOptimizationReport] = useState<any>(null);
+  const [optimizationReport, setOptimizationReport] = useState<OptimizationReport | null>(null);
   const [serverTemplates, setServerTemplates] = useState<any[]>([]);
   const [actionHistory, setActionHistory] = useState<any[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -217,13 +268,18 @@ const ServerManager: React.FC = () => {
     try {
       setLoading(true);
       
-      // Lade echte Server-Daten von der API
-      const [guildsResponse, statsResponse] = await Promise.all([
-        fetch('/api/guilds'),
-        fetch('/api/server-statistics')
-      ]);
+      // Lade echte Server-Daten von der API mit besserer Fehlerbehandlung
+      const guildsResponse = await fetch('/api/guilds').catch(err => {
+        console.error('Fehler beim Laden der Guilds:', err);
+        return null;
+      });
 
-      if (guildsResponse.ok) {
+      const statsResponse = await fetch('/api/server-statistics').catch(err => {
+        console.error('Fehler beim Laden der Server-Statistiken:', err);
+        return null;
+      });
+
+      if (guildsResponse?.ok) {
         const guildsData = await guildsResponse.json();
         
         // Konvertiere API-Daten zum erwarteten Format
@@ -232,17 +288,17 @@ const ServerManager: React.FC = () => {
           name: guild.name,
           icon: guild.iconURL,
           memberCount: guild.memberCount,
-          onlineMembers: guild.onlineMembers,
+          onlineMembers: guild.onlineMembers || 0,
           joinedAt: guild.joinedAt,
           isOwner: guild.isOwner,
-          permissions: guild.permissions,
-          features: guild.features,
-          verificationLevel: guild.verificationLevel,
-          region: guild.region,
-          channelCount: guild.channelCount,
-          roleCount: guild.roleCount,
-          boostLevel: guild.boostLevel,
-          boostCount: guild.boostCount
+          permissions: guild.permissions || [],
+          features: guild.features || [],
+          verificationLevel: guild.verificationLevel || 0,
+          region: guild.region || 'Unbekannt',
+          channelCount: guild.channelCount || 0,
+          roleCount: guild.roleCount || 0,
+          boostLevel: guild.boostLevel || 0,
+          boostCount: guild.boostCount || 0
         }));
 
         setServers(formattedServers);
@@ -251,15 +307,40 @@ const ServerManager: React.FC = () => {
         if (formattedServers.length > 0) {
           setCurrentServer(formattedServers[0]);
         }
+      } else {
+        console.warn('Guilds API nicht verfügbar, verwende Fallback');
+        setServers([]);
       }
 
-      if (statsResponse.ok) {
+      if (statsResponse?.ok) {
         const statsData = await statsResponse.json();
         setServerStats(statsData);
+      } else {
+        console.warn('Server-Statistics API nicht verfügbar, verwende Fallback');
+        setServerStats({
+          totalMessages: 0,
+          todayMessages: 0,
+          activeUsers: 0,
+          newMembers: 0,
+          leftMembers: 0,
+          topChannels: [],
+          topUsers: []
+        });
       }
     } catch (error) {
-      showError('Fehler beim Laden der Server-Daten');
+      showError('Fehler beim Laden der Server-Daten', 'Die Server-Daten konnten nicht geladen werden');
       console.error('Server loading error:', error);
+      // Fallback für den Fall dass alle APIs fehlschlagen
+      setServers([]);
+      setServerStats({
+        totalMessages: 0,
+        todayMessages: 0,
+        activeUsers: 0,
+        newMembers: 0,
+        leftMembers: 0,
+        topChannels: [],
+        topUsers: []
+      });
     } finally {
       setLoading(false);
     }
@@ -275,21 +356,26 @@ const ServerManager: React.FC = () => {
   const loadHealthData = async (guildId: string) => {
     try {
       setHealthLoading(true);
-      const response = await fetch(`/api/server-health/${guildId}`);
+      const response = await fetch(`/api/server-health/${guildId}`).catch(err => {
+        console.error('Fehler beim Laden der Health-Daten:', err);
+        return null;
+      });
       
-      if (response.ok) {
+      if (response?.ok) {
         const data = await response.json();
         if (data.success) {
           setHealthData(data.health);
         } else {
-          showError('Fehler beim Laden der Health-Daten');
+          console.warn('Health-Daten nicht verfügbar:', data.error);
+          setHealthData(null);
         }
       } else {
-        showError('Server-Health-Daten konnten nicht geladen werden');
+        console.warn('Server-Health API nicht verfügbar');
+        setHealthData(null);
       }
     } catch (error) {
       console.error('Health data loading error:', error);
-      showError('Fehler beim Laden der Server-Gesundheitsdaten');
+      setHealthData(null);
     } finally {
       setHealthLoading(false);
     }
@@ -298,27 +384,42 @@ const ServerManager: React.FC = () => {
   const loadAnomalies = async (guildId: string) => {
     try {
       setAnomaliesLoading(true);
-      const [anomaliesResponse, statsResponse] = await Promise.all([
-        fetch(`/api/anomalies/${guildId}`),
-        fetch(`/api/anomaly-stats/${guildId}`)
-      ]);
       
-      if (anomaliesResponse.ok) {
+      const anomaliesResponse = await fetch(`/api/anomalies/${guildId}`).catch(err => {
+        console.error('Fehler beim Laden der Anomalien:', err);
+        return null;
+      });
+      
+      const statsResponse = await fetch(`/api/anomaly-stats/${guildId}`).catch(err => {
+        console.error('Fehler beim Laden der Anomalie-Stats:', err);
+        return null;
+      });
+      
+      if (anomaliesResponse?.ok) {
         const anomaliesData = await anomaliesResponse.json();
         if (anomaliesData.success) {
-          setAnomalies(anomaliesData.anomalies);
+          setAnomalies(anomaliesData.anomalies || []);
+        } else {
+          setAnomalies([]);
         }
+      } else {
+        setAnomalies([]);
       }
       
-      if (statsResponse.ok) {
+      if (statsResponse?.ok) {
         const statsData = await statsResponse.json();
         if (statsData.success) {
           setAnomalyStats(statsData.stats);
+        } else {
+          setAnomalyStats(null);
         }
+      } else {
+        setAnomalyStats(null);
       }
     } catch (error) {
       console.error('Anomalies loading error:', error);
-      showError('Fehler beim Laden der Anomalie-Daten');
+      setAnomalies([]);
+      setAnomalyStats(null);
     } finally {
       setAnomaliesLoading(false);
     }
@@ -329,33 +430,64 @@ const ServerManager: React.FC = () => {
     try {
       setAnalyticsLoading(true);
       
-      // Live Events laden
-      const eventsResponse = await fetch(`/api/server-manager-analytics/live-events?serverId=${guildId}&limit=10`);
-      if (eventsResponse.ok) {
-        const eventsData = await eventsResponse.json();
-        setLiveEvents(eventsData.data.events || []);
+      // Live Events laden mit Fallback
+      try {
+        const eventsResponse = await fetch(`/api/server-manager-analytics/live-events?serverId=${guildId}&limit=10`);
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json();
+          setLiveEvents(eventsData.data?.events || []);
+        } else {
+          console.warn('Live Events API nicht verfügbar');
+          setLiveEvents([]);
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Live Events:', error);
+        setLiveEvents([]);
       }
       
-      // Voice Visualization laden
-      const voiceResponse = await fetch(`/api/server-manager-analytics/voice-visualization/${guildId}?timeRange=24h`);
-      if (voiceResponse.ok) {
-        const voiceData = await voiceResponse.json();
-        setVoiceVisualization(voiceData.data);
+      // Voice Visualization laden mit Fallback
+      try {
+        const voiceResponse = await fetch(`/api/server-manager-analytics/voice-visualization/${guildId}?timeRange=24h`);
+        if (voiceResponse.ok) {
+          const voiceData = await voiceResponse.json();
+          setVoiceVisualization(voiceData.data);
+        } else {
+          console.warn('Voice Visualization API nicht verfügbar');
+          setVoiceVisualization(null);
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Voice Visualization:', error);
+        setVoiceVisualization(null);
       }
       
-      // Member Journeys laden
-      const journeyResponse = await fetch(`/api/server-manager-analytics/member-journeys/${guildId}?limit=20&sortBy=engagement`);
-      if (journeyResponse.ok) {
-        const journeyData = await journeyResponse.json();
-        setMemberJourneys(journeyData.data);
+      // Member Journeys laden mit Fallback
+      try {
+        const journeyResponse = await fetch(`/api/server-manager-analytics/member-journeys/${guildId}?limit=20&sortBy=engagement`);
+        if (journeyResponse.ok) {
+          const journeyData = await journeyResponse.json();
+          setMemberJourneys(journeyData.data);
+        } else {
+          console.warn('Member Journeys API nicht verfügbar');
+          setMemberJourneys(null);
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Member Journeys:', error);
+        setMemberJourneys(null);
       }
       
-      // Event Stream einrichten
-      setupEventStream(guildId);
+      // Event Stream einrichten (nur wenn verfügbar)
+      try {
+        setupEventStream(guildId);
+      } catch (error) {
+        console.error('Fehler beim Einrichten des Event Streams:', error);
+      }
       
     } catch (error) {
       console.error('Fehler beim Laden der Analytics-Daten:', error);
-      showError('Fehler beim Laden der Analytics-Daten');
+      // Setze alle Analytics-Daten auf Fallback-Werte
+      setLiveEvents([]);
+      setVoiceVisualization(null);
+      setMemberJourneys(null);
     } finally {
       setAnalyticsLoading(false);
     }
@@ -414,9 +546,9 @@ const ServerManager: React.FC = () => {
         }
       }
       
-      success('🔄 Server-Daten erfolgreich aktualisiert!');
+      showSuccess('Server-Daten aktualisiert', 'Server-Daten erfolgreich aktualisiert!');
     } catch (error) {
-      showError('Fehler beim Aktualisieren der Server-Daten');
+      showError('Fehler beim Aktualisieren', 'Fehler beim Aktualisieren der Server-Daten');
       console.error('Server refresh error:', error);
     } finally {
       setRefreshing(false);
@@ -457,11 +589,11 @@ const ServerManager: React.FC = () => {
 
   const exportServerData = async () => {
     try {
-      success('📊 Export wird vorbereitet...');
+      showSuccess('Export gestartet', 'Export wird vorbereitet...');
       await new Promise(resolve => setTimeout(resolve, 2000));
-      success('✅ Server-Daten erfolgreich exportiert!');
+      showSuccess('Export erfolgreich', 'Server-Daten erfolgreich exportiert!');
     } catch (error) {
-      showError('Fehler beim Exportieren der Daten');
+      showError('Export Fehler', 'Fehler beim Exportieren der Daten');
     }
   };
 
@@ -524,17 +656,27 @@ const ServerManager: React.FC = () => {
   // Bulk Management Functions
   const loadServerTemplates = async () => {
     try {
-      const response = await fetch('/api/bulk-server-management/templates');
-      const result = await response.json();
+      const response = await fetch('/api/bulk-server-management/templates').catch(err => {
+        console.error('Fehler beim Laden der Templates:', err);
+        return null;
+      });
       
-      if (result.success) {
-        setServerTemplates(result.data);
+      if (response?.ok) {
+        const result = await response.json();
+        
+        if (result.success) {
+          setServerTemplates(result.data || []);
+        } else {
+          console.warn('Templates nicht verfügbar:', result.error);
+          setServerTemplates([]);
+        }
       } else {
-        showError('Fehler beim Laden der Templates');
+        console.warn('Templates API nicht verfügbar');
+        setServerTemplates([]);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Templates:', error);
-      showError('Fehler beim Laden der Templates');
+      setServerTemplates([]);
     }
   };
 
@@ -551,18 +693,18 @@ const ServerManager: React.FC = () => {
       
       if (result.success) {
         setOptimizationReport(result.data);
-        success('Optimierungs-Analyse erfolgreich generiert');
+        showSuccess('Optimierung generiert', 'Optimierungs-Analyse erfolgreich generiert');
         
         // Force reload nach kurzer Zeit für frische Daten
         setTimeout(() => {
           loadOptimizationReport(guildId);
         }, 500);
       } else {
-        showError('Fehler beim Generieren der Optimierungs-Analyse');
+        showError('Optimierung Fehler', 'Fehler beim Generieren der Optimierungs-Analyse');
       }
     } catch (error) {
       console.error('❌ Fehler beim Generieren der Optimierungs-Analyse:', error);
-      showError('Fehler beim Generieren der Optimierungs-Analyse');
+      showError('Optimierung Fehler', 'Fehler beim Generieren der Optimierungs-Analyse');
     }
   };
 
@@ -583,40 +725,65 @@ const ServerManager: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
-        success('Template erfolgreich angewendet');
+        showSuccess('Template angewendet', 'Template erfolgreich angewendet');
         loadActionHistory(); // Aktualisiere Action History
       } else {
-        showError('Fehler beim Anwenden des Templates');
+        showError('Template Fehler', 'Fehler beim Anwenden des Templates');
       }
     } catch (error) {
       console.error('Fehler beim Anwenden des Templates:', error);
-      showError('Fehler beim Anwenden des Templates');
+      showError('Template Fehler', 'Fehler beim Anwenden des Templates');
     }
   };
 
   const loadActionHistory = async () => {
     try {
-      const response = await fetch('/api/bulk-server-management/action-history?limit=10');
-      const result = await response.json();
+      const response = await fetch('/api/bulk-server-management/action-history?limit=10').catch(err => {
+        console.error('Fehler beim Laden der Action History:', err);
+        return null;
+      });
       
-      if (result.success) {
-        setActionHistory(result.data);
+      if (response?.ok) {
+        const result = await response.json();
+        
+        if (result.success) {
+          setActionHistory(result.data || []);
+        } else {
+          console.warn('Action History nicht verfügbar:', result.error);
+          setActionHistory([]);
+        }
+      } else {
+        console.warn('Action History API nicht verfügbar');
+        setActionHistory([]);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Action History:', error);
+      setActionHistory([]);
     }
   };
 
   const loadOptimizationReport = async (guildId: string) => {
     try {
-      const response = await fetch(`/api/bulk-server-management/optimization-report/${guildId}`);
-      const result = await response.json();
+      const response = await fetch(`/api/bulk-server-management/optimization-report/${guildId}`).catch(err => {
+        console.error('Fehler beim Laden des Optimization Reports:', err);
+        return null;
+      });
       
-      console.log('🔍 Optimization Report Data:', result.data);
-      console.log('📋 Recommendations:', result.data?.recommendations);
-      
-      if (result.success) {
-        setOptimizationReport(result.data);
+      if (response?.ok) {
+        const result = await response.json();
+        
+        console.log('🔍 Optimization Report Data:', result.data);
+        console.log('📋 Recommendations:', result.data?.recommendations);
+        
+        if (result.success) {
+          setOptimizationReport(result.data);
+        } else {
+          console.warn('Optimization Report nicht verfügbar:', result.error);
+          setOptimizationReport(null);
+        }
+      } else {
+        console.warn('Optimization Report API nicht verfügbar');
+        setOptimizationReport(null);
       }
     } catch (error) {
       console.error('❌ Error loading optimization report:', error);
@@ -676,20 +843,20 @@ const ServerManager: React.FC = () => {
       if (result.success) {
         if (result.dryRun && result.preview) {
           // Show preview results
-          success(`Vorschau: ${result.preview.targetCount} Mitglieder würden von der Aktion betroffen sein`);
+          showSuccess('Bulk Action Vorschau', `Vorschau: ${result.preview.targetCount} Mitglieder würden von der Aktion betroffen sein`);
           console.log('Preview data:', result.preview);
         } else {
           // Show success message
-          success(`Bulk Aktion erfolgreich ausgeführt! ${result.result?.processed || 0} Mitglieder verarbeitet.`);
+          showSuccess('Bulk Action erfolgreich', `Bulk Aktion erfolgreich ausgeführt! ${result.result?.processed || 0} Mitglieder verarbeitet.`);
           loadActionHistory(); // Reload action history
           closeBulkModal();
         }
       } else {
-        showError(`Fehler: ${result.error}`);
+        showError('Bulk Action Fehler', `Fehler: ${result.error}`);
       }
     } catch (error) {
       console.error('Error executing bulk action:', error);
-      showError('Unerwarteter Fehler beim Ausführen der Bulk Aktion');
+      showError('Bulk Action Fehler', 'Unerwarteter Fehler beim Ausführen der Bulk Aktion');
     }
   };
 
@@ -705,11 +872,11 @@ const ServerManager: React.FC = () => {
       if (result.success) {
         setAiOptimizationData(result.data);
       } else {
-        showError('Fehler beim Laden der AI-Optimierungen');
+        showError('AI Optimierung Fehler', 'Fehler beim Laden der AI-Optimierungen');
       }
     } catch (error) {
       console.error('Error loading AI optimizations:', error);
-      showError('Fehler beim Laden der AI-Optimierungen');
+      showError('AI Optimierung Fehler', 'Fehler beim Laden der AI-Optimierungen');
     } finally {
       setAiLoading(false);
     }
@@ -726,11 +893,11 @@ const ServerManager: React.FC = () => {
       if (result.success) {
         setGrowthPredictions(result.data);
       } else {
-        showError('Fehler beim Laden der Wachstumsprognosen');
+        showError('Wachstumsprognose Fehler', 'Fehler beim Laden der Wachstumsprognosen');
       }
     } catch (error) {
       console.error('Error loading growth predictions:', error);
-      showError('Fehler beim Laden der Wachstumsprognosen');
+      showError('Wachstumsprognose Fehler', 'Fehler beim Laden der Wachstumsprognosen');
     } finally {
       setAiLoading(false);
     }
@@ -751,10 +918,10 @@ const ServerManager: React.FC = () => {
         loadGrowthPredictions()
       ]);
       
-      success('Neue AI-Analyse erfolgreich generiert!');
+      showSuccess('AI Analyse erfolgreich', 'Neue AI-Analyse erfolgreich generiert!');
     } catch (error) {
       console.error('Error generating new AI analysis:', error);
-      showError('Fehler beim Generieren der neuen AI-Analyse');
+      showError('AI Analyse Fehler', 'Fehler beim Generieren der neuen AI-Analyse');
     } finally {
       setAiLoading(false);
     }
@@ -774,15 +941,15 @@ const ServerManager: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
-        success(`Optimierung "${suggestion.title}" erfolgreich angewendet!`);
+        showSuccess('Optimierung angewendet', `Optimierung "${suggestion.title}" erfolgreich angewendet!`);
         // Reload AI data
         loadAIOptimizations();
       } else {
-        showError(`Fehler beim Anwenden der Optimierung: ${result.error}`);
+        showError('Optimierung Fehler', `Fehler beim Anwenden der Optimierung: ${result.error}`);
       }
     } catch (error) {
       console.error('Error applying suggestion:', error);
-      showError('Fehler beim Anwenden der Optimierung');
+      showError('Optimierung Fehler', 'Fehler beim Anwenden der Optimierung');
     }
   };
 
@@ -1139,13 +1306,13 @@ const ServerManager: React.FC = () => {
                                 {categoryPermissions.map((permission, index) => {
                                   const permInfo = getPermissionInfo(permission);
                                   return (
-                                    <Badge 
+                                    <span 
                                       key={index} 
-                                      className={`text-xs transition-all duration-300 hover:scale-105 ${permInfo.className}`}
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 hover:scale-105 ${permInfo.className}`}
                                       title={`Kategorie: ${permInfo.category}`}
                                     >
                                       {permInfo.displayName}
-                                    </Badge>
+                                    </span>
                                   );
                                 })}
                               </div>
@@ -1159,23 +1326,22 @@ const ServerManager: React.FC = () => {
                         {currentServer.permissions.slice(0, 3).map((permission, index) => {
                           const permInfo = getPermissionInfo(permission);
                           return (
-                            <Badge 
+                            <span 
                               key={index} 
-                              className={`text-xs transition-all duration-300 hover:scale-105 ${permInfo.className}`}
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-300 hover:scale-105 ${permInfo.className}`}
                               title={`Kategorie: ${permInfo.category}`}
                             >
                               {permInfo.displayName}
-                            </Badge>
+                            </span>
                           );
                         })}
                         {currentServer.permissions.length > 3 && (
-                          <Badge 
-                            variant="outline" 
-                            className="text-xs cursor-pointer hover:bg-purple-primary/20 transition-colors animate-pulse"
+                          <button 
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-purple-primary text-purple-primary bg-transparent cursor-pointer hover:bg-purple-primary/20 transition-colors animate-pulse"
                             onClick={() => setExpandedPermissions(true)}
                           >
                             +{currentServer.permissions.length - 3} weitere anzeigen
-                          </Badge>
+                          </button>
                         )}
                       </div>
                     )
@@ -1682,7 +1848,7 @@ const ServerManager: React.FC = () => {
                                   category === 'active' ? 'text-green-400' :
                                   category === 'casual' ? 'text-orange-400' : 'text-gray-400'
                                 }`}>
-                                  {count}
+                                  {String(count)}
                                 </span>
                               </div>
                             </div>
