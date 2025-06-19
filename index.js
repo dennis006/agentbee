@@ -1139,7 +1139,7 @@ app.post('/api/bot/start', (req, res) => {
     }
 });
 
-// Bot Restart API - Railway Safe Version
+// Bot Restart API - Railway Container Restart
 app.post('/api/bot/restart', (req, res) => {
     try {
         console.log('🔄 Bot Restart Request erhalten...');
@@ -1150,72 +1150,37 @@ app.post('/api/bot/restart', (req, res) => {
         
         res.json({ 
             success: true, 
-            message: 'Bot wird neugestartet (Railway-Safe)...',
+            message: 'Bot wird neugestartet (Container-Restart)...',
             status: 'restarting' 
         });
         
-        // Railway-Safe Restart nach kurzer Verzögerung
+        // Container Restart nach kurzer Verzögerung
         setTimeout(async () => {
-            console.log('🔄 Bot wird neugestartet (Railway-Safe)...');
+            console.log('🔄 Bot wird neugestartet (Container-Restart)...');
             
             if (process.env.RAILWAY_ENVIRONMENT) {
-                // Railway: Graceful Bot Restart ohne Container Crash
-                console.log('🚂 Railway Safe Restart - Destroy & Re-Login');
-                try {
-                    // 1. Disconnect Bot gracefully
-                    if (client.isReady()) {
-                        await client.destroy();
-                        console.log('✅ Bot Discord Connection destroyed');
-                    }
-                    
-                    // 2. Wait a moment
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    
-                    // 3. Re-login
-                    currentBotStatus.status = 'starting';
-                    console.log('🚀 Starting bot re-login process...');
-                    await client.login(apiKeys.discord.bot_token);
-                    console.log('✅ Bot successfully restarted in Railway');
-                    
-                    // 4. Warte auf ready Event und dann force status update
-                    const waitForReady = () => {
-                        if (client.isReady() && client.user) {
-                            console.log('🟢 Bot is confirmed ready after restart');
-                            currentBotStatus.status = 'online';
-                            currentBotStatus.isRunning = true;
-                            updateBotStatus();
-                            sendStatusToAPI();
-                            console.log('🟢 Status nach Railway-Restart force-updated');
-                        } else {
-                            console.log('⏳ Waiting for bot to be ready...');
-                            setTimeout(waitForReady, 1000);
-                        }
-                    };
-                    
-                    setTimeout(waitForReady, 1000);
-                    
-                } catch (error) {
-                    console.error('❌ Railway Safe Restart failed:', error);
-                    currentBotStatus.status = 'error';
-                    currentBotStatus.isRunning = false;
-                    
-                    // If safe restart fails, try once more
-                    setTimeout(async () => {
-                        try {
-                            console.log('🔄 Retry bot login after failed restart...');
-                            await client.login(apiKeys.discord.bot_token);
-                        } catch (retryError) {
-                            console.error('❌ Retry also failed:', retryError);
-                        }
-                    }, 5000);
+                // Railway: Container Restart mit ALWAYS policy
+                console.log('🚂 Railway Container Restart (restartPolicyType: ALWAYS)');
+                console.log('🔄 Triggering container restart via process.exit(0)...');
+                
+                // Graceful Discord disconnect
+                if (client.isReady()) {
+                    await client.destroy();
+                    console.log('✅ Bot Discord connection closed gracefully');
                 }
+                
+                // Railway wird den Container automatisch neustarten
+                console.log('🏃‍♂️ Exiting for Railway auto-restart...');
+                process.exit(0);
             } else {
-                // Lokal: Destroy und neu verbinden
+                // Lokal: Nur Discord reconnect
+                console.log('💻 Local environment - Discord reconnect only');
                 client.destroy();
                 setTimeout(async () => {
                     try {
                         currentBotStatus.status = 'starting';
                         await client.login(apiKeys.discord.bot_token);
+                        console.log('✅ Local restart complete');
                     } catch (error) {
                         console.error('❌ Fehler beim lokalen Neustart:', error);
                         currentBotStatus.status = 'error';
