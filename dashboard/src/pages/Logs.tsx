@@ -53,6 +53,9 @@ const Logs = () => {
   const [stats, setStats] = useState<ModerationStats | null>(null);
   const [activeMutes, setActiveMutes] = useState<ActiveMute[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // API Base URL
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   
@@ -110,7 +113,7 @@ const Logs = () => {
         ...(filterDays && { days: filterDays })
       });
 
-      const response = await fetch(`http://localhost:3001/api/moderation/logs?${params}`);
+      const response = await fetch(`${apiUrl}/api/moderation/logs?${params}`);
       const data = await response.json();
       
       setLogs(data.logs || []);
@@ -126,7 +129,7 @@ const Logs = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/moderation/stats');
+      const response = await fetch(`${apiUrl}/api/moderation/stats`);
       const data = await response.json();
       setStats(data);
     } catch (error) {
@@ -137,7 +140,7 @@ const Logs = () => {
 
   const fetchActiveMutes = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/moderation/muted');
+      const response = await fetch(`${apiUrl}/api/moderation/muted`);
       const data = await response.json();
       setActiveMutes(data.activeMutes || []);
     } catch (error) {
@@ -148,7 +151,7 @@ const Logs = () => {
 
   const fetchResetStats = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/moderation/reset-stats');
+      const response = await fetch(`${apiUrl}/api/moderation/reset-stats`);
       const data = await response.json();
       setResetStats(data);
     } catch (error) {
@@ -179,7 +182,7 @@ const Logs = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/moderation/reset', {
+      const response = await fetch(`${apiUrl}/api/moderation/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirmReset: true })
@@ -263,7 +266,7 @@ const Logs = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/moderation/unmute', {
+      const response = await fetch(`${apiUrl}/api/moderation/unmute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
