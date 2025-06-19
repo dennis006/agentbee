@@ -324,24 +324,36 @@ const DashboardLayout = () => {
 
   // Bot Status laden
   useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
     const fetchBotStatus = async () => {
       try {
-        const response = await fetch('/api/bot/status')
+        console.log(`🔍 [App.tsx] Fetching bot status from: ${apiUrl}/api/bot/status`);
+        
+        const response = await fetch(`${apiUrl}/api/bot/status`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        })
+        
         if (response.ok) {
           const data = await response.json()
+          console.log('✅ [App.tsx] Bot Status Response:', data);
           setSystemStatus({
             isOnline: data.isRunning && data.status === 'online',
             status: data.status,
             uptime: data.uptime
           })
         } else {
+          console.warn(`⚠️ [App.tsx] HTTP ${response.status}: ${response.statusText}`);
           setSystemStatus({
             isOnline: false,
             status: 'offline'
           })
         }
       } catch (error) {
-        console.error('Fehler beim Laden des Bot-Status:', error)
+        console.error('❌ [App.tsx] Fehler beim Laden des Bot-Status:', error)
         setSystemStatus({
           isOnline: false,
           status: 'offline'
