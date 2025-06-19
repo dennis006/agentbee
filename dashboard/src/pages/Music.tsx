@@ -320,6 +320,10 @@ const progressBarStyles = `
   }
 `;
 
+import { useState, useEffect } from 'react';
+import { Music as MusicIcon, Play, Pause, SkipForward, Volume2, List, Settings, Plus, Trash2, Search, Mic, Users, Shuffle, Radio, Save } from 'lucide-react';
+import { useToast, ToastContainer } from '../components/ui/toast';
+
 const Music: React.FC = () => {
   // API Base URL
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -328,10 +332,6 @@ const Music: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('player');
-  
-import { useState, useEffect } from 'react';
-import { Music as MusicIcon, Play, Pause, SkipForward, Volume2, List, Settings, Plus, Trash2, Search, Mic, Users, Shuffle, Radio, Save } from 'lucide-react';
-import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
 const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
@@ -1303,14 +1303,14 @@ const Music: React.FC = () => {
       const data = await response.json();
       
       if (response.ok) {
-        success(data.message);
+        showSuccess('Radio Station', data.message);
         await loadRadioStations();
       } else {
-        error(data.error || 'Fehler beim Entfernen des Radio-Senders');
+        showError('Radio Station Fehler', data.error || 'Fehler beim Entfernen des Radio-Senders');
       }
     } catch (err) {
       console.error('Fehler beim Entfernen des Radio-Senders:', err);
-      error('Fehler beim Entfernen des Radio-Senders');
+      showError('Radio Station Fehler', 'Fehler beim Entfernen des Radio-Senders');
     } finally {
       setRadioLoading(false);
     }
