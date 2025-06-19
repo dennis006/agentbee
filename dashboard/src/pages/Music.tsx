@@ -1226,7 +1226,7 @@ const Music: React.FC = () => {
 
   const stopRadio = async () => {
     if (!guildId) {
-      error('Keine Guild-ID verfügbar');
+      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
       return;
     }
 
@@ -1239,15 +1239,15 @@ const Music: React.FC = () => {
       const data = await response.json();
       
       if (response.ok) {
-        success(data.message);
+        showSuccess('Radio', data.message);
         await loadRadioStatus();
         await loadData(); // Aktualisiere Queue
       } else {
-        error(data.error || 'Fehler beim Stoppen des Radios');
+        showError('Radio Fehler', data.error || 'Fehler beim Stoppen des Radios');
       }
     } catch (err) {
       console.error('Fehler beim Stoppen des Radios:', err);
-      error('Fehler beim Stoppen des Radios');
+      showError('Radio Fehler', 'Fehler beim Stoppen des Radios');
     } finally {
       setRadioLoading(false);
     }
@@ -1255,7 +1255,7 @@ const Music: React.FC = () => {
 
   const addCustomRadioStation = async () => {
     if (!newStation.name || !newStation.url) {
-      error('Name und URL sind erforderlich');
+      showError('Validation Fehler', 'Name und URL sind erforderlich');
       return;
     }
 
@@ -1272,7 +1272,7 @@ const Music: React.FC = () => {
       const data = await response.json();
       
       if (response.ok) {
-        success(data.message);
+        showSuccess('Radio Station', data.message);
         setNewStation({
           name: '',
           url: '',
@@ -1283,11 +1283,11 @@ const Music: React.FC = () => {
         });
         await loadRadioStations();
       } else {
-        error(data.error || 'Fehler beim Hinzufügen des Radio-Senders');
+        showError('Radio Station Fehler', data.error || 'Fehler beim Hinzufügen des Radio-Senders');
       }
     } catch (err) {
       console.error('Fehler beim Hinzufügen des Radio-Senders:', err);
-      error('Fehler beim Hinzufügen des Radio-Senders');
+      showError('Radio Station Fehler', 'Fehler beim Hinzufügen des Radio-Senders');
     } finally {
       setRadioLoading(false);
     }
