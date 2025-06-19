@@ -547,13 +547,30 @@ const Dashboard = () => {
       }
     };
 
-    // Initial fetch mit Verzögerung
-    const initialTimeout = setTimeout(() => fetchStatus(), 2000);
+    // Verhindere Race Conditions mit einem single call system
+    let isFetching = false;
     
-         // Polling interval mit dynamischem Delay (häufiger für bessere Bot Status Updates)
-     const interval = setInterval(() => {
-       fetchStatus();
-     }, consecutiveFailures > 0 ? retryDelay : 3000); // 3s normal für schnellere Updates, exponential bei Fehlern
+    const safeFetchStatus = async () => {
+      if (isFetching) {
+        console.log('⏸️ Fetch bereits im Gange - überspringe Aufruf');
+        return;
+      }
+      
+      isFetching = true;
+      try {
+        await fetchStatus();
+      } finally {
+        isFetching = false;
+      }
+    };
+    
+    // Initial fetch mit Verzögerung (nur EINMAL)
+    const initialTimeout = setTimeout(() => safeFetchStatus(), 2000);
+    
+    // Polling interval mit dynamischem Delay (mit Race Condition Schutz)
+    const interval = setInterval(() => {
+      safeFetchStatus();
+    }, consecutiveFailures > 0 ? retryDelay : 3000); // 3s normal für schnellere Updates, exponential bei Fehlern
     
     // Commands laden (mit eigener Fehlerbehandlung)
     fetchCommands();
