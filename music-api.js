@@ -432,10 +432,18 @@ function normalizeYouTubeURL(url) {
     return url;
 }
 
-// yt-dlp Integration für robuste YouTube-Streams
+// yt-dlp Integration für robuste YouTube-Streams (mit Railway-Fallback)
 async function getStreamWithYtDlp(url) {
     try {
         console.log(`🚀 Verwende yt-dlp für: ${url}`);
+        
+        // Prüfe ob yt-dlp verfügbar ist
+        try {
+            await execAsync('yt-dlp --version', { timeout: 3000 });
+        } catch (versionError) {
+            console.log('⚠️ yt-dlp nicht verfügbar (normal auf Railway)');
+            throw new Error('yt-dlp nicht installiert oder nicht verfügbar');
+        }
         
         // yt-dlp Command mit hochwertigen Audio-Optionen
         const command = `yt-dlp -f "bestaudio/best" --get-url "${url}"`;
@@ -457,15 +465,23 @@ async function getStreamWithYtDlp(url) {
         return streamUrl;
         
     } catch (error) {
-        console.error('❌ yt-dlp Fehler:', error.message);
+        console.log('⚠️ yt-dlp Fehler (normal auf Railway):', error.message);
         throw error;
     }
 }
 
-// Alternative: Hole Video-Info mit yt-dlp
+// Alternative: Hole Video-Info mit yt-dlp (mit Railway-Fallback)
 async function getVideoInfoWithYtDlp(url) {
     try {
         console.log(`🎵 Hole Video-Info mit yt-dlp für: ${url}`);
+        
+        // Prüfe ob yt-dlp verfügbar ist
+        try {
+            await execAsync('yt-dlp --version', { timeout: 3000 });
+        } catch (versionError) {
+            console.log('⚠️ yt-dlp nicht verfügbar für Video-Info (normal auf Railway)');
+            throw new Error('yt-dlp nicht installiert oder nicht verfügbar');
+        }
         
         const command = `yt-dlp -j "${url}"`;
         const { stdout, stderr } = await execAsync(command, {
@@ -489,7 +505,7 @@ async function getVideoInfoWithYtDlp(url) {
         };
         
     } catch (error) {
-        console.error('❌ yt-dlp Video-Info Fehler:', error.message);
+        console.log('⚠️ yt-dlp Video-Info Fehler (normal auf Railway):', error.message);
         throw error;
     }
 }
@@ -503,19 +519,7 @@ async function getVideoInfo(url) {
         const normalizedUrl = normalizeYouTubeURL(url);
         console.log(`🔄 Normalisierte URL: ${normalizedUrl}`);
         
-        // Methode 1: yt-dlp (Robust gegen YouTube-Blockierungen)
-        try {
-            console.log('🚀 Versuche yt-dlp...');
-            const ytdlpInfo = await getVideoInfoWithYtDlp(normalizedUrl);
-            if (ytdlpInfo) {
-                console.log('✅ yt-dlp Video-Info erfolgreich');
-                return ytdlpInfo;
-            }
-        } catch (ytdlpError) {
-            console.log('⚠️ yt-dlp fehlgeschlagen:', ytdlpError.message);
-        }
-        
-        // Methode 2: play-dl (Falls verfügbar)
+        // Methode 1: play-dl (Primär - funktioniert auf Railway)
         try {
             console.log('🎥 Versuche play-dl...');
             const isValidYT = playdl.yt_validate(normalizedUrl);
@@ -539,6 +543,18 @@ async function getVideoInfo(url) {
             }
         } catch (playdlError) {
             console.log('⚠️ play-dl fehlgeschlagen:', playdlError.message);
+        }
+        
+        // Methode 2: yt-dlp (Nur wenn verfügbar - für lokale Entwicklung)
+        try {
+            console.log('🚀 Versuche yt-dlp...');
+            const ytdlpInfo = await getVideoInfoWithYtDlp(normalizedUrl);
+            if (ytdlpInfo) {
+                console.log('✅ yt-dlp Video-Info erfolgreich');
+                return ytdlpInfo;
+            }
+        } catch (ytdlpError) {
+            console.log('⚠️ yt-dlp fehlgeschlagen (normal auf Railway):', ytdlpError.message);
         }
         
         // Methode 3: Fallback mit yt-search
@@ -1661,121 +1677,141 @@ async function playMusic(guildId, song) {
         let stream;
         let streamCreated = false;
         
-        // Methode 1: yt-dlp (Robuste Alternative gegen YouTube-Blockierungen)
-        try {
-            console.log(`🚀 Versuche yt-dlp Stream für: ${songData.title}`);
-            
-            const streamUrl = await getStreamWithYtDlp(songData.url);
-            if (streamUrl) {
-                console.log('📡 Erstelle Stream von yt-dlp URL...');
-                
-                const fetch = require('node-fetch');
-                const response = await fetch(streamUrl);
-                
-                if (response.ok) {
-                    stream = response.body;
-                    streamCreated = true;
-                    console.log('✅ yt-dlp Stream erfolgreich erstellt');
-                } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-            }
-        } catch (ytdlpError) {
-            console.log('⚠️ yt-dlp Stream fehlgeschlagen:', ytdlpError.message);
-        }
+        // Methode 1: play-dl (Primär - funktioniert auf Railway)
+        let streamAttempts = 0;
+        const maxStreamAttempts = 3;
         
-        // Methode 2: play-dl (Fallback falls yt-dlp nicht verfügbar)
-        if (!streamCreated) {
-            let streamAttempts = 0;
-            const maxStreamAttempts = 2;
-            
-            while (!streamCreated && streamAttempts < maxStreamAttempts) {
-                streamAttempts++;
-                try {
-                    console.log(`📡 Versuche play-dl Stream (Versuch ${streamAttempts}/${maxStreamAttempts})...`);
+        while (!streamCreated && streamAttempts < maxStreamAttempts) {
+            streamAttempts++;
+            try {
+                console.log(`📡 Versuche play-dl Stream (Versuch ${streamAttempts}/${maxStreamAttempts})...`);
+                
+                const normalizedUrl = normalizeYouTubeURL(songData.url);
+                const streamValidation = playdl.yt_validate(normalizedUrl);
+                
+                if (streamValidation === 'video') {
+                    // Verschiedene Qualitätsoptionen probieren
+                    const qualityOptions = [2, 1, 0]; // high, medium, low
                     
-                    const normalizedUrl = normalizeYouTubeURL(songData.url);
-                    const streamValidation = playdl.yt_validate(normalizedUrl);
-                    
-                    if (streamValidation === 'video') {
-                        const streamPromise = playdl.stream(normalizedUrl, {
-                            quality: 2,
-                            type: 'audio'
-                        });
-                        
-                        const streamResult = await Promise.race([
-                            streamPromise,
-                            new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('Stream-Timeout')), 8000)
-                            )
-                        ]);
-                        
-                        if (streamResult && streamResult.stream) {
-                            console.log(`✅ play-dl Stream erfolgreich erstellt (Versuch ${streamAttempts})`);
-                            stream = streamResult.stream;
-                            streamCreated = true;
-                            break;
-                        }
-                    }
-                } catch (playdlError) {
-                    console.log(`⚠️ play-dl Stream Versuch ${streamAttempts} fehlgeschlagen:`, playdlError.message);
-                    
-                    if (streamAttempts < maxStreamAttempts) {
-                        console.log(`⏳ Warte 2 Sekunden vor nächstem Versuch...`);
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-                }
-            }
-        }
-        
-        // Methode 3: Erweiterte yt-dlp Versuche mit verschiedenen Optionen
-        if (!streamCreated) {
-            console.log('🔄 Erweiterte yt-dlp Versuche mit verschiedenen Formaten...');
-            
-            // Verschiedene yt-dlp Kommando-Varianten ausprobieren
-            const ytdlpCommands = [
-                `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${songData.url}"`,
-                `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${songData.url}"`,
-                `yt-dlp --format-sort "+size,+br" --get-url "${songData.url}"`,
-                `yt-dlp -f "136/135/134/133/160" --get-url "${songData.url}"`
-            ];
-            
-            for (let i = 0; i < ytdlpCommands.length && !streamCreated; i++) {
-                try {
-                    console.log(`🚀 yt-dlp Versuch ${i + 1}/${ytdlpCommands.length}...`);
-                    
-                    const { stdout, stderr } = await execAsync(ytdlpCommands[i], {
-                        timeout: 12000 // 12 Sekunden Timeout
-                    });
-                    
-                    if (stdout && stdout.trim()) {
-                        const streamUrl = stdout.trim();
-                        if (streamUrl.startsWith('http')) {
-                            console.log(`📡 Erstelle Stream von yt-dlp URL (Versuch ${i + 1})...`);
+                    for (const quality of qualityOptions) {
+                        try {
+                            console.log(`🎵 Versuche play-dl Qualität ${quality}...`);
                             
-                            const fetch = require('node-fetch');
-                            const response = await fetch(streamUrl, {
-                                timeout: 8000,
-                                headers: {
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                }
+                            const streamPromise = playdl.stream(normalizedUrl, {
+                                quality: quality,
+                                type: 'audio'
                             });
                             
-                            if (response.ok) {
-                                stream = response.body;
+                            const streamResult = await Promise.race([
+                                streamPromise,
+                                new Promise((_, reject) => 
+                                    setTimeout(() => reject(new Error('Stream-Timeout')), 10000)
+                                )
+                            ]);
+                            
+                            if (streamResult && streamResult.stream) {
+                                console.log(`✅ play-dl Stream erfolgreich erstellt (Versuch ${streamAttempts}, Qualität ${quality})`);
+                                stream = streamResult.stream;
                                 streamCreated = true;
-                                console.log(`✅ yt-dlp Stream erfolgreich erstellt (Versuch ${i + 1})`);
                                 break;
                             }
+                        } catch (qualityError) {
+                            console.log(`⚠️ play-dl Qualität ${quality} fehlgeschlagen: ${qualityError.message}`);
                         }
                     }
-                } catch (error) {
-                    console.log(`⚠️ yt-dlp Versuch ${i + 1} fehlgeschlagen: ${error.message}`);
-                    if (i < ytdlpCommands.length - 1) {
-                        console.log('⏳ Warte 1 Sekunde vor nächstem Versuch...');
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    if (streamCreated) break;
+                }
+            } catch (playdlError) {
+                console.log(`⚠️ play-dl Stream Versuch ${streamAttempts} fehlgeschlagen:`, playdlError.message);
+                
+                if (streamAttempts < maxStreamAttempts) {
+                    console.log(`⏳ Warte 2 Sekunden vor nächstem Versuch...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+        }
+        
+        // Methode 2: yt-dlp (Nur wenn verfügbar - für lokale Entwicklung)
+        if (!streamCreated) {
+            try {
+                console.log(`🚀 Versuche yt-dlp Stream für: ${songData.title}`);
+                
+                const streamUrl = await getStreamWithYtDlp(songData.url);
+                if (streamUrl) {
+                    console.log('📡 Erstelle Stream von yt-dlp URL...');
+                    
+                    const fetch = require('node-fetch');
+                    const response = await fetch(streamUrl);
+                    
+                    if (response.ok) {
+                        stream = response.body;
+                        streamCreated = true;
+                        console.log('✅ yt-dlp Stream erfolgreich erstellt');
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                 }
+            } catch (ytdlpError) {
+                console.log('⚠️ yt-dlp Stream fehlgeschlagen (normal auf Railway):', ytdlpError.message);
+            }
+        }
+        
+        // Methode 3: Erweiterte yt-dlp Versuche (nur wenn verfügbar)
+        if (!streamCreated) {
+            try {
+                // Prüfe ob yt-dlp verfügbar ist
+                await execAsync('yt-dlp --version', { timeout: 3000 });
+                
+                console.log('🔄 Erweiterte yt-dlp Versuche mit verschiedenen Formaten...');
+                
+                // Verschiedene yt-dlp Kommando-Varianten ausprobieren
+                const ytdlpCommands = [
+                    `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${songData.url}"`,
+                    `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${songData.url}"`,
+                    `yt-dlp --format-sort "+size,+br" --get-url "${songData.url}"`,
+                    `yt-dlp -f "136/135/134/133/160" --get-url "${songData.url}"`
+                ];
+                
+                for (let i = 0; i < ytdlpCommands.length && !streamCreated; i++) {
+                    try {
+                        console.log(`🚀 yt-dlp Versuch ${i + 1}/${ytdlpCommands.length}...`);
+                        
+                        const { stdout, stderr } = await execAsync(ytdlpCommands[i], {
+                            timeout: 12000 // 12 Sekunden Timeout
+                        });
+                        
+                        if (stdout && stdout.trim()) {
+                            const streamUrl = stdout.trim();
+                            if (streamUrl.startsWith('http')) {
+                                console.log(`📡 Erstelle Stream von yt-dlp URL (Versuch ${i + 1})...`);
+                                
+                                const fetch = require('node-fetch');
+                                const response = await fetch(streamUrl, {
+                                    timeout: 8000,
+                                    headers: {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                    }
+                                });
+                                
+                                if (response.ok) {
+                                    stream = response.body;
+                                    streamCreated = true;
+                                    console.log(`✅ yt-dlp Stream erfolgreich erstellt (Versuch ${i + 1})`);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.log(`⚠️ yt-dlp Versuch ${i + 1} fehlgeschlagen: ${error.message}`);
+                        if (i < ytdlpCommands.length - 1) {
+                            console.log('⏳ Warte 1 Sekunde vor nächstem Versuch...');
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    }
+                }
+            } catch (ytdlpCheckError) {
+                console.log('⚠️ yt-dlp nicht verfügbar für erweiterte Versuche (normal auf Railway)');
             }
         }
         
@@ -1876,7 +1912,7 @@ async function playMusic(guildId, song) {
             }
             
             if (!streamCreated) {
-                throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert wahrscheinlich Bot-Zugriff. yt-dlp ist jetzt installiert und sollte beim nächsten Versuch funktionieren.');
+                throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert wahrscheinlich Bot-Zugriff. play-dl und alternative Methoden konnten den Stream nicht erstellen.');
             }
         }
         
@@ -1943,10 +1979,14 @@ async function playMusic(guildId, song) {
         return true;
     } catch (error) {
         console.error('❌ Fehler beim Abspielen:', error.message);
+        
+        // Sichere songData Referenz
+        const safeSongData = songData || song || { title: 'Unknown', url: 'Unknown', duration: 'Unknown', author: 'Unknown' };
+        
         console.error('❌ Song-Details:', {
-            title: songData?.title || 'Unknown',
-            url: songData?.url || 'Unknown',
-            duration: songData?.duration || 'Unknown'
+            title: safeSongData?.title || 'Unknown',
+            url: safeSongData?.url || 'Unknown',
+            duration: safeSongData?.duration || 'Unknown'
         });
         
         // Spezielle Behandlung für YouTube-Bot-Blockierung
@@ -1963,45 +2003,48 @@ async function playMusic(guildId, song) {
             
             console.log('🔄 YouTube Bot-Blockierung erkannt, versuche alternative Streaming-Methoden...');
             
-            // Versuche mit alternativer Suche
-            try {
-                console.log('🔍 Suche nach alternativen Quellen...');
-                const altResults = await searchYouTube(songData.title + ' ' + songData.author);
-                
-                if (altResults.length > 0) {
-                    console.log(`🔄 Gefunden: ${altResults.length} alternative Quellen`);
+            // Versuche mit alternativer Suche (nur wenn safeSongData verfügbar)
+            if (safeSongData && safeSongData.title && safeSongData.title !== 'Unknown') {
+                try {
+                    console.log('🔍 Suche nach alternativen Quellen...');
+                    const searchQuery = `${safeSongData.title} ${safeSongData.author || ''}`.trim();
+                    const altResults = await searchYouTube(searchQuery);
                     
-                    // Teste die ersten 2 Alternativen
-                    for (let i = 0; i < Math.min(2, altResults.length); i++) {
-                        const altResult = altResults[i];
-                        try {
-                            console.log(`🧪 Teste alternative Quelle ${i+1}: ${altResult.title}`);
-                            const altVideoInfo = await getVideoInfo(altResult.url);
-                            
-                            if (altVideoInfo) {
-                                altVideoInfo.requestedBy = songData.requestedBy;
-                                console.log('✅ Alternative Quelle gefunden, versuche Wiedergabe...');
+                    if (altResults.length > 0) {
+                        console.log(`🔄 Gefunden: ${altResults.length} alternative Quellen`);
+                        
+                        // Teste die ersten 2 Alternativen
+                        for (let i = 0; i < Math.min(2, altResults.length); i++) {
+                            const altResult = altResults[i];
+                            try {
+                                console.log(`🧪 Teste alternative Quelle ${i+1}: ${altResult.title}`);
+                                const altVideoInfo = await getVideoInfo(altResult.url);
                                 
-                                // Rekursiver Aufruf mit alternativer Quelle (nur 1 Versuch)
-                                const success = await playMusic(guildId, altVideoInfo);
-                                if (success) {
-                                    console.log('🎉 Alternative Quelle erfolgreich abgespielt!');
-                                    return true;
+                                if (altVideoInfo) {
+                                    altVideoInfo.requestedBy = safeSongData.requestedBy || 'System';
+                                    console.log('✅ Alternative Quelle gefunden, versuche Wiedergabe...');
+                                    
+                                    // Rekursiver Aufruf mit alternativer Quelle (nur 1 Versuch)
+                                    const success = await playMusic(guildId, altVideoInfo);
+                                    if (success) {
+                                        console.log('🎉 Alternative Quelle erfolgreich abgespielt!');
+                                        return true;
+                                    }
                                 }
+                            } catch (altError) {
+                                console.log(`⚠️ Alternative Quelle ${i+1} fehlgeschlagen: ${altError.message}`);
+                                continue;
                             }
-                        } catch (altError) {
-                            console.log(`⚠️ Alternative Quelle ${i+1} fehlgeschlagen: ${altError.message}`);
-                            continue;
                         }
                     }
+                } catch (altSearchError) {
+                    console.log('❌ Alternative Suche fehlgeschlagen:', altSearchError.message);
                 }
-            } catch (altSearchError) {
-                console.log('❌ Alternative Suche fehlgeschlagen:', altSearchError.message);
             }
         }
         
         // Sende Fehler-Nachricht an Bot-Channel falls konfiguriert
-        if (musicSettings.announcements.channelId && global.client) {
+        if (musicSettings.announcements.channelId && global.client && safeSongData) {
             try {
                 const channel = global.client.channels.cache.get(musicSettings.announcements.channelId);
                 if (channel) {
@@ -2009,7 +2052,7 @@ async function playMusic(guildId, song) {
                         embeds: [{
                             color: 0xFF6B6B,
                             title: errorTitle,
-                            description: `**Song:** ${songData.title}\n**Fehler:** ${errorMessage}`,
+                            description: `**Song:** ${safeSongData.title || 'Unknown'}\n**Fehler:** ${errorMessage}`,
                             fields: [
                                 {
                                     name: '🔧 Lösungsvorschläge',
