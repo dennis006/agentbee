@@ -7,17 +7,300 @@ const {
     entersState,
     getVoiceConnection
 } = require('@discordjs/voice');
-// Verwende play-dl für robuste YouTube-Integration
+
+// 🎵 SPOTIFY INTEGRATION - Neue Hauptmethode
+const SpotifyWebApi = require('spotify-web-api-node');
+// SoundCloud temporär deaktiviert
+
+// Verwende play-dl als Fallback
 const playdl = require('play-dl');
 const yts = require('yt-search');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
-// play-dl initialisieren
+// 🚀 SPOTIFY WEB API SETUP
+let spotifyApi;
+
+async function initializeSpotify() {
+    try {
+        console.log('🎵 Initialisiere Spotify Web API...');
+        
+        // Spotify Client Credentials Setup (Öffentliche Suche)
+        spotifyApi = new SpotifyWebApi({
+            clientId: process.env.SPOTIFY_CLIENT_ID || 'demo_client_id',
+            clientSecret: process.env.SPOTIFY_CLIENT_SECRET || 'demo_client_secret'
+        });
+
+        // Client Credentials Grant für App-Only Authentifizierung
+        try {
+            const data = await spotifyApi.clientCredentialsGrant();
+            spotifyApi.setAccessToken(data.body['access_token']);
+            console.log('✅ Spotify API authentifiziert');
+            
+            // Token automatisch erneuern (läuft 1 Stunde)
+            setTimeout(initializeSpotify, 3400000); // 57 Minuten
+            
+        } catch (authError) {
+            console.log('⚠️ Spotify Authentifizierung fehlgeschlagen - Demo-Modus:', authError.message);
+            // Fallback ohne Spotify
+            spotifyApi = null;
+        }
+    } catch (error) {
+        console.log('⚠️ Spotify Initialisierung fehlgeschlagen:', error.message);
+        spotifyApi = null;
+    }
+}
+
+// Spotify sofort initialisieren
+initializeSpotify();
+
+// 🎯 HAUPT-SUCHFUNKTION - Spotify First!
+async function searchMusic(query) {
+    console.log(`🔍 Suche Musik: "${query}"`);
+    
+    // 1. SPOTIFY SUCHE (Primär)
+    if (spotifyApi) {
+        try {
+            console.log('🎵 Spotify-Suche...');
+            const spotifyResults = await spotifyApi.searchTracks(query, { limit: 5 });
+            
+            if (spotifyResults.body.tracks.items.length > 0) {
+                const track = spotifyResults.body.tracks.items[0];
+                
+                const spotifyTrack = {
+                    title: `${track.artists[0].name} - ${track.name}`,
+                    artist: track.artists[0].name,
+                    name: track.name,
+                    duration: Math.floor(track.duration_ms / 1000),
+                    url: track.external_urls.spotify,
+                    spotify_id: track.id,
+                    preview_url: track.preview_url,
+                    image: track.album.images[0]?.url,
+                    popularity: track.popularity,
+                    source: 'spotify',
+                    search_query: `${track.artists[0].name} ${track.name}` // Für Audio-Suche
+                };
+                
+                console.log(`✅ Spotify gefunden: ${spotifyTrack.title}`);
+                return spotifyTrack;
+            }
+        } catch (spotifyError) {
+            console.log('⚠️ Spotify-Suche fehlgeschlagen:', spotifyError.message);
+        }
+    }
+    
+    // 2. SOUNDCLOUD SUCHE (Deaktiviert)
+    // SoundCloud temporär deaktiviert - direkter Sprung zu YouTube
+    
+    // 3. YOUTUBE SUCHE (Letzter Fallback)
+    try {
+        console.log('🎵 YouTube-Fallback-Suche...');
+        const youtubeResults = await searchYouTube(query);
+        if (youtubeResults) {
+            console.log(`✅ YouTube Fallback gefunden: ${youtubeResults.title}`);
+            return youtubeResults;
+        }
+    } catch (youtubeError) {
+        console.log('⚠️ YouTube-Suche fehlgeschlagen:', youtubeError.message);
+    }
+    
+    console.log('❌ Keine Ergebnisse in allen Quellen gefunden');
+    return null;
+}
+
+// 🎵 SOUNDCLOUD SUCHFUNKTION
+async function searchSoundCloud(query) {
+    try {
+        // SoundCloud Client ID aus Umgebungsvariablen oder Demo
+        const clientId = process.env.SOUNDCLOUD_CLIENT_ID || 'demo_client_id';
+        
+        // Einfache SoundCloud API-Suche
+        const fetch = require('node-fetch');
+        const searchUrl = `https://api.soundcloud.com/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=1`;
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+            const track = data[0];
+            
+            return {
+                title: track.title,
+                artist: track.user.username,
+                name: track.title,
+                duration: Math.floor(track.duration / 1000),
+                url: track.permalink_url,
+                soundcloud_id: track.id,
+                image: track.artwork_url,
+                source: 'soundcloud',
+                stream_url: track.stream_url + `?client_id=${clientId}`
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        console.log('SoundCloud Suche Fehler:', error.message);
+        return null;
+    }
+}
+
+// 🎵 AUDIO-STREAMING - Multi-Source Approach
+async function getAudioStream(songData) {
+    console.log(`🔊 Hole Audio-Stream für: ${songData.title} (Quelle: ${songData.source})`);
+    
+    let stream = null;
+    let method = 'unknown';
+    
+    // 1. SOUNDCLOUD DIRECT STREAM (Deaktiviert)
+    // SoundCloud-Streams temporär deaktiviert
+    
+    // 2. YOUTUBE AUDIO-SUCHE (Mit Spotify-Metadaten)
+    if (!stream && songData.search_query) {
+        try {
+            console.log(`🎵 YouTube Audio-Suche mit: "${songData.search_query}"`);
+            const youtubeResult = await getYouTubeAudioStream(songData.search_query);
+            
+            if (youtubeResult) {
+                stream = youtubeResult.stream;
+                method = youtubeResult.method;
+                console.log(`✅ YouTube Audio-Stream gefunden (${method})`);
+            }
+        } catch (ytError) {
+            console.log('⚠️ YouTube Audio-Stream fehlgeschlagen:', ytError.message);
+        }
+    }
+    
+    // 3. SPOTIFY PREVIEW (30 Sekunden)
+    if (!stream && songData.preview_url) {
+        try {
+            console.log('🎵 Spotify Preview (30s)...');
+            const fetch = require('node-fetch');
+            const response = await fetch(songData.preview_url);
+            
+            if (response.ok) {
+                stream = response.body;
+                method = 'spotify_preview';
+                console.log('✅ Spotify Preview Stream erfolgreich');
+            }
+        } catch (previewError) {
+            console.log('⚠️ Spotify Preview fehlgeschlagen:', previewError.message);
+        }
+    }
+    
+    // 4. RADIO FALLBACK
+    if (!stream) {
+        console.log('🎵 Aktiviere Radio-Fallback...');
+        return getRadioFallbackStream(songData);
+    }
+    
+    return { stream, method, songData };
+}
+
+// 🎵 YOUTUBE AUDIO-STREAM (Verbessert für Spotify-Queries)
+async function getYouTubeAudioStream(searchQuery) {
+    try {
+        // Erst YouTube-Video finden
+        const searchResults = await yts(searchQuery);
+        
+        if (!searchResults.videos || searchResults.videos.length === 0) {
+            throw new Error('Keine YouTube-Ergebnisse gefunden');
+        }
+        
+        const video = searchResults.videos[0];
+        const videoUrl = video.url;
+        
+        console.log(`🔗 YouTube Video gefunden: ${video.title}`);
+        
+        // play-dl Stream-Versuch
+        try {
+            const streamResult = await playdl.stream(videoUrl, { quality: 1 });
+            
+            if (streamResult && streamResult.stream) {
+                return {
+                    stream: streamResult.stream,
+                    method: 'play-dl'
+                };
+            }
+        } catch (playdlError) {
+            console.log('⚠️ play-dl fehlgeschlagen:', playdlError.message);
+        }
+        
+        // yt-dlp Fallback (falls verfügbar)
+        try {
+            const streamUrl = await getStreamWithYtDlp(videoUrl);
+            if (streamUrl) {
+                const fetch = require('node-fetch');
+                const response = await fetch(streamUrl);
+                
+                if (response.ok) {
+                    return {
+                        stream: response.body,
+                        method: 'yt-dlp'
+                    };
+                }
+            }
+        } catch (ytdlpError) {
+            console.log('⚠️ yt-dlp fehlgeschlagen:', ytdlpError.message);
+        }
+        
+        return null;
+    } catch (error) {
+        console.log('YouTube Audio-Stream Fehler:', error.message);
+        return null;
+    }
+}
+
+// 🎵 RADIO FALLBACK STREAM
+async function getRadioFallbackStream(songData) {
+    console.log('📻 Radio-Fallback wird aktiviert...');
+    
+    // Intelligente Radio-Station basierend auf Genre/Popularität
+    let stationId = '1live'; // Default
+    
+    if (songData.popularity && songData.popularity > 80) {
+        stationId = 'swr3'; // Mainstream
+    } else if (songData.artist && (
+        songData.artist.toLowerCase().includes('electronic') ||
+        songData.artist.toLowerCase().includes('techno') ||
+        songData.artist.toLowerCase().includes('house')
+    )) {
+        stationId = 'antenne'; // Electronic-freundlicher
+    }
+    
+    const radioStation = getRadioStation(stationId);
+    if (radioStation) {
+        try {
+            const fetch = require('node-fetch');
+            const response = await fetch(radioStation.url);
+            
+            if (response.ok) {
+                return {
+                    stream: response.body,
+                    method: 'radio_fallback',
+                    songData: {
+                        title: `📻 ${radioStation.name} - ${radioStation.description}`,
+                        artist: radioStation.name,
+                        name: 'Live Radio Stream',
+                        duration: 0, // Unendlich
+                        source: 'radio',
+                        url: radioStation.url,
+                        image: radioStation.logo
+                    }
+                };
+            }
+        } catch (radioError) {
+            console.log('⚠️ Radio-Fallback fehlgeschlagen:', radioError.message);
+        }
+    }
+    
+    return null;
+}
+
+// play-dl initialisieren (Fallback)
 (async () => {
     try {
-        console.log('🎵 Initialisiere play-dl...');
+        console.log('🎵 Initialisiere play-dl (Fallback)...');
         await playdl.authorization();
         console.log('✅ play-dl initialisiert');
     } catch (error) {
@@ -1734,193 +2017,125 @@ async function playMusic(guildId, song) {
         const player = createPlayerForGuild(guildId);
         const queue = getQueue(guildId);
         
-        // Handle both song objects and URLs
+        // 🎵 SPOTIFY-FIRST SYSTEM: Handle input
         let songData;
         if (typeof song === 'string') {
-            // If it's a URL string, get video info
-            console.log(`🔍 URL erkannt, hole Video-Info: ${song}`);
-            songData = await getVideoInfo(song);
+            // String input - Suche mit neuem Spotify-System
+            console.log(`🔍 Suche mit Spotify-System: "${song}"`);
+            songData = await searchMusic(song);
             if (!songData) {
-                console.error('❌ Konnte Video-Info nicht abrufen');
+                console.error('❌ Keine Musik in allen Quellen gefunden');
                 return false;
             }
         } else {
-            // It's already a song object
+            // Already a song object - might be from old system
             songData = song;
+            console.log(`🎵 Song-Objekt erkannt: ${songData.title}`);
         }
         
-        console.log(`🎵 Versuche abzuspielen: ${songData.title} (${songData.url})`);
+        console.log(`🎵 Versuche abzuspielen: ${songData.title} (Quelle: ${songData.source || 'unknown'})`);
         
-        let stream;
-        let streamCreated = false;
+        // 🚀 NEUES AUDIO-STREAMING SYSTEM
+        const audioResult = await getAudioStream(songData);
+        if (!audioResult || !audioResult.stream) {
+            console.error('❌ Konnte Audio-Stream nicht erstellen');
+            return false;
+        }
         
-        // Methode 1: Enhanced play-dl mit Anti-Detection (Primär - funktioniert auf Railway)
-        let streamAttempts = 0;
-        const maxStreamAttempts = 5; // Erhöht für mehr Versuche
+        let stream = audioResult.stream;
+        let method = audioResult.method;
+        let finalSongData = audioResult.songData || songData;
         
-        // Erstelle alternative URLs für den Song
-        const alternativeUrls = createAlternativeYouTubeURLs(songData.url);
-        console.log(`🔄 Erstellt ${alternativeUrls.length} alternative YouTube URLs`);
+        console.log(`✅ Audio-Stream erstellt mit Methode: ${method}`);
         
-        for (const testUrl of alternativeUrls) {
-            if (streamCreated) break;
+        // 🎵 ERSTELLE AUDIO RESOURCE
+        try {
+            const resource = createAudioResource(stream, {
+                inputType: 'opus',
+                inlineVolume: true
+            });
             
-            streamAttempts = 0;
-            while (!streamCreated && streamAttempts < maxStreamAttempts) {
-                streamAttempts++;
+            // Volume anwenden
+            if (resource.volume) {
+                const volume = musicSettings.defaultVolume / 100;
+                resource.volume.setVolume(volume);
+                console.log(`🔊 Volume gesetzt auf: ${musicSettings.defaultVolume}%`);
+            }
+            
+            // Player für diese Guild
+            const player = audioPlayers.get(guildId);
+            if (!player) {
+                console.error('❌ Audio Player nicht gefunden');
+                return false;
+            }
+            
+            // Audio Resource abspielen
+            player.play(resource);
+            
+            // Update aktueller Song
+            currentSongs.set(guildId, finalSongData);
+            
+            // Erfolg-Nachricht mit Quelle
+            console.log(`✅ Spiele ab: ${finalSongData.title} (${method})`);
+            
+            // Discord-Nachricht mit Quelle-Info
+            const channel = connection.joinConfig.channelId;
+            if (channel) {
                 try {
-                    console.log(`📡 Enhanced play-dl (URL ${alternativeUrls.indexOf(testUrl) + 1}/${alternativeUrls.length}, Versuch ${streamAttempts}/${maxStreamAttempts})`);
-                    console.log(`🔗 Teste URL: ${testUrl}`);
-                    
-                    // Anti-Detection Delay
-                    if (streamAttempts > 1) {
-                        await antiDetectionStrategies.randomWait();
-                    }
-                    
-                    const normalizedUrl = normalizeYouTubeURL(testUrl);
-                    const streamValidation = playdl.yt_validate(normalizedUrl);
-                    
-                    if (streamValidation === 'video') {
-                        // Verschiedene Qualitätsoptionen probieren mit erweiterten Timeouts
-                        const qualityOptions = [1, 0, 2]; // medium, low, high - medium zuerst
+                    const discordChannel = await connection.guild?.channels.fetch(channel);
+                    if (discordChannel && discordChannel.isTextBased()) {
+                        const sourceEmoji = {
+                            'spotify': '🎵',
+                            'soundcloud': '🎧',
+                            'youtube': '📺',
+                            'spotify_preview': '🎵⏱️',
+                            'radio_fallback': '📻'
+                        };
                         
-                        for (const quality of qualityOptions) {
-                            try {
-                                console.log(`🎵 Enhanced play-dl Qualität ${quality} (${quality === 0 ? 'low' : quality === 1 ? 'medium' : 'high'})...`);
-                                
-                                // Anti-Detection Headers (falls play-dl sie unterstützt)
-                                const streamOptions = {
-                                    quality: quality,
-                                    type: 'audio',
-                                    requestOptions: {
-                                        headers: antiDetectionStrategies.getAntiDetectionHeaders()
-                                    }
-                                };
-                                
-                                const streamPromise = playdl.stream(normalizedUrl, streamOptions);
-                                
-                                const streamResult = await Promise.race([
-                                    streamPromise,
-                                    new Promise((_, reject) => 
-                                        setTimeout(() => reject(new Error('Enhanced-Stream-Timeout')), 15000)
-                                    )
-                                ]);
-                                
-                                if (streamResult && streamResult.stream) {
-                                    console.log(`✅ Enhanced play-dl erfolgreich! (URL ${alternativeUrls.indexOf(testUrl) + 1}, Versuch ${streamAttempts}, Qualität ${quality})`);
-                                    stream = streamResult.stream;
-                                    streamCreated = true;
-                                    break;
+                        const sourceText = {
+                            'spotify': 'Spotify + YouTube Audio',
+                            'soundcloud': 'SoundCloud',
+                            'youtube': 'YouTube',
+                            'spotify_preview': 'Spotify Preview (30s)',
+                            'radio_fallback': 'Radio Fallback'
+                        };
+                        
+                        const embed = {
+                            color: parseInt(musicSettings.embedColor.replace('#', ''), 16),
+                            title: `${sourceEmoji[method] || '🎵'} Spielt jetzt`,
+                            description: `**${finalSongData.title}**`,
+                            fields: [
+                                {
+                                    name: 'Quelle',
+                                    value: sourceText[method] || method,
+                                    inline: true
+                                },
+                                {
+                                    name: 'Dauer',
+                                    value: finalSongData.duration > 0 ? formatDuration(finalSongData.duration) : 'Live Stream',
+                                    inline: true
                                 }
-                            } catch (qualityError) {
-                                console.log(`⚠️ Enhanced play-dl Qualität ${quality} fehlgeschlagen: ${qualityError.message}`);
-                                
-                                // Kurze Pause zwischen Qualitätsversuchen
-                                if (quality !== qualityOptions[qualityOptions.length - 1]) {
-                                    await new Promise(resolve => setTimeout(resolve, 1000));
-                                }
-                            }
+                            ],
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        if (finalSongData.image) {
+                            embed.thumbnail = { url: finalSongData.image };
                         }
                         
-                        if (streamCreated) break;
+                        await discordChannel.send({ embeds: [embed] });
                     }
-                } catch (playdlError) {
-                    console.log(`⚠️ Enhanced play-dl Versuch ${streamAttempts} fehlgeschlagen:`, playdlError.message);
-                    
-                    if (streamAttempts < maxStreamAttempts) {
-                        console.log(`⏳ Anti-Detection Pause vor nächstem Versuch...`);
-                        await antiDetectionStrategies.randomWait();
-                    }
+                } catch (messageError) {
+                    console.log('⚠️ Konnte Discord-Nachricht nicht senden:', messageError.message);
                 }
             }
             
-            // Pause zwischen URL-Versuchen
-            if (!streamCreated && alternativeUrls.indexOf(testUrl) < alternativeUrls.length - 1) {
-                console.log(`🔄 Wechsle zur nächsten URL...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-        }
-        
-        // Methode 2: yt-dlp (Nur wenn verfügbar - für lokale Entwicklung)
-        if (!streamCreated) {
-                    try {
-            const safeTitle = songData?.title || song?.title || 'Unknown';
-            console.log(`🚀 Versuche yt-dlp Stream für: ${safeTitle}`);
-            
-            const safeUrl = songData?.url || song?.url;
-            if (!safeUrl) {
-                throw new Error('Keine URL für yt-dlp verfügbar');
+            // Progress Tracking starten
+            if (finalSongData.duration > 0) {
+                startProgressTracking(guildId, finalSongData.duration);
             }
             
-            const streamUrl = await getStreamWithYtDlp(safeUrl);
-                if (streamUrl) {
-                    console.log('📡 Erstelle Stream von yt-dlp URL...');
-                    
-                    const fetch = require('node-fetch');
-                    const response = await fetch(streamUrl);
-                    
-                    if (response.ok) {
-                        stream = response.body;
-                        streamCreated = true;
-                        console.log('✅ yt-dlp Stream erfolgreich erstellt');
-                    } else {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                }
-            } catch (ytdlpError) {
-                console.log('⚠️ yt-dlp Stream fehlgeschlagen (normal auf Railway):', ytdlpError.message);
-            }
-        }
-        
-        // Methode 3: Erweiterte yt-dlp Versuche (nur wenn verfügbar)
-        if (!streamCreated) {
-            try {
-                // Prüfe ob yt-dlp verfügbar ist
-                await execAsync('yt-dlp --version', { timeout: 3000 });
-                
-                console.log('🔄 Erweiterte yt-dlp Versuche mit verschiedenen Formaten...');
-                
-                // Verschiedene yt-dlp Kommando-Varianten ausprobieren (mit sicherer URL)
-                const safeUrl = songData?.url || song?.url || '';
-                if (!safeUrl) {
-                    console.log('❌ Keine URL für yt-dlp verfügbar');
-                    return;
-                }
-                
-                const ytdlpCommands = [
-                    `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${safeUrl}"`,
-                    `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${safeUrl}"`,
-                    `yt-dlp --format-sort "+size,+br" --get-url "${safeUrl}"`,
-                    `yt-dlp -f "136/135/134/133/160" --get-url "${safeUrl}"`
-                ];
-                
-                for (let i = 0; i < ytdlpCommands.length && !streamCreated; i++) {
-                    try {
-                        console.log(`🚀 yt-dlp Versuch ${i + 1}/${ytdlpCommands.length}...`);
-                        
-                        const { stdout, stderr } = await execAsync(ytdlpCommands[i], {
-                            timeout: 12000 // 12 Sekunden Timeout
-                        });
-                        
-                        if (stdout && stdout.trim()) {
-                            const streamUrl = stdout.trim();
-                            if (streamUrl.startsWith('http')) {
-                                console.log(`📡 Erstelle Stream von yt-dlp URL (Versuch ${i + 1})...`);
-                                
-                                const fetch = require('node-fetch');
-                                const response = await fetch(streamUrl, {
-                                    timeout: 8000,
-                                    headers: {
-                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                    }
-                                });
-                                
-                                if (response.ok) {
-                                    stream = response.body;
-                                    streamCreated = true;
-                                    console.log(`✅ yt-dlp Stream erfolgreich erstellt (Versuch ${i + 1})`);
-                                    break;
-                                }
+            return true;
                             }
                         }
                     } catch (error) {

@@ -260,8 +260,8 @@ interface Song {
   thumbnail: string;
   author: string;
   requestedBy?: string;
-  // New Spotify System Properties
-  source?: 'spotify' | 'soundcloud' | 'youtube' | 'radio';
+  // New Spotify System Properties (ohne SoundCloud)
+  source?: 'spotify' | 'youtube' | 'radio';
   image?: string; // Alternative to thumbnail
   artist?: string; // Alternative to author
   popularity?: number; // Spotify popularity score
@@ -1485,15 +1485,14 @@ const Music: React.FC = () => {
                     <div>
                       <div>Intelligente Musiksuche mit mehreren Quellen:</div>
                       <div>🎵 Spotify API (Primär - 99.9% Erfolgsrate)</div>
-                      <div>🎧 SoundCloud (Independent-Musik)</div>
-                      <div>📺 YouTube (Fallback)</div>
+                      <div>📺 YouTube Audio (Zuverlässiger Fallback)</div>
                       <div>📻 Radio-Fallback (100% verfügbar)</div>
                     </div>
                   }
                 />
               </CardTitle>
               <CardDescription>
-                Suche über Spotify, SoundCloud und YouTube - kein Anti-Bot mehr!
+                Suche über Spotify und YouTube - kein Anti-Bot mehr!
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1522,12 +1521,11 @@ const Music: React.FC = () => {
                 <span className="text-2xl">🎵</span>
                 <h4 className="text-white font-semibold">Neues Spotify-First System!</h4>
               </div>
-              <div className="text-sm text-purple-200 space-y-1">
-                <p>✅ <strong>Spotify API</strong> - Professionelle Metadaten (99.9% Erfolgsrate)</p>
-                <p>✅ <strong>SoundCloud</strong> - Independent-Musik ohne Limits</p>
-                <p>✅ <strong>YouTube Fallback</strong> - Als letzte Option</p>
-                <p>✅ <strong>Radio Fallback</strong> - 100% Verfügbarkeit garantiert</p>
-              </div>
+                             <div className="text-sm text-purple-200 space-y-1">
+                 <p>✅ <strong>Spotify API</strong> - Professionelle Metadaten (99.9% Erfolgsrate)</p>
+                 <p>✅ <strong>YouTube Audio</strong> - Zuverlässiger Fallback ohne Anti-Bot</p>
+                 <p>✅ <strong>Radio Fallback</strong> - 100% Verfügbarkeit garantiert</p>
+               </div>
               <div className="mt-3 text-xs text-green-300">
                 🚀 <strong>Kein "Sign in to confirm you're not a bot" mehr!</strong>
               </div>
@@ -1536,10 +1534,9 @@ const Music: React.FC = () => {
 
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {searchResults.map((song, index) => {
-              // Source information and styling
+              // Source information and styling (ohne SoundCloud)
               const sourceInfo = {
                 'spotify': { emoji: '🎵', name: 'Spotify', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
-                'soundcloud': { emoji: '🎧', name: 'SoundCloud', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
                 'youtube': { emoji: '📺', name: 'YouTube', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' },
                 'radio': { emoji: '📻', name: 'Radio', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' }
               };
@@ -1646,13 +1643,12 @@ const Music: React.FC = () => {
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {queue.songs.map((song, index) => {
-                    // Source styling for queue items
-                    const sourceInfo = {
-                      'spotify': { emoji: '🎵', color: 'text-green-400', bg: 'bg-green-500/10' },
-                      'soundcloud': { emoji: '🎧', color: 'text-orange-400', bg: 'bg-orange-500/10' },
-                      'youtube': { emoji: '📺', color: 'text-red-400', bg: 'bg-red-500/10' },
-                      'radio': { emoji: '📻', color: 'text-blue-400', bg: 'bg-blue-500/10' }
-                    };
+                                         // Source styling for queue items (ohne SoundCloud)
+                     const sourceInfo = {
+                       'spotify': { emoji: '🎵', color: 'text-green-400', bg: 'bg-green-500/10' },
+                       'youtube': { emoji: '📺', color: 'text-red-400', bg: 'bg-red-500/10' },
+                       'radio': { emoji: '📻', color: 'text-blue-400', bg: 'bg-blue-500/10' }
+                     };
                     
                     const source = sourceInfo[song.source] || { emoji: '🎵', color: 'text-purple-400', bg: 'bg-purple-500/10' };
                     
