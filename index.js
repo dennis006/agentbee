@@ -1052,6 +1052,102 @@ app.get('/api/bot/status', (req, res) => {
     res.json(currentBotStatus);
 });
 
+// Bot Start API  
+app.post('/api/bot/start', (req, res) => {
+    try {
+        console.log('🟢 Bot Start Request erhalten...');
+        
+        if (currentBotStatus.isRunning) {
+            return res.json({ 
+                success: true, 
+                message: 'Bot läuft bereits',
+                status: currentBotStatus.status 
+            });
+        }
+        
+        // Setze Status auf starting
+        currentBotStatus.status = 'starting';
+        currentBotStatus.isRunning = false;
+        
+        res.json({ 
+            success: true, 
+            message: 'Bot wird gestartet...',
+            status: 'starting' 
+        });
+        
+        // Starte den Bot-Login nach kurzer Verzögerung
+        setTimeout(async () => {
+            try {
+                console.log('🟢 Bot wird gestartet...');
+                if (!client.isReady()) {
+                    await client.login(apiKeys.discord.bot_token);
+                }
+            } catch (error) {
+                console.error('❌ Fehler beim Starten des Bots:', error);
+                currentBotStatus.status = 'error';
+                currentBotStatus.isRunning = false;
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Starten des Bots:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Starten des Bots',
+            details: error.message 
+        });
+    }
+});
+
+// Bot Restart API
+app.post('/api/bot/restart', (req, res) => {
+    try {
+        console.log('🔄 Bot Restart Request erhalten...');
+        
+        // Setze Status auf stopping
+        currentBotStatus.status = 'stopping';
+        currentBotStatus.isRunning = false;
+        
+        res.json({ 
+            success: true, 
+            message: 'Bot wird neugestartet...',
+            status: 'restarting' 
+        });
+        
+        // Restart nach kurzer Verzögerung
+        setTimeout(() => {
+            console.log('🔄 Bot wird neugestartet...');
+            
+            // In Railway wird process.exit(0) automatisch einen Neustart auslösen
+            if (process.env.RAILWAY_ENVIRONMENT) {
+                console.log('🚂 Railway Restart - Exit mit Code 0');
+                process.exit(0);
+            } else {
+                // Lokal: Destroy und neu verbinden
+                client.destroy();
+                setTimeout(async () => {
+                    try {
+                        currentBotStatus.status = 'starting';
+                        await client.login(apiKeys.discord.bot_token);
+                    } catch (error) {
+                        console.error('❌ Fehler beim Neustart:', error);
+                        currentBotStatus.status = 'error';
+                        currentBotStatus.isRunning = false;
+                    }
+                }, 2000);
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Neustarten des Bots:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Neustarten des Bots',
+            details: error.message 
+        });
+    }
+});
+
 // Bot Stop API
 app.post('/api/bot/stop', (req, res) => {
     try {
@@ -1070,8 +1166,17 @@ app.post('/api/bot/stop', (req, res) => {
         // Stoppe den Bot nach kurzer Verzögerung damit die Response noch gesendet wird
         setTimeout(() => {
             console.log('🛑 Bot wird gestoppt...');
-            client.destroy();
-            process.exit(0);
+            if (process.env.RAILWAY_ENVIRONMENT) {
+                // In Railway: Graceful shutdown
+                console.log('🚂 Railway Stop - Graceful shutdown');
+                client.destroy();
+                process.exit(0);
+            } else {
+                // Lokal: Nur disconnect
+                client.destroy();
+                currentBotStatus.status = 'offline';
+                currentBotStatus.isRunning = false;
+            }
         }, 1000);
         
     } catch (error) {
@@ -1081,6 +1186,61 @@ app.post('/api/bot/stop', (req, res) => {
             error: 'Fehler beim Stoppen des Bots',
             details: error.message 
         });
+    }
+});
+
+// Bot Commands API
+app.get('/api/commands', (req, res) => {
+    try {
+        const commands = [
+            // Moderation Commands
+            { name: '/warn', description: 'Einen Benutzer verwarnen', category: 'Moderation', usage: '/warn @user [reason]', permissions: 'MODERATE_MEMBERS', icon: '⚠️' },
+            { name: '/ban', description: 'Einen Benutzer bannen', category: 'Moderation', usage: '/ban @user [reason]', permissions: 'BAN_MEMBERS', icon: '🔨' },
+            { name: '/kick', description: 'Einen Benutzer kicken', category: 'Moderation', usage: '/kick @user [reason]', permissions: 'KICK_MEMBERS', icon: '👢' },
+            { name: '/mute', description: 'Einen Benutzer stumm schalten', category: 'Moderation', usage: '/mute @user [time] [reason]', permissions: 'MODERATE_MEMBERS', icon: '🔇' },
+            { name: '/unmute', description: 'Einen Benutzer entstummen', category: 'Moderation', usage: '/unmute @user', permissions: 'MODERATE_MEMBERS', icon: '🔊' },
+            { name: '/clear', description: 'Nachrichten löschen', category: 'Moderation', usage: '/clear [amount]', permissions: 'MANAGE_MESSAGES', icon: '🧹' },
+            
+            // XP System Commands  
+            { name: '/level', description: 'Zeige dein aktuelles Level', category: 'XP System', usage: '/level [@user]', permissions: 'Alle', icon: '📊' },
+            { name: '/leaderboard', description: 'Zeige die XP-Rangliste', category: 'XP System', usage: '/leaderboard', permissions: 'Alle', icon: '🏆' },
+            { name: '/xp', description: 'XP-System verwalten', category: 'XP System', usage: '/xp add/remove @user [amount]', permissions: 'ADMINISTRATOR', icon: '⭐' },
+            
+            // Music Commands
+            { name: '/play', description: 'Musik abspielen', category: 'Musik', usage: '/play [song/url]', permissions: 'Alle', icon: '🎵' },
+            { name: '/stop', description: 'Musik stoppen', category: 'Musik', usage: '/stop', permissions: 'DJ', icon: '⏹️' },
+            { name: '/skip', description: 'Song überspringen', category: 'Musik', usage: '/skip', permissions: 'DJ', icon: '⏭️' },
+            { name: '/queue', description: 'Aktuelle Warteschlange anzeigen', category: 'Musik', usage: '/queue', permissions: 'Alle', icon: '📋' },
+            { name: '/volume', description: 'Lautstärke ändern', category: 'Musik', usage: '/volume [0-100]', permissions: 'DJ', icon: '🔊' },
+            
+            // Utility Commands
+            { name: '/ping', description: 'Bot-Latenz prüfen', category: 'Utility', usage: '/ping', permissions: 'Alle', icon: '🏓' },
+            { name: '/serverinfo', description: 'Server-Informationen anzeigen', category: 'Utility', usage: '/serverinfo', permissions: 'Alle', icon: 'ℹ️' },
+            { name: '/userinfo', description: 'Benutzer-Informationen anzeigen', category: 'Utility', usage: '/userinfo [@user]', permissions: 'Alle', icon: '👤' },
+            { name: '/help', description: 'Hilfe und Commands anzeigen', category: 'Utility', usage: '/help [command]', permissions: 'Alle', icon: '❓' },
+            
+            // Valorant Commands
+            { name: '/valorant', description: 'Valorant-Stats anzeigen', category: 'Gaming', usage: '/valorant [region] [username]', permissions: 'Alle', icon: '🎯' },
+            { name: '/valorant-setup', description: 'Valorant-Rollen erstellen', category: 'Gaming', usage: '/valorant-setup', permissions: 'ADMINISTRATOR', icon: '⚙️' },
+            
+            // Fun Commands
+            { name: '/8ball', description: 'Magische 8-Ball Antwort', category: 'Fun', usage: '/8ball [question]', permissions: 'Alle', icon: '🎱' },
+            { name: '/coinflip', description: 'Münze werfen', category: 'Fun', usage: '/coinflip', permissions: 'Alle', icon: '🪙' },
+            { name: '/dice', description: 'Würfel werfen', category: 'Fun', usage: '/dice [sides]', permissions: 'Alle', icon: '🎲' }
+        ];
+
+        const stats = {
+            total: commands.length,
+            byCategory: commands.reduce((acc, cmd) => {
+                acc[cmd.category] = (acc[cmd.category] || 0) + 1;
+                return acc;
+            }, {})
+        };
+
+        res.json({ commands, stats });
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Commands:', error);
+        res.status(500).json({ error: 'Fehler beim Laden der Commands' });
     }
 });
 
