@@ -4519,7 +4519,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 }
             }
 
-            const response = await fetch(`http://localhost:3001/api/music/control/${guildId}/${action}`, {
+            const response = await fetch(`${API_SERVER_URL}/api/music/control/${guildId}/${action}`, {
                 method: 'POST'
             });
             
@@ -4871,10 +4871,12 @@ function sendStatusToAPI() {
     };
 
     const postData = JSON.stringify(statusData);
+    // Verwende die API_SERVER_URL für internen Status-Update
+    const serverUrl = new URL(`${API_SERVER_URL}/api/bot/status/update`);
     const options = {
-        hostname: 'localhost',
-        port: 3001,
-        path: '/api/bot/status/update',
+        hostname: serverUrl.hostname,
+        port: serverUrl.port || (serverUrl.protocol === 'https:' ? 443 : 80),
+        path: serverUrl.pathname,
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
