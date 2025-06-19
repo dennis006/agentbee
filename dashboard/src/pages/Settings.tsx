@@ -52,6 +52,9 @@ interface BotSettings {
 }
 
 const Settings = () => {
+  // API Base URL
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  
   const { toasts, success, error: showError, removeToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -94,7 +97,7 @@ const Settings = () => {
 
   const loadSettings = async () => {
     try {
-      const response = await fetch('/api/bot/settings');
+      const response = await fetch(`${apiUrl}/api/bot/settings`);
       if (response.ok) {
         const data = await response.json();
         setSettings(data);
@@ -109,7 +112,7 @@ const Settings = () => {
     setSaved(false);
 
     try {
-      const response = await fetch('/api/bot/settings', {
+      const response = await fetch(`${apiUrl}/api/bot/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),

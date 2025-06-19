@@ -297,6 +297,9 @@ const CommandsModal = ({ isOpen, onClose, commands }: { isOpen: boolean; onClose
 };
 
 const Dashboard = () => {
+  // API Base URL
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  
   const [botStatus, setBotStatus] = useState<BotStatus>({
     isRunning: false,
     uptime: '0s',
@@ -324,7 +327,7 @@ const Dashboard = () => {
   // API-Funktionen
   const startBot = async () => {
     try {
-      const response = await fetch('/api/bot/start', { method: 'POST' });
+      const response = await fetch(`${apiUrl}/api/bot/start`, { method: 'POST' });
       if (response.ok) {
         alert('Bot wird gestartet...');
       }
@@ -335,7 +338,7 @@ const Dashboard = () => {
 
   const stopBot = async () => {
     try {
-      const response = await fetch('/api/bot/stop', { method: 'POST' });
+      const response = await fetch(`${apiUrl}/api/bot/stop`, { method: 'POST' });
       if (response.ok) {
         alert('Bot wird gestoppt...');
       }
@@ -352,7 +355,7 @@ const Dashboard = () => {
   // Commands laden
   const fetchCommands = async () => {
     try {
-      const response = await fetch('/api/commands');
+      const response = await fetch(`${apiUrl}/api/commands`);
       if (response.ok) {
         const data = await response.json();
         setCommands(data);
@@ -366,7 +369,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStatus = async (retryCount = 3) => {
       try {
-        const response = await fetch('/api/bot/status');
+        const response = await fetch(`${apiUrl}/api/bot/status`);
         if (response.ok) {
           const data = await response.json();
           setBotStatus(data);
@@ -374,6 +377,7 @@ const Dashboard = () => {
           setTimeout(() => fetchStatus(retryCount - 1), 1000);
         }
       } catch (error) {
+        console.error('Fehler beim Laden des Bot-Status:', error);
         if (retryCount > 0) {
           setTimeout(() => fetchStatus(retryCount - 1), 1000);
         } else {
