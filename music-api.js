@@ -7,425 +7,23 @@ const {
     entersState,
     getVoiceConnection
 } = require('@discordjs/voice');
-
-// 🎵 SPOTIFY INTEGRATION - Neue Hauptmethode
-const SpotifyWebApi = require('spotify-web-api-node');
-// SoundCloud temporär deaktiviert
-
-// Verwende play-dl als Fallback
+// Verwende play-dl für robuste YouTube-Integration
 const playdl = require('play-dl');
 const yts = require('yt-search');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
-// 🚀 SPOTIFY WEB API SETUP
-let spotifyApi;
-
-async function initializeSpotify() {
-    try {
-        console.log('🎵 Initialisiere Spotify Web API...');
-        
-        // Spotify Client Credentials Setup (Öffentliche Suche)
-        spotifyApi = new SpotifyWebApi({
-            clientId: process.env.SPOTIFY_CLIENT_ID || 'demo_client_id',
-            clientSecret: process.env.SPOTIFY_CLIENT_SECRET || 'demo_client_secret'
-        });
-
-        // Client Credentials Grant für App-Only Authentifizierung
-        try {
-            const data = await spotifyApi.clientCredentialsGrant();
-            spotifyApi.setAccessToken(data.body['access_token']);
-            console.log('✅ Spotify API authentifiziert');
-            
-            // Token automatisch erneuern (läuft 1 Stunde)
-            setTimeout(initializeSpotify, 3400000); // 57 Minuten
-            
-        } catch (authError) {
-            console.log('⚠️ Spotify Authentifizierung fehlgeschlagen - Demo-Modus:', authError.message);
-            // Fallback ohne Spotify
-            spotifyApi = null;
-        }
-    } catch (error) {
-        console.log('⚠️ Spotify Initialisierung fehlgeschlagen:', error.message);
-        spotifyApi = null;
-    }
-}
-
-// Spotify sofort initialisieren
-initializeSpotify();
-
-// 🎯 HAUPT-SUCHFUNKTION - Spotify First!
-async function searchMusic(query) {
-    console.log(`🔍 Suche Musik: "${query}"`);
-    
-    // 1. SPOTIFY SUCHE (Primär)
-    if (spotifyApi) {
-        try {
-            console.log('🎵 Spotify-Suche...');
-            const spotifyResults = await spotifyApi.searchTracks(query, { limit: 5 });
-            
-            if (spotifyResults.body.tracks.items.length > 0) {
-                const track = spotifyResults.body.tracks.items[0];
-                
-                const spotifyTrack = {
-                    title: `${track.artists[0].name} - ${track.name}`,
-                    artist: track.artists[0].name,
-                    name: track.name,
-                    duration: Math.floor(track.duration_ms / 1000),
-                    url: track.external_urls.spotify,
-                    spotify_id: track.id,
-                    preview_url: track.preview_url,
-                    image: track.album.images[0]?.url,
-                    popularity: track.popularity,
-                    source: 'spotify',
-                    search_query: `${track.artists[0].name} ${track.name}` // Für Audio-Suche
-                };
-                
-                console.log(`✅ Spotify gefunden: ${spotifyTrack.title}`);
-                return spotifyTrack;
-            }
-        } catch (spotifyError) {
-            console.log('⚠️ Spotify-Suche fehlgeschlagen:', spotifyError.message);
-        }
-    }
-    
-    // 2. SOUNDCLOUD SUCHE (Deaktiviert)
-    // SoundCloud temporär deaktiviert - direkter Sprung zu YouTube
-    
-    // 3. YOUTUBE SUCHE (Letzter Fallback)
-    try {
-        console.log('🎵 YouTube-Fallback-Suche...');
-        const youtubeResults = await searchYouTube(query);
-        if (youtubeResults) {
-            console.log(`✅ YouTube Fallback gefunden: ${youtubeResults.title}`);
-            return youtubeResults;
-        }
-    } catch (youtubeError) {
-        console.log('⚠️ YouTube-Suche fehlgeschlagen:', youtubeError.message);
-    }
-    
-    console.log('❌ Keine Ergebnisse in allen Quellen gefunden');
-    return null;
-}
-
-// 🎵 SOUNDCLOUD SUCHFUNKTION
-async function searchSoundCloud(query) {
-    try {
-        // SoundCloud Client ID aus Umgebungsvariablen oder Demo
-        const clientId = process.env.SOUNDCLOUD_CLIENT_ID || 'demo_client_id';
-        
-        // Einfache SoundCloud API-Suche
-        const fetch = require('node-fetch');
-        const searchUrl = `https://api.soundcloud.com/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=1`;
-        
-        const response = await fetch(searchUrl);
-        const data = await response.json();
-        
-        if (data && data.length > 0) {
-            const track = data[0];
-            
-            return {
-                title: track.title,
-                artist: track.user.username,
-                name: track.title,
-                duration: Math.floor(track.duration / 1000),
-                url: track.permalink_url,
-                soundcloud_id: track.id,
-                image: track.artwork_url,
-                source: 'soundcloud',
-                stream_url: track.stream_url + `?client_id=${clientId}`
-            };
-        }
-        
-        return null;
-    } catch (error) {
-        console.log('SoundCloud Suche Fehler:', error.message);
-        return null;
-    }
-}
-
-// 🎵 AUDIO-STREAMING - Multi-Source Approach
-async function getAudioStream(songData) {
-    console.log(`🔊 Hole Audio-Stream für: ${songData.title} (Quelle: ${songData.source})`);
-    
-    let stream = null;
-    let method = 'unknown';
-    
-    // 1. SOUNDCLOUD DIRECT STREAM (Deaktiviert)
-    // SoundCloud-Streams temporär deaktiviert
-    
-    // 2. YOUTUBE AUDIO-SUCHE (Mit Spotify-Metadaten)
-    if (!stream && songData.search_query) {
-        try {
-            console.log(`🎵 YouTube Audio-Suche mit: "${songData.search_query}"`);
-            const youtubeResult = await getYouTubeAudioStream(songData.search_query);
-            
-            if (youtubeResult) {
-                stream = youtubeResult.stream;
-                method = youtubeResult.method;
-                console.log(`✅ YouTube Audio-Stream gefunden (${method})`);
-            }
-        } catch (ytError) {
-            console.log('⚠️ YouTube Audio-Stream fehlgeschlagen:', ytError.message);
-        }
-    }
-    
-    // 3. SPOTIFY PREVIEW (30 Sekunden)
-    if (!stream && songData.preview_url) {
-        try {
-            console.log('🎵 Spotify Preview (30s)...');
-            const fetch = require('node-fetch');
-            const response = await fetch(songData.preview_url);
-            
-            if (response.ok) {
-                stream = response.body;
-                method = 'spotify_preview';
-                console.log('✅ Spotify Preview Stream erfolgreich');
-            }
-        } catch (previewError) {
-            console.log('⚠️ Spotify Preview fehlgeschlagen:', previewError.message);
-        }
-    }
-    
-    // 4. RADIO FALLBACK
-    if (!stream) {
-        console.log('🎵 Aktiviere Radio-Fallback...');
-        return getRadioFallbackStream(songData);
-    }
-    
-    return { stream, method, songData };
-}
-
-// 🎵 YOUTUBE AUDIO-STREAM (Anti-Bot-Optimiert)
-async function getYouTubeAudioStream(searchQuery) {
-    try {
-        // Anti-Detection Delay
-        await antiDetectionStrategies.randomWait();
-        
-        // Erst YouTube-Video finden
-        const searchResults = await yts(searchQuery);
-        
-        if (!searchResults.videos || searchResults.videos.length === 0) {
-            throw new Error('Keine YouTube-Ergebnisse gefunden');
-        }
-        
-        const video = searchResults.videos[0];
-        const videoUrl = video.url;
-        
-        console.log(`🔗 YouTube Video gefunden: ${video.title}`);
-        
-        // 1. YT-DLP PRIMÄR (100% Anti-Bot)
-        try {
-            console.log('🎵 Versuche yt-dlp (Anti-Bot Primär)...');
-            const streamUrl = await getStreamWithYtDlp(videoUrl);
-            if (streamUrl) {
-                const fetch = require('node-fetch');
-                const response = await fetch(streamUrl, {
-                    headers: antiDetectionStrategies.getAntiDetectionHeaders()
-                });
-                
-                if (response.ok) {
-                    console.log('✅ yt-dlp Stream erfolgreich');
-                    return {
-                        stream: response.body,
-                        method: 'yt-dlp'
-                    };
-                }
-            }
-        } catch (ytdlpError) {
-            console.log('⚠️ yt-dlp fehlgeschlagen:', ytdlpError.message);
-        }
-        
-        // 2. Alternative URLs probieren
-        console.log('🔄 Versuche alternative YouTube URLs...');
-        const alternativeUrls = createAlternativeYouTubeURLs(videoUrl);
-        
-        for (let i = 0; i < alternativeUrls.length && i < 3; i++) {
-            try {
-                await antiDetectionStrategies.randomWait();
-                
-                const streamUrl = await getStreamWithYtDlp(alternativeUrls[i]);
-                if (streamUrl) {
-                    const fetch = require('node-fetch');
-                    const response = await fetch(streamUrl, {
-                        headers: antiDetectionStrategies.getAntiDetectionHeaders()
-                    });
-                    
-                    if (response.ok) {
-                        console.log(`✅ Alternative URL ${i+1} erfolgreich`);
-                        return {
-                            stream: response.body,
-                            method: 'yt-dlp-alt'
-                        };
-                    }
-                }
-            } catch (altError) {
-                console.log(`⚠️ Alternative URL ${i+1} fehlgeschlagen:`, altError.message);
-            }
-        }
-        
-        // 3. play-dl als letzter Fallback (nur für alte Videos)
-        try {
-            console.log('🎵 play-dl Fallback...');
-            await antiDetectionStrategies.randomWait();
-            
-            const streamResult = await playdl.stream(videoUrl, { 
-                quality: 1,
-                htmldata: false // Weniger Bot-Detection
-            });
-            
-            if (streamResult && streamResult.stream) {
-                console.log('✅ play-dl Fallback erfolgreich');
-                return {
-                    stream: streamResult.stream,
-                    method: 'play-dl-fallback'
-                };
-            }
-        } catch (playdlError) {
-            console.log('⚠️ play-dl Fallback fehlgeschlagen:', playdlError.message);
-        }
-        
-        return null;
-    } catch (error) {
-        console.log('YouTube Audio-Stream Fehler:', error.message);
-        return null;
-    }
-}
-
-// 🎵 RADIO FALLBACK STREAM
-async function getRadioFallbackStream(songData) {
-    console.log('📻 Radio-Fallback wird aktiviert...');
-    
-    // Intelligente Radio-Station basierend auf Genre/Popularität
-    let stationId = '1live'; // Default
-    
-    if (songData.popularity && songData.popularity > 80) {
-        stationId = 'swr3'; // Mainstream
-    } else if (songData.artist && (
-        songData.artist.toLowerCase().includes('electronic') ||
-        songData.artist.toLowerCase().includes('techno') ||
-        songData.artist.toLowerCase().includes('house')
-    )) {
-        stationId = 'antenne'; // Electronic-freundlicher
-    }
-    
-    const radioStation = getRadioStation(stationId);
-    if (radioStation) {
-        try {
-            const fetch = require('node-fetch');
-            const response = await fetch(radioStation.url);
-            
-            if (response.ok) {
-                return {
-                    stream: response.body,
-                    method: 'radio_fallback',
-                    songData: {
-                        title: `📻 ${radioStation.name} - ${radioStation.description}`,
-                        artist: radioStation.name,
-                        name: 'Live Radio Stream',
-                        duration: 0, // Unendlich
-                        source: 'radio',
-                        url: radioStation.url,
-                        image: radioStation.logo
-                    }
-                };
-            }
-        } catch (radioError) {
-            console.log('⚠️ Radio-Fallback fehlgeschlagen:', radioError.message);
-        }
-    }
-    
-    return null;
-}
-
-// play-dl initialisieren (Fallback)
+// play-dl initialisieren
 (async () => {
     try {
-        console.log('🎵 Initialisiere play-dl (Fallback)...');
+        console.log('🎵 Initialisiere play-dl...');
         await playdl.authorization();
         console.log('✅ play-dl initialisiert');
     } catch (error) {
         console.log('⚠️ play-dl Initialisierung fehlgeschlagen:', error.message);
     }
 })();
-
-// Erweiterte Anti-Bot-Detection Strategien
-const antiDetectionStrategies = {
-    userAgents: [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0'
-    ],
-    
-    headers: {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Cache-Control': 'max-age=0'
-    },
-    
-    getRandomUserAgent() {
-        return this.userAgents[Math.floor(Math.random() * this.userAgents.length)];
-    },
-    
-    getRandomDelay() {
-        return Math.floor(Math.random() * 3000) + 1000; // 1-4 Sekunden
-    },
-    
-    async randomWait() {
-        const delay = this.getRandomDelay();
-        console.log(`⏳ Anti-Detection Delay: ${delay}ms`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-    },
-    
-    getAntiDetectionHeaders() {
-        return {
-            ...this.headers,
-            'User-Agent': this.getRandomUserAgent()
-        };
-    }
-};
-
-// Erweiterte YouTube-URL Manipulation
-function createAlternativeYouTubeURLs(originalUrl) {
-    const videoId = extractVideoId(originalUrl);
-    if (!videoId) return [originalUrl];
-    
-    const alternatives = [
-        `https://www.youtube.com/watch?v=${videoId}`,
-        `https://youtube.com/watch?v=${videoId}`,
-        `https://m.youtube.com/watch?v=${videoId}`,
-        `https://youtu.be/${videoId}`,
-        `https://www.youtube.com/embed/${videoId}`,
-        `https://youtube.googleapis.com/v/${videoId}`
-    ];
-    
-    return alternatives;
-}
-
-function extractVideoId(url) {
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-        /youtube\.com\/v\/([^&\n?#]+)/
-    ];
-    
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
-    }
-    return null;
-}
 const fs = require('fs');
 const path = require('path');
 
@@ -834,7 +432,7 @@ function normalizeYouTubeURL(url) {
     return url;
 }
 
-// yt-dlp Integration für robuste YouTube-Streams (Anti-Bot Enhanced)
+// yt-dlp Integration für robuste YouTube-Streams (mit Railway-Fallback)
 async function getStreamWithYtDlp(url) {
     try {
         console.log(`🚀 Verwende yt-dlp für: ${url}`);
@@ -847,32 +445,15 @@ async function getStreamWithYtDlp(url) {
             throw new Error('yt-dlp nicht installiert oder nicht verfügbar');
         }
         
-        // Erweiterte Anti-Bot yt-dlp Command
-        const randomAgent = antiDetectionStrategies.getRandomUserAgent();
-        const command = `yt-dlp -f "bestaudio[ext=m4a]/bestaudio/best" --user-agent "${randomAgent}" --extractor-args "youtube:player_client=android" --get-url "${url}"`;
+        // yt-dlp Command mit hochwertigen Audio-Optionen
+        const command = `yt-dlp -f "bestaudio/best" --get-url "${url}"`;
         
         const { stdout, stderr } = await execAsync(command, {
-            timeout: 20000 // 20 Sekunden Timeout
+            timeout: 15000 // 15 Sekunden Timeout
         });
         
         if (stderr && !stdout) {
-            // Fallback mit Web Player Client
-            console.log('🔄 Versuche Web Player Client...');
-            const fallbackCommand = `yt-dlp -f "bestaudio/best" --user-agent "${randomAgent}" --extractor-args "youtube:player_client=web" --get-url "${url}"`;
-            
-            const { stdout: fallbackStdout } = await execAsync(fallbackCommand, {
-                timeout: 20000
-            });
-            
-            if (!fallbackStdout) {
-                throw new Error(`yt-dlp Fehler: ${stderr}`);
-            }
-            
-            const streamUrl = fallbackStdout.trim();
-            if (streamUrl && streamUrl.startsWith('http')) {
-                console.log(`✅ yt-dlp Fallback Stream-URL erhalten`);
-                return streamUrl;
-            }
+            throw new Error(`yt-dlp Fehler: ${stderr}`);
         }
         
         const streamUrl = stdout.trim();
@@ -2076,125 +1657,161 @@ async function playMusic(guildId, song) {
         const player = createPlayerForGuild(guildId);
         const queue = getQueue(guildId);
         
-        // 🎵 SPOTIFY-FIRST SYSTEM: Handle input
+        // Handle both song objects and URLs
         let songData;
         if (typeof song === 'string') {
-            // String input - Suche mit neuem Spotify-System
-            console.log(`🔍 Suche mit Spotify-System: "${song}"`);
-            songData = await searchMusic(song);
+            // If it's a URL string, get video info
+            console.log(`🔍 URL erkannt, hole Video-Info: ${song}`);
+            songData = await getVideoInfo(song);
             if (!songData) {
-                console.error('❌ Keine Musik in allen Quellen gefunden');
+                console.error('❌ Konnte Video-Info nicht abrufen');
                 return false;
             }
         } else {
-            // Already a song object - might be from old system
+            // It's already a song object
             songData = song;
-            console.log(`🎵 Song-Objekt erkannt: ${songData.title}`);
         }
         
-        console.log(`🎵 Versuche abzuspielen: ${songData.title} (Quelle: ${songData.source || 'unknown'})`);
+        console.log(`🎵 Versuche abzuspielen: ${songData.title} (${songData.url})`);
         
-        // 🚀 NEUES AUDIO-STREAMING SYSTEM
-        const audioResult = await getAudioStream(songData);
-        if (!audioResult || !audioResult.stream) {
-            console.error('❌ Konnte Audio-Stream nicht erstellen');
-            return false;
-        }
+        let stream;
+        let streamCreated = false;
         
-        let stream = audioResult.stream;
-        let method = audioResult.method;
-        let finalSongData = audioResult.songData || songData;
+        // Methode 1: play-dl (Primär - funktioniert auf Railway)
+        let streamAttempts = 0;
+        const maxStreamAttempts = 3;
         
-        console.log(`✅ Audio-Stream erstellt mit Methode: ${method}`);
-        
-        // 🎵 ERSTELLE AUDIO RESOURCE
-        try {
-            const resource = createAudioResource(stream, {
-                inputType: 'opus',
-                inlineVolume: true
-            });
-            
-            // Volume anwenden
-            if (resource.volume) {
-                const volume = musicSettings.defaultVolume / 100;
-                resource.volume.setVolume(volume);
-                console.log(`🔊 Volume gesetzt auf: ${musicSettings.defaultVolume}%`);
-            }
-            
-            // Player für diese Guild
-            const player = audioPlayers.get(guildId);
-            if (!player) {
-                console.error('❌ Audio Player nicht gefunden');
-                return false;
-            }
-            
-            // Audio Resource abspielen
-            player.play(resource);
-            
-            // Update aktueller Song
-            currentSongs.set(guildId, finalSongData);
-            
-            // Erfolg-Nachricht mit Quelle
-            console.log(`✅ Spiele ab: ${finalSongData.title} (${method})`);
-            
-            // Discord-Nachricht mit Quelle-Info
-            const channel = connection.joinConfig.channelId;
-            if (channel) {
-                try {
-                    const discordChannel = await connection.guild?.channels.fetch(channel);
-                    if (discordChannel && discordChannel.isTextBased()) {
-                        const sourceEmoji = {
-                            'spotify': '🎵',
-                            'soundcloud': '🎧',
-                            'youtube': '📺',
-                            'spotify_preview': '🎵⏱️',
-                            'radio_fallback': '📻'
-                        };
-                        
-                        const sourceText = {
-                            'spotify': 'Spotify + YouTube Audio',
-                            'soundcloud': 'SoundCloud',
-                            'youtube': 'YouTube',
-                            'spotify_preview': 'Spotify Preview (30s)',
-                            'radio_fallback': 'Radio Fallback'
-                        };
-                        
-                        const embed = {
-                            color: parseInt(musicSettings.embedColor.replace('#', ''), 16),
-                            title: `${sourceEmoji[method] || '🎵'} Spielt jetzt`,
-                            description: `**${finalSongData.title}**`,
-                            fields: [
-                                {
-                                    name: 'Quelle',
-                                    value: sourceText[method] || method,
-                                    inline: true
-                                },
-                                {
-                                    name: 'Dauer',
-                                    value: finalSongData.duration > 0 ? formatDuration(finalSongData.duration) : 'Live Stream',
-                                    inline: true
-                                }
-                            ],
-                            timestamp: new Date().toISOString()
-                        };
-                        
-                        if (finalSongData.image) {
-                            embed.thumbnail = { url: finalSongData.image };
+        while (!streamCreated && streamAttempts < maxStreamAttempts) {
+            streamAttempts++;
+            try {
+                console.log(`📡 Versuche play-dl Stream (Versuch ${streamAttempts}/${maxStreamAttempts})...`);
+                
+                const normalizedUrl = normalizeYouTubeURL(songData.url);
+                const streamValidation = playdl.yt_validate(normalizedUrl);
+                
+                if (streamValidation === 'video') {
+                    // Verschiedene Qualitätsoptionen probieren
+                    const qualityOptions = [2, 1, 0]; // high, medium, low
+                    
+                    for (const quality of qualityOptions) {
+                        try {
+                            console.log(`🎵 Versuche play-dl Qualität ${quality}...`);
+                            
+                            const streamPromise = playdl.stream(normalizedUrl, {
+                                quality: quality,
+                                type: 'audio'
+                            });
+                            
+                            const streamResult = await Promise.race([
+                                streamPromise,
+                                new Promise((_, reject) => 
+                                    setTimeout(() => reject(new Error('Stream-Timeout')), 10000)
+                                )
+                            ]);
+                            
+                            if (streamResult && streamResult.stream) {
+                                console.log(`✅ play-dl Stream erfolgreich erstellt (Versuch ${streamAttempts}, Qualität ${quality})`);
+                                stream = streamResult.stream;
+                                streamCreated = true;
+                                break;
+                            }
+                        } catch (qualityError) {
+                            console.log(`⚠️ play-dl Qualität ${quality} fehlgeschlagen: ${qualityError.message}`);
                         }
-                        
-                        await discordChannel.send({ embeds: [embed] });
                     }
-                } catch (messageError) {
-                    console.log('⚠️ Konnte Discord-Nachricht nicht senden:', messageError.message);
+                    
+                    if (streamCreated) break;
+                }
+            } catch (playdlError) {
+                console.log(`⚠️ play-dl Stream Versuch ${streamAttempts} fehlgeschlagen:`, playdlError.message);
+                
+                if (streamAttempts < maxStreamAttempts) {
+                    console.log(`⏳ Warte 2 Sekunden vor nächstem Versuch...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
+        }
+        
+        // Methode 2: yt-dlp (Nur wenn verfügbar - für lokale Entwicklung)
+        if (!streamCreated) {
+                    try {
+            const safeTitle = songData?.title || song?.title || 'Unknown';
+            console.log(`🚀 Versuche yt-dlp Stream für: ${safeTitle}`);
             
-            // Progress Tracking starten
-            if (finalSongData.duration > 0) {
-                startProgressTracking(guildId, finalSongData.duration);
+            const safeUrl = songData?.url || song?.url;
+            if (!safeUrl) {
+                throw new Error('Keine URL für yt-dlp verfügbar');
             }
             
-            return true;
+            const streamUrl = await getStreamWithYtDlp(safeUrl);
+                if (streamUrl) {
+                    console.log('📡 Erstelle Stream von yt-dlp URL...');
+                    
+                    const fetch = require('node-fetch');
+                    const response = await fetch(streamUrl);
+                    
+                    if (response.ok) {
+                        stream = response.body;
+                        streamCreated = true;
+                        console.log('✅ yt-dlp Stream erfolgreich erstellt');
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                }
+            } catch (ytdlpError) {
+                console.log('⚠️ yt-dlp Stream fehlgeschlagen (normal auf Railway):', ytdlpError.message);
+            }
+        }
+        
+        // Methode 3: Erweiterte yt-dlp Versuche (nur wenn verfügbar)
+        if (!streamCreated) {
+            try {
+                // Prüfe ob yt-dlp verfügbar ist
+                await execAsync('yt-dlp --version', { timeout: 3000 });
+                
+                console.log('🔄 Erweiterte yt-dlp Versuche mit verschiedenen Formaten...');
+                
+                // Verschiedene yt-dlp Kommando-Varianten ausprobieren (mit sicherer URL)
+                const safeUrl = songData?.url || song?.url || '';
+                if (!safeUrl) {
+                    console.log('❌ Keine URL für yt-dlp verfügbar');
+                    return;
+                }
+                
+                const ytdlpCommands = [
+                    `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${safeUrl}"`,
+                    `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${safeUrl}"`,
+                    `yt-dlp --format-sort "+size,+br" --get-url "${safeUrl}"`,
+                    `yt-dlp -f "136/135/134/133/160" --get-url "${safeUrl}"`
+                ];
+                
+                for (let i = 0; i < ytdlpCommands.length && !streamCreated; i++) {
+                    try {
+                        console.log(`🚀 yt-dlp Versuch ${i + 1}/${ytdlpCommands.length}...`);
+                        
+                        const { stdout, stderr } = await execAsync(ytdlpCommands[i], {
+                            timeout: 12000 // 12 Sekunden Timeout
+                        });
+                        
+                        if (stdout && stdout.trim()) {
+                            const streamUrl = stdout.trim();
+                            if (streamUrl.startsWith('http')) {
+                                console.log(`📡 Erstelle Stream von yt-dlp URL (Versuch ${i + 1})...`);
+                                
+                                const fetch = require('node-fetch');
+                                const response = await fetch(streamUrl, {
+                                    timeout: 8000,
+                                    headers: {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                    }
+                                });
+                                
+                                if (response.ok) {
+                                    stream = response.body;
+                                    streamCreated = true;
+                                    console.log(`✅ yt-dlp Stream erfolgreich erstellt (Versuch ${i + 1})`);
+                                    break;
+                                }
                             }
                         }
                     } catch (error) {
@@ -2210,138 +1827,79 @@ async function playMusic(guildId, song) {
             }
         }
         
-        // Methode 4: Enhanced Alternative URL-Suche mit Anti-Detection
+        // Methode 4: Suche alternative URLs und versuche verschiedene Quellen
         if (!streamCreated) {
-            console.log('🔍 Enhanced Suche nach alternativen YouTube-Quellen...');
+            console.log('🔄 Suche nach alternativen URLs...');
             
             const searchTitle = songData?.title || song?.title || 'Unknown';
             const searchAuthor = songData?.author || song?.author || '';
-            
-            // Erweiterte Suchbegriffe für bessere Trefferquote
-            const searchQueries = [
-                `${searchTitle} ${searchAuthor}`,
-                `${searchTitle} official`,
-                `${searchTitle} audio`,
-                `${searchTitle} music video`,
-                `${searchTitle}` // Nur Titel als letzter Versuch
-            ];
-            
-            for (const searchQuery of searchQueries) {
-                if (streamCreated) break;
-                
-                console.log(`🔍 Suche: "${searchQuery}"`);
-                await antiDetectionStrategies.randomWait(); // Anti-Detection Delay
-                
-                const searchResults = await searchYouTube(searchQuery);
-                
-                if (searchResults.length > 0) {
-                    console.log(`📋 Gefunden: ${searchResults.length} alternative Quellen für "${searchQuery}"`);
+            const searchResults = await searchYouTube(searchTitle + ' ' + searchAuthor);
+            if (searchResults.length > 0) {
+                // Versuche die ersten 3 Suchergebnisse
+                for (let i = 0; i < Math.min(3, searchResults.length) && !streamCreated; i++) {
+                    const altResult = searchResults[i];
+                    console.log(`🔄 Alternative URL ${i + 1}: ${altResult.title}`);
                     
-                    // Versuche die ersten 5 Suchergebnisse mit Enhanced-Methoden
-                    for (let i = 0; i < Math.min(5, searchResults.length) && !streamCreated; i++) {
-                        const altResult = searchResults[i];
-                        console.log(`🎵 Teste Alternative ${i + 1}/${Math.min(5, searchResults.length)}: ${altResult.title}`);
-                        
-                        // Anti-Detection Delay zwischen Versuchen
-                        if (i > 0) {
-                            await new Promise(resolve => setTimeout(resolve, 1500));
-                        }
-                        
-                        // Enhanced play-dl für Alternative URLs
-                        const altUrls = createAlternativeYouTubeURLs(altResult.url);
-                        
-                        for (const altUrl of altUrls) {
-                            if (streamCreated) break;
+                    try {
+                        // Erste Methode: yt-dlp
+                        const streamUrl = await getStreamWithYtDlp(altResult.url);
+                        if (streamUrl) {
+                            const fetch = require('node-fetch');
+                            const response = await fetch(streamUrl, {
+                                timeout: 6000,
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                }
+                            });
                             
-                            try {
-                                console.log(`🔗 Teste Alt-URL: ${altUrl}`);
-                                const normalizedAltUrl = normalizeYouTubeURL(altUrl);
-                                const altStreamValidation = playdl.yt_validate(normalizedAltUrl);
+                            if (response.ok) {
+                                stream = response.body;
+                                streamCreated = true;
+                                console.log(`✅ Alternative URL ${i + 1} mit yt-dlp erfolgreich`);
+                                // Update songData mit alternativen Informationen (sichere Zuweisung)
+                                if (songData) {
+                                    songData.title = altResult.title;
+                                    songData.url = altResult.url;
+                                    songData.author = altResult.author;
+                                }
+                                break;
+                            }
+                        }
+                    } catch (ytdlpError) {
+                        console.log(`⚠️ yt-dlp für Alternative ${i + 1} fehlgeschlagen: ${ytdlpError.message}`);
+                        
+                        // Zweite Methode: play-dl für alternative URL
+                        try {
+                            const normalizedAltUrl = normalizeYouTubeURL(altResult.url);
+                            const altStreamValidation = playdl.yt_validate(normalizedAltUrl);
+                            
+                            if (altStreamValidation === 'video') {
+                                const altStreamResult = await playdl.stream(normalizedAltUrl, {
+                                    quality: 2,
+                                    type: 'audio'
+                                });
                                 
-                                if (altStreamValidation === 'video') {
-                                    // Versuche verschiedene Qualitäten für Alternative URLs
-                                    const qualityOptions = [0, 1]; // low, medium - konservativer für Alternativen
-                                    
-                                    for (const quality of qualityOptions) {
-                                        try {
-                                            console.log(`🎵 Alternative URL play-dl Qualität ${quality}...`);
-                                            
-                                            const altStreamOptions = {
-                                                quality: quality,
-                                                type: 'audio',
-                                                requestOptions: {
-                                                    headers: antiDetectionStrategies.getAntiDetectionHeaders()
-                                                }
-                                            };
-                                            
-                                            const altStreamResult = await Promise.race([
-                                                playdl.stream(normalizedAltUrl, altStreamOptions),
-                                                new Promise((_, reject) => 
-                                                    setTimeout(() => reject(new Error('Alt-Stream-Timeout')), 12000)
-                                                )
-                                            ]);
-                                            
-                                            if (altStreamResult && altStreamResult.stream) {
-                                                stream = altStreamResult.stream;
-                                                streamCreated = true;
-                                                console.log(`✅ Alternative URL ${i + 1} mit Enhanced play-dl erfolgreich!`);
-                                                console.log(`🎉 ERFOLG: Original Song "${searchTitle}" über Alternative gefunden!`);
-                                                
-                                                // Update songData (sichere Zuweisung)
-                                                if (songData) {
-                                                    songData.title = altResult.title;
-                                                    songData.url = altResult.url;
-                                                    songData.author = altResult.author;
-                                                }
-                                                break;
-                                            }
-                                        } catch (qualityError) {
-                                            console.log(`⚠️ Alt-URL Qualität ${quality} fehlgeschlagen: ${qualityError.message}`);
-                                        }
+                                if (altStreamResult && altStreamResult.stream) {
+                                    stream = altStreamResult.stream;
+                                    streamCreated = true;
+                                    console.log(`✅ Alternative URL ${i + 1} mit play-dl erfolgreich`);
+                                    // Update songData (sichere Zuweisung)
+                                    if (songData) {
+                                        songData.title = altResult.title;
+                                        songData.url = altResult.url;
+                                        songData.author = altResult.author;
                                     }
+                                    break;
                                 }
-                            } catch (altError) {
-                                console.log(`⚠️ Alternative URL fehlgeschlagen: ${altError.message}`);
                             }
-                            
-                            if (streamCreated) break;
-                        }
-                        
-                        // yt-dlp als Fallback für Alternative URLs (nur wenn verfügbar)
-                        if (!streamCreated) {
-                            try {
-                                const streamUrl = await getStreamWithYtDlp(altResult.url);
-                                if (streamUrl) {
-                                    const fetch = require('node-fetch');
-                                    const response = await fetch(streamUrl, {
-                                        timeout: 8000,
-                                        headers: antiDetectionStrategies.getAntiDetectionHeaders()
-                                    });
-                                    
-                                    if (response.ok) {
-                                        stream = response.body;
-                                        streamCreated = true;
-                                        console.log(`✅ Alternative URL ${i + 1} mit yt-dlp erfolgreich!`);
-                                        
-                                        // Update songData (sichere Zuweisung)
-                                        if (songData) {
-                                            songData.title = altResult.title;
-                                            songData.url = altResult.url;
-                                            songData.author = altResult.author;
-                                        }
-                                        break;
-                                    }
-                                }
-                            } catch (ytdlpError) {
-                                console.log(`⚠️ yt-dlp für Alternative ${i + 1} fehlgeschlagen: ${ytdlpError.message}`);
-                            }
+                        } catch (playdlError) {
+                            console.log(`⚠️ play-dl für Alternative ${i + 1} fehlgeschlagen: ${playdlError.message}`);
                         }
                     }
-                }
-                
-                if (streamCreated) {
-                    console.log(`🎉 ERFOLGREICH: Song über Suche "${searchQuery}" gefunden!`);
-                    break;
+                    
+                    if (i < Math.min(3, searchResults.length) - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
                 }
             }
         }
@@ -2372,129 +1930,71 @@ async function playMusic(guildId, song) {
                 }
             }
             
-            // Methode 6: Intelligentes Radio-Fallback (nur als allerletzter Ausweg)
+            // Methode 6: Letztes Fallback - Verwende Radio-Stream wenn verfügbar
             if (!streamCreated && musicSettings.radio?.enabled) {
-                console.log('📻 LETZTER AUSWEG: YouTube komplett blockiert - aktiviere intelligentes Radio-Fallback...');
-                
-                // Sende Benachrichtigung über Radio-Fallback
-                if (musicSettings.announcements.channelId && global.client) {
-                    try {
-                        const channel = global.client.channels.cache.get(musicSettings.announcements.channelId);
-                        if (channel) {
-                            await channel.send({
-                                embeds: [{
-                                    color: 0xFF6B6B, // Rot
-                                    title: '📻 Radio-Fallback aktiviert',
-                                    description: `❌ **YouTube komplett blockiert!**\n\n` +
-                                               `Ursprünglicher Song: **${songData?.title || song?.title || 'Unknown'}**\n` +
-                                               `🔄 Alle Enhanced-Methoden fehlgeschlagen\n\n` +
-                                               `📻 Aktiviere intelligenten Radio-Fallback...`,
-                                    footer: {
-                                        text: 'Versuche es in 15-30 Minuten erneut wenn YouTube-Blockierung nachlässt'
-                                    },
-                                    timestamp: new Date().toISOString()
-                                }]
-                            });
-                        }
-                    } catch (notifyError) {
-                        console.log('⚠️ Fehler beim Senden der Radio-Fallback-Benachrichtigung:', notifyError.message);
-                    }
-                }
-                
                 try {
+                    console.log('📻 Letztes Fallback: Verwende einen passenden Radio-Sender...');
+                    
                     const requestedGenres = [
-                        { genre: ['pop', 'hits', 'musik', 'charts'], station: '1live' },
-                        { genre: ['deutsch', 'rap', 'hip-hop', 'german'], station: 'deutschrap1' },
-                        { genre: ['electronic', 'dance', 'edm', 'house', 'techno'], station: 'sunshine' },
-                        { genre: ['chill', 'lofi', 'relax', 'ambient'], station: 'lofi' },
-                        { genre: ['rock', 'metal', 'alternative'], station: 'swr3' },
-                        { genre: ['oldschool', 'classic', '90s', '80s'], station: 'oldschool' }
+                        { genre: ['pop', 'hits', 'musik'], station: '1live' },
+                        { genre: ['deutsch', 'rap', 'hip-hop'], station: 'deutschrap1' },
+                        { genre: ['electronic', 'dance', 'edm'], station: 'sunshine' },
+                        { genre: ['chill', 'lofi', 'relax'], station: 'lofi' },
+                        { genre: ['house', 'techno'], station: 'deephouse' }
                     ];
                     
                     const songTitle = (songData?.title || song?.title || '').toLowerCase();
-                    const songAuthor = (songData?.author || song?.author || '').toLowerCase();
                     let fallbackStation = null;
-                    let genreReason = '';
                     
-                    // Erweiterte Genre-Erkennung (Titel + Autor)
+                    // Versuche passenden Sender zu finden basierend auf Song-Titel
                     for (const genreMap of requestedGenres) {
-                        if (genreMap.genre.some(genre => 
-                            songTitle.includes(genre) || songAuthor.includes(genre)
-                        )) {
+                        if (genreMap.genre.some(genre => songTitle.includes(genre))) {
                             fallbackStation = getRadioStation(genreMap.station);
-                            genreReason = `Genre-Match: ${genreMap.genre.find(g => songTitle.includes(g) || songAuthor.includes(g))}`;
                             break;
                         }
                     }
                     
-                    // Falls kein Genre-Match, verwende beliebtesten Sender
+                    // Falls kein passender Sender gefunden, nutze Standard-Sender
                     if (!fallbackStation) {
                         fallbackStation = getRadioStation('1live') || getRadioStations()[0];
-                        genreReason = 'Standard-Auswahl (kein Genre-Match)';
                     }
                     
                     if (fallbackStation && !fallbackStation.url.includes('youtube')) {
-                        console.log(`📻 Intelligente Radio-Auswahl: ${fallbackStation.name} (${genreReason})`);
+                        console.log(`📻 Verwende Fallback-Radio-Sender: ${fallbackStation.name}`);
                         
-                        // Erstelle erweiterten Radio-Song mit mehr Informationen
+                        // Erstelle temporären Radio-Song
                         const fallbackSong = {
-                            title: `📻 ${fallbackStation.name} (YouTube-Ersatz)`,
+                            title: `📻 ${fallbackStation.name} (Fallback für: ${songData?.title || song?.title || 'Unknown'})`,
                             url: fallbackStation.url,
                             duration: 0,
                             thumbnail: fallbackStation.logo,
-                            author: `${fallbackStation.description} • Original: ${songData?.author || song?.author || 'Unknown'}`,
+                            author: fallbackStation.description,
                             isRadio: true,
                             isFallback: true,
                             originalRequest: songData?.title || song?.title,
-                            originalAuthor: songData?.author || song?.author,
-                            genreReason: genreReason,
                             radioStation: fallbackStation,
                             requestedBy: songData?.requestedBy || song?.requestedBy || 'System'
                         };
                         
-                        // Versuche Radio-Stream mit Enhanced Headers
+                        // Versuche Radio-Stream
                         const fetch = require('node-fetch');
                         const response = await fetch(fallbackStation.url, {
-                            timeout: 8000,
-                            headers: antiDetectionStrategies.getAntiDetectionHeaders()
+                            timeout: 5000,
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                            }
                         });
                         
                         if (response.ok) {
                             stream = response.body;
                             streamCreated = true;
                             console.log(`✅ Radio-Fallback erfolgreich: ${fallbackStation.name}`);
-                            console.log(`🎵 Grund: ${genreReason}`);
                             
                             // Update songData für korrekte Anzeige
                             if (songData) {
                                 Object.assign(songData, fallbackSong);
                             } else if (song) {
                                 Object.assign(song, fallbackSong);
-                            }
-                            
-                            // Sende Erfolgs-Benachrichtigung
-                            if (musicSettings.announcements.channelId && global.client) {
-                                try {
-                                    const channel = global.client.channels.cache.get(musicSettings.announcements.channelId);
-                                    if (channel) {
-                                        await channel.send({
-                                            embeds: [{
-                                                color: 0x00FF00, // Grün
-                                                title: '📻 Radio-Fallback erfolgreich',
-                                                description: `✅ **${fallbackStation.name}** ist jetzt aktiv\n\n` +
-                                                           `🎯 **Grund:** ${genreReason}\n` +
-                                                           `🎵 **Original-Request:** ${songData?.title || song?.title}\n` +
-                                                           `👤 **Angefordert von:** ${songData?.requestedBy || song?.requestedBy || 'System'}`,
-                                                footer: {
-                                                    text: 'Radio läuft bis neuer Song angefordert wird'
-                                                },
-                                                timestamp: new Date().toISOString()
-                                            }]
-                                        });
-                                    }
-                                } catch (successNotifyError) {
-                                    console.log('⚠️ Fehler beim Senden der Erfolgs-Benachrichtigung:', successNotifyError.message);
-                                }
                             }
                         }
                     }
@@ -2504,7 +2004,7 @@ async function playMusic(guildId, song) {
             }
             
             if (!streamCreated) {
-                throw new Error('ALLE ENHANCED METHODEN FEHLGESCHLAGEN - YouTube blockiert alle Zugriffsmethoden komplett. Enhanced play-dl, yt-dlp, alternative URLs und Radio-Fallback sind alle fehlgeschlagen oder nicht verfügbar.');
+                throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert Bot-Zugriff und keine Fallback-Quellen verfügbar.');
             }
         }
         
