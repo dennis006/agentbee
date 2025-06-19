@@ -41,7 +41,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
-    "@rollup/rollup-win32-x64-msvc": "^4.42.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
@@ -56,6 +55,7 @@
     "vite": "^6.3.5"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.42.0"
+    "@rollup/rollup-linux-x64-gnu": "^4.42.0",
+    "@rollup/rollup-win32-x64-msvc": "^4.42.0"
   }
 }
