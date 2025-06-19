@@ -953,14 +953,19 @@ const corsOptions = {
         const allowedOrigins = [
             'http://localhost:5173', // Development Frontend
             'http://localhost:3000', // Alternative Development Port
-            process.env.FRONTEND_URL, // Production Frontend (Netlify)
+            'https://agentbee-dashboard.netlify.app', // Production Frontend (Netlify)
+            process.env.FRONTEND_URL, // Zusätzliche Frontend URL
             ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [])
         ].filter(Boolean); // Entferne undefined Werte
+        
+        console.log(`🌐 CORS Request from origin: ${origin}`);
+        console.log(`🔒 Allowed origins:`, allowedOrigins);
         
         // Erlaube Requests ohne Origin (z.B. mobile apps oder Postman)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1) {
+            console.log(`✅ CORS allowed for origin: ${origin}`);
             callback(null, true);
         } else {
             console.log(`❌ CORS blocked origin: ${origin}`);
