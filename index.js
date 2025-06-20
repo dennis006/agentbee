@@ -4471,9 +4471,32 @@ client.on(Events.InteractionCreate, async interaction => {
     // Giveaway-Button-Interaktionen werden jetzt von GiveawayInteractions behandelt
     // (automatisch über event listener)
 
-    // Music Interactive Panel Buttons
+    // YouTube Radio Button Handlers
+    if (interaction.customId === 'radio_select') {
+        const { handleRadioSelectButton } = require('./music-api');
+        await handleRadioSelectButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'radio_stop') {
+        const { handleRadioStopButton } = require('./music-api');
+        await handleRadioStopButton(interaction);
+        return;
+    }
+
+    // Radio Station Selection Menu
+    if (interaction.customId === 'radio_station_select') {
+        const { handleRadioStationSelect } = require('./music-api');
+        await handleRadioStationSelect(interaction);
+        return;
+    }
+
+    // Old Music Interactive Panel Buttons (DEPRECATED - für kompatibilität)
     if (interaction.customId === 'song_request') {
-        await handleSongRequestButton(interaction);
+        await interaction.reply({
+            content: '📻 **YouTube Radio-System** - Song-Requests nicht verfügbar! Nutze die Radio-Auswahl.',
+            ephemeral: true
+        });
         return;
     }
 
