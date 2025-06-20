@@ -578,31 +578,75 @@ async function postInteractiveRadioPanel(guildId) {
 async function updateInteractiveRadioPanel(guildId, forceUpdate = false) {
     try {
         // Prüfe Auto-Update Setting nur wenn nicht forced
-        if (!forceUpdate && !musicSettings.interactivePanel.autoUpdate) return;
+        if (!forceUpdate && !musicSettings.interactivePanel.autoUpdate) {
+            console.log('📻 Panel Update übersprungen - Auto-Update deaktiviert');
+            return true; // Kein Fehler, nur übersprungen
+        }
 
-        const guild = global.client?.guilds.cache.get(guildId);
-        if (!guild) return;
+        // Prüfe ob Client verfügbar ist
+        if (!global.client) {
+            console.log('⚠️ Discord Client nicht verfügbar');
+            return false;
+        }
+
+        const guild = global.client.guilds.cache.get(guildId);
+        if (!guild) {
+            console.log(`⚠️ Guild ${guildId} nicht gefunden`);
+            return false;
+        }
 
         const channelId = musicSettings.interactivePanel.channelId;
         const messageId = musicSettings.interactivePanel.messageId;
         
-        if (!channelId || !messageId) return;
+        if (!channelId) {
+            console.log('⚠️ Kein Channel für Interactive Panel konfiguriert');
+            return false;
+        }
+
+        if (!messageId) {
+            console.log('⚠️ Keine Message-ID für Interactive Panel konfiguriert');
+            return false;
+        }
 
         const channel = guild.channels.cache.get(channelId);
-        if (!channel) return;
+        if (!channel) {
+            console.log(`⚠️ Channel ${channelId} nicht gefunden`);
+            return false;
+        }
 
-        const message = await channel.messages.fetch(messageId);
-        if (!message) return;
+        // Versuche Nachricht zu fetchen
+        let message;
+        try {
+            message = await channel.messages.fetch(messageId);
+        } catch (fetchError) {
+            console.log(`⚠️ Nachricht ${messageId} nicht gefunden:`, fetchError.message);
+            return false;
+        }
 
+        if (!message) {
+            console.log(`⚠️ Nachricht ${messageId} ist null`);
+            return false;
+        }
+
+        // Erstelle Panel-Daten
         const panelData = await createInteractiveRadioPanel(guildId);
-        if (!panelData) return;
+        if (!panelData) {
+            console.log('⚠️ Konnte Panel-Daten nicht erstellen');
+            return false;
+        }
 
-        await message.edit(panelData);
-        console.log('🔄 Radio Panel aktualisiert');
-        return true;
+        // Aktualisiere Nachricht
+        try {
+            await message.edit(panelData);
+            console.log('🔄 Radio Panel erfolgreich aktualisiert');
+            return true;
+        } catch (editError) {
+            console.log('⚠️ Fehler beim Bearbeiten der Panel-Nachricht:', editError.message);
+            return false;
+        }
 
     } catch (error) {
-        console.log('⚠️ Fehler beim Aktualisieren des Radio Panels:', error.message);
+        console.error('❌ Unerwarteter Fehler beim Aktualisieren des Radio Panels:', error);
         return false;
     }
 }
@@ -894,24 +938,50 @@ function registerMusicAPI(app) {
         try {
             const { guildId } = req.params;
             
+            console.log(`📻 Panel Update angefragt für Guild: ${guildId}`);
+            
+            // Prüfe Konfiguration
+            if (!musicSettings.interactivePanel.enabled) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Interactive Panel ist nicht aktiviert'
+                });
+            }
+
+            if (!musicSettings.interactivePanel.channelId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Kein Channel für Interactive Panel konfiguriert'
+                });
+            }
+
+            if (!musicSettings.interactivePanel.messageId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Keine Message-ID für Interactive Panel konfiguriert. Bitte poste zuerst ein Panel.'
+                });
+            }
+            
             const success = await updateInteractiveRadioPanel(guildId, true); // Force update
             
             if (success) {
+                console.log(`✅ Panel Update erfolgreich für Guild: ${guildId}`);
                 res.json({
                     success: true,
-                    message: 'Interactive Panel aktualisiert'
+                    message: 'Interactive Panel erfolgreich aktualisiert'
                 });
             } else {
+                console.log(`❌ Panel Update fehlgeschlagen für Guild: ${guildId}`);
                 res.status(500).json({
                     success: false,
-                    error: 'Fehler beim Aktualisieren des Panels'
+                    error: 'Panel konnte nicht aktualisiert werden. Prüfe die Logs für Details.'
                 });
             }
         } catch (error) {
-            console.error('❌ Fehler beim Panel Update:', error);
+            console.error('❌ Unerwarteter Fehler beim Panel Update:', error);
             res.status(500).json({
                 success: false,
-                error: error.message
+                error: `Interner Fehler: ${error.message}`
             });
         }
     });
