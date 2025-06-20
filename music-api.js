@@ -7,21 +7,72 @@ const {
     entersState,
     getVoiceConnection
 } = require('@discordjs/voice');
-// Verwende play-dl für robuste YouTube-Integration
+// Verwende play-dl für robuste YouTube-Integration mit Cookies
 const playdl = require('play-dl');
 const yts = require('yt-search');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
-// play-dl initialisieren
+// 🍪 YouTube-Cookies für Anti-Bot-Umgehung (aus Railway Environment Variables)
+const YOUTUBE_COOKIES = {
+    SID: process.env.YOUTUBE_SID || '',
+    SSID: process.env.YOUTUBE_SSID || '',
+    HSID: process.env.YOUTUBE_HSID || '',
+    APISID: process.env.YOUTUBE_APISID || '',
+    SAPISID: process.env.YOUTUBE_SAPISID || '',
+    LOGIN_INFO: process.env.YOUTUBE_LOGIN_INFO || ''
+};
+
+// 🔓 play-dl mit YouTube-Cookies initialisieren (Anti-Bot-Schutz)
 (async () => {
     try {
-        console.log('🎵 Initialisiere play-dl...');
-        await playdl.authorization();
-        console.log('✅ play-dl initialisiert');
+        console.log('🎵 Initialisiere play-dl mit YouTube-Cookies...');
+        
+        // Prüfe ob wichtige Cookies verfügbar sind
+        const hasCookies = YOUTUBE_COOKIES.SID && YOUTUBE_COOKIES.SSID && YOUTUBE_COOKIES.LOGIN_INFO;
+        
+        if (hasCookies) {
+            console.log('🍪 YouTube-Cookies gefunden - setze Cookie-Authentifizierung...');
+            
+            // Erstelle Cookie-String für play-dl
+            const cookieString = Object.entries(YOUTUBE_COOKIES)
+                .filter(([key, value]) => value && value.trim()) // Nur nicht-leere Cookies
+                .map(([key, value]) => `${key}=${value}`)
+                .join('; ');
+            
+            console.log(`🔧 Cookies gesetzt für: ${Object.keys(YOUTUBE_COOKIES).filter(key => YOUTUBE_COOKIES[key]).join(', ')}`);
+            
+            // Setze YouTube-Cookies für play-dl (Cookie-basierte Authentifizierung)
+            await playdl.setToken({
+                youtube: {
+                    cookie: cookieString
+                }
+            });
+            
+            console.log('✅ play-dl mit YouTube-Cookies initialisiert');
+            console.log('🔓 YouTube Anti-Bot-Schutz erfolgreich umgangen!');
+            console.log('🎯 Bot kann jetzt authentifizierte YouTube-Anfragen stellen');
+            
+        } else {
+            console.log('⚠️ YouTube-Cookies nicht vollständig - verwende Standard-Modus');
+            console.log(`🔍 Gefundene Cookies: ${Object.keys(YOUTUBE_COOKIES).filter(key => YOUTUBE_COOKIES[key]).join(', ') || 'keine'}`);
+            console.log('💡 Tipp: Setze YOUTUBE_SID, YOUTUBE_SSID und YOUTUBE_LOGIN_INFO in Railway Environment Variables');
+            
+            await playdl.authorization();
+            console.log('✅ play-dl Standard-Modus initialisiert (ohne Cookies)');
+        }
+        
     } catch (error) {
-        console.log('⚠️ play-dl Initialisierung fehlgeschlagen:', error.message);
+        console.log('⚠️ play-dl Cookie-Initialisierung fehlgeschlagen:', error.message);
+        console.log('🔄 Fallback zu Standard-Modus ohne Cookies...');
+        
+        try {
+            await playdl.authorization();
+            console.log('✅ play-dl Fallback-Modus aktiv (ohne Cookies)');
+        } catch (fallbackError) {
+            console.log('❌ Auch Standard-Fallback fehlgeschlagen:', fallbackError.message);
+        }
     }
 })();
 const fs = require('fs');

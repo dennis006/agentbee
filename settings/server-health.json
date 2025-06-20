@@ -2822,6 +2822,12 @@
         "channelId": "1382762512453472337",
         "timestamp": 1750339608704,
         "reactions": 0
+      },
+      {
+        "userId": "306523854233403393",
+        "channelId": "1381721887792697484",
+        "timestamp": 1750413336014,
+        "reactions": 0
       }
     ]
   },
@@ -4677,6 +4683,20 @@
         "targetUserId": "1325057674169286749",
         "moderatorId": null,
         "timestamp": 1750342370543,
+        "responseTime": null
+      },
+      {
+        "type": "message_delete",
+        "targetUserId": "1325057674169286749",
+        "moderatorId": null,
+        "timestamp": 1750411905651,
+        "responseTime": null
+      },
+      {
+        "type": "message_delete",
+        "targetUserId": "306523854233403393",
+        "moderatorId": null,
+        "timestamp": 1750413339648,
         "responseTime": null
       }
     ]
