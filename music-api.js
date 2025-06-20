@@ -1743,78 +1743,8 @@ async function playMusic(guildId, song) {
             
 
             
-            // 📻 Methode 3: Letztes Fallback - Verwende Radio-Stream wenn verfügbar
-            if (!streamCreated && musicSettings.radio?.enabled) {
-                try {
-                    console.log('📻 Letztes Fallback: Verwende einen passenden Radio-Sender...');
-                    
-                    const requestedGenres = [
-                        { genre: ['pop', 'hits', 'musik'], station: '1live' },
-                        { genre: ['deutsch', 'rap', 'hip-hop'], station: 'deutschrap1' },
-                        { genre: ['electronic', 'dance', 'edm'], station: 'sunshine' },
-                        { genre: ['chill', 'lofi', 'relax'], station: 'lofi' },
-                        { genre: ['house', 'techno'], station: 'deephouse' }
-                    ];
-                    
-                    const songTitle = (songData?.title || song?.title || '').toLowerCase();
-                    let fallbackStation = null;
-                    
-                    // Versuche passenden Sender zu finden basierend auf Song-Titel
-                    for (const genreMap of requestedGenres) {
-                        if (genreMap.genre.some(genre => songTitle.includes(genre))) {
-                            fallbackStation = getRadioStation(genreMap.station);
-                            break;
-                        }
-                    }
-                    
-                    // Falls kein passender Sender gefunden, nutze Standard-Sender
-                    if (!fallbackStation) {
-                        fallbackStation = getRadioStation('1live') || getRadioStations()[0];
-                    }
-                    
-                    if (fallbackStation && !fallbackStation.url.includes('youtube')) {
-                        console.log(`📻 Verwende Fallback-Radio-Sender: ${fallbackStation.name}`);
-                        
-                        // Erstelle temporären Radio-Song
-                        const fallbackSong = {
-                            title: `📻 ${fallbackStation.name} (Fallback für: ${songData?.title || song?.title || 'Unknown'})`,
-                            url: fallbackStation.url,
-                            duration: 0,
-                            thumbnail: fallbackStation.logo,
-                            author: fallbackStation.description,
-                            isRadio: true,
-                            isFallback: true,
-                            originalRequest: songData?.title || song?.title,
-                            radioStation: fallbackStation,
-                            requestedBy: songData?.requestedBy || song?.requestedBy || 'System'
-                        };
-                        
-                        // Versuche Radio-Stream
-                        const fetch = require('node-fetch');
-                        const response = await fetch(fallbackStation.url, {
-                            timeout: 5000,
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                            }
-                        });
-                        
-                        if (response.ok) {
-                            stream = response.body;
-                            streamCreated = true;
-                            console.log(`✅ Radio-Fallback erfolgreich: ${fallbackStation.name}`);
-                            
-                            // Update songData für korrekte Anzeige
-                            if (songData) {
-                                Object.assign(songData, fallbackSong);
-                            } else if (song) {
-                                Object.assign(song, fallbackSong);
-                            }
-                        }
-                    }
-                } catch (radioError) {
-                    console.log('❌ Radio-Fallback fehlgeschlagen:', radioError.message);
-                }
-            }
+            // 🚫 Radio-Fallback temporär deaktiviert für Tests
+            // Direkter Fehler wenn play-dl fehlschlägt, kein Radio-Fallback
             
             if (!streamCreated) {
                 throw new Error('Alle play-dl Stream-Methoden fehlgeschlagen - Cookie-Authentifizierung prüfen oder YouTube-URL ist nicht verfügbar.');
@@ -1917,9 +1847,9 @@ async function playMusic(guildId, song) {
                             embeds: [{
                                 color: 0xFFA500, // Orange
                                 title: '🔄 YouTube-Blockierung erkannt',
-                                description: `YouTube blockiert den Song **${safeSongData?.title || 'Unknown'}**\n\n🔍 Versuche alternative Quellen und Fallback-Optionen...`,
+                                description: `YouTube blockiert den Song **${safeSongData?.title || 'Unknown'}**\n\n🔍 Versuche alternative Quellen...`,
                                 footer: {
-                                    text: 'Falls alle Versuche fehlschlagen, wird ein passender Radio-Sender als Fallback verwendet'
+                                    text: 'Radio-Fallback ist für Tests deaktiviert'
                                 },
                                 timestamp: new Date().toISOString()
                             }]
