@@ -787,10 +787,10 @@ const PlaylistsOverview: React.FC<{
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-white">🎵 Aktuelle Playlist</h3>
-              <p className="text-green-400 font-medium">{playlistStatus.currentPlaylist.name}</p>
-              {playlistStatus.currentSong && (
-                <p className="text-gray-300 text-sm">Aktuell: {playlistStatus.currentSong.title}</p>
-              )}
+                              <p className="text-green-400 font-medium">{playlistStatus.currentPlaylist?.name || 'Unbekannte Playlist'}</p>
+                              {playlistStatus.currentSong && (
+                  <p className="text-gray-300 text-sm">Aktuell: {playlistStatus.currentSong?.title || 'Unbekannter Song'}</p>
+                )}
             </div>
             <div className="text-green-400">
               <Volume2 className="w-8 h-8 animate-bounce" />
@@ -850,15 +850,15 @@ const PlaylistsOverview: React.FC<{
 
               {/* Playlist Stats */}
               <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
-                <span>🎵 {playlist.songs.length} Songs</span>
-                <span>⏱️ {formatDuration(playlist.duration)}</span>
-                <span>▶️ {playlist.playCount}</span>
+                <span>🎵 {(playlist.songs || []).length} Songs</span>
+                <span>⏱️ {formatDuration(playlist.duration || 0)}</span>
+                <span>▶️ {playlist.playCount || 0}</span>
               </div>
 
               {/* Playlist Tags */}
-              {playlist.tags.length > 0 && (
+              {(playlist.tags || []).length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {playlist.tags.slice(0, 3).map(tag => (
+                  {(playlist.tags || []).slice(0, 3).map(tag => (
                     <span
                       key={tag}
                       className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs"
@@ -866,9 +866,9 @@ const PlaylistsOverview: React.FC<{
                       {tag}
                     </span>
                   ))}
-                  {playlist.tags.length > 3 && (
+                  {(playlist.tags || []).length > 3 && (
                     <span className="px-2 py-1 bg-gray-500/20 text-gray-400 rounded-full text-xs">
-                      +{playlist.tags.length - 3}
+                      +{(playlist.tags || []).length - 3}
                     </span>
                   )}
                 </div>
@@ -1033,27 +1033,27 @@ const LiveControl: React.FC<{
           </h3>
           
           <div className="space-y-3">
-            <h4 className="font-medium text-white">{currentPlaylist.name}</h4>
-            <p className="text-sm text-gray-400">{currentPlaylist.description}</p>
+            <h4 className="font-medium text-white">{currentPlaylist?.name || 'Unbekannte Playlist'}</h4>
+            <p className="text-sm text-gray-400">{currentPlaylist?.description || ''}</p>
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-500">Songs:</span>
-                <span className="text-white ml-2">{currentPlaylist.songs.length}</span>
+                <span className="text-white ml-2">{(currentPlaylist.songs || []).length}</span>
               </div>
               <div>
                 <span className="text-gray-500">Dauer:</span>
-                <span className="text-white ml-2">{formatDuration(currentPlaylist.duration)}</span>
+                <span className="text-white ml-2">{formatDuration(currentPlaylist.duration || 0)}</span>
               </div>
-              <div>
+                            <div>
                 <span className="text-gray-500">Shuffle:</span>
-                <span className="text-white ml-2">{currentPlaylist.settings.shuffle ? '🔀 An' : '📑 Aus'}</span>
+                <span className="text-white ml-2">{currentPlaylist?.settings?.shuffle ? '🔀 An' : '📑 Aus'}</span>
               </div>
               <div>
                 <span className="text-gray-500">Repeat:</span>
                 <span className="text-white ml-2">
-                  {currentPlaylist.settings.repeat === 'all' ? '🔁 All' : 
-                   currentPlaylist.settings.repeat === 'one' ? '🔂 One' : '⏹️ Off'}
+                  {currentPlaylist?.settings?.repeat === 'all' ? '🔁 All' :
+                   currentPlaylist?.settings?.repeat === 'one' ? '🔂 One' : '⏹️ Off'}
                 </span>
               </div>
             </div>
