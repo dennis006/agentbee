@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus } from 'lucide-react';
+import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2 } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -237,6 +237,16 @@ const Music: React.FC = () => {
   
   // Guild ID State
   const [guildId, setGuildId] = useState<string | null>(null);
+
+  // New Station State
+  const [newStation, setNewStation] = useState({
+    name: '',
+    url: '',
+    genre: '',
+    country: '',
+    description: '',
+    logo: ''
+  });
 
   const loadData = async () => {
     try {
@@ -477,6 +487,55 @@ const Music: React.FC = () => {
     } catch (err) {
       console.error('Panel Post Error:', err);
       showError('Netzwerk Fehler', '❌ Netzwerkfehler');
+    }
+  };
+
+  const removeRadioStation = async (stationId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/api/music/radio/stations/${stationId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        showSuccess('Radio Station', 'Station erfolgreich entfernt');
+        await loadRadioStations();
+      } else {
+        showError('Radio Fehler', 'Fehler beim Entfernen der Station');
+      }
+    } catch (err) {
+      showError('Radio Fehler', 'Fehler beim Entfernen der Station');
+    }
+  };
+
+  const addCustomRadioStation = async () => {
+    if (!newStation.name || !newStation.url) {
+      showError('Radio Station', 'Name und URL sind erforderlich');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/api/music/radio/stations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStation)
+      });
+
+      if (response.ok) {
+        showSuccess('Radio Station', 'Station erfolgreich hinzugefügt');
+        setNewStation({
+          name: '',
+          url: '',
+          genre: '',
+          country: '',
+          description: '',
+          logo: ''
+        });
+        await loadRadioStations();
+      } else {
+        showError('Radio Fehler', 'Fehler beim Hinzufügen der Station');
+      }
+    } catch (err) {
+      showError('Radio Fehler', 'Fehler beim Hinzufügen der Station');
     }
   };
 
