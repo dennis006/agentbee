@@ -1629,78 +1629,54 @@ async function playMusic(guildId, song) {
         let stream;
         let streamCreated = false;
         
-        // 🆕 Methode 0: youtubei.js - Direkte YouTube-API ohne Cookies/Bot-Detection
+        // 🆕 METHODE 1: youtubei.js - Direkte YouTube-API (VEREINFACHT)
         if (!streamCreated) {
             try {
                 console.log('🆕 Versuche youtubei.js (interne YouTube-API)...');
                 
-                // Falls bereits youtubei.js Daten vorhanden sind
+                // Hole youtubei.js Daten (entweder aus songData oder frisch)
+                let youtubeData = null;
+                
                 if (songData.isYoutubei && songData.streamUrl) {
-                    console.log('🎯 Verwende bereits abgerufene youtubei.js Stream-URL...');
+                    console.log('🎯 Verwende bereits abgerufene youtubei.js Daten...');
+                    youtubeData = songData;
+                } else {
+                    console.log('🔄 Hole frische youtubei.js Daten...');
+                    youtubeData = await getVideoInfoWithYoutubei(songData.url);
+                    if (youtubeData) {
+                        // Update songData mit youtubei.js Daten
+                        Object.assign(songData, youtubeData);
+                    }
+                }
+                
+                // Wenn wir eine gültige streamUrl haben, hole den Stream
+                if (youtubeData && youtubeData.streamUrl) {
+                    console.log(`🎯 youtubei.js Stream-URL gefunden: ${youtubeData.streamUrl.substring(0, 100)}...`);
+                    console.log(`🎵 MIME-Type: ${youtubeData.mimeType}`);
+                    console.log(`🎵 Bitrate: ${youtubeData.bitrate}bps`);
                     
                     const fetch = require('node-fetch');
-                    console.log(`🔗 Fetching Stream-URL: ${songData.streamUrl}`);
-                    
-                    const response = await fetch(songData.streamUrl, {
+                    const streamResponse = await fetch(youtubeData.streamUrl, {
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                            'Referer': 'https://www.youtube.com/',
-                            'Range': 'bytes=0-'
+                            'Referer': 'https://www.youtube.com/'
                         }
                     });
                     
-                    console.log(`📡 Response Status: ${response.status} ${response.statusText}`);
-                    console.log(`📡 Content-Type: ${response.headers.get('content-type')}`);
-                    console.log(`📡 Content-Length: ${response.headers.get('content-length')}`);
+                    console.log(`📡 Stream Response: ${streamResponse.status} ${streamResponse.statusText}`);
+                    console.log(`📡 Stream Content-Type: ${streamResponse.headers.get('content-type')}`);
                     
-                    if (response.ok && response.body) {
-                        // Teste ob es ein echter ReadableStream ist
-                        if (typeof response.body.pipe === 'function') {
-                            stream = response.body;
-                            streamCreated = true;
-                            console.log(`✅ youtubei.js Stream erfolgreich! (${songData.mimeType}) - ReadableStream validiert`);
-                        } else {
-                            console.log(`❌ response.body ist kein ReadableStream: ${typeof response.body}`);
-                        }
-                    } else {
-                        console.log(`❌ Response nicht OK oder body fehlt. Status: ${response.status}`);
+                    if (!streamResponse.ok || !streamResponse.body) {
+                        throw new Error(`Stream konnte nicht geladen werden: ${streamResponse.status} ${streamResponse.statusText}`);
                     }
+                    
+                    // ✅ DIREKTER STREAM-ANSATZ wie vom User vorgeschlagen
+                    stream = streamResponse.body;
+                    streamCreated = true;
+                    console.log(`✅ youtubei.js Stream erfolgreich geladen! ReadableStream bereit.`);
+                    
                 } else {
-                    // Hole neue youtubei.js Daten
-                    const youtubeIData = await getVideoInfoWithYoutubei(songData.url);
-                    if (youtubeIData && youtubeIData.streamUrl) {
-                        console.log('🎯 Verwende frische youtubei.js Stream-URL...');
-                        
-                        const fetch = require('node-fetch');
-                        console.log(`🔗 Fetching frische Stream-URL: ${youtubeIData.streamUrl}`);
-                        
-                        const response = await fetch(youtubeIData.streamUrl, {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                                'Referer': 'https://www.youtube.com/',
-                                'Range': 'bytes=0-'
-                            }
-                        });
-                        
-                        console.log(`📡 Fresh Response Status: ${response.status} ${response.statusText}`);
-                        console.log(`📡 Fresh Content-Type: ${response.headers.get('content-type')}`);
-                        
-                        if (response.ok && response.body) {
-                            // Teste ob es ein echter ReadableStream ist
-                            if (typeof response.body.pipe === 'function') {
-                                stream = response.body;
-                                streamCreated = true;
-                                console.log(`✅ Frische youtubei.js Stream erfolgreich! (${youtubeIData.mimeType}) - ReadableStream validiert`);
-                                
-                                // Update songData mit youtubei.js Daten
-                                Object.assign(songData, youtubeIData);
-                            } else {
-                                console.log(`❌ Fresh response.body ist kein ReadableStream: ${typeof response.body}`);
-                            }
-                        } else {
-                            console.log(`❌ Fresh Response nicht OK oder body fehlt. Status: ${response.status}`);
-                        }
-                    }
+                    console.log('❌ Keine gültige Stream-URL von youtubei.js erhalten');
                 }
                 
             } catch (youtubeIError) {
@@ -1708,54 +1684,47 @@ async function playMusic(guildId, song) {
             }
         }
 
-        // 🔄 Fallback: Alternative ytb-search für problematische URLs
+        // 🔄 METHODE 2: Alternative yt-search Fallback (VEREINFACHT) 
         if (!streamCreated) {
             try {
-                console.log('🔍 Versuche alternative Suche mit yt-search...');
+                console.log('🔍 Fallback: Alternative Suche mit yt-search...');
                 
-                // Extract title from songData if available
                 const searchQuery = songData.title || songData.url;
                 const searchResults = await searchYouTube(searchQuery);
                 
                 if (searchResults.length > 0) {
-                    console.log(`🎯 Gefunden: ${searchResults.length} alternative Quellen`);
+                    console.log(`🎯 Alternative gefunden: ${searchResults.length} Ergebnisse`);
                     
-                    // Try the first alternative
+                    // Versuche erste Alternative
                     const alternative = searchResults[0];
+                    console.log(`🔄 Teste Alternative: ${alternative.title}`);
+                    
                     const alternativeData = await getVideoInfoWithYoutubei(alternative.url);
                     
                     if (alternativeData && alternativeData.streamUrl) {
-                        console.log('🎯 Verwende alternative Quelle...');
+                        console.log(`🎯 Alternative Stream-URL gefunden: ${alternativeData.streamUrl.substring(0, 100)}...`);
                         
                         const fetch = require('node-fetch');
-                        console.log(`🔗 Fetching Alternative Stream-URL: ${alternativeData.streamUrl}`);
-                        
-                        const response = await fetch(alternativeData.streamUrl, {
+                        const streamResponse = await fetch(alternativeData.streamUrl, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                                'Referer': 'https://www.youtube.com/',
-                                'Range': 'bytes=0-'
+                                'Referer': 'https://www.youtube.com/'
                             }
                         });
                         
-                        console.log(`📡 Alt Response Status: ${response.status} ${response.statusText}`);
-                        console.log(`📡 Alt Content-Type: ${response.headers.get('content-type')}`);
+                        console.log(`📡 Alternative Response: ${streamResponse.status} ${streamResponse.statusText}`);
                         
-                        if (response.ok && response.body) {
-                            // Teste ob es ein echter ReadableStream ist
-                            if (typeof response.body.pipe === 'function') {
-                                stream = response.body;
-                                streamCreated = true;
-                                console.log(`✅ Alternative Quelle erfolgreich! - ReadableStream validiert`);
-                                
-                                // Update songData mit alternativen Daten
-                                Object.assign(songData, alternativeData);
-                            } else {
-                                console.log(`❌ Alt response.body ist kein ReadableStream: ${typeof response.body}`);
-                            }
-                        } else {
-                            console.log(`❌ Alt Response nicht OK oder body fehlt. Status: ${response.status}`);
+                        if (!streamResponse.ok || !streamResponse.body) {
+                            throw new Error(`Alternative Stream failed: ${streamResponse.status}`);
                         }
+                        
+                        // ✅ DIREKTER STREAM-ANSATZ für Alternative
+                        stream = streamResponse.body;
+                        streamCreated = true;
+                        console.log(`✅ Alternative Quelle erfolgreich geladen!`);
+                        
+                        // Update songData mit alternativen Daten
+                        Object.assign(songData, alternativeData);
                     }
                 }
                 
