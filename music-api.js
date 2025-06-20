@@ -10,84 +10,48 @@ const {
 // Verwende play-dl für robuste YouTube-Integration mit Cookies
 const playdl = require('play-dl');
 const yts = require('yt-search');
+
+// 🍪 Direkte Cookie-Konfiguration beim Start (vor allen anderen Operationen)
+playdl.setToken({
+    youtube: {
+        cookie: `SID=${process.env.YOUTUBE_SID}; SSID=${process.env.YOUTUBE_SSID}; HSID=${process.env.YOUTUBE_HSID}; SAPISID=${process.env.YOUTUBE_SAPISID}; APISID=${process.env.YOUTUBE_APISID}; LOGIN_INFO=${process.env.YOUTUBE_LOGIN_INFO};`
+    }
+});
+
+console.log('🍪 YouTube-Cookies beim Start gesetzt');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
-// 🍪 YouTube-Cookies für Anti-Bot-Umgehung (aus Railway Environment Variables)
-const YOUTUBE_COOKIES = {
-    SID: process.env.YOUTUBE_SID || '',
-    SSID: process.env.YOUTUBE_SSID || '',
-    HSID: process.env.YOUTUBE_HSID || '',
-    APISID: process.env.YOUTUBE_APISID || '',
-    SAPISID: process.env.YOUTUBE_SAPISID || '',
-    LOGIN_INFO: process.env.YOUTUBE_LOGIN_INFO || ''
-};
-
-// 🔓 play-dl mit YouTube-Cookies initialisieren (Anti-Bot-Schutz)
+// 🚀 Einfache play-dl Initialisierung
 (async () => {
     try {
-        console.log('🎵 Initialisiere play-dl mit YouTube-Cookies...');
+        console.log('🎵 Initialisiere play-dl...');
+        await playdl.authorization();
+        console.log('✅ play-dl initialisiert und bereit');
         
-        // Prüfe ob wichtige Cookies verfügbar sind
-        const hasCookies = YOUTUBE_COOKIES.SID && YOUTUBE_COOKIES.SSID && YOUTUBE_COOKIES.LOGIN_INFO;
-        
-        if (hasCookies) {
-            console.log('🍪 YouTube-Cookies gefunden - setze Cookie-Authentifizierung...');
+        // Teste Cookie-Setup falls Cookies verfügbar sind
+        if (process.env.YOUTUBE_SID && process.env.YOUTUBE_LOGIN_INFO) {
+            console.log('🍪 YouTube-Cookies erkannt - Cookie-Authentifizierung aktiv');
             
-            // Erstelle Cookie-String für play-dl
-            const cookieString = Object.entries(YOUTUBE_COOKIES)
-                .filter(([key, value]) => value && value.trim()) // Nur nicht-leere Cookies
-                .map(([key, value]) => `${key}=${value}`)
-                .join('; ');
-            
-            console.log(`🔧 Cookies gesetzt für: ${Object.keys(YOUTUBE_COOKIES).filter(key => YOUTUBE_COOKIES[key]).join(', ')}`);
-            
-            // Setze YouTube-Cookies für play-dl (Cookie-basierte Authentifizierung)
-            await playdl.setToken({
-                youtube: {
-                    cookie: cookieString
-                }
-            });
-            
-            // Validiere Cookie-Setup durch Test-Anfrage
             try {
-                console.log('🧪 Teste Cookie-Setup mit YouTube-Validierung...');
                 const testValidation = playdl.yt_validate('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-                console.log(`🧪 Test-Validierung Ergebnis: ${testValidation}`);
+                console.log(`🧪 Test-Validierung mit Cookies: ${testValidation}`);
                 
                 if (testValidation === 'video') {
-                    console.log('🎉 Cookie-Setup erfolgreich - YouTube-Videos werden als gültig erkannt!');
+                    console.log('🎉 Cookie-Authentifizierung erfolgreich!');
                 } else {
-                    console.log('⚠️ Cookie-Setup möglicherweise problematisch - Video-Validierung fehlgeschlagen');
+                    console.log('⚠️ Cookie-Authentifizierung möglicherweise problematisch');
                 }
             } catch (testError) {
                 console.log('⚠️ Cookie-Test fehlgeschlagen:', testError.message);
             }
-            
-            console.log('✅ play-dl mit YouTube-Cookies initialisiert');
-            console.log('🔓 YouTube Anti-Bot-Schutz erfolgreich umgangen!');
-            console.log('🎯 Bot kann jetzt authentifizierte YouTube-Anfragen stellen');
-            
         } else {
-            console.log('⚠️ YouTube-Cookies nicht vollständig - verwende Standard-Modus');
-            console.log(`🔍 Gefundene Cookies: ${Object.keys(YOUTUBE_COOKIES).filter(key => YOUTUBE_COOKIES[key]).join(', ') || 'keine'}`);
-            console.log('💡 Tipp: Setze YOUTUBE_SID, YOUTUBE_SSID und YOUTUBE_LOGIN_INFO in Railway Environment Variables');
-            
-            await playdl.authorization();
-            console.log('✅ play-dl Standard-Modus initialisiert (ohne Cookies)');
+            console.log('💡 Tipp: Setze YouTube-Cookies in Railway Environment Variables für bessere Kompatibilität');
         }
         
     } catch (error) {
-        console.log('⚠️ play-dl Cookie-Initialisierung fehlgeschlagen:', error.message);
-        console.log('🔄 Fallback zu Standard-Modus ohne Cookies...');
-        
-        try {
-            await playdl.authorization();
-            console.log('✅ play-dl Fallback-Modus aktiv (ohne Cookies)');
-        } catch (fallbackError) {
-            console.log('❌ Auch Standard-Fallback fehlgeschlagen:', fallbackError.message);
-        }
+        console.log('⚠️ play-dl Initialisierung fehlgeschlagen:', error.message);
     }
 })();
 const fs = require('fs');
@@ -1743,343 +1707,91 @@ async function playMusic(guildId, song) {
         let stream;
         let streamCreated = false;
         
-        // Methode 1: play-dl (Primär - funktioniert auf Railway)
-        let streamAttempts = 0;
-        const maxStreamAttempts = 3;
-        
-        while (!streamCreated && streamAttempts < maxStreamAttempts) {
-            streamAttempts++;
+        // 🎯 Methode 1: play-dl mit video_info + stream_from_info (Empfohlener Weg mit Cookies)
+        if (!streamCreated) {
             try {
-                console.log(`📡 Versuche play-dl Stream (Versuch ${streamAttempts}/${maxStreamAttempts})...`);
+                console.log('🎯 Versuche play-dl mit video_info + stream_from_info...');
                 
                 const normalizedUrl = normalizeYouTubeURL(songData.url);
-                console.log(`🔗 Normalisierte URL: ${normalizedUrl}`);
+                console.log(`🔗 URL: ${normalizedUrl}`);
                 
-                // Verbesserte URL-Validierung mit mehreren Fallbacks
-                let streamValidation = playdl.yt_validate(normalizedUrl);
-                console.log(`🔍 URL-Validierung: ${streamValidation} für ${normalizedUrl}`);
+                // Hole Video-Informationen mit Cookie-Authentifizierung
+                const info = await playdl.video_info(normalizedUrl);
+                console.log(`📋 Video-Info erhalten: ${info.video_details.title}`);
                 
-                // Diagnostiziere URL-Problem falls Validierung fehlschlägt
-                if (streamValidation !== 'video') {
-                    console.log(`❌ URL-Validierung fehlgeschlagen!`);
-                    console.log(`🔍 URL-Details: ${normalizedUrl}`);
-                    console.log(`🔍 Validierung Typ: ${typeof streamValidation}`);
-                    console.log(`🔍 Validierung Wert: "${streamValidation}"`);
-                    console.log(`🔍 Erwartet: "video"`);
-                    
-                    // Überprüfe URL-Format
-                    const hasVideoId = normalizedUrl.includes('v=') || normalizedUrl.includes('youtu.be/');
-                    const isHttps = normalizedUrl.startsWith('https://');
-                    const isYouTube = normalizedUrl.includes('youtube.com') || normalizedUrl.includes('youtu.be');
-                    
-                    console.log(`🔍 URL-Analyse: hasVideoId=${hasVideoId}, isHttps=${isHttps}, isYouTube=${isYouTube}`);
-                    
-                    const alternativeUrls = [
-                        normalizedUrl.replace('www.youtube.com', 'youtube.com'),
-                        normalizedUrl.replace('youtube.com', 'www.youtube.com'),
-                        normalizedUrl.replace('m.youtube.com', 'www.youtube.com'),
-                        normalizedUrl.replace('https://', 'http://'),
-                        normalizedUrl.replace('http://', 'https://')
-                    ];
-                    
-                    for (const altUrl of alternativeUrls) {
-                        if (altUrl !== normalizedUrl) {
-                            const altValidation = playdl.yt_validate(altUrl);
-                            console.log(`🔄 Alt-URL-Test: ${altValidation} für ${altUrl}`);
-                            if (altValidation === 'video') {
-                                streamValidation = altValidation;
-                                songData.url = altUrl; // Update URL für Stream
-                                console.log(`✅ Gültige Alt-URL gefunden: ${altUrl}`);
-                                break;
-                            }
-                        }
-                    }
+                // Erstelle Stream aus Video-Info (automatisch mit Cookies)
+                const streamResult = await playdl.stream_from_info(info, { quality: 'high' });
+                
+                if (streamResult && streamResult.stream) {
+                    stream = streamResult.stream;
+                    streamCreated = true;
+                    console.log('✅ play-dl Stream mit video_info erfolgreich erstellt!');
+                    console.log('🍪 Cookie-Authentifizierung erfolgreich verwendet');
                 }
                 
-                if (streamValidation === 'video') {
-                    // Verschiedene Qualitätsoptionen probieren
-                    const qualityOptions = [2, 1, 0]; // high, medium, low
-                    
-                    for (const quality of qualityOptions) {
-                        try {
-                            console.log(`🎵 Versuche play-dl Qualität ${quality}...`);
-                            
-                            // Erweiterte Stream-Optionen mit Cookie-Support
-                            const streamOptions = {
-                                quality: quality,
-                                type: 'audio',
-                                requestOptions: {
-                                    headers: {
-                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                                        'Accept-Language': 'en-US,en;q=0.5',
-                                        'Accept-Encoding': 'gzip, deflate',
-                                        'DNT': '1',
-                                        'Connection': 'keep-alive',
-                                        'Upgrade-Insecure-Requests': '1'
-                                    }
-                                }
-                            };
-                            
-                            // Verwende die bereits gesetzte URL aus der Cookie-Validierung
-                            const finalUrl = songData.url;
-                            console.log(`🎵 Stream-Versuch mit finaler URL: ${finalUrl}`);
-                            
-                            const streamPromise = playdl.stream(finalUrl, streamOptions);
-                            
-                            const streamResult = await Promise.race([
-                                streamPromise,
-                                new Promise((_, reject) => 
-                                    setTimeout(() => reject(new Error('Stream-Timeout')), 10000)
-                                )
-                            ]);
-                            
-                            if (streamResult && streamResult.stream) {
-                                console.log(`✅ play-dl Stream erfolgreich erstellt (Versuch ${streamAttempts}, Qualität ${quality})`);
-                                stream = streamResult.stream;
-                                streamCreated = true;
-                                break;
-                            }
-                        } catch (qualityError) {
-                            console.log(`⚠️ play-dl Qualität ${quality} fehlgeschlagen: ${qualityError.message}`);
-                        }
-                    }
-                    
-                    if (streamCreated) break;
-                }
-            } catch (playdlError) {
-                console.log(`⚠️ play-dl Stream Versuch ${streamAttempts} fehlgeschlagen:`, playdlError.message);
+            } catch (infoError) {
+                console.log('⚠️ play-dl video_info fehlgeschlagen:', infoError.message);
                 
-                if (streamAttempts < maxStreamAttempts) {
-                    console.log(`⏳ Warte 2 Sekunden vor nächstem Versuch...`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-            }
-        }
-        
-        // Methode 2: yt-dlp (Nur wenn verfügbar - für lokale Entwicklung)
-        if (!streamCreated) {
-                    try {
-            const safeTitle = songData?.title || song?.title || 'Unknown';
-            console.log(`🚀 Versuche yt-dlp Stream für: ${safeTitle}`);
-            
-            const safeUrl = songData?.url || song?.url;
-            if (!safeUrl) {
-                throw new Error('Keine URL für yt-dlp verfügbar');
-            }
-            
-            const streamUrl = await getStreamWithYtDlp(safeUrl);
-                if (streamUrl) {
-                    console.log('📡 Erstelle Stream von yt-dlp URL...');
+                // Fallback mit verschiedenen Qualitäten
+                try {
+                    console.log('🔄 Fallback: Versuche stream_from_info mit niedriger Qualität...');
+                    const normalizedUrl = normalizeYouTubeURL(songData.url);
+                    const info = await playdl.video_info(normalizedUrl);
+                    const streamResult = await playdl.stream_from_info(info, { quality: 'low' });
                     
-                    const fetch = require('node-fetch');
-                    const response = await fetch(streamUrl);
-                    
-                    if (response.ok) {
-                        stream = response.body;
+                    if (streamResult && streamResult.stream) {
+                        stream = streamResult.stream;
                         streamCreated = true;
-                        console.log('✅ yt-dlp Stream erfolgreich erstellt');
-                    } else {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        console.log('✅ play-dl Stream mit niedriger Qualität erfolgreich!');
                     }
+                } catch (fallbackError) {
+                    console.log('⚠️ Auch Fallback fehlgeschlagen:', fallbackError.message);
                 }
-            } catch (ytdlpError) {
-                console.log('⚠️ yt-dlp Stream fehlgeschlagen (normal auf Railway):', ytdlpError.message);
             }
         }
         
-        // Methode 3: Erweiterte yt-dlp Versuche (nur wenn verfügbar)
-        if (!streamCreated) {
-            try {
-                // Prüfe ob yt-dlp verfügbar ist
-                await execAsync('yt-dlp --version', { timeout: 3000 });
-                
-                console.log('🔄 Erweiterte yt-dlp Versuche mit verschiedenen Formaten...');
-                
-                // Verschiedene yt-dlp Kommando-Varianten ausprobieren (mit sicherer URL)
-                const safeUrl = songData?.url || song?.url || '';
-                if (!safeUrl) {
-                    console.log('❌ Keine URL für yt-dlp verfügbar');
-                    return;
-                }
-                
-                const ytdlpCommands = [
-                    `yt-dlp -f "worst[ext=m4a]/worst[ext=mp3]/worst" --get-url "${safeUrl}"`,
-                    `yt-dlp -f "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio" --get-url "${safeUrl}"`,
-                    `yt-dlp --format-sort "+size,+br" --get-url "${safeUrl}"`,
-                    `yt-dlp -f "136/135/134/133/160" --get-url "${safeUrl}"`
-                ];
-                
-                for (let i = 0; i < ytdlpCommands.length && !streamCreated; i++) {
-                    try {
-                        console.log(`🚀 yt-dlp Versuch ${i + 1}/${ytdlpCommands.length}...`);
-                        
-                        const { stdout, stderr } = await execAsync(ytdlpCommands[i], {
-                            timeout: 12000 // 12 Sekunden Timeout
-                        });
-                        
-                        if (stdout && stdout.trim()) {
-                            const streamUrl = stdout.trim();
-                            if (streamUrl.startsWith('http')) {
-                                console.log(`📡 Erstelle Stream von yt-dlp URL (Versuch ${i + 1})...`);
-                                
-                                const fetch = require('node-fetch');
-                                const response = await fetch(streamUrl, {
-                                    timeout: 8000,
-                                    headers: {
-                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                    }
-                                });
-                                
-                                if (response.ok) {
-                                    stream = response.body;
-                                    streamCreated = true;
-                                    console.log(`✅ yt-dlp Stream erfolgreich erstellt (Versuch ${i + 1})`);
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.log(`⚠️ yt-dlp Versuch ${i + 1} fehlgeschlagen: ${error.message}`);
-                        if (i < ytdlpCommands.length - 1) {
-                            console.log('⏳ Warte 1 Sekunde vor nächstem Versuch...');
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                        }
-                    }
-                }
-            } catch (ytdlpCheckError) {
-                console.log('⚠️ yt-dlp nicht verfügbar für erweiterte Versuche (normal auf Railway)');
-            }
-        }
+
         
-        // Methode 4: Direkte YouTube-Extraktion (wenn URL bekannt ist)
+        // 🔄 Methode 2: Alternative URL-Varianten mit video_info (falls Methode 1 fehlschlägt)
         if (!streamCreated && songData?.url) {
             try {
-                console.log('🎯 Versuche direkte YouTube-URL-Extraktion...');
+                console.log('🔄 Versuche alternative URL-Formate mit video_info...');
                 
                 // Extrahiere Video-ID und erstelle verschiedene URL-Varianten
-                const videoId = songData.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/)?.[1];
+                const videoId = songData.url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
                 if (videoId) {
                     const directUrls = [
                         `https://www.youtube.com/watch?v=${videoId}`,
                         `https://youtube.com/watch?v=${videoId}`,
-                        `https://youtu.be/${videoId}`,
-                        `https://m.youtube.com/watch?v=${videoId}`
+                        `https://youtu.be/${videoId}`
                     ];
                     
                     for (const directUrl of directUrls) {
                         if (streamCreated) break;
                         
                         try {
-                            console.log(`🔗 Teste direkte URL: ${directUrl}`);
-                            const directValidation = playdl.yt_validate(directUrl);
+                            console.log(`🔗 Teste URL-Variante: ${directUrl}`);
                             
-                            if (directValidation === 'video') {
-                                console.log(`✅ Direkte URL validiert: ${directUrl}`);
-                                
-                                const directStreamResult = await playdl.stream(directUrl, {
-                                    quality: 1, // Medium quality für bessere Kompatibilität
-                                    type: 'audio',
-                                    requestOptions: {
-                                        headers: {
-                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                        }
-                                    }
-                                });
-                                
-                                if (directStreamResult && directStreamResult.stream) {
-                                    stream = directStreamResult.stream;
-                                    streamCreated = true;
-                                    console.log(`✅ Direkte URL erfolgreich: ${directUrl}`);
-                                    break;
-                                }
+                            const info = await playdl.video_info(directUrl);
+                            const directStreamResult = await playdl.stream_from_info(info, { quality: 'low' });
+                            
+                            if (directStreamResult && directStreamResult.stream) {
+                                stream = directStreamResult.stream;
+                                streamCreated = true;
+                                console.log(`✅ URL-Variante erfolgreich: ${directUrl}`);
+                                break;
                             }
                         } catch (directError) {
-                            console.log(`⚠️ Direkte URL fehlgeschlagen: ${directError.message}`);
+                            console.log(`⚠️ URL-Variante fehlgeschlagen: ${directError.message}`);
                         }
                     }
                 }
             } catch (directExtractError) {
-                console.log('⚠️ Direkte URL-Extraktion fehlgeschlagen:', directExtractError.message);
+                console.log('⚠️ Alternative URL-Extraktion fehlgeschlagen:', directExtractError.message);
             }
         }
         
-        // Methode 5: Suche alternative URLs und versuche verschiedene Quellen
-        if (!streamCreated) {
-            console.log('🔄 Suche nach alternativen URLs...');
-            
-            const searchTitle = songData?.title || song?.title || 'Unknown';
-            const searchAuthor = songData?.author || song?.author || '';
-            const searchResults = await searchYouTube(searchTitle + ' ' + searchAuthor);
-            if (searchResults.length > 0) {
-                // Versuche die ersten 3 Suchergebnisse
-                for (let i = 0; i < Math.min(3, searchResults.length) && !streamCreated; i++) {
-                    const altResult = searchResults[i];
-                    console.log(`🔄 Alternative URL ${i + 1}: ${altResult.title}`);
-                    
-                    try {
-                        // Erste Methode: yt-dlp
-                        const streamUrl = await getStreamWithYtDlp(altResult.url);
-                        if (streamUrl) {
-                            const fetch = require('node-fetch');
-                            const response = await fetch(streamUrl, {
-                                timeout: 6000,
-                                headers: {
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                }
-                            });
-                            
-                            if (response.ok) {
-                                stream = response.body;
-                                streamCreated = true;
-                                console.log(`✅ Alternative URL ${i + 1} mit yt-dlp erfolgreich`);
-                                // Update songData mit alternativen Informationen (sichere Zuweisung)
-                                if (songData) {
-                                    songData.title = altResult.title;
-                                    songData.url = altResult.url;
-                                    songData.author = altResult.author;
-                                }
-                                break;
-                            }
-                        }
-                    } catch (ytdlpError) {
-                        console.log(`⚠️ yt-dlp für Alternative ${i + 1} fehlgeschlagen: ${ytdlpError.message}`);
-                        
-                        // Zweite Methode: play-dl für alternative URL
-                        try {
-                            const normalizedAltUrl = normalizeYouTubeURL(altResult.url);
-                            const altStreamValidation = playdl.yt_validate(normalizedAltUrl);
-                            
-                            if (altStreamValidation === 'video') {
-                                const altStreamResult = await playdl.stream(normalizedAltUrl, {
-                                    quality: 2,
-                                    type: 'audio'
-                                });
-                                
-                                if (altStreamResult && altStreamResult.stream) {
-                                    stream = altStreamResult.stream;
-                                    streamCreated = true;
-                                    console.log(`✅ Alternative URL ${i + 1} mit play-dl erfolgreich`);
-                                    // Update songData (sichere Zuweisung)
-                                    if (songData) {
-                                        songData.title = altResult.title;
-                                        songData.url = altResult.url;
-                                        songData.author = altResult.author;
-                                    }
-                                    break;
-                                }
-                            }
-                        } catch (playdlError) {
-                            console.log(`⚠️ play-dl für Alternative ${i + 1} fehlgeschlagen: ${playdlError.message}`);
-                        }
-                    }
-                    
-                    if (i < Math.min(3, searchResults.length) - 1) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                    }
-                }
-            }
-        }
+
         
         if (!streamCreated) {
             console.error('❌ Alle Stream-Methoden fehlgeschlagen');
@@ -2107,45 +1819,9 @@ async function playMusic(guildId, song) {
                 }
             }
             
-            // Methode 6: Notfall-Stream ohne Validierung (für problematische URLs)
-            if (!streamCreated && songData?.url) {
-                try {
-                    console.log('🚨 Notfall-Stream: Versuche Stream ohne URL-Validierung...');
-                    
-                    // Extrahiere Video-ID direkt und baue saubere URL
-                    const videoId = songData.url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
-                    if (videoId) {
-                        const emergencyUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                        console.log(`🚨 Notfall-URL: ${emergencyUrl}`);
-                        
-                        // Versuche Stream ohne Validierung (manchmal funktioniert das trotzdem)
-                        const emergencyStreamResult = await Promise.race([
-                            playdl.stream(emergencyUrl, {
-                                quality: 0, // Niedrigste Qualität für beste Kompatibilität
-                                type: 'audio',
-                                requestOptions: {
-                                    headers: {
-                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                                    }
-                                }
-                            }),
-                            new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('Notfall-Stream-Timeout')), 15000)
-                            )
-                        ]);
-                        
-                        if (emergencyStreamResult && emergencyStreamResult.stream) {
-                            stream = emergencyStreamResult.stream;
-                            streamCreated = true;
-                            console.log('🚨✅ Notfall-Stream erfolgreich! Stream erstellt trotz Validierungsproblem.');
-                        }
-                    }
-                } catch (emergencyError) {
-                    console.log('🚨❌ Notfall-Stream fehlgeschlagen:', emergencyError.message);
-                }
-            }
+
             
-            // Methode 7: Letztes Fallback - Verwende Radio-Stream wenn verfügbar
+            // 📻 Methode 3: Letztes Fallback - Verwende Radio-Stream wenn verfügbar
             if (!streamCreated && musicSettings.radio?.enabled) {
                 try {
                     console.log('📻 Letztes Fallback: Verwende einen passenden Radio-Sender...');
