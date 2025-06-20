@@ -664,7 +664,7 @@ const Music: React.FC = () => {
                 Radio Status
                 {radioStatus.isPlaying && (
                   <Badge className="bg-red-500 text-white animate-pulse">
-                    ­ƒö┤ LIVE
+                    🎵 LIVE
                   </Badge>
                 )}
               </CardTitle>
@@ -686,15 +686,15 @@ const Music: React.FC = () => {
                     />
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-white">
-                        ­ƒô╗ {radioStatus.currentStation.name}
+                        🎵 {radioStatus.currentStation.name}
                       </h3>
                       <p className="text-red-300">{radioStatus.currentStation.description}</p>
                       <div className="flex gap-4 mt-2">
                         <Badge variant="outline" className="text-red-400 border-red-400">
-                          ­ƒÄÁ {radioStatus.currentStation.genre}
+                          🎵 {radioStatus.currentStation.genre}
                         </Badge>
                         <Badge variant="outline" className="text-red-400 border-red-400">
-                          ­ƒîì {radioStatus.currentStation.country}
+                          🌍 {radioStatus.currentStation.country}
                         </Badge>
                       </div>
                     </div>
@@ -713,7 +713,7 @@ const Music: React.FC = () => {
                 <div className="text-center py-8 text-dark-muted">
                   <Radio className="w-12 h-12 mx-auto mb-4 text-gray-500" />
                   <p>Kein Radio-Sender aktiv</p>
-                  <p className="text-sm">W├ñhle einen Sender aus der Liste unten</p>
+                  <p className="text-sm">Wähle einen Sender aus der Liste unten</p>
                 </div>
               )}
             </CardContent>
@@ -726,7 +726,7 @@ const Music: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Radio className="w-5 h-5 text-purple-accent" />
-                  ­ƒô╗ Radio-Sender
+                  🎵 Radio-Sender
                 </CardTitle>
                 <CardDescription>
                   Traditionelle Radio-Streams aus Deutschland und international
@@ -764,7 +764,7 @@ const Music: React.FC = () => {
                       
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className="text-xs">
-                          ­ƒîì {station.country}
+                          🌍 {station.country}
                         </Badge>
                         
                         <div className="flex items-center gap-2">
@@ -786,7 +786,7 @@ const Music: React.FC = () => {
                             )}
                           </Button>
                           
-                          {/* L├Âsch-Button nur f├╝r custom Sender anzeigen (nicht f├╝r vordefinierte) */}
+                          {/* Lösch-Button nur für custom Sender anzeigen (nicht für vordefinierte) */}
                           {!['1live', 'swr3', 'antenne', 'bigfm', 'ndr2', 'ffn', 'energy', 'sunshine', 'deutschrap1', 'rapstation', 'hiphopradio', 'urbanradio', 'gtaradio', 'oldschool', 'synthwave', 'phonkradio'].includes(station.id) && (
                             <Button
                               onClick={() => removeRadioStation(station.id)}
@@ -812,10 +812,10 @@ const Music: React.FC = () => {
                   <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                   </svg>
-                  ­ƒÄÑ YouTube Live-Streams
+                  🎵 YouTube Live-Streams
                 </CardTitle>
                 <CardDescription>
-                  24/7 YouTube Live-Streams f├╝r verschiedene Musikrichtungen
+                  24/7 YouTube Live-Streams für verschiedene Musikrichtungen
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -843,7 +843,7 @@ const Music: React.FC = () => {
                         <div className="flex-1">
                           <h4 className="font-bold text-white flex items-center gap-2">
                             {station.name}
-                            <span className="text-red-500 text-xs">­ƒö┤ LIVE</span>
+                            <span className="text-red-500 text-xs">🎵 LIVE</span>
                           </h4>
                           <p className="text-sm text-dark-muted">{station.genre}</p>
                         </div>
@@ -853,7 +853,7 @@ const Music: React.FC = () => {
                       
                       <div className="flex items-center justify-between">
                         <Badge variant="outline" className="text-xs bg-red-500/10 border-red-500/30 text-red-400">
-                          ­ƒÄ¼ {station.country}
+                          🌍 {station.country}
                         </Badge>
                         
                         <div className="flex items-center gap-2">
@@ -875,7 +875,7 @@ const Music: React.FC = () => {
                             )}
                           </Button>
                           
-                          {/* L├Âsch-Button nur f├╝r custom Sender anzeigen (nicht f├╝r vordefinierte) */}
+                          {/* Lösch-Button nur für custom Sender anzeigen (nicht für vordefinierte) */}
                           {!['lofi', 'chillhop', 'deephouse', 'trapmusic', 'gaming', 'jazzhop', 'retrowave', 'bassmusic'].includes(station.id) && (
                             <Button
                               onClick={() => removeRadioStation(station.id)}
@@ -900,10 +900,10 @@ const Music: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="w-5 h-5 text-green-400" />
-                Eigenen Radio-Sender hinzuf├╝gen
+                Eigenen Radio-Sender hinzufügen
               </CardTitle>
               <CardDescription>
-                F├╝ge deinen eigenen Radio-Stream hinzu
+                Füge deinen eigenen Radio-Stream hinzu
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -982,7 +982,7 @@ const Music: React.FC = () => {
                   className="flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
-                  {radioLoading ? 'F├╝ge hinzu...' : 'Radio-Sender hinzuf├╝gen'}
+                  {radioLoading ? 'Füge hinzu...' : 'Radio-Sender hinzufügen'}
                 </Button>
               </div>
             </CardContent>
