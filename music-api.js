@@ -1638,17 +1638,31 @@ async function playMusic(guildId, song) {
                     console.log('🎯 Verwende bereits abgerufene youtubei.js Stream-URL...');
                     
                     const fetch = require('node-fetch');
+                    console.log(`🔗 Fetching Stream-URL: ${songData.streamUrl}`);
+                    
                     const response = await fetch(songData.streamUrl, {
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                            'Referer': 'https://www.youtube.com/'
+                            'Referer': 'https://www.youtube.com/',
+                            'Range': 'bytes=0-'
                         }
                     });
                     
-                    if (response.ok) {
-                        stream = response.body;
-                        streamCreated = true;
-                        console.log(`✅ youtubei.js Stream erfolgreich! (${songData.mimeType})`);
+                    console.log(`📡 Response Status: ${response.status} ${response.statusText}`);
+                    console.log(`📡 Content-Type: ${response.headers.get('content-type')}`);
+                    console.log(`📡 Content-Length: ${response.headers.get('content-length')}`);
+                    
+                    if (response.ok && response.body) {
+                        // Teste ob es ein echter ReadableStream ist
+                        if (typeof response.body.pipe === 'function') {
+                            stream = response.body;
+                            streamCreated = true;
+                            console.log(`✅ youtubei.js Stream erfolgreich! (${songData.mimeType}) - ReadableStream validiert`);
+                        } else {
+                            console.log(`❌ response.body ist kein ReadableStream: ${typeof response.body}`);
+                        }
+                    } else {
+                        console.log(`❌ Response nicht OK oder body fehlt. Status: ${response.status}`);
                     }
                 } else {
                     // Hole neue youtubei.js Daten
@@ -1657,20 +1671,33 @@ async function playMusic(guildId, song) {
                         console.log('🎯 Verwende frische youtubei.js Stream-URL...');
                         
                         const fetch = require('node-fetch');
+                        console.log(`🔗 Fetching frische Stream-URL: ${youtubeIData.streamUrl}`);
+                        
                         const response = await fetch(youtubeIData.streamUrl, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                                'Referer': 'https://www.youtube.com/'
+                                'Referer': 'https://www.youtube.com/',
+                                'Range': 'bytes=0-'
                             }
                         });
                         
-                        if (response.ok) {
-                            stream = response.body;
-                            streamCreated = true;
-                            console.log(`✅ youtubei.js Stream erfolgreich! (${youtubeIData.mimeType})`);
-                            
-                            // Update songData mit youtubei.js Daten
-                            Object.assign(songData, youtubeIData);
+                        console.log(`📡 Fresh Response Status: ${response.status} ${response.statusText}`);
+                        console.log(`📡 Fresh Content-Type: ${response.headers.get('content-type')}`);
+                        
+                        if (response.ok && response.body) {
+                            // Teste ob es ein echter ReadableStream ist
+                            if (typeof response.body.pipe === 'function') {
+                                stream = response.body;
+                                streamCreated = true;
+                                console.log(`✅ Frische youtubei.js Stream erfolgreich! (${youtubeIData.mimeType}) - ReadableStream validiert`);
+                                
+                                // Update songData mit youtubei.js Daten
+                                Object.assign(songData, youtubeIData);
+                            } else {
+                                console.log(`❌ Fresh response.body ist kein ReadableStream: ${typeof response.body}`);
+                            }
+                        } else {
+                            console.log(`❌ Fresh Response nicht OK oder body fehlt. Status: ${response.status}`);
                         }
                     }
                 }
@@ -1700,20 +1727,33 @@ async function playMusic(guildId, song) {
                         console.log('🎯 Verwende alternative Quelle...');
                         
                         const fetch = require('node-fetch');
+                        console.log(`🔗 Fetching Alternative Stream-URL: ${alternativeData.streamUrl}`);
+                        
                         const response = await fetch(alternativeData.streamUrl, {
                             headers: {
                                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                                'Referer': 'https://www.youtube.com/'
+                                'Referer': 'https://www.youtube.com/',
+                                'Range': 'bytes=0-'
                             }
                         });
                         
-                        if (response.ok) {
-                            stream = response.body;
-                            streamCreated = true;
-                            console.log(`✅ Alternative Quelle erfolgreich!`);
-                            
-                            // Update songData mit alternativen Daten
-                            Object.assign(songData, alternativeData);
+                        console.log(`📡 Alt Response Status: ${response.status} ${response.statusText}`);
+                        console.log(`📡 Alt Content-Type: ${response.headers.get('content-type')}`);
+                        
+                        if (response.ok && response.body) {
+                            // Teste ob es ein echter ReadableStream ist
+                            if (typeof response.body.pipe === 'function') {
+                                stream = response.body;
+                                streamCreated = true;
+                                console.log(`✅ Alternative Quelle erfolgreich! - ReadableStream validiert`);
+                                
+                                // Update songData mit alternativen Daten
+                                Object.assign(songData, alternativeData);
+                            } else {
+                                console.log(`❌ Alt response.body ist kein ReadableStream: ${typeof response.body}`);
+                            }
+                        } else {
+                            console.log(`❌ Alt Response nicht OK oder body fehlt. Status: ${response.status}`);
                         }
                     }
                 }
@@ -2283,16 +2323,27 @@ async function playMusicWithRadio(guildId, song) {
                 const youtubeData = await getVideoInfoWithYoutubei(song.url);
                 if (youtubeData && youtubeData.streamUrl) {
                     const fetch = require('node-fetch');
+                    console.log(`📻 Fetching Radio YouTube Stream: ${youtubeData.streamUrl}`);
+                    
                     const response = await fetch(youtubeData.streamUrl, {
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                            'Referer': 'https://www.youtube.com/'
+                            'Referer': 'https://www.youtube.com/',
+                            'Range': 'bytes=0-'
                         }
                     });
-                    resource = createAudioResource(response.body, {
-                        inputType: 'arbitrary',
-                        inlineVolume: true
-                    });
+                    
+                    console.log(`📻 Radio Response Status: ${response.status} ${response.statusText}`);
+                    
+                    if (response.ok && response.body && typeof response.body.pipe === 'function') {
+                        resource = createAudioResource(response.body, {
+                            inputType: 'arbitrary',
+                            inlineVolume: true
+                        });
+                        console.log(`✅ Radio YouTube-Stream ReadableStream validiert`);
+                    } else {
+                        throw new Error(`Radio YouTube-Stream Response invalid: Status ${response.status}, Body type: ${typeof response.body}`);
+                    }
                 } else {
                     throw new Error('Radio YouTube-Stream konnte nicht geladen werden');
                 }
