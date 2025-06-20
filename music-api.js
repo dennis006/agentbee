@@ -401,7 +401,7 @@ async function searchYouTube(query) {
     }
 }
 
-// 🆕 VEREINFACHTE YouTube-Info Funktion (nach User-Muster)
+// 🆕 VEREINFACHTE YouTube-Info Funktion (nach User-Muster) mit Debug
 async function getVideoInfoWithYoutubei(url) {
     try {
         console.log(`🆕 Lade Video-Info mit youtubei.js: ${url}`);
@@ -409,40 +409,67 @@ async function getVideoInfoWithYoutubei(url) {
         // 🎯 SAUBERE Video-ID Extraction (nach User-Muster)
         const videoId = extractVideoId(url);
         if (!videoId) {
+            console.error(`❌ Video-ID Extraction fehlgeschlagen für URL: ${url}`);
             throw new Error('Ungültige YouTube-URL');
         }
         
         console.log(`🔍 Video-ID extrahiert: ${videoId}`);
         
         // Initialisiere youtubei.js Client
+        console.log('🔄 Initialisiere Innertube...');
         const youtube = await Innertube.create();
+        console.log('✅ Innertube initialisiert');
         
         // 🎯 DIREKTE API-Nutzung (nach User-Muster)
         console.log('🔄 Verwende youtube.getInfo() (normale API)...');
         const info = await youtube.getInfo(videoId);
         
-        if (!info || !info.streaming_data) {
-            throw new Error('Video-Details oder Streaming-Daten nicht verfügbar');
+        if (!info) {
+            console.error('❌ info ist null oder undefined');
+            throw new Error('Video-Info nicht verfügbar');
         }
         
-        console.log(`✅ youtubei.js Video-Details erhalten: ${info.basic_info.title}`);
+        if (!info.streaming_data) {
+            console.error('❌ info.streaming_data ist null oder undefined');
+            console.error('🔍 Verfügbare info Properties:', Object.keys(info));
+            throw new Error('Streaming-Daten nicht verfügbar');
+        }
+        
+        console.log(`✅ youtubei.js Video-Details erhalten: ${info.basic_info?.title || 'UNKNOWN TITLE'}`);
         
         // 🎯 INTELLIGENTE Stream-Auswahl (nach User-Muster: AUDIO_QUALITY_MEDIUM)
         const streamingData = info.streaming_data;
+        console.log(`🔍 Adaptive Formats verfügbar: ${streamingData.adaptive_formats?.length || 0}`);
+        
+        if (!streamingData.adaptive_formats || streamingData.adaptive_formats.length === 0) {
+            console.error('❌ Keine adaptive_formats verfügbar');
+            throw new Error('Keine Audio-Streams verfügbar');
+        }
+        
         const audioStream = streamingData.adaptive_formats.find(f => 
-            f.mime_type.includes('audio/webm') && 
+            f.mime_type && f.mime_type.includes('audio/webm') && 
             f.audio_quality === 'AUDIO_QUALITY_MEDIUM'
         );
         
         if (!audioStream || !audioStream.url) {
             console.log('⚠️ AUDIO_QUALITY_MEDIUM nicht gefunden, versuche andere Qualitäten...');
             
+            // Debug: Zeige alle verfügbaren Streams
+            const audioStreams = streamingData.adaptive_formats.filter(f => 
+                f.mime_type && f.mime_type.includes('audio')
+            );
+            console.log(`🔍 Verfügbare Audio-Streams: ${audioStreams.length}`);
+            audioStreams.forEach((stream, index) => {
+                console.log(`  ${index + 1}. ${stream.mime_type} - ${stream.audio_quality || 'UNKNOWN'} - URL: ${!!stream.url}`);
+            });
+            
             // Fallback: Suche nach anderen Audio-Qualitäten
             const alternativeStream = streamingData.adaptive_formats.find(f => 
-                f.mime_type.includes('audio/webm') && f.url
+                f.mime_type && f.mime_type.includes('audio/webm') && f.url
             );
             
             if (!alternativeStream || !alternativeStream.url) {
+                console.error('❌ Auch alternative Audio-Streams haben keine URL');
                 throw new Error('Kein gültiger Audio-Stream gefunden');
             }
             
@@ -454,15 +481,39 @@ async function getVideoInfoWithYoutubei(url) {
         return createVideoInfoResult(info, audioStream, url);
         
     } catch (error) {
-        console.error('❌ youtubei.js Fehler:', error.message);
+        console.error('❌ youtubei.js Detaillierter Fehler:', {
+            message: error.message,
+            stack: error.stack?.split('\n').slice(0, 3),
+            url: url
+        });
         return null;
     }
 }
 
-// 🎯 SAUBERE Video-ID Extraction (nach User-Muster)
+// 🎯 ERWEITERTE Video-ID Extraction (robuster als User-Muster)
 function extractVideoId(url) {
-    const match = url.match(/(?:v=|\.be\/)([\w-]{11})/);
-    return match ? match[1] : null;
+    // Verschiedene YouTube URL-Formate abdecken
+    const patterns = [
+        /(?:v=|\/v\/|embed\/|youtu\.be\/|\/watch\?v=)([a-zA-Z0-9_-]{11})/,
+        /(?:youtube\.com\/watch\?.*v=)([a-zA-Z0-9_-]{11})/,
+        /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+            console.log(`✅ Video-ID gefunden mit Pattern: ${pattern.source.substring(0, 30)}...`);
+            return match[1];
+        }
+    }
+    
+    console.error(`❌ Keine Video-ID gefunden in URL: ${url}`);
+    console.error(`🔍 URL-Format nicht erkannt. Unterstützte Formate:
+        - https://www.youtube.com/watch?v=VIDEO_ID
+        - https://youtu.be/VIDEO_ID
+        - https://www.youtube.com/embed/VIDEO_ID`);
+    
+    return null;
 }
 
 // 🎯 Helper-Funktion für einheitliches Result-Format
@@ -486,29 +537,29 @@ function createVideoInfoResult(info, audioStream, originalUrl) {
 
 
 
-// Get YouTube video info mit mehreren Fallback-Methoden
+// 🎯 DIREKTE YouTube-Info Funktion (FIXED - nach User-Muster)
 async function getVideoInfo(url) {
     try {
         console.log(`🎵 Lade Video-Info für: ${url}`);
         
-        // Normalisiere URL zuerst
-        const normalizedUrl = normalizeYouTubeURL(url);
-        console.log(`🔄 Normalisierte URL: ${normalizedUrl}`);
+        // 🎯 DIREKTER ANSATZ - keine URL-Normalisierung mehr nötig (youtubei.js macht das intern)
         
-        // 🆕 youtubei.js (Primär und einzige Methode - interne YouTube-API ohne Bot-Detection)
+        // 🆕 youtubei.js (Primär-Methode - interne YouTube-API ohne Bot-Detection)
         try {
             console.log('🆕 Versuche youtubei.js (interne YouTube-API)...');
-            const youtubeIResult = await getVideoInfoWithYoutubei(normalizedUrl);
+            const youtubeIResult = await getVideoInfoWithYoutubei(url);
             
             if (youtubeIResult) {
                 console.log(`✅ youtubei.js Video-Info erfolgreich: ${youtubeIResult.title}`);
                 return youtubeIResult;
+            } else {
+                console.log('⚠️ youtubei.js lieferte null zurück');
             }
         } catch (youtubeIError) {
-            console.log('⚠️ youtubei.js fehlgeschlagen:', youtubeIError.message);
+            console.log('⚠️ youtubei.js Exception:', youtubeIError.message);
         }
         
-        // Methode 2: Fallback mit yt-search
+        // Methode 2: Fallback mit yt-search (für Suche-Queries)
         try {
             console.log('🔍 Verwende Fallback yt-search...');
             const searchResults = await searchYouTube(url);
@@ -521,13 +572,18 @@ async function getVideoInfo(url) {
                     duration: firstResult.duration,
                     thumbnail: firstResult.thumbnail,
                     author: firstResult.author,
-                    requestedBy: null
+                    requestedBy: null,
+                    // Markiere als Fallback-Ergebnis
+                    isFallback: true
                 };
+            } else {
+                console.log('⚠️ yt-search lieferte keine Ergebnisse');
             }
         } catch (fallbackError) {
-            console.error('❌ Auch Fallback-Suche fehlgeschlagen:', fallbackError);
+            console.error('❌ Auch Fallback-Suche fehlgeschlagen:', fallbackError.message);
         }
         
+        console.error('❌ ALLE Methoden fehlgeschlagen für URL:', url);
         return null;
         
     } catch (error) {
@@ -2850,6 +2906,83 @@ function registerMusicAPI(app) {
             res.status(500).json({
                 success: false,
                 error: `Fehler beim Erstellen der DJ-Rolle: ${error.message}`
+            });
+        }
+    });
+
+    // 🔍 DEBUG: Video-Info Test Route
+    app.post('/api/music/debug-video-info', async (req, res) => {
+        try {
+            const { url } = req.body;
+            
+            if (!url) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'URL ist erforderlich'
+                });
+            }
+            
+            console.log(`🔍 DEBUG: Teste Video-Info für URL: ${url}`);
+            
+            // Test Video-ID Extraction
+            const videoId = extractVideoId(url);
+            console.log(`🔍 DEBUG: Video-ID Result: ${videoId}`);
+            
+            if (!videoId) {
+                return res.json({
+                    success: false,
+                    debug: {
+                        step: 'video_id_extraction',
+                        result: null,
+                        error: 'Video-ID konnte nicht extrahiert werden',
+                        url: url
+                    }
+                });
+            }
+            
+            // Test getVideoInfo
+            const videoInfo = await getVideoInfo(url);
+            console.log(`🔍 DEBUG: Video-Info Result:`, videoInfo ? 'SUCCESS' : 'NULL');
+            
+            if (!videoInfo) {
+                return res.json({
+                    success: false,
+                    debug: {
+                        step: 'video_info_retrieval',
+                        result: null,
+                        error: 'Video-Info konnte nicht abgerufen werden',
+                        videoId: videoId,
+                        url: url
+                    }
+                });
+            }
+            
+            res.json({
+                success: true,
+                debug: {
+                    step: 'complete',
+                    videoId: videoId,
+                    videoInfo: {
+                        title: videoInfo.title,
+                        duration: videoInfo.duration,
+                        author: videoInfo.author,
+                        hasStreamUrl: !!videoInfo.streamUrl,
+                        isYoutubei: !!videoInfo.isYoutubei,
+                        mimeType: videoInfo.mimeType,
+                        audioQuality: videoInfo.audioQuality
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error('🔍 DEBUG: Fehler beim Video-Info Test:', error);
+            res.json({
+                success: false,
+                debug: {
+                    step: 'error',
+                    error: error.message,
+                    stack: error.stack?.split('\n').slice(0, 5)
+                }
             });
         }
     });
