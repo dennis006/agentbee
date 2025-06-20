@@ -285,11 +285,42 @@ async function handleTrackEnd(guildId) {
     }
 }
 
-// Radio Station Functions (Dummy implementations for compatibility)
+// Radio Station Functions
 function getRadioStations() {
+    // Return radio stations from settings, or default list if not configured
+    if (musicSettings.radio && musicSettings.radio.stations) {
+        return musicSettings.radio.stations;
+    }
+    
+    // Default radio stations (fallback)
     return [
-        { id: 'lofi', name: 'Lo-Fi Hip Hop', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk' },
-        { id: 'chill', name: 'Chill Music', url: 'https://www.youtube.com/watch?v=5qap5aO4i9A' }
+        {
+            id: "1live",
+            name: "1LIVE",
+            url: "https://wdr-1live-live.icecastssl.wdr.de/wdr/1live/live/mp3/128/stream.mp3",
+            genre: "Pop/Rock",
+            country: "Deutschland",
+            description: "Der junge Radiosender von WDR",
+            logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MUxJVkU8L3RleHQ+Cjwvc3ZnPgo="
+        },
+        {
+            id: "lofi",
+            name: "Lofi Hip Hop Radio",
+            url: "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+            genre: "Lofi/Chill",
+            country: "International",
+            description: "24/7 Lofi Hip Hop Beats",
+            logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TG9GaTwvdGV4dD4KPC9zdmc+Cg=="
+        },
+        {
+            id: "deephouse",
+            name: "Deep House Radio",
+            url: "https://www.youtube.com/watch?v=36YnV9STBqc",
+            genre: "Deep House/Electronic",
+            country: "International",
+            description: "24/7 Deep House Live Stream",
+            logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDMzNjYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMEZGRkYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRFRVA8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDBGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1VTRTI8L3RleHQ+Cjwvc3ZnPgo="
+        }
     ];
 }
 
@@ -710,7 +741,140 @@ function registerMusicAPI(app) {
         }
     });
 
-    console.log('✅ Shoukaku Musik-API Endpunkte registriert');
+    // Radio API Endpoints
+    app.get('/api/music/radio/stations', (req, res) => {
+        try {
+            const stations = getRadioStations();
+            res.json({
+                success: true,
+                stations: stations,
+                enabled: musicSettings.radio?.enabled || true
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Get radio status for guild
+    app.get('/api/music/radio/:guildId/status', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const currentStation = getCurrentRadioStation(guildId);
+            const isPlaying = isPlayingRadio(guildId);
+            
+            res.json({
+                success: true,
+                isPlaying: isPlaying,
+                currentStation: currentStation,
+                queue: getQueue(guildId)
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Start radio station
+    app.post('/api/music/radio/:guildId/play', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { stationId } = req.body;
+
+            if (!stationId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Station-ID erforderlich'
+                });
+            }
+
+            const station = getRadioStation(stationId);
+            if (!station) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Radio-Sender "${stationId}" nicht gefunden`
+                });
+            }
+
+            const success = await playRadioStation(guildId, stationId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: `📻 Radio-Sender "${station.name}" gestartet`,
+                    station: station
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Starten des Radio-Senders'
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Radio Start Fehler:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Stop radio
+    app.post('/api/music/radio/:guildId/stop', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            const success = stopRadio(guildId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: '📻 Radio gestoppt'
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Stoppen des Radios'
+                });
+            }
+
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Request tracking endpoint
+    app.get('/api/music/request-tracking', (req, res) => {
+        try {
+            // Simple implementation - could be expanded with real tracking
+            res.json({
+                success: true,
+                trackingData: [],
+                rateLimit: {
+                    enabled: musicSettings.songRequests?.rateLimit?.enabled || false,
+                    maxRequests: musicSettings.songRequests?.maxRequestsPerUser || 5,
+                    timeWindow: 24,
+                    timeUnit: 'hours'
+                },
+                cooldownMinutes: musicSettings.songRequests?.cooldownMinutes || 1
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    console.log('✅ Shoukaku Musik-API Endpunkte registriert (inkl. Radio + Request Tracking)');
 }
 
 // Helper Functions for API
