@@ -361,6 +361,8 @@ const Music: React.FC = () => {
   const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState<string | null>(null);
+  const [editPlaylistName, setEditPlaylistName] = useState('');
 
   // Channels
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -406,7 +408,54 @@ const Music: React.FC = () => {
 
       if (settingsRes.ok) {
         const data = await settingsRes.json();
-        setSettings(data.settings);
+        console.log('🎵 Geladene Settings:', data.settings);
+        
+        // Merge mit default Settings um fehlende Properties zu ergänzen
+        const mergedSettings = {
+          enabled: true,
+          radio: {
+            enabled: true,
+            stations: [],
+            defaultStation: "lofi",
+            autoStop: false,
+            showNowPlaying: true,
+            embedColor: "#FF6B6B",
+            ...data.settings?.radio
+          },
+          announcements: {
+            channelId: "",
+            ...data.settings?.announcements
+          },
+          interactivePanel: {
+            enabled: true,
+            channelId: "",
+            messageId: "",
+            autoUpdate: true,
+            embedColor: "#FF6B6B",
+            ...data.settings?.interactivePanel
+          },
+          playlists: {
+            enabled: true,
+            customPlaylists: [],
+            autoQueue: true,
+            crossfade: 3000,
+            voting: {
+              enabled: true,
+              votingTime: 30000,
+              skipThreshold: 0.5
+            },
+            schedule: {
+              enabled: false,
+              timeZone: "Europe/Berlin",
+              schedules: []
+            },
+            ...data.settings?.playlists
+          },
+          ...data.settings
+        };
+        
+        console.log('🎵 Finale Settings:', mergedSettings);
+        setSettings(mergedSettings);
       }
 
       if (channelsRes.ok) {
@@ -430,6 +479,8 @@ const Music: React.FC = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
+      console.log('💾 Speichere Settings:', settings);
+      
       const response = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -437,7 +488,14 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Settings erfolgreich gespeichert:', data);
         showSuccess('YouTube Radio', '🎵 Einstellungen erfolgreich gespeichert!');
+        
+        // Optional: Settings noch einmal vom Server laden um Konsistenz sicherzustellen
+        setTimeout(() => {
+          loadData();
+        }, 500);
       } else {
         showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
       }
@@ -941,6 +999,43 @@ const Music: React.FC = () => {
       console.error('Fehler beim Löschen der Playlist:', err);
       showError('Playlist Fehler', 'Verbindungsfehler');
     }
+  };
+
+  const startEditingPlaylist = (playlist: Playlist) => {
+    setEditingPlaylist(playlist.id);
+    setEditPlaylistName(playlist.name);
+  };
+
+  const savePlaylistEdit = async (playlistId: string) => {
+    if (!editPlaylistName.trim()) {
+      showError('Playlist Fehler', 'Name darf nicht leer sein');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/api/music/playlists/${playlistId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editPlaylistName.trim() })
+      });
+
+      if (response.ok) {
+        showSuccess('Playlist bearbeitet', `Name geändert zu "${editPlaylistName}"`);
+        setEditingPlaylist(null);
+        setEditPlaylistName('');
+        loadData(); // Reload playlists
+      } else {
+        showError('Playlist Fehler', 'Fehler beim Speichern des Namens');
+      }
+    } catch (err) {
+      console.error('Fehler beim Bearbeiten der Playlist:', err);
+      showError('Playlist Fehler', 'Verbindungsfehler');
+    }
+  };
+
+  const cancelPlaylistEdit = () => {
+    setEditingPlaylist(null);
+    setEditPlaylistName('');
   };
 
   useEffect(() => {
@@ -1767,8 +1862,49 @@ const Music: React.FC = () => {
                           }}
                         />
                         <div className="flex-1">
-                          <h4 className="font-bold text-white text-lg">{playlist.name}</h4>
-                          <p className="text-gray-400 text-sm">{playlist.description}</p>
+                          {editingPlaylist === playlist.id ? (
+                            <div className="space-y-2">
+                              <Input
+                                type="text"
+                                value={editPlaylistName}
+                                onChange={(e) => setEditPlaylistName(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && savePlaylistEdit(playlist.id)}
+                                className="text-lg font-bold border-green-500/50 focus:border-green-400"
+                                placeholder="Playlist Name..."
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => savePlaylistEdit(playlist.id)}
+                                  className="text-xs px-3 py-1 bg-green-600 hover:bg-green-700"
+                                  animated={true}
+                                >
+                                  ✓ Speichern
+                                </Button>
+                                <Button
+                                  onClick={cancelPlaylistEdit}
+                                  variant="outline"
+                                  className="text-xs px-3 py-1"
+                                  animated={true}
+                                >
+                                  ✕ Abbrechen
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-white text-lg">{playlist.name}</h4>
+                                <Button
+                                  onClick={() => startEditingPlaylist(playlist)}
+                                  className="w-6 h-6 p-0 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400"
+                                  animated={true}
+                                >
+                                  ✏️
+                                </Button>
+                              </div>
+                              <p className="text-gray-400 text-sm">{playlist.description}</p>
+                            </>
+                          )}
                         </div>
                       </div>
                       

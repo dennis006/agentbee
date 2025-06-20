@@ -140,14 +140,48 @@ function loadMusicSettings() {
         if (fs.existsSync('music-settings.json')) {
             const data = fs.readFileSync('music-settings.json', 'utf8');
             const loadedSettings = JSON.parse(data);
-            musicSettings = { ...musicSettings, ...loadedSettings };
+            
+            // Deep merge um Default-Values zu behalten wenn neue Properties hinzugefügt werden
+            musicSettings = {
+                ...musicSettings,
+                ...loadedSettings,
+                radio: {
+                    ...musicSettings.radio,
+                    ...loadedSettings.radio
+                },
+                announcements: {
+                    ...musicSettings.announcements,
+                    ...loadedSettings.announcements
+                },
+                interactivePanel: {
+                    ...musicSettings.interactivePanel,
+                    ...loadedSettings.interactivePanel
+                },
+                playlists: {
+                    ...musicSettings.playlists,
+                    ...loadedSettings.playlists,
+                    voting: {
+                        ...musicSettings.playlists.voting,
+                        ...loadedSettings.playlists?.voting
+                    },
+                    schedule: {
+                        ...musicSettings.playlists.schedule,
+                        ...loadedSettings.playlists?.schedule
+                    }
+                }
+            };
+            
             console.log('🎵 Musik-Einstellungen geladen');
+            console.log('🎨 Radio Embed Farbe:', musicSettings.radio.embedColor);
+            console.log('🎨 Panel Embed Farbe:', musicSettings.interactivePanel.embedColor);
         } else {
             saveMusicSettings();
             console.log('🎵 Standard-Musik-Einstellungen erstellt');
         }
     } catch (error) {
         console.error('❌ Fehler beim Laden der Musik-Einstellungen:', error);
+        // Fallback auf Default-Settings
+        saveMusicSettings();
     }
 }
 
@@ -839,6 +873,24 @@ function updateCustomPlaylist(playlistId, updateData) {
             throw new Error('Playlist nicht gefunden');
         }
         
+        // Validiere Name-Update
+        if (updateData.name !== undefined) {
+            if (!updateData.name.trim()) {
+                throw new Error('Playlist-Name darf nicht leer sein');
+            }
+            
+            // Prüfe auf doppelte Namen (außer current playlist)
+            const existingPlaylist = playlists.find(p => 
+                p.name.toLowerCase() === updateData.name.trim().toLowerCase() && 
+                p.id !== playlistId
+            );
+            
+            if (existingPlaylist) {
+                throw new Error(`Eine Playlist mit dem Namen "${updateData.name}" existiert bereits`);
+            }
+        }
+        
+        // Update playlist
         playlists[playlistIndex] = {
             ...playlists[playlistIndex],
             ...updateData,
@@ -850,7 +902,7 @@ function updateCustomPlaylist(playlistId, updateData) {
         return playlists[playlistIndex];
     } catch (error) {
         console.error('❌ Fehler beim Aktualisieren der Playlist:', error);
-        return null;
+        throw error;
     }
 }
 
@@ -1309,13 +1361,36 @@ function registerMusicAPI(app) {
     // Save music settings
     app.post('/api/music/settings', (req, res) => {
         try {
-            musicSettings = { ...musicSettings, ...req.body };
+            // Deep merge to preserve all nested properties
+            musicSettings = {
+                ...musicSettings,
+                ...req.body,
+                radio: {
+                    ...musicSettings.radio,
+                    ...req.body.radio
+                },
+                announcements: {
+                    ...musicSettings.announcements,
+                    ...req.body.announcements
+                },
+                interactivePanel: {
+                    ...musicSettings.interactivePanel,
+                    ...req.body.interactivePanel
+                },
+                playlists: {
+                    ...musicSettings.playlists,
+                    ...req.body.playlists
+                }
+            };
             saveMusicSettings();
+            console.log('💾 Settings gespeichert:', JSON.stringify(musicSettings, null, 2));
             res.json({
                 success: true,
-                message: 'YouTube Radio-Einstellungen gespeichert'
+                message: 'YouTube Radio-Einstellungen gespeichert',
+                settings: musicSettings
             });
         } catch (error) {
+            console.error('❌ Settings Speicher-Fehler:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
