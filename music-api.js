@@ -419,8 +419,15 @@ async function getVideoInfoWithYoutubei(url) {
         
         console.log(`🔍 Video-ID extrahiert: ${videoId}`);
         
-        // Hole Video-Details über interne YouTube-API
-        const info = await youtube.music.getInfo(videoId);
+        // Hole Video-Details über interne YouTube-API (versuche beide APIs)
+        let info;
+        try {
+            console.log('🔄 Versuche youtube.getInfo() (normale API)...');
+            info = await youtube.getInfo(videoId);
+        } catch (normalApiError) {
+            console.log('⚠️ Normale API fehlgeschlagen, versuche music.getInfo()...');
+            info = await youtube.music.getInfo(videoId);
+        }
         
         if (!info) {
             throw new Error('Video-Details konnten nicht abgerufen werden');
@@ -442,6 +449,28 @@ async function getVideoInfoWithYoutubei(url) {
         // Wähle besten Audio-Stream (höchste Bitrate)
         const bestAudioStream = formats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
         console.log(`🎯 Bester Audio-Stream: ${bestAudioStream.mime_type} - ${bestAudioStream.bitrate}bps`);
+        
+        // 🔍 DEBUG: Prüfe ob Stream-URL vorhanden ist
+        console.log(`🔍 Stream-URL Debug: ${bestAudioStream.url ? 'VORHANDEN' : 'FEHLT'}`);
+        if (bestAudioStream.url) {
+            console.log(`🔗 Stream-URL: ${bestAudioStream.url.substring(0, 100)}...`);
+        } else {
+            console.error(`❌ bestAudioStream.url ist undefined!`);
+            console.error(`🔍 Available properties:`, Object.keys(bestAudioStream));
+            
+            // Versuche alternative URL-Properties
+            const possibleUrlKeys = ['url', 'signatureCipher', 'sig', 'stream_url'];
+            for (const key of possibleUrlKeys) {
+                if (bestAudioStream[key]) {
+                    console.log(`🔍 Alternative URL gefunden in '${key}': ${String(bestAudioStream[key]).substring(0, 100)}...`);
+                }
+            }
+        }
+        
+        // ⚠️ Fallback wenn keine URL gefunden
+        if (!bestAudioStream.url) {
+            throw new Error('Keine Stream-URL im besten Audio-Stream gefunden');
+        }
         
         return {
             title: info.basic_info.title,
