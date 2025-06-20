@@ -603,7 +603,11 @@ async function handleRadioSelectButton(interaction) {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
 
         const stations = getRadioStations();
-        const options = stations.map(station => ({
+        
+        // Discord erlaubt nur maximal 25 Optionen - beschränke auf die ersten 25
+        const limitedStations = stations.slice(0, 25);
+        
+        const options = limitedStations.map(station => ({
             label: station.name,
             value: station.id,
             description: `${station.genre} • ${station.description.substring(0, 50)}`,
@@ -619,8 +623,13 @@ async function handleRadioSelectButton(interaction) {
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
 
+        // Zeige Info wenn mehr als 25 Sender verfügbar sind
+        const contentText = stations.length > 25 
+            ? `📻 **Wähle deinen YouTube Radio-Stream:** (${limitedStations.length} von ${stations.length} Sendern)`
+            : '📻 **Wähle deinen YouTube Radio-Stream:**';
+
         await interaction.reply({
-            content: '📻 **Wähle deinen YouTube Radio-Stream:**',
+            content: contentText,
             components: [row],
             ephemeral: true
         });
