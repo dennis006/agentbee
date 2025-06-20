@@ -7,7 +7,9 @@ const {
     entersState,
     getVoiceConnection
 } = require('@discordjs/voice');
-// Verwende play-dl für robuste YouTube-Integration mit Cookies
+// 🆕 Neue YouTube-API Implementierung
+const { YoutubeiJS } = require('youtubei.js');
+// Legacy: Verwende play-dl für robuste YouTube-Integration mit Cookies
 const playdl = require('play-dl');
 const yts = require('yt-search');
 
@@ -450,6 +452,69 @@ async function searchYouTube(query) {
     }
 }
 
+// 🆕 Neue YouTube-Info Funktion mit youtubei.js
+async function getVideoInfoWithYoutubei(url) {
+    try {
+        console.log(`🆕 Lade Video-Info mit youtubei.js: ${url}`);
+        
+        // Initialisiere youtubei.js Client
+        const youtube = new YoutubeiJS();
+        
+        // Normalisiere URL und extrahiere Video-ID
+        const normalizedUrl = normalizeYouTubeURL(url);
+        const videoId = normalizedUrl.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
+        
+        if (!videoId) {
+            throw new Error('Ungültige YouTube-URL: Video-ID nicht gefunden');
+        }
+        
+        console.log(`🔍 Video-ID extrahiert: ${videoId}`);
+        
+        // Hole Video-Details über interne YouTube-API
+        const info = await youtube.getDetails(videoId);
+        
+        if (!info) {
+            throw new Error('Video-Details konnten nicht abgerufen werden');
+        }
+        
+        console.log(`✅ youtubei.js Video-Details erhalten: ${info.basic_info.title}`);
+        
+        // Hole Stream-URLs über interne YouTube-API
+        const formats = await youtube.download(videoId, {
+            type: 'audio', // Nur Audio-Streams
+            quality: 'best' // Beste verfügbare Qualität
+        });
+        
+        console.log(`🎵 Audio-Streams gefunden: ${formats?.length || 0}`);
+        
+        if (!formats || formats.length === 0) {
+            throw new Error('Keine Audio-Streams verfügbar');
+        }
+        
+        // Wähle besten Audio-Stream
+        const bestAudioStream = formats[0]; // youtubei.js sortiert bereits nach Qualität
+        console.log(`🎯 Bester Audio-Stream: ${bestAudioStream.mime_type} - ${bestAudioStream.bitrate}bps`);
+        
+        return {
+            title: info.basic_info.title,
+            url: normalizedUrl,
+            duration: info.basic_info.duration?.seconds_total || 0,
+            thumbnail: info.basic_info.thumbnail?.[0]?.url || '',
+            author: info.basic_info.channel?.name || 'Unbekannt',
+            requestedBy: null,
+            // 🆕 youtubei.js spezifische Daten
+            streamUrl: bestAudioStream.url,
+            mimeType: bestAudioStream.mime_type,
+            bitrate: bestAudioStream.bitrate,
+            isYoutubei: true
+        };
+        
+    } catch (error) {
+        console.error('❌ youtubei.js Fehler:', error.message);
+        return null;
+    }
+}
+
 // Normalisiere YouTube URL für play-dl
 function normalizeYouTubeURL(url) {
     // Entferne verschiedene URL-Varianten und normalisiere
@@ -483,7 +548,20 @@ async function getVideoInfo(url) {
         const normalizedUrl = normalizeYouTubeURL(url);
         console.log(`🔄 Normalisierte URL: ${normalizedUrl}`);
         
-        // Methode 1: play-dl (Primär - funktioniert auf Railway)
+        // 🆕 Methode 0: youtubei.js (Primär - interne YouTube-API ohne Bot-Detection)
+        try {
+            console.log('🆕 Versuche youtubei.js (interne YouTube-API)...');
+            const youtubeIResult = await getVideoInfoWithYoutubei(normalizedUrl);
+            
+            if (youtubeIResult) {
+                console.log(`✅ youtubei.js Video-Info erfolgreich: ${youtubeIResult.title}`);
+                return youtubeIResult;
+            }
+        } catch (youtubeIError) {
+            console.log('⚠️ youtubei.js fehlgeschlagen:', youtubeIError.message);
+        }
+        
+        // Methode 1: play-dl (Legacy Fallback)
         try {
             console.log('🎥 Versuche play-dl...');
             const isValidYT = playdl.yt_validate(normalizedUrl);
@@ -1629,7 +1707,59 @@ async function playMusic(guildId, song) {
         let stream;
         let streamCreated = false;
         
-        // 🎯 Methode 1: play-dl mit video_info + stream_from_info (Empfohlener Weg mit Cookies)
+        // 🆕 Methode 0: youtubei.js - Direkte YouTube-API ohne Cookies/Bot-Detection
+        if (!streamCreated) {
+            try {
+                console.log('🆕 Versuche youtubei.js (interne YouTube-API)...');
+                
+                // Falls bereits youtubei.js Daten vorhanden sind
+                if (songData.isYoutubei && songData.streamUrl) {
+                    console.log('🎯 Verwende bereits abgerufene youtubei.js Stream-URL...');
+                    
+                    const fetch = require('node-fetch');
+                    const response = await fetch(songData.streamUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                            'Referer': 'https://www.youtube.com/'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        stream = response.body;
+                        streamCreated = true;
+                        console.log(`✅ youtubei.js Stream erfolgreich! (${songData.mimeType})`);
+                    }
+                } else {
+                    // Hole neue youtubei.js Daten
+                    const youtubeIData = await getVideoInfoWithYoutubei(songData.url);
+                    if (youtubeIData && youtubeIData.streamUrl) {
+                        console.log('🎯 Verwende frische youtubei.js Stream-URL...');
+                        
+                        const fetch = require('node-fetch');
+                        const response = await fetch(youtubeIData.streamUrl, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                                'Referer': 'https://www.youtube.com/'
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            stream = response.body;
+                            streamCreated = true;
+                            console.log(`✅ youtubei.js Stream erfolgreich! (${youtubeIData.mimeType})`);
+                            
+                            // Update songData mit youtubei.js Daten
+                            Object.assign(songData, youtubeIData);
+                        }
+                    }
+                }
+                
+            } catch (youtubeIError) {
+                console.log('⚠️ youtubei.js fehlgeschlagen:', youtubeIError.message);
+            }
+        }
+
+        // 🎯 Methode 1: play-dl mit video_info + stream_from_info (Legacy Fallback)
         if (!streamCreated) {
             try {
                 console.log('🎯 Versuche play-dl mit video_info + stream_from_info (Qualität: 0)...');
