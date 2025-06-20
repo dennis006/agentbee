@@ -2954,9 +2954,7 @@ try {
     
     // Voice State Updates werden von Shoukaku automatisch verwaltet
     
-    // API-Routen registrieren
-    registerMusicAPI(app);
-    console.log('🎵 Shoukaku Musik-API registriert!');
+    // API-Routen registrieren (verschoben nach Express-Server-Start)
     
     console.log('✅ Lavalink Musik-System erfolgreich initialisiert!');
     
@@ -7070,6 +7068,14 @@ app.listen(API_PORT, HOST, () => {
     console.log(`🌐 Dashboard API läuft auf ${baseUrl}`);
     console.log(`🔧 Environment: ${environment}`);
     console.log(`🌍 Host: ${HOST}:${API_PORT}`);
+    
+    // 🎵 Musik-API-Routen registrieren (nach Express-Server-Start)
+    try {
+        registerMusicAPI(app);
+        console.log('🎵 Shoukaku Musik-API erfolgreich registriert!');
+    } catch (error) {
+        console.error('❌ Fehler beim Registrieren der Musik-API:', error);
+    }
     console.log('📋 Verfügbare Endpoints:');
     console.log('   GET  /api/health');
     console.log('   GET  /api/bot/status');
