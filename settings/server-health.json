@@ -4698,6 +4698,13 @@
         "moderatorId": null,
         "timestamp": 1750413339648,
         "responseTime": null
+      },
+      {
+        "type": "message_delete",
+        "targetUserId": "1325057674169286749",
+        "moderatorId": null,
+        "timestamp": 1750413524331,
+        "responseTime": null
       }
     ]
   }

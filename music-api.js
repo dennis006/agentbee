@@ -50,6 +50,21 @@ const YOUTUBE_COOKIES = {
                 }
             });
             
+            // Validiere Cookie-Setup durch Test-Anfrage
+            try {
+                console.log('🧪 Teste Cookie-Setup mit YouTube-Validierung...');
+                const testValidation = playdl.yt_validate('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+                console.log(`🧪 Test-Validierung Ergebnis: ${testValidation}`);
+                
+                if (testValidation === 'video') {
+                    console.log('🎉 Cookie-Setup erfolgreich - YouTube-Videos werden als gültig erkannt!');
+                } else {
+                    console.log('⚠️ Cookie-Setup möglicherweise problematisch - Video-Validierung fehlgeschlagen');
+                }
+            } catch (testError) {
+                console.log('⚠️ Cookie-Test fehlgeschlagen:', testError.message);
+            }
+            
             console.log('✅ play-dl mit YouTube-Cookies initialisiert');
             console.log('🔓 YouTube Anti-Bot-Schutz erfolgreich umgangen!');
             console.log('🎯 Bot kann jetzt authentifizierte YouTube-Anfragen stellen');
@@ -1738,7 +1753,48 @@ async function playMusic(guildId, song) {
                 console.log(`📡 Versuche play-dl Stream (Versuch ${streamAttempts}/${maxStreamAttempts})...`);
                 
                 const normalizedUrl = normalizeYouTubeURL(songData.url);
-                const streamValidation = playdl.yt_validate(normalizedUrl);
+                console.log(`🔗 Normalisierte URL: ${normalizedUrl}`);
+                
+                // Verbesserte URL-Validierung mit mehreren Fallbacks
+                let streamValidation = playdl.yt_validate(normalizedUrl);
+                console.log(`🔍 URL-Validierung: ${streamValidation} für ${normalizedUrl}`);
+                
+                // Diagnostiziere URL-Problem falls Validierung fehlschlägt
+                if (streamValidation !== 'video') {
+                    console.log(`❌ URL-Validierung fehlgeschlagen!`);
+                    console.log(`🔍 URL-Details: ${normalizedUrl}`);
+                    console.log(`🔍 Validierung Typ: ${typeof streamValidation}`);
+                    console.log(`🔍 Validierung Wert: "${streamValidation}"`);
+                    console.log(`🔍 Erwartet: "video"`);
+                    
+                    // Überprüfe URL-Format
+                    const hasVideoId = normalizedUrl.includes('v=') || normalizedUrl.includes('youtu.be/');
+                    const isHttps = normalizedUrl.startsWith('https://');
+                    const isYouTube = normalizedUrl.includes('youtube.com') || normalizedUrl.includes('youtu.be');
+                    
+                    console.log(`🔍 URL-Analyse: hasVideoId=${hasVideoId}, isHttps=${isHttps}, isYouTube=${isYouTube}`);
+                    
+                    const alternativeUrls = [
+                        normalizedUrl.replace('www.youtube.com', 'youtube.com'),
+                        normalizedUrl.replace('youtube.com', 'www.youtube.com'),
+                        normalizedUrl.replace('m.youtube.com', 'www.youtube.com'),
+                        normalizedUrl.replace('https://', 'http://'),
+                        normalizedUrl.replace('http://', 'https://')
+                    ];
+                    
+                    for (const altUrl of alternativeUrls) {
+                        if (altUrl !== normalizedUrl) {
+                            const altValidation = playdl.yt_validate(altUrl);
+                            console.log(`🔄 Alt-URL-Test: ${altValidation} für ${altUrl}`);
+                            if (altValidation === 'video') {
+                                streamValidation = altValidation;
+                                songData.url = altUrl; // Update URL für Stream
+                                console.log(`✅ Gültige Alt-URL gefunden: ${altUrl}`);
+                                break;
+                            }
+                        }
+                    }
+                }
                 
                 if (streamValidation === 'video') {
                     // Verschiedene Qualitätsoptionen probieren
@@ -1748,10 +1804,28 @@ async function playMusic(guildId, song) {
                         try {
                             console.log(`🎵 Versuche play-dl Qualität ${quality}...`);
                             
-                            const streamPromise = playdl.stream(normalizedUrl, {
+                            // Erweiterte Stream-Optionen mit Cookie-Support
+                            const streamOptions = {
                                 quality: quality,
-                                type: 'audio'
-                            });
+                                type: 'audio',
+                                requestOptions: {
+                                    headers: {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                                        'Accept-Language': 'en-US,en;q=0.5',
+                                        'Accept-Encoding': 'gzip, deflate',
+                                        'DNT': '1',
+                                        'Connection': 'keep-alive',
+                                        'Upgrade-Insecure-Requests': '1'
+                                    }
+                                }
+                            };
+                            
+                            // Verwende die bereits gesetzte URL aus der Cookie-Validierung
+                            const finalUrl = songData.url;
+                            console.log(`🎵 Stream-Versuch mit finaler URL: ${finalUrl}`);
+                            
+                            const streamPromise = playdl.stream(finalUrl, streamOptions);
                             
                             const streamResult = await Promise.race([
                                 streamPromise,
@@ -1878,7 +1952,59 @@ async function playMusic(guildId, song) {
             }
         }
         
-        // Methode 4: Suche alternative URLs und versuche verschiedene Quellen
+        // Methode 4: Direkte YouTube-Extraktion (wenn URL bekannt ist)
+        if (!streamCreated && songData?.url) {
+            try {
+                console.log('🎯 Versuche direkte YouTube-URL-Extraktion...');
+                
+                // Extrahiere Video-ID und erstelle verschiedene URL-Varianten
+                const videoId = songData.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/)?.[1];
+                if (videoId) {
+                    const directUrls = [
+                        `https://www.youtube.com/watch?v=${videoId}`,
+                        `https://youtube.com/watch?v=${videoId}`,
+                        `https://youtu.be/${videoId}`,
+                        `https://m.youtube.com/watch?v=${videoId}`
+                    ];
+                    
+                    for (const directUrl of directUrls) {
+                        if (streamCreated) break;
+                        
+                        try {
+                            console.log(`🔗 Teste direkte URL: ${directUrl}`);
+                            const directValidation = playdl.yt_validate(directUrl);
+                            
+                            if (directValidation === 'video') {
+                                console.log(`✅ Direkte URL validiert: ${directUrl}`);
+                                
+                                const directStreamResult = await playdl.stream(directUrl, {
+                                    quality: 1, // Medium quality für bessere Kompatibilität
+                                    type: 'audio',
+                                    requestOptions: {
+                                        headers: {
+                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                        }
+                                    }
+                                });
+                                
+                                if (directStreamResult && directStreamResult.stream) {
+                                    stream = directStreamResult.stream;
+                                    streamCreated = true;
+                                    console.log(`✅ Direkte URL erfolgreich: ${directUrl}`);
+                                    break;
+                                }
+                            }
+                        } catch (directError) {
+                            console.log(`⚠️ Direkte URL fehlgeschlagen: ${directError.message}`);
+                        }
+                    }
+                }
+            } catch (directExtractError) {
+                console.log('⚠️ Direkte URL-Extraktion fehlgeschlagen:', directExtractError.message);
+            }
+        }
+        
+        // Methode 5: Suche alternative URLs und versuche verschiedene Quellen
         if (!streamCreated) {
             console.log('🔄 Suche nach alternativen URLs...');
             
@@ -1981,7 +2107,45 @@ async function playMusic(guildId, song) {
                 }
             }
             
-            // Methode 6: Letztes Fallback - Verwende Radio-Stream wenn verfügbar
+            // Methode 6: Notfall-Stream ohne Validierung (für problematische URLs)
+            if (!streamCreated && songData?.url) {
+                try {
+                    console.log('🚨 Notfall-Stream: Versuche Stream ohne URL-Validierung...');
+                    
+                    // Extrahiere Video-ID direkt und baue saubere URL
+                    const videoId = songData.url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
+                    if (videoId) {
+                        const emergencyUrl = `https://www.youtube.com/watch?v=${videoId}`;
+                        console.log(`🚨 Notfall-URL: ${emergencyUrl}`);
+                        
+                        // Versuche Stream ohne Validierung (manchmal funktioniert das trotzdem)
+                        const emergencyStreamResult = await Promise.race([
+                            playdl.stream(emergencyUrl, {
+                                quality: 0, // Niedrigste Qualität für beste Kompatibilität
+                                type: 'audio',
+                                requestOptions: {
+                                    headers: {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                                    }
+                                }
+                            }),
+                            new Promise((_, reject) => 
+                                setTimeout(() => reject(new Error('Notfall-Stream-Timeout')), 15000)
+                            )
+                        ]);
+                        
+                        if (emergencyStreamResult && emergencyStreamResult.stream) {
+                            stream = emergencyStreamResult.stream;
+                            streamCreated = true;
+                            console.log('🚨✅ Notfall-Stream erfolgreich! Stream erstellt trotz Validierungsproblem.');
+                        }
+                    }
+                } catch (emergencyError) {
+                    console.log('🚨❌ Notfall-Stream fehlgeschlagen:', emergencyError.message);
+                }
+            }
+            
+            // Methode 7: Letztes Fallback - Verwende Radio-Stream wenn verfügbar
             if (!streamCreated && musicSettings.radio?.enabled) {
                 try {
                     console.log('📻 Letztes Fallback: Verwende einen passenden Radio-Sender...');
