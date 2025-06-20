@@ -1289,7 +1289,7 @@ const Music: React.FC = () => {
                       <div>ÔÇó Play/Pause/Skip Buttons</div>
                       <div>ÔÇó Lautst├ñrke-Regler</div>
                       <div>ÔÇó Queue-Management</div>
-                      <div>ÔÇó Audio-Fix f├╝r Verbindungsprobleme</div>
+                      <div>ÔÇó Voice-Reconnect f├╝r DNS/Gateway-Probleme</div>
                     </div>
                   }
                 />
@@ -1466,7 +1466,7 @@ const Music: React.FC = () => {
                     {saving ? '­ƒöä' : '­ƒöº'}
                   </Button>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ­ƒöº Audio-Verbindung reparieren
+                    ­ƒöº Voice-Gateway reparieren
                   </div>
                 </div>
               </div>
@@ -1478,21 +1478,21 @@ const Music: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Search className="w-5 h-5 text-purple-accent" />
-                🎵 Spotify + Multi-Source Suche
+                🆕 youtubei.js + Multi-Source Suche
                 <Tooltip 
-                  title="🎵 Multi-Source Suche erklärt:"
+                  title="🆕 youtubei.js Multi-Source Suche erklärt:"
                   content={
                     <div>
-                      <div>Intelligente Musiksuche mit mehreren Quellen:</div>
-                      <div>🎵 Spotify API (Primär - 99.9% Erfolgsrate)</div>
-                      <div>📺 YouTube Audio (Zuverlässiger Fallback)</div>
+                      <div>Moderne Musiksuche mit internen APIs:</div>
+                      <div>🆕 youtubei.js (Primär - interne YouTube-API)</div>
+                      <div>🎵 Spotify API (Metadata & Suche)</div>
                       <div>📻 Radio-Fallback (100% verfügbar)</div>
                     </div>
                   }
                 />
               </CardTitle>
               <CardDescription>
-                Suche über Spotify und YouTube - kein Anti-Bot mehr!
+                Direkte YouTube-API ohne Cookies oder Bot-Detection!
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1516,18 +1516,18 @@ const Music: React.FC = () => {
           
           {/* System Information */}
           {searchResults.length === 0 && !searching && (
-            <div className="bg-gradient-to-r from-purple-500/10 to-green-500/10 rounded-lg p-4 border border-purple-primary/30 mb-4">
+            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-4 border border-purple-primary/30 mb-4">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">🎵</span>
-                <h4 className="text-white font-semibold">Neues Spotify-First System!</h4>
+                <span className="text-2xl">🆕</span>
+                <h4 className="text-white font-semibold">youtubei.js System - Keine Cookies mehr!</h4>
               </div>
                              <div className="text-sm text-purple-200 space-y-1">
-                 <p>✅ <strong>Spotify API</strong> - Professionelle Metadaten (99.9% Erfolgsrate)</p>
-                 <p>✅ <strong>YouTube Audio</strong> - Zuverlässiger Fallback ohne Anti-Bot</p>
+                 <p>✅ <strong>youtubei.js</strong> - Interne YouTube-API ohne Bot-Detection</p>
+                 <p>✅ <strong>Spotify API</strong> - Professionelle Metadaten & Suche</p>
                  <p>✅ <strong>Radio Fallback</strong> - 100% Verfügbarkeit garantiert</p>
                </div>
               <div className="mt-3 text-xs text-green-300">
-                🚀 <strong>Kein "Sign in to confirm you're not a bot" mehr!</strong>
+                🚀 <strong>Komplett Cookie-frei und Bot-Detection-resistent!</strong>
               </div>
             </div>
           )}
