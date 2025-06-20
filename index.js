@@ -13,10 +13,8 @@ const TicketSystemV2 = require('./ticket-system-v2');
 const setupTwitchAPI = require('./twitch-api');
 // AFK System entfernt - verwende Discord Native AFK
 
-// 🎵 LAVALINK MUSIK-SYSTEM
-const { initializeShoukaku, loadMusicSettings, musicSettings, registerMusicAPI } = require('./shoukaku-music');
-// Manager wird nach Client-Initialisierung gesetzt
-let lavalinkManager = null;
+// 🎵 YOUTUBE RADIO-SYSTEM
+const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
 const { OpenAI } = require('openai');
 const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
@@ -2939,9 +2937,9 @@ registerGiveawayAPI(app, client);
 registerTicketAPI(app, client);
 console.log('🎉 Giveaway-API registriert');
 
-// 🎵 LAVALINK MUSIK-SYSTEM INITIALISIEREN
+// 🎵 YOUTUBE RADIO-SYSTEM INITIALISIEREN
 try {
-    console.log('🎵 Initialisiere Lavalink Musik-System...');
+    console.log('🎵 Initialisiere YouTube Radio-System...');
     
     // Settings laden
     loadMusicSettings();
@@ -2949,17 +2947,16 @@ try {
     // Global Client verfügbar machen
     global.client = client;
     
-    // Lavalink Manager initialisieren
-    lavalinkManager = initializeShoukaku(client);
-    
-    // Voice State Updates werden von Shoukaku automatisch verwaltet
+    // YouTube Radio-System initialisiert
+    // Musik-System initialisiert
+    console.log('🎵 YouTube Radio-System geladen!');
     
     // API-Routen registrieren (verschoben nach Express-Server-Start)
     
-    console.log('✅ Lavalink Musik-System erfolgreich initialisiert!');
+    console.log('✅ YouTube Radio-System erfolgreich initialisiert!');
     
 } catch (error) {
-    console.error('❌ Fehler beim Initialisieren des Lavalink Musik-Systems:', error);
+    console.error('❌ Fehler beim Initialisieren des YouTube Radio-Systems:', error);
 }
     console.log('✅ XP-System initialisiert');
     
@@ -4185,7 +4182,7 @@ client.on(Events.MessageCreate, async message => {
             if (command === 'play' && args[1]) {
                 const stationId = args[1];
                 try {
-                    const { playRadioStation } = require('./shoukaku-music.js');
+                    const { playRadioStation } = require('./music-api.js');
                     const success = await playRadioStation(message.guild.id, stationId);
                     
                     if (success) {
@@ -4200,7 +4197,7 @@ client.on(Events.MessageCreate, async message => {
             
             if (command === 'stop') {
                 try {
-                    const { stopRadio } = require('./shoukaku-music.js');
+                    const { stopRadio } = require('./music-api.js');
                     const success = stopRadio(message.guild.id);
                     
                     if (success) {
@@ -4215,7 +4212,7 @@ client.on(Events.MessageCreate, async message => {
             
             if (command === 'list' || command === 'stations') {
                 try {
-                    const { getRadioStations } = require('./shoukaku-music.js');
+                    const { getRadioStations } = require('./music-api.js');
                     const stations = getRadioStations();
                     
                     if (stations.length === 0) {
@@ -4247,7 +4244,7 @@ client.on(Events.MessageCreate, async message => {
             
             if (command === 'status') {
                 try {
-                    const { getCurrentRadioStation, isPlayingRadio } = require('./shoukaku-music.js');
+                    const { getCurrentRadioStation, isPlayingRadio } = require('./music-api.js');
                     const currentStation = getCurrentRadioStation(message.guild.id);
                     const isPlaying = isPlayingRadio(message.guild.id);
                     
@@ -4483,43 +4480,10 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.customId === 'view_queue') {
         // Show current queue in ephemeral message
         try {
-            const { getQueue } = require('./shoukaku-music');
-            const queue = getQueue(interaction.guild.id);
-            
-            if (queue.songs.length === 0) {
-                await interaction.reply({
-                    embeds: [{
-                        color: parseInt(musicSettings.songRequests.embedColor.replace('#', ''), 16),
-                        title: '📋 Queue ist leer',
-                        description: 'Keine Songs in der Queue.\nSei der Erste und request einen Song!',
-                        timestamp: new Date().toISOString()
-                    }],
-                    ephemeral: true
-                });
-                return;
-            }
-
-            let queueText = '';
-            queue.songs.slice(0, 10).forEach((song, index) => {
-                queueText += `**${index + 1}.** ${song.title}\n`;
-                queueText += `    von ${song.author} • ${song.duration ? Math.floor(song.duration / 60) + ':' + (song.duration % 60).toString().padStart(2, '0') : 'N/A'}${song.requestedBy ? ` • ${song.requestedBy}` : ''}\n\n`;
-            });
-
-            if (queue.songs.length > 10) {
-                queueText += `... und ${queue.songs.length - 10} weitere Songs`;
-            }
-
-            await interaction.reply({
-                embeds: [{
-                    color: parseInt(musicSettings.songRequests.embedColor.replace('#', ''), 16),
-                    title: `📋 Aktuelle Queue (${queue.songs.length} Songs)`,
-                    description: queueText,
-                    footer: {
-                        text: 'Nur für dich sichtbar'
-                    },
-                    timestamp: new Date().toISOString()
-                }],
-                ephemeral: true
+            // Kein Queue-System mehr im einfachen Radio-System
+            await interaction.reply({ 
+              content: '📻 **YouTube Radio-System** - Kein Queue verfügbar, nur Live-Radio-Streams!', 
+              ephemeral: true 
             });
         } catch (error) {
             console.error('❌ Fehler beim Anzeigen der Queue:', error);
@@ -7072,7 +7036,7 @@ app.listen(API_PORT, HOST, () => {
     // 🎵 Musik-API-Routen registrieren (nach Express-Server-Start)
     try {
         registerMusicAPI(app);
-        console.log('🎵 Shoukaku Musik-API erfolgreich registriert!');
+        console.log('🎵 YouTube Radio-API erfolgreich registriert!');
     } catch (error) {
         console.error('❌ Fehler beim Registrieren der Musik-API:', error);
     }

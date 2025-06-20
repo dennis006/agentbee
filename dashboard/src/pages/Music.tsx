@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Music as MusicIcon, Play, Pause, SkipForward, Volume2, List, Settings, Plus, Trash2, Search, Mic, Users, Shuffle, Radio, Save } from 'lucide-react';
+import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -24,8 +24,6 @@ const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?:
     {children}
   </span>
 );
-
-
 
 // Tabs components
 const Tabs: React.FC<{ children: React.ReactNode; defaultValue?: string; className?: string }> = ({ children, defaultValue, className = '' }) => (
@@ -70,26 +68,6 @@ const Switch: React.FC<{ checked: boolean; onCheckedChange: (checked: boolean) =
   >
     <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
   </button>
-);
-
-// Tooltip component
-const Tooltip: React.FC<{ content: React.ReactNode; title?: string }> = ({ content, title }) => (
-  <div className="relative group">
-    <button
-      type="button"
-      className="text-blue-400 hover:text-blue-300 text-xs transition-colors duration-200"
-    >
-      ÔØô
-    </button>
-    
-    {/* Tooltip */}
-    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-dark-surface border border-purple-primary/30 rounded-lg text-xs text-dark-text opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 shadow-lg min-w-max">
-      {title && <div className="font-medium text-blue-400 mb-1">{title}</div>}
-      <div>{content}</div>
-      {/* Arrow */}
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-dark-surface"></div>
-    </div>
-  </div>
 );
 
 // Card components
@@ -159,19 +137,14 @@ const Input: React.FC<{
   placeholder?: string; 
   value?: string | number; 
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   className?: string;
-  min?: string | number;
-  max?: string | number;
-  step?: string | number;
   id?: string;
-}> = ({ type = 'text', placeholder, value, onChange, onKeyPress, className = '', ...props }) => (
+}> = ({ type = 'text', placeholder, value, onChange, className = '', ...props }) => (
   <input
     type={type}
     placeholder={placeholder}
     value={value}
     onChange={onChange}
-    onKeyPress={onKeyPress}
     className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-colors duration-200 ${className}`}
     {...props}
   />
@@ -180,70 +153,7 @@ const Input: React.FC<{
 // Interfaces
 interface MusicSettings {
   enabled: boolean;
-  defaultVolume: number;
-  maxQueueLength: number;
-  autoJoinVoice: boolean;
-  voiceChannels: {
-    autoJoin: string[];
-    preferred: string;
-    blacklist: string[];
-  };
-  commands: {
-    enabled: boolean;
-    prefix: string;
-    djRole: string;
-    allowEveryone: boolean;
-  };
-  queue: {
-    autoplay: boolean;
-    shuffle: boolean;
-    repeat: string;
-    clearOnEmpty: boolean;
-  };
-  filters: {
-    bass: boolean;
-    nightcore: boolean;
-    vaporwave: boolean;
-    lowpass: boolean;
-  };
-  youtube: {
-    quality: string;
-    maxLength: number;
-    playlistLimit: number;
-  };
-  announcements: {
-    nowPlaying: boolean;
-    queueAdd: boolean;
-    channelId: string;
-  };
-  embedColor: string;
-  songRequests: {
-    enabled: boolean;
-    channels: string[];
-    prefix: string;
-    embedColor: string;
-    requireDJRole: boolean;
-    maxRequestsPerUser: number;
-    cooldownMinutes: number;
-    rateLimit: {
-      enabled: boolean;
-      maxRequests: number;
-      timeWindow: number; // in minutes
-      timeUnit: 'minutes' | 'hours' | 'days';
-    };
-    interactivePanel: {
-      enabled: boolean;
-      channelId: string;
-      messageId: string;
-      autoUpdate: boolean;
-      showQueue: boolean;
-      maxQueueDisplay: number;
-      requireDJForControls: boolean;
-      autoJoinLeave: boolean;
-      adminRole: string;
-    };
-  };
-  radio?: {
+  radio: {
     enabled: boolean;
     stations: RadioStation[];
     defaultStation: string;
@@ -251,53 +161,15 @@ interface MusicSettings {
     showNowPlaying: boolean;
     embedColor: string;
   };
-}
-
-interface Song {
-  title: string;
-  url: string;
-  duration: number;
-  thumbnail: string;
-  author: string;
-  requestedBy?: string;
-  // New Spotify System Properties (ohne SoundCloud)
-  source?: 'spotify' | 'youtube' | 'radio';
-  image?: string; // Alternative to thumbnail
-  artist?: string; // Alternative to author
-  popularity?: number; // Spotify popularity score
-  preview_url?: string; // Spotify preview URL
-  spotify_id?: string; // Spotify track ID
-  soundcloud_id?: string; // SoundCloud track ID
-  search_query?: string; // For audio search
-}
-
-interface Queue {
-  currentSong: Song | null;
-  songs: Song[];
-  volume: number;
-  repeat: string;
-  shuffle: boolean;
-}
-
-interface Channel {
-  id: string;
-  name: string;
-  type: string;
-}
-
-interface Role {
-  id: string;
-  name: string;
-  color: string;
-}
-
-interface RequestTrackingData {
-  userId: string;
-  username: string;
-  requestsUsed: number;
-  remainingRequests: number;
-  resetTime: number | null;
-  lastRequest: number | null;
+  announcements: {
+    channelId: string;
+  };
+  interactivePanel: {
+    enabled: boolean;
+    channelId: string;
+    messageId: string;
+    autoUpdate: boolean;
+  };
 }
 
 interface RadioStation {
@@ -315,19 +187,11 @@ interface RadioStatus {
   currentStation: RadioStation | null;
 }
 
-// CSS Animation f├╝r Progress Bar
-const progressBarStyles = `
-  @keyframes progressSlide {
-    0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
-    50% { opacity: 1; }
-    100% { transform: translateX(400%) skewX(-12deg); opacity: 0; }
-  }
-  
-  @keyframes progressGlow {
-    0%, 100% { box-shadow: 0 0 15px rgba(147, 51, 234, 0.8), 0 0 30px rgba(147, 51, 234, 0.4); }
-    50% { box-shadow: 0 0 25px rgba(147, 51, 234, 1), 0 0 50px rgba(147, 51, 234, 0.6); }
-  }
-`;
+interface Channel {
+  id: string;
+  name: string;
+  type: string;
+}
 
 const Music: React.FC = () => {
   // API Base URL
@@ -336,114 +200,29 @@ const Music: React.FC = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('player');
+  const [activeTab, setActiveTab] = useState('radio');
   
   // Settings State
   const [settings, setSettings] = useState<MusicSettings>({
     enabled: true,
-    defaultVolume: 50,
-    maxQueueLength: 100,
-    autoJoinVoice: true,
-    voiceChannels: {
-      autoJoin: [],
-      preferred: "",
-      blacklist: []
-    },
-    commands: {
+    radio: {
       enabled: true,
-      prefix: "!",
-      djRole: "",
-      allowEveryone: true
-    },
-    queue: {
-      autoplay: false,
-      shuffle: false,
-      repeat: "off",
-      clearOnEmpty: true
-    },
-    filters: {
-      bass: false,
-      nightcore: false,
-      vaporwave: false,
-      lowpass: false
-    },
-    youtube: {
-      quality: "highestaudio",
-      maxLength: 600,
-      playlistLimit: 50
+      stations: [],
+      defaultStation: "lofi",
+      autoStop: false,
+      showNowPlaying: true,
+      embedColor: "#FF6B6B"
     },
     announcements: {
-      nowPlaying: true,
-      queueAdd: true,
       channelId: ""
     },
-    embedColor: "#9333EA",
-    songRequests: {
+    interactivePanel: {
       enabled: true,
-      channels: [],
-      prefix: "!play",
-      embedColor: "#9333EA",
-      requireDJRole: false,
-      maxRequestsPerUser: 5,
-      cooldownMinutes: 1,
-      rateLimit: {
-        enabled: true,
-        maxRequests: 5,
-        timeWindow: 60,
-        timeUnit: 'minutes'
-      },
-      interactivePanel: {
-        enabled: true,
-        channelId: "",
-        messageId: "",
-        autoUpdate: true,
-        showQueue: true,
-        maxQueueDisplay: 5,
-        requireDJForControls: false,
-        autoJoinLeave: false,
-        adminRole: ""
-      }
+      channelId: "",
+      messageId: "",
+      autoUpdate: true
     }
   });
-
-  // Queue State
-  const [queue, setQueue] = useState<Queue>({
-    currentSong: null,
-    songs: [],
-    volume: 50,
-    repeat: "off",
-    shuffle: false
-  });
-
-  // Search State
-  const [searchResults, setSearchResults] = useState<Song[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // Player Progress State
-  const [progress, setProgress] = useState({
-    currentTime: 0,
-    duration: 0,
-    currentTimeFormatted: '0:00',
-    durationFormatted: '0:00',
-    percentage: 0
-  });
-  const [searching, setSearching] = useState(false);
-
-  // Channels und Roles
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  
-  // Guild ID State
-  const [guildId, setGuildId] = useState<string | null>(null);
-
-  // Request Tracking State
-  const [requestTracking, setRequestTracking] = useState<RequestTrackingData[]>([]);
-  const [trackingLoading, setTrackingLoading] = useState(false);
-  
-  // Auto-Update State
-  const [autoUpdateActive, setAutoUpdateActive] = useState(false);
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
-  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true);
 
   // Radio State
   const [radioStations, setRadioStations] = useState<RadioStation[]>([]);
@@ -452,20 +231,18 @@ const Music: React.FC = () => {
     currentStation: null
   });
   const [radioLoading, setRadioLoading] = useState(false);
-  const [newStation, setNewStation] = useState({
-    name: '',
-    url: '',
-    genre: '',
-    country: '',
-    description: '',
-    logo: ''
-  });
+
+  // Channels
+  const [channels, setChannels] = useState<Channel[]>([]);
+  
+  // Guild ID State
+  const [guildId, setGuildId] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
       setLoading(true);
       
-      // Zuerst Guild-ID laden
+      // Guild-ID laden
       const guildsRes = await fetch(`${apiUrl}/api/guilds`);
       let currentGuildId = null;
       
@@ -476,16 +253,14 @@ const Music: React.FC = () => {
       }
 
       if (!currentGuildId) {
-        showError('Guild Fehler', 'ÔØî Keine Guild-ID gefunden. Bot m├Âglicherweise offline.');
+        showError('Guild Fehler', '❌ Keine Guild-ID gefunden. Bot möglicherweise offline.');
         return;
       }
 
-      // Load all data in parallel
-      const [settingsRes, channelsRes, rolesRes, queueRes] = await Promise.all([
+      // Load data
+      const [settingsRes, channelsRes] = await Promise.all([
         fetch(`${apiUrl}/api/music/settings`),
-        fetch(`${apiUrl}/api/channels`),
-        fetch(`${apiUrl}/api/roles`),
-        fetch(`${apiUrl}/api/music/queue/${currentGuildId}`)
+        fetch(`${apiUrl}/api/channels`)
       ]);
 
       if (settingsRes.ok) {
@@ -498,39 +273,11 @@ const Music: React.FC = () => {
         setChannels(data.channels || []);
       }
 
-      if (rolesRes.ok) {
-        const data = await rolesRes.json();
-        setRoles(data.roles || []);
-      }
-
-      if (queueRes.ok) {
-        const data = await queueRes.json();
-        setQueue(data.queue);
-      }
-
-      // Load request tracking data
-      await loadRequestTracking();
-
     } catch (err) {
       console.error('Fehler beim Laden der Daten:', err);
       showError('Lade Fehler', 'Fehler beim Laden der Daten');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadRequestTracking = async () => {
-    try {
-      setTrackingLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/request-tracking`);
-      if (response.ok) {
-        const data = await response.json();
-        setRequestTracking(data.trackingData || []);
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden der Request-Tracking Daten:', error);
-    } finally {
-      setTrackingLoading(false);
     }
   };
 
@@ -544,94 +291,21 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        showSuccess('Musik Einstellungen', '­ƒÄÁ Musik-Einstellungen erfolgreich gespeichert!');
+        showSuccess('YouTube Radio', '🎵 Einstellungen erfolgreich gespeichert!');
       } else {
-        showError('Speicher Fehler', 'ÔØî Fehler beim Speichern der Einstellungen');
+        showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
       }
     } catch (err) {
       console.error('Speicherfehler:', err);
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler beim Speichern');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler beim Speichern');
     } finally {
       setSaving(false);
     }
   };
 
-  const searchMusic = async () => {
-    if (!searchQuery.trim()) return;
-    
-    setSearching(true);
-    try {
-      const response = await fetch(`${apiUrl}/api/music/search?query=${encodeURIComponent(searchQuery)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.results);
-        
-        // Show success message
-        if (data.results.length > 0) {
-          showSuccess(
-            `🚀 Shoukaku Suche erfolgreich`, 
-            `${data.results.length} Songs über Lavalink v4 gefunden`
-          );
-        }
-      }
-    } catch (err) {
-      showError('Musik Suche', 'ÔØî Fehler bei der Musik-Suche');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const addToQueue = async (song: Song) => {
-    if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/queue/${guildId}/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: song.url, requestedBy: 'Dashboard' })
-      });
-
-      if (response.ok) {
-        showSuccess('Queue Update', `­ƒÄÁ "${song.title}" zur Queue hinzugef├╝gt!`);
-        loadData(); // Refresh queue
-      } else {
-        showError('Queue Fehler', 'ÔØî Fehler beim Hinzuf├╝gen zur Queue');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
-    }
-  };
-
-  const controlPlayback = async (action: string) => {
-    if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/control/${guildId}/${action}`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('Player Kontrolle', data.message || `­ƒÄÁ ${action} ausgef├╝hrt!`);
-        loadData(); // Refresh queue
-      } else {
-        const errorData = await response.json();
-        showError('Player Fehler', errorData.error || `ÔØî Fehler bei ${action}`);
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
-    }
-  };
-
   const joinVoiceChannel = async (channelId: string) => {
     if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -646,16 +320,16 @@ const Music: React.FC = () => {
         const data = await response.json();
         showSuccess('Voice Channel', data.message);
       } else {
-        showError('Voice Fehler', 'ÔØî Fehler beim Beitreten des Voice-Channels');
+        showError('Voice Fehler', '❌ Fehler beim Beitreten des Voice-Channels');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
   const leaveVoiceChannel = async () => {
     if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
       return;
     }
 
@@ -665,185 +339,11 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        showSuccess('Voice Channel', '­ƒæï Voice-Channel verlassen');
+        showSuccess('Voice Channel', '👋 Voice-Channel verlassen');
       }
     } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
-  };
-  
-  const updateVolume = async (newVolume: number) => {
-    if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/volume/${guildId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ volume: newVolume })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setQueue(prev => ({ ...prev, volume: newVolume }));
-        showSuccess('Lautst├ñrke', `­ƒöè ${data.message}`);
-      } else {
-        const errorData = await response.json();
-        showError('Lautst├ñrke Fehler', errorData.error || 'ÔØî Fehler beim ├ändern der Lautst├ñrke');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler beim ├ändern der Lautst├ñrke');
-    }
-  };
-
-  const updateProgress = async () => {
-    if (!guildId) return;
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/status`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status.progress) {
-          setProgress(data.status.progress);
-        }
-      }
-    } catch (err) {
-      // Silent fail - progress updates are not critical
-      console.log('Progress update failed:', err);
-    }
-  };
-
-  const createDJRole = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/create-dj-role/${guildId}`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('DJ Rolle', `­ƒÄ¡ ${data.message}`);
-        loadData(); // Reload roles
-      } else {
-        const errorData = await response.json();
-        showError('DJ Rolle Fehler', errorData.error || 'ÔØî Fehler beim Erstellen der DJ-Rolle');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
-    }
-  };
-
-  const testPopularSong = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/test-popular-song/${guildId}`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('Test Song', `­ƒº¬ ${data.message}`);
-        loadData(); // Reload queue
-      } else {
-        const errorData = await response.json();
-        showError('Test Song Fehler', errorData.error || 'ÔØî Test-Song fehlgeschlagen');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
-    }
-  };
-
-  const reconnectVoice = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const response = await fetch(`${apiUrl}/api/music/reconnect/${guildId}`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('Voice Reconnect', `­ƒöä ${data.message}`);
-        // Reload queue and progress after reconnect
-        setTimeout(() => {
-          updateProgress();
-          loadData();
-        }, 2000);
-      } else {
-        const errorData = await response.json();
-        showError('Voice Reconnect Fehler', errorData.error || 'ÔØî Voice-Reconnect fehlgeschlagen');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler beim Voice-Reconnect');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const postInteractivePanel = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'ÔØî Keine Guild-ID verf├╝gbar');
-      return;
-    }
-
-    if (!settings.songRequests.interactivePanel.channelId) {
-      showError('Channel Fehler', 'ÔØî Kein Channel f├╝r Interactive Panel ausgew├ñhlt');
-      return;
-    }
-
-    try {
-      // First save the current settings to ensure channelId is saved
-      console.log('­ƒöä Speichere Settings vor Panel-Post...');
-      const saveResponse = await fetch(`${apiUrl}/api/music/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
-      });
-
-      if (!saveResponse.ok) {
-        showError('Settings Fehler', 'ÔØî Fehler beim Speichern der Settings');
-        return;
-      }
-
-      console.log('Ô£à Settings gespeichert, poste Interactive Panel...');
-
-      // Then post the interactive panel
-      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('Interactive Panel', `­ƒÄÁ ${data.message}`);
-        loadData(); // Reload settings to get message ID
-      } else {
-        const errorData = await response.json();
-        showError('Panel Fehler', errorData.error || 'ÔØî Fehler beim Posten des Interactive Panels');
-      }
-    } catch (err) {
-      console.error('Interactive Panel Post Error:', err);
-      showError('Netzwerk Fehler', 'ÔØî Netzwerkfehler');
-    }
-  };
-
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Radio Functions
@@ -879,7 +379,7 @@ const Music: React.FC = () => {
 
   const playRadioStation = async (stationId: string) => {
     if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verf├╝gbar');
+      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
       return;
     }
 
@@ -896,9 +396,8 @@ const Music: React.FC = () => {
       const data = await response.json();
       
       if (response.ok) {
-        showSuccess('Radio', data.message);
+        showSuccess('YouTube Radio', data.message);
         await loadRadioStatus();
-        await loadData(); // Aktualisiere Queue
       } else {
         showError('Radio Fehler', data.error || 'Fehler beim Starten des Radio-Senders');
       }
@@ -912,7 +411,7 @@ const Music: React.FC = () => {
 
   const stopRadio = async () => {
     if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verf├╝gbar');
+      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
       return;
     }
 
@@ -927,7 +426,6 @@ const Music: React.FC = () => {
       if (response.ok) {
         showSuccess('Radio', data.message);
         await loadRadioStatus();
-        await loadData(); // Aktualisiere Queue
       } else {
         showError('Radio Fehler', data.error || 'Fehler beim Stoppen des Radios');
       }
@@ -939,66 +437,46 @@ const Music: React.FC = () => {
     }
   };
 
-  const addCustomRadioStation = async () => {
-    if (!newStation.name || !newStation.url) {
-      showError('Validation Fehler', 'Name und URL sind erforderlich');
+  const postInteractivePanel = async () => {
+    if (!guildId) {
+      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
+      return;
+    }
+
+    if (!settings.interactivePanel.channelId) {
+      showError('Channel Fehler', '❌ Kein Channel für Interactive Panel ausgewählt');
       return;
     }
 
     try {
-      setRadioLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/radio/stations`, {
+      // Save settings first
+      const saveResponse = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newStation),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
       });
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        showSuccess('Radio Station', data.message);
-        setNewStation({
-          name: '',
-          url: '',
-          genre: '',
-          country: '',
-          description: '',
-          logo: ''
-        });
-        await loadRadioStations();
-      } else {
-        showError('Radio Station Fehler', data.error || 'Fehler beim Hinzuf├╝gen des Radio-Senders');
+      if (!saveResponse.ok) {
+        showError('Settings Fehler', '❌ Fehler beim Speichern der Settings');
+        return;
       }
-    } catch (err) {
-      console.error('Fehler beim Hinzuf├╝gen des Radio-Senders:', err);
-      showError('Radio Station Fehler', 'Fehler beim Hinzuf├╝gen des Radio-Senders');
-    } finally {
-      setRadioLoading(false);
-    }
-  };
 
-  const removeRadioStation = async (stationId: string) => {
-    try {
-      setRadioLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/radio/stations/${stationId}`, {
-        method: 'DELETE',
+      // Post panel
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
+        method: 'POST'
       });
 
-      const data = await response.json();
-      
       if (response.ok) {
-        showSuccess('Radio Station', data.message);
-        await loadRadioStations();
+        const data = await response.json();
+        showSuccess('YouTube Radio Panel', `🎵 ${data.message}`);
+        loadData(); // Reload to get message ID
       } else {
-        showError('Radio Fehler', data.error || 'Fehler beim Entfernen des Radio-Senders');
+        const errorData = await response.json();
+        showError('Panel Fehler', errorData.error || '❌ Fehler beim Posten des Panels');
       }
     } catch (err) {
-      console.error('Fehler beim Entfernen des Radio-Senders:', err);
-      showError('Radio Fehler', 'Fehler beim Entfernen des Radio-Senders');
-    } finally {
-      setRadioLoading(false);
+      console.error('Panel Post Error:', err);
+      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
     }
   };
 
@@ -1010,90 +488,18 @@ const Music: React.FC = () => {
   useEffect(() => {
     if (guildId) {
       loadRadioStatus();
+      
+      // Auto-update radio status
+      const interval = setInterval(loadRadioStatus, 10000);
+      return () => clearInterval(interval);
     }
   }, [guildId]);
-
-  // Auto-Update System - L├ñdt nur Queue-Daten neu (NICHT die ganze Seite)
-  useEffect(() => {
-    if (!autoUpdateEnabled) return;
-    
-    const autoUpdateInterval = setInterval(async () => {
-      if (!guildId) return;
-      
-      setAutoUpdateActive(true);
-      console.log('­ƒöä Auto-Update: Lade nur Queue-Daten neu...');
-      
-      try {
-        // Nur Queue-Daten laden, NICHT die ganze loadData() Funktion
-        const queueRes = await fetch(`${apiUrl}/api/music/queue/${guildId}`);
-        if (queueRes.ok) {
-          const data = await queueRes.json();
-          setQueue(data.queue);
-        }
-        setLastUpdateTime(new Date());
-      } catch (error) {
-        console.error('Auto-Update Error:', error);
-      }
-      
-      setTimeout(() => setAutoUpdateActive(false), 500);
-    }, 15000); // Noch weniger h├ñufig - alle 15 Sekunden
-
-    return () => clearInterval(autoUpdateInterval);
-  }, [guildId, autoUpdateEnabled]);
-
-  // Progress Updates - H├ñufiger f├╝r fl├╝ssige Progress Bar
-  useEffect(() => {
-    const progressInterval = setInterval(() => {
-      updateProgress();
-    }, 1000);
-
-    return () => clearInterval(progressInterval);
-  }, [guildId]);
-
-  // Song Change Detection - Erkennt wenn ein neuer Song startet (sanft)
-  useEffect(() => {
-    if (!autoUpdateEnabled) return;
-    
-    const songChangeInterval = setInterval(async () => {
-      if (!guildId) return;
-      
-      try {
-        const response = await fetch(`${apiUrl}/api/music/queue/${guildId}`);
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Pr├╝fe ob sich der aktuelle Song ge├ñndert hat
-          if (data.queue.currentSong && queue.currentSong) {
-            if (data.queue.currentSong.url !== queue.currentSong.url) {
-              console.log('­ƒÄÁ Song-Wechsel erkannt! Aktualisiere nur Queue...');
-              setAutoUpdateActive(true);
-              // Nur Queue aktualisieren, NICHT die ganze Seite
-              setQueue(data.queue);
-              setLastUpdateTime(new Date());
-              setTimeout(() => setAutoUpdateActive(false), 500);
-            }
-          } else if (data.queue.currentSong !== queue.currentSong) {
-            // Song gestartet oder gestoppt
-            console.log('­ƒÄÁ Player-Status ge├ñndert! Aktualisiere nur Queue...');
-            setAutoUpdateActive(true);
-            setQueue(data.queue);
-            setLastUpdateTime(new Date());
-            setTimeout(() => setAutoUpdateActive(false), 500);
-          }
-        }
-      } catch (error) {
-        console.error('Song Change Detection Error:', error);
-      }
-    }, 8000); // Noch weniger h├ñufig - alle 8 Sekunden
-
-    return () => clearInterval(songChangeInterval);
-  }, [guildId, queue.currentSong, autoUpdateEnabled]);
 
   if (loading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Lade Musik-System...</div>
+          <div className="text-lg">Lade YouTube Radio System...</div>
         </div>
       </div>
     );
@@ -1101,22 +507,19 @@ const Music: React.FC = () => {
 
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
-      {/* CSS Styles f├╝r Progress Bar Animationen */}
-      <style dangerouslySetInnerHTML={{ __html: progressBarStyles }} />
-      
       {/* Matrix Background Effects */}
       <MatrixBlocks density={20} />
       
       {/* Page Header */}
       <div className="text-center py-8">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <MusicIcon className="w-12 h-12 text-purple-accent animate-pulse" />
+          <Radio className="w-12 h-12 text-red-400 animate-pulse" />
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
-            Musik Bot Management
+            YouTube Radio Bot
           </h1>
         </div>
         <div className="text-dark-text text-lg max-w-2xl mx-auto">
-          Verwalte deinen Discord Musik-Bot wie ein Boss! 
+          Einfaches YouTube Radio System für Discord! 
           <span className="ml-2 inline-block relative">
             <svg 
               className="w-6 h-6 animate-pulse hover:animate-bounce text-purple-400 hover:text-purple-300 transition-all duration-300 hover:scale-110 drop-shadow-lg" 
@@ -1154,52 +557,31 @@ const Music: React.FC = () => {
       {/* System Status Badge */}
       <div className="flex justify-center gap-4 items-center">
         <Badge variant={settings.enabled ? "default" : "outline"} className="text-lg py-2 px-4">
-          {settings.enabled ? 'Ô£à Musik-Bot Aktiviert' : 'ÔØî Musik-Bot Deaktiviert'}
+          {settings.enabled ? '✅ YouTube Radio Aktiviert' : '❌ YouTube Radio Deaktiviert'}
         </Badge>
         
-        {/* Auto-Update Indikator */}
-        <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg px-3 py-2">
-          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${autoUpdateActive ? 'bg-green-400 animate-pulse' : autoUpdateEnabled ? 'bg-blue-400' : 'bg-gray-500'}`}></div>
+        {/* Radio Status Indikator */}
+        <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-red-primary/30 rounded-lg px-3 py-2">
+          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${radioStatus.isPlaying ? 'bg-red-400 animate-pulse' : 'bg-gray-500'}`}></div>
           <span className="text-sm text-dark-muted">
-            {autoUpdateActive ? 'Aktualisiere...' : autoUpdateEnabled ? `Letztes Update: ${lastUpdateTime.toLocaleTimeString()}` : 'Auto-Update deaktiviert'}
+            {radioStatus.isPlaying ? `Live: ${radioStatus.currentStation?.name}` : 'Kein Radio aktiv'}
           </span>
-          <Switch
-            checked={autoUpdateEnabled}
-            onCheckedChange={setAutoUpdateEnabled}
-            className="scale-75"
-          />
-          <div className="text-xs text-purple-accent">
-            ­ƒöä Auto-Sync
+          <div className="text-xs text-red-accent">
+            📻 YouTube Radio
           </div>
         </div>
       </div>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="player" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30">
-          <TabsTrigger 
-            value="player" 
-            className={`flex items-center space-x-2 ${activeTab === 'player' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'}`}
-            onClick={() => setActiveTab('player')}
-          >
-            <Play className="h-4 w-4" />
-            <span>Player</span>
-          </TabsTrigger>
+      <Tabs defaultValue="radio" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30">
           <TabsTrigger 
             value="radio" 
-            className={`flex items-center space-x-2 ${activeTab === 'radio' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'}`}
+            className={`flex items-center space-x-2 ${activeTab === 'radio' ? 'bg-red-500 text-white' : 'hover:bg-red-500/20 text-dark-text'}`}
             onClick={() => setActiveTab('radio')}
           >
             <Radio className="h-4 w-4" />
-            <span>Radio</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="requests" 
-            className={`flex items-center space-x-2 ${activeTab === 'requests' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'}`}
-            onClick={() => setActiveTab('requests')}
-          >
-            <Plus className="h-4 w-4" />
-            <span>Song-Requests</span>
+            <span>📻 Radio</span>
           </TabsTrigger>
           <TabsTrigger 
             value="settings" 
@@ -1207,483 +589,11 @@ const Music: React.FC = () => {
             onClick={() => setActiveTab('settings')}
           >
             <Settings className="h-4 w-4" />
-            <span>Einstellungen</span>
+            <span>⚙️ Einstellungen</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Player Tab */}
-        <TabsContent value="player" className="space-y-6" activeTab={activeTab}>
-          {/* System Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Radio className="w-5 h-5 text-purple-accent" />
-                System Status
-                <Tooltip 
-                  title="­ƒÄÁ System Status erkl├ñrt:"
-                  content={
-                    <div>
-                      <div>Zeigt den aktuellen Status des Musik-Bots:</div>
-                      <div>ÔÇó Bot-Status (Online/Offline)</div>
-                      <div>ÔÇó Voice-Channel Verbindung</div>
-                      <div>ÔÇó Aktuelle Wiedergabe-Informationen</div>
-                    </div>
-                  }
-                />
-              </CardTitle>
-              <CardDescription>
-                Aktueller Status des Musik-Bot Systems
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Badge variant={settings.enabled ? 'default' : 'outline'}>
-                    {settings.enabled ? 'Aktiv' : 'Deaktiviert'}
-                  </Badge>
-                </div>
-                <Switch
-                  checked={settings.enabled}
-                  onCheckedChange={(checked) => {
-                    setSettings(prev => ({ ...prev, enabled: checked }));
-                    saveSettings();
-                  }}
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
-                  <div className="text-dark-muted text-sm">Aktuelle Queue</div>
-                  <div className="text-neon-purple font-semibold text-lg">{queue.songs.length} Songs</div>
-                </div>
-                <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
-                  <div className="text-dark-muted text-sm">Lautst├ñrke</div>
-                  <div className="text-neon-purple font-semibold text-lg">{queue.volume}%</div>
-                </div>
-                <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
-                  <div className="text-dark-muted text-sm">Wiederholung</div>
-                  <div className="text-neon-purple font-semibold text-lg capitalize">{queue.repeat}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Player Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Play className="w-5 h-5 text-purple-accent" />
-                Player Kontrolle
-                <Tooltip 
-                  title="­ƒÄ« Player Kontrolle erkl├ñrt:"
-                  content={
-                    <div>
-                      <div>Steuere die Musik-Wiedergabe:</div>
-                      <div>ÔÇó Play/Pause/Skip Buttons</div>
-                      <div>ÔÇó Lautst├ñrke-Regler</div>
-                      <div>ÔÇó Queue-Management</div>
-                      <div>ÔÇó Voice-Reconnect f├╝r DNS/Gateway-Probleme</div>
-                    </div>
-                  }
-                />
-              </CardTitle>
-              <CardDescription>
-                Direkte Kontrolle ├╝ber die Musik-Wiedergabe
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-          
-          {queue.currentSong && (
-            <div className="bg-purple-500/10 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-4 mb-3">
-                <img
-                  src={queue.currentSong.thumbnail}
-                  alt={queue.currentSong.title}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <div className="flex-1">
-                  <h4 className="text-white font-semibold">{queue.currentSong.title}</h4>
-                  <p className="text-purple-200 text-sm">{queue.currentSong.author}</p>
-                  <div className="flex items-center gap-2 text-purple-300 text-xs">
-                    <span>{progress.currentTimeFormatted}</span>
-                    <span>/</span>
-                    <span>{progress.durationFormatted}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full bg-gray-700/50 rounded-full h-3 mb-3 relative overflow-hidden shadow-inner">
-                {/* Background glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-full"></div>
-                
-                {/* Main progress bar */}
-                <div 
-                  className="bg-gradient-to-r from-purple-primary via-purple-accent to-purple-secondary h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden shadow-lg"
-                  style={{ width: `${progress.percentage}%` }}
-                >
-                  {/* Animated shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
-                  
-                  {/* Moving highlight with custom animation */}
-                  <div 
-                    className="absolute top-0 left-0 h-full w-8 bg-gradient-to-r from-transparent via-white/40 to-transparent transform -skew-x-12"
-                    style={{
-                      animation: 'progressSlide 3s infinite linear',
-                      animationDelay: '0.5s'
-                    }}
-                  ></div>
-                </div>
-                
-                {/* Progress indicator dot */}
-                <div 
-                  className="absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg border-2 border-purple-primary transition-all duration-1000 ease-out animate-pulse"
-                  style={{ 
-                    left: `calc(${progress.percentage}% - 8px)`,
-                    boxShadow: '0 0 15px rgba(147, 51, 234, 0.8), 0 0 30px rgba(147, 51, 234, 0.4)'
-                  }}
-                >
-                  <div className="absolute inset-1 bg-gradient-to-r from-purple-primary to-purple-accent rounded-full"></div>
-                </div>
-                
-                {/* Sparkle effects */}
-                <div 
-                  className="absolute top-0 h-full w-1 bg-white/60 rounded-full animate-ping"
-                  style={{ 
-                    left: `${Math.min(progress.percentage + 2, 100)}%`,
-                    animationDuration: '2s',
-                    animationDelay: '1s'
-                  }}
-                ></div>
-              </div>
-              
-              {/* Volume Control */}
-              <div className="flex items-center gap-3">
-                <Volume2 className="w-4 h-4 text-purple-accent" />
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={queue.volume}
-                  onChange={(e) => updateVolume(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, #9333ea 0%, #9333ea ${queue.volume}%, #374151 ${queue.volume}%, #374151 100%)`
-                  }}
-                />
-                <span className="text-purple-200 text-sm min-w-[3ch]">{queue.volume}%</span>
-              </div>
-            </div>
-          )}
-          
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-                <div className="relative group">
-                  <Button
-                    onClick={() => controlPlayback('play')}
-                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white p-3 transition-all duration-200 hover:scale-105"
-                  >
-                    <Play className="w-5 h-5" />
-                  </Button>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ÔûÂ´©Å Wiedergabe starten
-                  </div>
-                </div>
-                
-                <div className="relative group">
-                  <Button
-                    onClick={() => controlPlayback('pause')}
-                    className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white p-3 transition-all duration-200 hover:scale-105"
-                  >
-                    <Pause className="w-5 h-5" />
-                  </Button>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ÔÅ©´©Å Wiedergabe pausieren
-                  </div>
-                </div>
-                
-                <div className="relative group">
-                  <Button
-                    onClick={() => controlPlayback('skip')}
-                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-3 transition-all duration-200 hover:scale-105"
-                  >
-                    <SkipForward className="w-5 h-5" />
-                  </Button>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ÔÅ¡´©Å N├ñchsten Song ├╝berspringen
-                  </div>
-                </div>
-                
-                <div className="relative group">
-                  <Button
-                    onClick={() => controlPlayback('shuffle')}
-                    className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white p-3 transition-all duration-200 hover:scale-105"
-                  >
-                    <Shuffle className="w-5 h-5" />
-                  </Button>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ­ƒöÇ Queue mischen
-                  </div>
-                </div>
-                
-                <div className="relative group">
-                  <Button
-                    onClick={() => controlPlayback('clear')}
-                    variant="destructive"
-                    className="p-3 transition-all duration-200 hover:scale-105"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </Button>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ­ƒùæ´©Å Queue leeren
-                  </div>
-                </div>
-                
-                <div className="relative group">
-                  <Button
-                    onClick={testPopularSong}
-                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white p-3 transition-all duration-200 hover:scale-105"
-                  >
-                    ­ƒº¬
-                  </Button>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ­ƒº¬ Test-Song abspielen
-                  </div>
-                </div>
-                
-                <div className="relative group">
-                  <Button
-                    onClick={reconnectVoice}
-                    disabled={saving}
-                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white p-3 transition-all duration-200 hover:scale-105 disabled:opacity-50"
-                  >
-                    {saving ? '­ƒöä' : '­ƒöº'}
-                  </Button>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
-                    ­ƒöº Voice-Gateway reparieren
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Multi-Source Music Search */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5 text-purple-accent" />
-                🚀 Shoukaku + Kazagumo Suche
-                <Tooltip 
-                  title="🚀 Shoukaku + Kazagumo System erklärt:"
-                  content={
-                    <div>
-                      <div>Modernes Lavalink v4 Musik-System:</div>
-                      <div>🚀 Shoukaku (Native Lavalink v4 Client)</div>
-                      <div>🎵 Kazagumo (Queue Manager)</div>
-                      <div>📺 YouTube über /v4/websocket</div>
-                      <div>⚡ Keine Bot-Detection mehr!</div>
-                    </div>
-                  }
-                />
-              </CardTitle>
-              <CardDescription>
-                Native Lavalink v4 mit /v4/websocket - Keine Bot-Detection mehr!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 mb-4">
-                <Input
-                  type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && searchMusic()}
-              placeholder="Nach Musik suchen..."
-              className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-purple-primary focus:outline-none"
-            />
-            <button
-                  onClick={searchMusic}
-              disabled={searching}
-              className="bg-gradient-to-r from-purple-primary to-purple-secondary text-white px-6 py-2 rounded-lg font-bold hover:scale-105 transition-all duration-200 disabled:opacity-50"
-            >
-              {searching ? 'Suche...' : 'Suchen'}
-            </button>
-          </div>
-          
-          {/* System Information */}
-          {searchResults.length === 0 && !searching && (
-            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-4 border border-purple-primary/30 mb-4">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">🚀</span>
-                <h4 className="text-white font-semibold">Shoukaku + Kazagumo System - Lavalink v4!</h4>
-              </div>
-                             <div className="text-sm text-purple-200 space-y-1">
-                 <p>✅ <strong>Shoukaku</strong> - Native Lavalink v4 Client mit /v4/websocket</p>
-                 <p>✅ <strong>Kazagumo</strong> - Moderne Queue-Verwaltung und Audio-Engine</p>
-                 <p>✅ <strong>YouTube Integration</strong> - Direkt über Lavalink-Server</p>
-                 <p>✅ <strong>Bot-Detection-frei</strong> - Lavalink-Server handhabt alle Requests</p>
-               </div>
-              <div className="mt-3 text-xs text-green-300">
-                🚀 <strong>Modernste Discord-Musik-Technologie mit nativer Lavalink v4 Unterstützung!</strong>
-              </div>
-            </div>
-          )}
-          
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {searchResults.map((song, index) => {
-              // Source information - Shoukaku liefert YouTube via Lavalink
-              const sourceInfo = {
-                'youtube': { emoji: '🚀', name: 'Shoukaku', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' },
-                'spotify': { emoji: '🎵', name: 'Spotify', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
-                'radio': { emoji: '📻', name: 'Radio', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' }
-              };
-              
-              // Standardmäßig Shoukaku für alle Suchergebnisse
-              const source = sourceInfo[song.source] || sourceInfo['youtube'];
-              
-              return (
-                <div key={index} className={`${source.bg} rounded-lg p-4 flex items-center gap-4 border ${source.border} transition-all duration-300 hover:scale-[1.02]`}>
-                <img
-                    src={song.thumbnail || song.image}
-                  alt={song.title}
-                  className="w-12 h-12 rounded-lg object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-                    }}
-                />
-                <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                  <h4 className="text-white font-semibold text-sm">{song.title}</h4>
-                      <span className={`${source.color} text-xs font-medium px-2 py-1 rounded-full ${source.bg} border ${source.border}`}>
-                        {source.emoji} {source.name}
-                      </span>
-                    </div>
-                    <p className="text-purple-200 text-xs">
-                      {song.author || song.artist} • {song.duration > 0 ? formatDuration(song.duration) : 'Live Stream'}
-                    </p>
-                    {song.popularity && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <span className="text-yellow-400 text-xs">⭐</span>
-                        <span className="text-yellow-300 text-xs">{song.popularity}/100</span>
-                      </div>
-                    )}
-                </div>
-                <button
-                  onClick={() => addToQueue(song)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-lg transition-all duration-200 hover:scale-105 flex items-center gap-1"
-                    title={`Zu Queue hinzufügen (${source.name})`}
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-              );
-            })}
-          </div>
-            </CardContent>
-          </Card>
-
-          {/* Voice Channel Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mic className="w-5 h-5 text-purple-accent" />
-                Voice Channel Kontrolle
-              </CardTitle>
-              <CardDescription>
-                Verbinde dich mit Voice-Channels oder verlasse sie
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {channels.filter(c => c.type === 'voice').map(channel => (
-              <button
-                key={channel.id}
-                onClick={() => joinVoiceChannel(channel.id)}
-                className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-primary/20 rounded-lg p-4 text-left transition-all duration-200"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-white font-semibold">{channel.name}</span>
-                  <Users className="w-4 h-4 text-purple-accent" />
-                </div>
-              </button>
-            ))}
-            
-                <Button
-                  onClick={leaveVoiceChannel}
-                  variant="destructive"
-                  className="p-4 text-left w-full justify-between"
-                >
-                  <span>Voice Channel verlassen</span>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Current Queue */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <List className="w-5 h-5 text-purple-accent" />
-                Aktuelle Queue ({queue.songs.length} Songs)
-              </CardTitle>
-              <CardDescription>
-                ├£bersicht ├╝ber alle Songs in der Warteschlange
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              
-              {queue.songs.length === 0 ? (
-                <div className="text-center py-8">
-                  <MusicIcon className="w-16 h-16 text-purple-300 mx-auto mb-4 opacity-50" />
-                  <p className="text-purple-300">Keine Songs in der Queue</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {queue.songs.map((song, index) => {
-                                         // Source styling for queue items - Shoukaku System
-                     const sourceInfo = {
-                       'youtube': { emoji: '🚀', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-                       'spotify': { emoji: '🎵', color: 'text-green-400', bg: 'bg-green-500/10' },
-                       'radio': { emoji: '📻', color: 'text-blue-400', bg: 'bg-blue-500/10' }
-                     };
-                    
-                    // Standardmäßig Shoukaku für alle Queue-Items
-                    const source = sourceInfo[song.source] || sourceInfo['youtube'];
-                    
-                    return (
-                      <div key={index} className={`${source.bg} rounded-lg p-4 flex items-center gap-4 transition-all duration-300 hover:scale-[1.01]`}>
-                      <span className="text-purple-300 font-mono text-sm w-8">{index + 1}</span>
-                      <img
-                          src={song.thumbnail || song.image}
-                        alt={song.title}
-                        className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-                          }}
-                      />
-                      <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                        <h4 className="text-white font-semibold">{song.title}</h4>
-                            {song.source && (
-                              <span className={`${source.color} text-xs`}>
-                                {source.emoji}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-purple-200 text-sm">
-                            {song.author || song.artist} • {song.duration > 0 ? formatDuration(song.duration) : 'Live Stream'}
-                          </p>
-                        {song.requestedBy && (
-                          <p className="text-purple-300 text-xs">Angefragt von: {song.requestedBy}</p>
-                        )}
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Radio Tab */}
         <TabsContent value="radio" className="space-y-6" activeTab={activeTab}>
