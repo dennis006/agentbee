@@ -14,7 +14,13 @@ const yts = require('yt-search');
 // 🍪 Direkte Cookie-Konfiguration beim Start (vor allen anderen Operationen)
 playdl.setToken({
     youtube: {
-        cookie: `SID=${process.env.YOUTUBE_SID}; SSID=${process.env.YOUTUBE_SSID}; HSID=${process.env.YOUTUBE_HSID}; SAPISID=${process.env.YOUTUBE_SAPISID}; APISID=${process.env.YOUTUBE_APISID}; LOGIN_INFO=${process.env.YOUTUBE_LOGIN_INFO};`
+        cookie:
+            `SID=${process.env.YOUTUBE_SID}; ` +
+            `HSID=${process.env.YOUTUBE_HSID}; ` +
+            `SSID=${process.env.YOUTUBE_SSID}; ` +
+            `APISID=${process.env.YOUTUBE_APISID}; ` +
+            `SAPISID=${process.env.YOUTUBE_SAPISID}; ` +
+            `LOGIN_INFO=${process.env.YOUTUBE_LOGIN_INFO};`
     }
 });
 
@@ -2332,7 +2338,8 @@ async function playMusicWithRadio(guildId, song) {
             
             // Prüfe ob es ein YouTube-Stream ist (für Lofi/ChillHop)
             if (song.url.includes('youtube.com') || song.url.includes('youtu.be')) {
-                const streamInfo = await playdl.stream(song.url, { quality: 2 });
+                const info = await playdl.video_info(song.url);
+                const streamInfo = await playdl.stream_from_info(info, { quality: 2 });
                 resource = createAudioResource(streamInfo.stream, {
                     inputType: streamInfo.type,
                     inlineVolume: true
