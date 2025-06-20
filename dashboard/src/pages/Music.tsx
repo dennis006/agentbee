@@ -340,7 +340,7 @@ const YouTubeSearch: React.FC<{
       {/* Search Results */}
       {searchResults.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {searchResults.map((song) => (
+          {(searchResults || []).map((song) => (
             <div
               key={song.id}
               className="group bg-dark-surface/50 rounded-xl p-4 border border-gray-600/30 hover:border-blue-400/50 transition-all duration-300 hover:scale-[1.02]"
@@ -403,6 +403,7 @@ const PlaylistEditor: React.FC<{
   }
 
   const moveSong = (fromIndex: number, toIndex: number) => {
+    if (!playlist?.songs) return;
     const newSongs = [...playlist.songs];
     const song = newSongs.splice(fromIndex, 1)[0];
     newSongs.splice(toIndex, 0, song);
@@ -410,17 +411,20 @@ const PlaylistEditor: React.FC<{
   };
 
   const removeSong = (songId: string) => {
+    if (!playlist?.songs) return;
     const newSongs = playlist.songs.filter(song => song.id !== songId);
     onUpdate({ songs: newSongs });
   };
 
   const addSong = (song: YouTubeSong) => {
-    const newSongs = [...playlist.songs, song];
+    if (!playlist) return;
+    const newSongs = [...(playlist.songs || []), song];
     onUpdate({ songs: newSongs });
   };
 
   const getTotalDuration = () => {
-    const totalSeconds = playlist.songs.reduce((total, song) => total + song.duration, 0);
+    if (!playlist?.songs) return '0m';
+    const totalSeconds = playlist.songs.reduce((total, song) => total + (song.duration || 0), 0);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
@@ -450,9 +454,9 @@ const PlaylistEditor: React.FC<{
               rows={2}
             />
             <div className="flex items-center gap-4 mt-3 text-sm text-gray-400">
-              <span>🎵 {playlist.songs.length} Songs</span>
+              <span>🎵 {playlist.songs?.length || 0} Songs</span>
               <span>⏱️ {getTotalDuration()}</span>
-              <span>▶️ {playlist.playCount} Plays</span>
+              <span>▶️ {playlist.playCount || 0} Plays</span>
             </div>
           </div>
         </div>
@@ -540,7 +544,7 @@ const PlaylistEditor: React.FC<{
           </div>
         ) : (
           <div className="space-y-3">
-            {playlist.songs.map((song, index) => (
+            {(playlist.songs || []).map((song, index) => (
               <DraggableSong
                 key={song.id}
                 song={song}
@@ -811,7 +815,7 @@ const PlaylistsOverview: React.FC<{
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {playlists.map((playlist, index) => (
+          {(playlists || []).map((playlist, index) => (
             <div
               key={playlist.id}
               className={`group bg-gradient-to-br from-dark-surface/90 to-dark-bg/90 backdrop-blur-xl border rounded-xl p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl fade-in-delay-${index % 3 + 1} ${
@@ -1263,7 +1267,7 @@ export default function Music() {
       
       // Update in playlists array
       setPlaylists(prev => 
-        prev.map(p => p.id === updatedPlaylist.id ? updatedPlaylist : p)
+        (prev || []).map(p => p.id === updatedPlaylist.id ? updatedPlaylist : p)
       );
     }
   };
