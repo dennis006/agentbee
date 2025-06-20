@@ -13,8 +13,10 @@ const TicketSystemV2 = require('./ticket-system-v2');
 const setupTwitchAPI = require('./twitch-api');
 // AFK System entfernt - verwende Discord Native AFK
 
-const { registerMusicAPI, loadMusicSettings, checkAutoJoinChannels, handleSongRequest, handleSongRequestButton, handleSongRequestModal, updateInteractivePanel } = require('./music-api');
-let musicSettings = require('./music-api').musicSettings;
+// 🎵 LAVALINK MUSIK-SYSTEM
+const { initializeLavalink, registerLavalinkAPI, handleVoiceStateUpdate, loadMusicSettings, musicSettings } = require('./music-api');
+// Manager wird nach Client-Initialisierung gesetzt
+let lavalinkManager = null;
 const { OpenAI } = require('openai');
 const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
@@ -2937,25 +2939,30 @@ registerGiveawayAPI(app, client);
 registerTicketAPI(app, client);
 console.log('🎉 Giveaway-API registriert');
 
-// Musik-System initialisieren und API registrieren
+// 🎵 LAVALINK MUSIK-SYSTEM INITIALISIEREN
 try {
-    console.log('🎵 Initialisiere Musik-System...');
+    console.log('🎵 Initialisiere Lavalink Musik-System...');
+    
+    // Settings laden
     loadMusicSettings();
-    registerMusicAPI(app);
-    global.client = client; // Für Musik-API verfügbar machen
     
-    // Prüfe Auto-Join Voice Channels alle 30 Sekunden
-    setInterval(() => {
-        if (musicSettings.enabled && musicSettings.autoJoinVoice) {
-            client.guilds.cache.forEach(guild => {
-                checkAutoJoinChannels(guild);
-            });
-        }
-    }, 30000);
+    // Global Client verfügbar machen
+    global.client = client;
     
-    console.log('✅ Musik-System und API aktiviert');
+    // Lavalink Manager initialisieren
+    lavalinkManager = initializeLavalink(client);
+    
+    // Voice State Updates für Lavalink handhaben
+    handleVoiceStateUpdate(client);
+    
+    // API-Routen registrieren
+    registerLavalinkAPI(app);
+    
+    console.log('✅ Lavalink Musik-System erfolgreich initialisiert!');
+    console.log(`🔗 Verbindung zu Lavalink: ${musicSettings.lavalink.host}:${musicSettings.lavalink.port}`);
+    
 } catch (error) {
-    console.error('❌ Fehler beim Initialisieren des Musik-Systems:', error);
+    console.error('❌ Fehler beim Initialisieren des Lavalink Musik-Systems:', error);
 }
     console.log('✅ XP-System initialisiert');
     
