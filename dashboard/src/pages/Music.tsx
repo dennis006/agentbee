@@ -1,161 +1,37 @@
 import { useState, useEffect } from 'react';
-import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2 } from 'lucide-react';
+import { Music, Play, Pause, Upload, Trash2, Settings, Save, Radio } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
-// Matrix Blocks Komponente
-const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
-  const blocks = Array.from({ length: density }, (_, i) => (
-    <div
-      key={i}
-      className="matrix-block"
-      style={{
-        left: `${Math.random() * 100}%`,
-        animationDelay: `${Math.random() * 5}s`,
-        animationDuration: `${2 + Math.random() * 3}s`
-      }}
-    />
-  ));
-  return <div className="matrix-blocks">{blocks}</div>;
-};
+// Erweiterte Interfaces für kombiniertes System
+interface MusicFile {
+  id: string;
+  name: string;
+  filename: string;
+  path: string;
+  size: number;
+  duration: number | null;
+}
 
-// Badge component
-const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?: string }> = ({ children, className = '', variant = 'default' }) => (
-  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variant === 'outline' ? 'border border-purple-primary text-purple-primary bg-transparent' : 'bg-purple-primary text-white'} ${className}`}>
-    {children}
-  </span>
-);
+interface RadioStation {
+  id: string;
+  name: string;
+  url: string;
+  genre: string;
+  country: string;
+  description: string;
+  logo: string;
+}
 
-// Tabs components
-const Tabs: React.FC<{ children: React.ReactNode; defaultValue?: string; className?: string }> = ({ children, defaultValue, className = '' }) => (
-  <div className={className} data-default-value={defaultValue}>
-    {children}
-  </div>
-);
-
-const TabsList: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`inline-flex h-10 items-center justify-center rounded-md bg-dark-surface/50 p-1 ${className}`}>
-    {children}
-  </div>
-);
-
-const TabsTrigger: React.FC<{ children: React.ReactNode; value: string; className?: string; onClick?: () => void }> = ({ children, value, className = '', onClick }) => (
-  <button
-    className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-purple-primary/20 text-dark-text ${className}`}
-    data-value={value}
-    onClick={onClick}
-  >
-    {children}
-  </button>
-);
-
-const TabsContent: React.FC<{ children: React.ReactNode; value: string; className?: string; activeTab?: string }> = ({ children, value, className = '', activeTab }) => (
-  activeTab === value ? (
-    <div className={`mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${className}`} data-value={value}>
-      {children}
-    </div>
-  ) : null
-);
-
-// Switch component
-const Switch: React.FC<{ checked: boolean; onCheckedChange: (checked: boolean) => void; className?: string; id?: string }> = ({ checked, onCheckedChange, className = '', id }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    id={id}
-    onClick={() => onCheckedChange(!checked)}
-    className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-purple-primary' : 'bg-dark-bg'} ${className}`}
-  >
-    <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
-  </button>
-);
-
-// Card components mit Animationen
-const Card: React.FC<{ children: React.ReactNode; className?: string; animate?: boolean }> = ({ children, className = '', animate = true }) => (
-  <div className={`bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 shadow-purple-glow rounded-lg ${animate ? 'animate-fade-in-up hover:scale-[1.01] transition-all duration-300' : ''} ${className}`}>
-    {children}
-  </div>
-);
-
-const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`p-6 pb-4 ${className}`}>
-    {children}
-  </div>
-);
-
-const CardTitle: React.FC<{ children: React.ReactNode; className?: string; animated?: boolean }> = ({ children, className = '', animated = true }) => (
-  <h3 className={`text-xl font-bold text-dark-text ${animated ? 'animate-pulse-slow' : ''} ${className}`}>
-    {children}
-  </h3>
-);
-
-const CardDescription: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <p className={`text-dark-muted text-sm mt-1 ${className}`}>
-    {children}
-  </p>
-);
-
-const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`p-6 pt-0 ${className}`}>
-    {children}
-  </div>
-);
-
-// Button component mit besseren Animationen
-const Button: React.FC<{ 
-  children: React.ReactNode; 
-  onClick?: () => void; 
-  className?: string; 
-  disabled?: boolean;
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-  animated?: boolean;
-}> = ({ children, onClick, className = '', disabled = false, variant = 'default', animated = true }) => {
-  const baseClasses = "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
-  
-  const variantClasses = {
-    default: "bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white shadow-neon hover:scale-105",
-    destructive: "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-neon hover:scale-105",
-    outline: "border border-purple-primary/30 bg-transparent hover:bg-purple-primary/20 text-dark-text",
-    secondary: "bg-dark-surface/50 hover:bg-dark-surface text-dark-text",
-    ghost: "hover:bg-purple-primary/20 text-dark-text",
-    link: "text-purple-primary underline-offset-4 hover:underline"
-  };
-
-  const animatedClasses = animated ? 'transform transition-all duration-300 hover:scale-105 hover:rotate-1 active:scale-95' : '';
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`${baseClasses} ${variantClasses[variant]} ${animatedClasses} px-4 py-2 ${className}`}
-    >
-      {children}
-    </button>
-  );
-};
-
-// Input component
-const Input: React.FC<{ 
-  type?: string; 
-  placeholder?: string; 
-  value?: string | number; 
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  className?: string;
-  id?: string;
-}> = ({ type = 'text', placeholder, value, onChange, className = '', ...props }) => (
-  <input
-    type={type}
-    placeholder={placeholder}
-    value={value}
-    onChange={onChange}
-    className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-all duration-300 focus:scale-105 hover:shadow-neon ${className}`}
-    {...props}
-  />
-);
-
-// Interfaces - Vereinfacht für YouTube Radio-System
 interface MusicSettings {
   enabled: boolean;
+  localMusic: {
+    enabled: boolean;
+    musicFolder: string;
+    allowedFormats: string[];
+    defaultVolume: number;
+    shuffle: boolean;
+    loop: boolean;
+  };
   radio: {
     enabled: boolean;
     stations: RadioStation[];
@@ -176,14 +52,12 @@ interface MusicSettings {
   };
 }
 
-interface RadioStation {
+interface CurrentSong {
   id: string;
   name: string;
-  url: string;
-  genre: string;
-  country: string;
-  description: string;
-  logo: string;
+  filename?: string;
+  startTime: number;
+  isLocal: boolean;
 }
 
 interface RadioStatus {
@@ -197,1327 +71,684 @@ interface Channel {
   type: string;
 }
 
-const Music: React.FC = () => {
-  // API Base URL
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-  
-  const { toasts, showSuccess, showError, removeToast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('radio');
-  
-  // Settings State
+const MusicCombined: React.FC = () => {
   const [settings, setSettings] = useState<MusicSettings>({
     enabled: true,
+    localMusic: {
+      enabled: true,
+      musicFolder: './music',
+      allowedFormats: ['.mp3', '.wav', '.ogg'],
+      defaultVolume: 50,
+      shuffle: false,
+      loop: false
+    },
     radio: {
       enabled: true,
       stations: [],
-      defaultStation: "lofi",
+      defaultStation: '',
       autoStop: false,
       showNowPlaying: true,
-      embedColor: "#FF6B6B"
+      embedColor: '#FF6B6B'
     },
     announcements: {
-      channelId: ""
+      channelId: ''
     },
     interactivePanel: {
       enabled: true,
-      channelId: "",
-      messageId: "",
+      channelId: '',
+      messageId: '',
       autoUpdate: true,
-      embedColor: "#FF6B6B"
+      embedColor: '#FF6B6B'
     }
   });
 
-  // Radio State
+  const [musicFiles, setMusicFiles] = useState<MusicFile[]>([]);
   const [radioStations, setRadioStations] = useState<RadioStation[]>([]);
-  const [radioStatus, setRadioStatus] = useState<RadioStatus>({
-    isPlaying: false,
-    currentStation: null
-  });
-  const [radioLoading, setRadioLoading] = useState(false);
-
-  // Channels
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [currentSong, setCurrentSong] = useState<CurrentSong | null>(null);
+  const [radioStatus, setRadioStatus] = useState<RadioStatus>({ isPlaying: false, currentStation: null });
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState('');
+  const [activeTab, setActiveTab] = useState('mp3');
+  const [loading, setLoading] = useState(false);
+
+  const { addToast, toasts, removeToast } = useToast();
   
-  // Guild ID State
-  const [guildId, setGuildId] = useState<string | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    addToast({ title: type === 'error' ? 'Fehler' : type === 'success' ? 'Erfolg' : 'Info', message, type });
+  };
 
-  // New Station State
-  const [newStation, setNewStation] = useState({
-    name: '',
-    url: '',
-    genre: '',
-    country: '',
-    description: '',
-    logo: ''
-  });
-
+  // Daten laden
   const loadData = async () => {
     try {
       setLoading(true);
       
-      // Guild-ID laden
-      const guildsRes = await fetch(`${apiUrl}/api/guilds`);
-      let currentGuildId = null;
-      
-      if (guildsRes.ok) {
-        const guildsData = await guildsRes.json();
-        currentGuildId = guildsData.primaryGuild;
-        setGuildId(currentGuildId);
+      // Einstellungen laden
+      const settingsResponse = await fetch('/api/music/settings');
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        if (settingsData.success) {
+          setSettings(settingsData.settings);
+          if (settingsData.settings.radio?.stations) {
+            setRadioStations(settingsData.settings.radio.stations);
+          }
+        }
       }
 
-      if (!currentGuildId) {
-        showError('Guild Fehler', '❌ Keine Guild-ID gefunden. Bot möglicherweise offline.');
-        return;
+      // Musik-Dateien laden
+      const filesResponse = await fetch('/api/music/files');
+      if (filesResponse.ok) {
+        const filesData = await filesResponse.json();
+        if (filesData.success) {
+          setMusicFiles(filesData.files);
+        }
       }
 
-      // Load data
-      const [settingsRes, channelsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/music/settings`),
-        fetch(`${apiUrl}/api/channels`)
-      ]);
-
-      if (settingsRes.ok) {
-        const data = await settingsRes.json();
-        setSettings(data.settings);
+      // Radio-Sender laden (zusätzlicher API-Call falls verfügbar)
+      try {
+        const radioResponse = await fetch('/api/music/radio/stations');
+        if (radioResponse.ok) {
+          const radioData = await radioResponse.json();
+          if (radioData.success) {
+            setRadioStations(radioData.stations);
+          }
+        }
+      } catch (error) {
+        // Fallback zu Einstellungen wenn API nicht verfügbar
+        console.log('Radio API nicht verfügbar, verwende Einstellungen');
       }
 
-      if (channelsRes.ok) {
-        const data = await channelsRes.json();
-        setChannels(data.channels || []);
+      // Channels laden
+      const channelsResponse = await fetch('/api/discord/voice-channels');
+      if (channelsResponse.ok) {
+        const channelsData = await channelsResponse.json();
+        if (channelsData.success) {
+          setChannels(channelsData.channels);
+        }
       }
 
-    } catch (err) {
-      console.error('Fehler beim Laden der Daten:', err);
-      showError('Lade Fehler', 'Fehler beim Laden der Daten');
+      // Aktueller Song (lokale MP3)
+      const currentResponse = await fetch('/api/music/current/1382473264839917785');
+      if (currentResponse.ok) {
+        const currentData = await currentResponse.json();
+        if (currentData.success) {
+          setCurrentSong(currentData.currentSong);
+          setIsPlaying(currentData.isPlaying);
+        }
+      }
+
+      // Radio-Status
+      try {
+        const radioStatusResponse = await fetch('/api/music/radio/1382473264839917785/status');
+        if (radioStatusResponse.ok) {
+          const radioStatusData = await radioStatusResponse.json();
+          if (radioStatusData.success) {
+            setRadioStatus({
+              isPlaying: radioStatusData.isPlaying,
+              currentStation: radioStatusData.currentStation
+            });
+          }
+        }
+      } catch (error) {
+        console.log('Radio Status API nicht verfügbar');
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden:', error);
+      showToast('Fehler beim Laden der Daten', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const saveSettings = async () => {
-    setSaving(true);
-    try {
-      const response = await fetch(`${apiUrl}/api/music/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
-      });
-
-      if (response.ok) {
-        showSuccess('YouTube Radio', '🎵 Einstellungen erfolgreich gespeichert!');
-      } else {
-        showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
-      }
-    } catch (err) {
-      console.error('Speicherfehler:', err);
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler beim Speichern');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const joinVoiceChannel = async (channelId: string) => {
-    if (!guildId) {
-      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('Voice Channel', data.message);
-      } else {
-        showError('Voice Fehler', '❌ Fehler beim Beitreten des Voice-Channels');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
-    }
-  };
-
-  const leaveVoiceChannel = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/leave`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        showSuccess('Voice Channel', '👋 Voice-Channel verlassen');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
-    }
-  };
-
-  // Radio Functions
-  const loadRadioStations = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/radio/stations`);
-      if (response.ok) {
-        const data = await response.json();
-        setRadioStations(data.stations || []);
-      }
-    } catch (err) {
-      console.error('Fehler beim Laden der Radio-Sender:', err);
-      showError('Radio Stations', 'Fehler beim Laden der Radio-Sender');
-    }
-  };
-
-  const loadRadioStatus = async () => {
-    if (!guildId) return;
-    
-    try {
-      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/status`);
-      if (response.ok) {
-        const data = await response.json();
-        setRadioStatus({
-          isPlaying: data.isPlaying,
-          currentStation: data.currentStation
-        });
-      }
-    } catch (err) {
-      console.error('Fehler beim Laden des Radio-Status:', err);
-    }
-  };
-
-  const playRadioStation = async (stationId: string) => {
-    if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      setRadioLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/play`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ stationId }),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        showSuccess('YouTube Radio', data.message);
-        await loadRadioStatus();
-        
-        // Update Discord Interactive Panel
-        try {
-          await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/update`, {
-            method: 'POST'
-          });
-        } catch (updateErr) {
-          console.log('Panel Update Fehler:', updateErr);
-        }
-      } else {
-        showError('Radio Fehler', data.error || 'Fehler beim Starten des Radio-Senders');
-      }
-    } catch (err) {
-      console.error('Fehler beim Starten des Radio-Senders:', err);
-      showError('Radio Fehler', 'Fehler beim Starten des Radio-Senders');
-    } finally {
-      setRadioLoading(false);
-    }
-  };
-
-  const stopRadio = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      setRadioLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/stop`, {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        showSuccess('Radio', data.message);
-        await loadRadioStatus();
-        
-        // Update Discord Interactive Panel
-        try {
-          await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/update`, {
-            method: 'POST'
-          });
-        } catch (updateErr) {
-          console.log('Panel Update Fehler:', updateErr);
-        }
-      } else {
-        showError('Radio Fehler', data.error || 'Fehler beim Stoppen des Radios');
-      }
-    } catch (err) {
-      console.error('Fehler beim Stoppen des Radios:', err);
-      showError('Radio Fehler', 'Fehler beim Stoppen des Radios');
-    } finally {
-      setRadioLoading(false);
-    }
-  };
-
-  const postInteractivePanel = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
-      return;
-    }
-
-    if (!settings.interactivePanel.channelId) {
-      showError('Channel Fehler', '❌ Kein Channel für Interactive Panel ausgewählt');
-      return;
-    }
-
-    try {
-      // Save settings first
-      const saveResponse = await fetch(`${apiUrl}/api/music/settings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
-      });
-
-      if (!saveResponse.ok) {
-        showError('Settings Fehler', '❌ Fehler beim Speichern der Settings');
-        return;
-      }
-
-      // Post panel
-      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('YouTube Radio Panel', `🎵 ${data.message}`);
-        loadData(); // Reload to get message ID
-      } else {
-        const errorData = await response.json();
-        showError('Panel Fehler', errorData.error || '❌ Fehler beim Posten des Panels');
-      }
-    } catch (err) {
-      console.error('Panel Post Error:', err);
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
-    }
-  };
-
-  const removeRadioStation = async (stationId: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/radio/stations/${stationId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        showSuccess('Radio Station', 'Station erfolgreich entfernt');
-        await loadRadioStations();
-      } else {
-        showError('Radio Fehler', 'Fehler beim Entfernen der Station');
-      }
-    } catch (err) {
-      showError('Radio Fehler', 'Fehler beim Entfernen der Station');
-    }
-  };
-
-  const addCustomRadioStation = async () => {
-    if (!newStation.name || !newStation.url) {
-      showError('Radio Station', 'Name und URL sind erforderlich');
-      return;
-    }
-
-    // YouTube URL Validierung und Verbesserung
-    let processedStation = { ...newStation };
-    
-    if (newStation.url.includes('youtube.com') || newStation.url.includes('youtu.be')) {
-      // YouTube URL erkannt
-      if (!processedStation.logo) {
-        // Standard YouTube Logo setzen falls kein Custom Logo vorhanden
-        processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0ZGMDAwMCIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllUPC90ZXh0Pgo8L3N2Zz4K';
-      }
-      
-      // Automatische Metadaten für YouTube
-      if (!processedStation.genre) {
-        processedStation.genre = 'YouTube Stream';
-      }
-      if (!processedStation.country) {
-        processedStation.country = 'International';
-      }
-      if (!processedStation.description) {
-        processedStation.description = 'YouTube Live-Stream';
-      }
-    } else {
-      // Normale Radio-URL
-      if (!processedStation.logo) {
-        processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-      }
-    }
-
-    // Generate unique ID und erweitere das Object
-    const stationWithId = {
-      ...processedStation,
-      id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-
-    try {
-      setRadioLoading(true);
-      
-      const response = await fetch(`${apiUrl}/api/music/radio/stations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stationWithId)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        showSuccess('YouTube Radio', `${stationWithId.url.includes('youtube.com') ? 'YouTube-Stream' : 'Radio-Station'} "${stationWithId.name}" erfolgreich hinzugefügt!`);
-        
-        // Reset form mit Animation
-        setNewStation({
-          name: '',
-          url: '',
-          genre: '',
-          country: '',
-          description: '',
-          logo: ''
-        });
-        
-        await loadRadioStations();
-      } else {
-        showError('Radio Fehler', data.error || 'Fehler beim Hinzufügen der Station');
-      }
-    } catch (err) {
-      console.error('Fehler beim Hinzufügen der Station:', err);
-      showError('Radio Fehler', 'Verbindungsfehler beim Hinzufügen der Station');
-    } finally {
-      setRadioLoading(false);
-    }
-  };
-
   useEffect(() => {
     loadData();
-    loadRadioStations();
   }, []);
 
-  useEffect(() => {
-    if (guildId) {
-      loadRadioStatus();
-      
-      // Auto-update radio status
-      const interval = setInterval(loadRadioStatus, 10000);
-      return () => clearInterval(interval);
+  // Einstellungen speichern
+  const saveSettings = async () => {
+    try {
+      const response = await fetch('/api/music/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        showToast('Einstellungen gespeichert', 'success');
+      } else {
+        showToast('Fehler beim Speichern', 'error');
+      }
+    } catch (error) {
+      showToast('Fehler beim Speichern', 'error');
     }
-  }, [guildId]);
+  };
+
+  // Voice-Channel beitreten
+  const joinVoiceChannel = async () => {
+    if (!selectedChannel) {
+      showToast('Bitte wähle einen Voice-Channel aus', 'error');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/music/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guildId: '1382473264839917785',
+          channelId: selectedChannel
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setIsConnected(true);
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.error, 'error');
+      }
+    } catch (error) {
+      showToast('Fehler beim Beitreten', 'error');
+    }
+  };
+
+  // Voice-Channel verlassen
+  const leaveVoiceChannel = async () => {
+    try {
+      const response = await fetch('/api/music/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guildId: '1382473264839917785'
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setIsConnected(false);
+        setIsPlaying(false);
+        setCurrentSong(null);
+        setRadioStatus({ isPlaying: false, currentStation: null });
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.error, 'error');
+      }
+    } catch (error) {
+      showToast('Fehler beim Verlassen', 'error');
+    }
+  };
+
+  // Lokale Musik abspielen
+  const playMusic = async (songId: string) => {
+    try {
+      const response = await fetch('/api/music/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guildId: '1382473264839917785',
+          songId
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setIsPlaying(true);
+        setRadioStatus({ isPlaying: false, currentStation: null }); // Radio stoppen
+        await loadData(); // Aktuellen Song neu laden
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.error, 'error');
+      }
+    } catch (error) {
+      showToast('Fehler beim Abspielen', 'error');
+    }
+  };
+
+  // Radio abspielen
+  const playRadioStation = async (stationId: string) => {
+    try {
+      const response = await fetch(`/api/music/radio/1382473264839917785/play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stationId })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setCurrentSong(null); // Lokale Musik stoppen
+        setIsPlaying(false);
+        await loadData(); // Status neu laden
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.error, 'error');
+      }
+    } catch (error) {
+      showToast('Fehler beim Abspielen des Radio-Senders', 'error');
+    }
+  };
+
+  // Musik/Radio stoppen
+  const stopMusic = async () => {
+    try {
+      // Lokale Musik stoppen
+      if (currentSong) {
+        const response = await fetch('/api/music/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            guildId: '1382473264839917785'
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setIsPlaying(false);
+          setCurrentSong(null);
+          showToast(data.message, 'success');
+        }
+      }
+
+      // Radio stoppen
+      if (radioStatus.isPlaying) {
+        const response = await fetch('/api/music/radio/1382473264839917785/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setRadioStatus({ isPlaying: false, currentStation: null });
+          showToast(data.message, 'success');
+        }
+      }
+    } catch (error) {
+      showToast('Fehler beim Stoppen', 'error');
+    }
+  };
+
+  // Datei-Upload (Frontend-Teil)
+  const handleFileUpload = () => {
+    showToast('Upload-Anleitung: Lade MP3-Dateien in den ./music Ordner hoch und pushe zu Git/Railway', 'info');
+  };
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Lade YouTube Radio System...</div>
-        </div>
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="text-dark-text text-xl">Lade Musik-System...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 p-6 animate-fade-in relative">
-      {/* Matrix Background Effects */}
-      <MatrixBlocks density={20} />
+    <div className="min-h-screen bg-dark-bg text-dark-text p-6">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       
-      {/* Page Header */}
-      <div className="text-center py-8">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <Radio className="w-12 h-12 text-red-400 animate-pulse" />
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
-            YouTube Radio Bot
-          </h1>
-        </div>
-        <div className="text-dark-text text-lg max-w-2xl mx-auto">
-          Einfaches YouTube Radio System für Discord! 
-          <span className="ml-2 inline-block relative">
-            <svg 
-              className="w-6 h-6 animate-pulse hover:animate-bounce text-purple-400 hover:text-purple-300 transition-all duration-300 hover:scale-110 drop-shadow-lg" 
-              fill="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-            <div className="absolute inset-0 animate-ping">
-              <svg 
-                className="w-6 h-6 text-purple-500 opacity-30" 
-                fill="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-              </svg>
-            </div>
-          </span>
-        </div>
-        <div className="w-32 h-1 bg-gradient-neon mx-auto mt-4 rounded-full animate-glow"></div>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-purple-primary mb-2 flex items-center gap-3">
+          <Music className="w-8 h-8" />
+          Musik-System (MP3 + Radio)
+        </h1>
+        <p className="text-dark-muted">
+          Spiele lokale MP3-Dateien oder Radio-Sender in Voice-Channels ab
+        </p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex justify-center gap-4">
-        <Button 
-          onClick={saveSettings} 
-          disabled={saving} 
-          className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
-        >
-          <Save className="h-5 w-5" />
-          <span>{saving ? 'Speichere...' : 'Einstellungen speichern'}</span>
-        </Button>
-      </div>
-
-      {/* System Status Badge */}
-      <div className="flex justify-center gap-4 items-center">
-        <Badge variant={settings.enabled ? "default" : "outline"} className="text-lg py-2 px-4">
-          {settings.enabled ? '✅ YouTube Radio Aktiviert' : '❌ YouTube Radio Deaktiviert'}
-        </Badge>
-        
-        {/* Radio Status Indikator */}
-        <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-red-primary/30 rounded-lg px-3 py-2">
-          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${radioStatus.isPlaying ? 'bg-red-400 animate-pulse' : 'bg-gray-500'}`}></div>
-          <span className="text-sm text-dark-muted">
-            {radioStatus.isPlaying ? `Live: ${radioStatus.currentStation?.name}` : 'Kein Radio aktiv'}
-          </span>
-          <div className="text-xs text-red-accent">
-            📻 YouTube Radio
-          </div>
-        </div>
-      </div>
-
-      {/* Main Tabs */}
-      <Tabs defaultValue="radio" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30">
-          <TabsTrigger 
-            value="radio" 
-            className={`flex items-center space-x-2 ${activeTab === 'radio' ? 'bg-red-500 text-white' : 'hover:bg-red-500/20 text-dark-text'}`}
+      {/* Tabs */}
+      <div className="mb-6">
+        <div className="flex space-x-1 bg-dark-surface/50 p-1 rounded-lg inline-flex">
+          <button
+            onClick={() => setActiveTab('mp3')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'mp3' 
+                ? 'bg-purple-primary text-white' 
+                : 'text-dark-text hover:bg-purple-primary/20'
+            }`}
+          >
+            🎵 Lokale MP3s
+          </button>
+          <button
             onClick={() => setActiveTab('radio')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'radio' 
+                ? 'bg-purple-primary text-white' 
+                : 'text-dark-text hover:bg-purple-primary/20'
+            }`}
           >
-            <Radio className="h-4 w-4" />
-            <span>📻 Radio</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="settings" 
-            className={`flex items-center space-x-2 ${activeTab === 'settings' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'}`}
+            📻 Radio-Sender
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              activeTab === 'settings' 
+                ? 'bg-purple-primary text-white' 
+                : 'text-dark-text hover:bg-purple-primary/20'
+            }`}
           >
-            <Settings className="h-4 w-4" />
-            <span>⚙️ Einstellungen</span>
-          </TabsTrigger>
-        </TabsList>
+            ⚙️ Einstellungen
+          </button>
+        </div>
+      </div>
 
-        {/* Radio Tab */}
-        <TabsContent value="radio" className="space-y-6" activeTab={activeTab}>
-          {/* Radio Status mit Animation */}
-          <Card animate={true} className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-purple-500/5 animate-gradient-x"></div>
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3 animated={true}">
-                <div className={`p-2 rounded-full ${radioStatus.isPlaying ? 'bg-red-500/20 animate-pulse' : 'bg-gray-500/20'} transition-all duration-500`}>
-                  <Radio className={`w-5 h-5 ${radioStatus.isPlaying ? 'text-red-400' : 'text-gray-400'} transition-colors duration-500`} />
-                </div>
-                <span className="bg-gradient-to-r from-red-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
-                  📻 Radio Status
-                </span>
-                {radioStatus.isPlaying && (
-                  <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white animate-bounce shadow-neon">
-                    <span className="animate-pulse">🎵 LIVE</span>
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription className="text-gray-300">
-                Aktueller Radio-Status und Steuerung
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              {radioStatus.currentStation ? (
-                <div className="bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-xl p-6 border border-red-400/40 shadow-2xl backdrop-blur-sm animate-fade-in-up">
-                  <div className="flex items-center gap-6">
-                    <div className="relative">
-                    <img 
-                      src={radioStatus.currentStation.logo} 
-                      alt={radioStatus.currentStation.name}
-                        className="w-20 h-20 rounded-xl object-cover border-2 border-red-400/50 shadow-lg animate-float"
-                      onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjY2NjYiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K';
-                      }}
-                    />
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-ping"></div>
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-white animate-pulse-slow bg-gradient-to-r from-white to-red-200 bg-clip-text text-transparent">
-                        🎵 {radioStatus.currentStation.name}
-                      </h3>
-                      <p className="text-red-300 text-lg mt-1 animate-fade-in">{radioStatus.currentStation.description}</p>
-                      <div className="flex gap-3 mt-3">
-                        <Badge variant="outline" className="text-red-400 border-red-400/60 bg-red-500/10 animate-bounce-slow">
-                          🎵 {radioStatus.currentStation.genre}
-                        </Badge>
-                        <Badge variant="outline" className="text-purple-400 border-purple-400/60 bg-purple-500/10 animate-bounce-slow delay-100">
-                          🌍 {radioStatus.currentStation.country}
-                        </Badge>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={stopRadio}
-                      disabled={radioLoading}
-                      variant="destructive"
-                      className="flex items-center gap-2 shadow-xl hover:shadow-red-500/25 animate-pulse-subtle"
-                      animated={true}
-                    >
-                      <Pause className="w-5 h-5 animate-pulse" />
-                      {radioLoading ? 'Stoppe...' : 'Radio stoppen'}
-                    </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Voice-Channel Controls */}
+        <div className="bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            🔊 Voice-Channel
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Voice-Channel auswählen:</label>
+              <select
+                value={selectedChannel}
+                onChange={(e) => setSelectedChannel(e.target.value)}
+                className="w-full bg-dark-bg border border-purple-primary/30 rounded-lg px-3 py-2"
+              >
+                <option value="">-- Channel auswählen --</option>
+                {channels.map(channel => (
+                  <option key={channel.id} value={channel.id}>
+                    {channel.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={joinVoiceChannel}
+                disabled={isConnected}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 px-4 py-2 rounded-lg transition-colors"
+              >
+                Beitreten
+              </button>
+              <button
+                onClick={leaveVoiceChannel}
+                disabled={!isConnected}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 px-4 py-2 rounded-lg transition-colors"
+              >
+                Verlassen
+              </button>
+            </div>
+
+            <div className="text-center">
+              Status: <span className={isConnected ? 'text-green-400' : 'text-red-400'}>
+                {isConnected ? 'Verbunden' : 'Nicht verbunden'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Aktuell spielt */}
+        <div className="bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            🎵 Aktuell spielt
+          </h2>
+          
+          {currentSong || radioStatus.currentStation ? (
+            <div className="space-y-3">
+              {currentSong && (
+                <>
+                  <div className="text-lg font-medium">🎵 {currentSong.name}</div>
+                  <div className="text-sm text-dark-muted">MP3-Datei: {currentSong.filename}</div>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${isPlaying ? 'bg-green-400' : 'bg-gray-400'}`}></span>
+                    <span>{isPlaying ? 'Spielt ab' : 'Pausiert'}</span>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-dark-muted animate-fade-in">
-                  <div className="relative inline-block">
-                    <Radio className="w-16 h-16 mx-auto mb-6 text-gray-500 animate-bounce-slow" />
-                    <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-gray-500/30 rounded-full animate-ping"></div>
-                  </div>
-                  <p className="text-lg font-medium">Kein Radio-Sender aktiv</p>
-                  <p className="text-sm mt-2 animate-pulse">Wähle einen Sender aus der Liste unten</p>
-                </div>
+                </>
               )}
-            </CardContent>
-          </Card>
+              
+              {radioStatus.currentStation && (
+                <>
+                  <div className="text-lg font-medium">📻 {radioStatus.currentStation.name}</div>
+                  <div className="text-sm text-dark-muted">{radioStatus.currentStation.description}</div>
+                  <div className="text-sm text-dark-muted">Genre: {radioStatus.currentStation.genre}</div>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${radioStatus.isPlaying ? 'bg-green-400' : 'bg-gray-400'}`}></span>
+                    <span>{radioStatus.isPlaying ? 'Radio läuft' : 'Radio pausiert'}</span>
+                  </div>
+                </>
+              )}
+              
+              <button
+                onClick={stopMusic}
+                className="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <Pause className="w-4 h-4" />
+                Stoppen
+              </button>
+            </div>
+          ) : (
+            <div className="text-center text-dark-muted py-8">
+              Keine Musik wird abgespielt
+            </div>
+          )}
+        </div>
+      </div>
 
-          {/* Radio Stations - Kategorisiert */}
-          <div className="space-y-6">
-            {/* Radio-Sender Kategorie */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Radio className="w-5 h-5 text-purple-accent" />
-                  🎵 Radio-Sender
-                </CardTitle>
-                <CardDescription>
-                  Traditionelle Radio-Streams aus Deutschland und international
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {radioStations
-                    .filter(station => !station.url.includes('youtube.com'))
-                    .map((station) => (
-                    <div
-                      key={station.id}
-                      className={`bg-dark-surface/50 rounded-lg p-4 border transition-all duration-300 hover:scale-105 ${
-                        radioStatus.currentStation?.id === station.id
-                          ? 'border-red-400 bg-red-500/10'
-                          : 'border-purple-primary/30 hover:border-purple-primary'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <img 
-                          src={station.logo} 
-                          alt={station.name}
-                          className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-                          }}
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-bold text-white">{station.name}</h4>
-                          <p className="text-sm text-dark-muted">{station.genre}</p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-dark-text mb-3">{station.description}</p>
-                      
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs">
-                          🌍 {station.country}
-                        </Badge>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => playRadioStation(station.id)}
-                            disabled={radioLoading || radioStatus.currentStation?.id === station.id}
-                            className="flex items-center gap-2 px-3 py-1 text-sm"
-                          >
-                            {radioStatus.currentStation?.id === station.id ? (
-                              <>
-                                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                                Live
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3 h-3" />
-                                {radioLoading ? 'Starte...' : 'Abspielen'}
-                              </>
-                            )}
-                          </Button>
-                          
-                          {/* Lösch-Button nur für custom Sender anzeigen (nicht für vordefinierte) */}
-                          {!['1live', 'swr3', 'antenne', 'bigfm', 'ndr2', 'ffn', 'energy', 'sunshine', 'deutschrap1', 'rapstation', 'hiphopradio', 'urbanradio', 'gtaradio', 'oldschool', 'synthwave', 'phonkradio'].includes(station.id) && (
-                            <Button
-                              onClick={() => removeRadioStation(station.id)}
-                              disabled={radioLoading}
-                              variant="destructive"
-                              className="px-2 py-1 text-xs"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* YouTube Live-Streams Kategorie */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                  </svg>
-                  🎵 YouTube Live-Streams
-                </CardTitle>
-                <CardDescription>
-                  24/7 YouTube Live-Streams für verschiedene Musikrichtungen
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {radioStations
-                    .filter(station => station.url.includes('youtube.com'))
-                    .map((station) => (
-                    <div
-                      key={station.id}
-                      className={`bg-dark-surface/50 rounded-lg p-4 border transition-all duration-300 hover:scale-105 ${
-                        radioStatus.currentStation?.id === station.id
-                          ? 'border-red-400 bg-red-500/10'
-                          : 'border-purple-primary/30 hover:border-purple-primary'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <img 
-                          src={station.logo} 
-                          alt={station.name}
-                          className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0ZGMDAwMCIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllUPC90ZXh0Pgo8L3N2Zz4K';
-                          }}
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-bold text-white flex items-center gap-2">
-                            {station.name}
-                            <span className="text-red-500 text-xs">🎵 LIVE</span>
-                          </h4>
-                          <p className="text-sm text-dark-muted">{station.genre}</p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-dark-text mb-3">{station.description}</p>
-                      
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs bg-red-500/10 border-red-500/30 text-red-400">
-                          🌍 {station.country}
-                        </Badge>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => playRadioStation(station.id)}
-                            disabled={radioLoading || radioStatus.currentStation?.id === station.id}
-                            className="flex items-center gap-2 px-3 py-1 text-sm"
-                          >
-                            {radioStatus.currentStation?.id === station.id ? (
-                              <>
-                                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                                Live
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3 h-3" />
-                                {radioLoading ? 'Starte...' : 'Abspielen'}
-                              </>
-                            )}
-                          </Button>
-                          
-                          {/* Lösch-Button nur für custom Sender anzeigen (nicht für vordefinierte) */}
-                          {!['lofi', 'chillhop', 'deephouse', 'trapmusic', 'gaming', 'jazzhop', 'retrowave', 'bassmusic'].includes(station.id) && (
-                            <Button
-                              onClick={() => removeRadioStation(station.id)}
-                              disabled={radioLoading}
-                              variant="destructive"
-                              className="px-2 py-1 text-xs"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+      {/* Tab Content */}
+      {activeTab === 'mp3' && (
+        <div className="bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              🎵 Lokale MP3-Bibliothek
+            </h2>
+            <div className="flex gap-2">
+              <button
+                onClick={handleFileUpload}
+                className="bg-purple-primary hover:bg-purple-secondary px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Upload-Anleitung
+              </button>
+              <button
+                onClick={loadData}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+              >
+                Aktualisieren
+              </button>
+            </div>
           </div>
 
-          {/* Add Custom Radio Station mit verbesserter YouTube-Unterstützung */}
-          <Card animate={true} className="relative overflow-hidden border-green-500/30">
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-blue-500/5 animate-gradient-x"></div>
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3" animated={true}>
-                <div className="p-2 rounded-full bg-green-500/20 animate-pulse">
-                  <Plus className="w-5 h-5 text-green-400 animate-bounce-slow" />
+          {musicFiles.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {musicFiles.map(file => (
+                <div key={file.id} className="bg-dark-bg/50 border border-purple-primary/20 rounded-lg p-4">
+                  <div className="font-medium mb-2">{file.name}</div>
+                  <div className="text-sm text-dark-muted mb-2">
+                    Datei: {file.filename}
+                  </div>
+                  <div className="text-sm text-dark-muted mb-3">
+                    Größe: {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </div>
+                  <button
+                    onClick={() => playMusic(file.id)}
+                    disabled={!isConnected}
+                    className="w-full bg-purple-primary hover:bg-purple-secondary disabled:bg-gray-600 px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Play className="w-4 h-4" />
+                    Abspielen
+                  </button>
                 </div>
-                <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-                  🎵 YouTube Radio-Sender hinzufügen
-                </span>
-              </CardTitle>
-              <CardDescription className="text-gray-300">
-                Füge eigene YouTube Live-Streams oder Radio-Streams hinzu
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-xl p-6 border border-green-400/30 mb-6 animate-fade-in-up">
-                <h4 className="text-lg font-semibold text-green-400 mb-3 flex items-center gap-2">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                  </svg>
-                  YouTube-Unterstützung
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>YouTube Live-Streams (z.B. 24/7 Lofi Radio)</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>Normale Radio-Streams (.mp3, .m3u8)</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>Automatische YouTube-Metadaten</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>Custom Logo-Upload unterstützt</span>
-                  </div>
-                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-dark-muted py-8">
+              <Music className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <div>Keine MP3-Dateien gefunden</div>
+              <div className="text-sm mt-2">
+                Lade MP3-Dateien in den ./music Ordner hoch und pushe zu Git
               </div>
+            </div>
+          )}
+        </div>
+      )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="animate-fade-in-right delay-100">
-                    <label className="block text-sm font-medium text-green-400 mb-2 flex items-center gap-2">
-                      🎵 Sender-Name *
-                  </label>
-                  <Input
-                      placeholder="z.B. Mein Lofi Radio"
-                    value={newStation.name}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
-                      className="border-green-500/30 focus:border-green-400"
-                  />
-                </div>
-                
-                  <div className="animate-fade-in-right delay-200">
-                    <label className="block text-sm font-medium text-blue-400 mb-2 flex items-center gap-2">
-                      🌐 Stream-URL * 
-                      <span className="text-xs text-gray-400">(YouTube oder direkte URL)</span>
-                  </label>
-                  <Input
-                      placeholder="https://youtube.com/watch?v=... oder https://stream.radio.com/..."
-                    value={newStation.url}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, url: e.target.value }))}
-                      className="border-blue-500/30 focus:border-blue-400"
-                  />
-                    {newStation.url.includes('youtube.com') && (
-                      <p className="text-xs text-green-400 mt-1 animate-pulse">✓ YouTube-Link erkannt</p>
-                    )}
-                </div>
-                
-                  <div className="animate-fade-in-right delay-300">
-                    <label className="block text-sm font-medium text-purple-400 mb-2 flex items-center gap-2">
-                      🎭 Genre
-                  </label>
-                  <Input
-                      placeholder="z.B. Lofi Hip Hop, Electronic, Rock"
-                    value={newStation.genre}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, genre: e.target.value }))}
-                      className="border-purple-500/30 focus:border-purple-400"
-                  />
+      {activeTab === 'radio' && (
+        <div className="bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              📻 Radio-Sender
+            </h2>
+            <button
+              onClick={loadData}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+            >
+              Aktualisieren
+            </button>
+          </div>
+
+          {radioStations.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {radioStations.map(station => (
+                <div key={station.id} className="bg-dark-bg/50 border border-purple-primary/20 rounded-lg p-4">
+                  <div className="font-medium mb-2">{station.name}</div>
+                  <div className="text-sm text-dark-muted mb-2">
+                    Genre: {station.genre}
                   </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="animate-fade-in-left delay-100">
-                    <label className="block text-sm font-medium text-orange-400 mb-2 flex items-center gap-2">
-                      🌍 Land/Region
-                  </label>
-                  <Input
-                      placeholder="z.B. Deutschland, International, USA"
-                    value={newStation.country}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, country: e.target.value }))}
-                      className="border-orange-500/30 focus:border-orange-400"
-                  />
-                </div>
-                
-                  <div className="animate-fade-in-left delay-200">
-                    <label className="block text-sm font-medium text-cyan-400 mb-2 flex items-center gap-2">
-                      📝 Beschreibung
-                  </label>
-                  <Input
-                    placeholder="Kurze Beschreibung des Senders"
-                    value={newStation.description}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, description: e.target.value }))}
-                      className="border-cyan-500/30 focus:border-cyan-400"
-                  />
-                </div>
-                
-                  <div className="animate-fade-in-left delay-300">
-                    <label className="block text-sm font-medium text-pink-400 mb-2 flex items-center gap-2">
-                      🖼️ Logo-URL (optional)
-                  </label>
-                  <Input
-                    placeholder="https://example.com/logo.png"
-                    value={newStation.logo}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, logo: e.target.value }))}
-                      className="border-pink-500/30 focus:border-pink-400"
-                    />
-                    {newStation.logo && (
-                      <div className="mt-2">
-                        <img 
-                          src={newStation.logo} 
-                          alt="Logo Preview" 
-                          className="w-12 h-12 rounded-lg object-cover border border-pink-400/50 animate-fade-in"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
+                  <div className="text-sm text-dark-muted mb-2">
+                    Land: {station.country}
                   </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-center mt-8 animate-fade-in-up delay-500">
-                <Button
-                  onClick={addCustomRadioStation}
-                  disabled={radioLoading || !newStation.name || !newStation.url}
-                  className="flex items-center gap-3 px-8 py-3 text-lg bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 shadow-xl hover:shadow-green-500/25"
-                  animated={true}
-                >
-                  <Plus className="w-5 h-5 animate-spin-slow" />
-                  {radioLoading ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Füge hinzu...
-                    </span>
-                  ) : (
-                    'YouTube Radio hinzufügen'
-                  )}
-                </Button>
-              </div>
-
-              {/* Hilfe-Sektion */}
-              <div className="mt-6 p-4 bg-dark-surface/50 rounded-lg border border-gray-600/30 animate-fade-in delay-700">
-                <h5 className="text-sm font-medium text-gray-300 mb-2">💡 Tipps für YouTube-Links:</h5>
-                <ul className="text-xs text-gray-400 space-y-1">
-                  <li>• Verwende YouTube Live-Stream URLs für 24/7 Radio</li>
-                  <li>• Normale YouTube-Videos funktionieren auch</li>
-                  <li>• Der Bot extrahiert automatisch Audio vom Video</li>
-                  <li>• Für beste Qualität verwende offizielle Radio-Streams</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6" activeTab={activeTab}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-purple-accent" />
-                YouTube Radio Einstellungen
-              </CardTitle>
-              <CardDescription>
-                Konfiguriere dein einfaches YouTube Radio-System
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Radio aktivieren/deaktivieren */}
-                <div className="flex items-center justify-between p-4 bg-red-500/10 rounded-lg">
-                  <div>
-                    <label className="text-white font-medium">📻 YouTube Radio aktivieren</label>
-                    <p className="text-red-300 text-sm">Hauptschalter für das gesamte Radio-System</p>
+                  <div className="text-sm text-dark-muted mb-3">
+                    {station.description}
                   </div>
-                  <Switch
-                    checked={settings.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enabled: checked }))}
-                  />
+                  <button
+                    onClick={() => playRadioStation(station.id)}
+                    disabled={!isConnected}
+                    className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-600 px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Radio className="w-4 h-4" />
+                    Radio starten
+                  </button>
                 </div>
-
-                {/* Radio-spezifische Einstellungen */}
-                {settings.enabled && (
-                  <>
-                    <div className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg">
-                      <div>
-                        <label className="text-white font-medium">🔊 Now Playing anzeigen</label>
-                        <p className="text-purple-300 text-sm">Zeigt aktuell gespielten Radio-Stream im Chat</p>
-                      </div>
-                      <Switch
-                        checked={settings.radio.showNowPlaying}
-                        onCheckedChange={(checked) => setSettings(prev => ({ 
-                          ...prev, 
-                          radio: { ...prev.radio, showNowPlaying: checked }
-                        }))}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-orange-500/10 rounded-lg">
-                      <div>
-                        <label className="text-white font-medium">⏹️ Auto-Stop bei Disconnect</label>
-                        <p className="text-orange-300 text-sm">Stoppt Radio automatisch wenn alle User den Voice-Channel verlassen</p>
-                      </div>
-                      <Switch
-                        checked={settings.radio.autoStop}
-                        onCheckedChange={(checked) => setSettings(prev => ({ 
-                          ...prev, 
-                          radio: { ...prev.radio, autoStop: checked }
-                        }))}
-                      />
-                    </div>
-
-                    {/* Embed Farbe - Schönes Design wie XP.tsx */}
-                    <div>
-                      <label className="block text-dark-text text-sm font-medium mb-2">
-                        🎨 Radio Embed Farbe
-                      </label>
-                      <div className="flex gap-3 items-center">
-                        {/* Color Picker */}
-                        <div className="relative">
-                          <input
-                            type="color"
-                            value={settings.radio.embedColor?.startsWith?.('#') ? settings.radio.embedColor : '#FF6B6B'}
-                            onChange={(e) => {
-                              const hexColor = e.target.value;
-                              setSettings(prev => ({ 
-                                ...prev, 
-                                radio: { ...prev.radio, embedColor: hexColor }
-                              }));
-                            }}
-                            className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-neon-purple transition-all duration-300 hover:scale-105"
-                            style={{
-                              filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                            }}
-                          />
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-neon rounded-full animate-ping opacity-60"></div>
-                        </div>
-                        
-                        {/* Hex Input */}
-                        <div className="flex-1">
-                          <Input
-                            type="text"
-                            value={settings.radio.embedColor || '#FF6B6B'}
-                            onChange={(e) => setSettings(prev => ({ 
-                              ...prev, 
-                              radio: { ...prev.radio, embedColor: e.target.value }
-                            }))}
-                            className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
-                            placeholder="#FF6B6B"
-                          />
-                        </div>
-
-                        {/* Color Preview */}
-                        <div 
-                          className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
-                          style={{
-                            backgroundColor: settings.radio.embedColor?.startsWith?.('#') ? settings.radio.embedColor : '#FF6B6B',
-                            filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                          }}
-                        >
-                          📻
-                        </div>
-                      </div>
-                      
-                      {/* Preset Colors */}
-                      <div className="mt-3">
-                        <p className="text-xs text-dark-muted mb-2">Beliebte Radio Farben:</p>
-                        <div className="flex gap-2 flex-wrap">
-                          {[
-                            { name: 'Radio Rot', color: '#FF6B6B' },
-                            { name: 'YouTube Rot', color: '#FF0000' },
-                            { name: 'Orange', color: '#FF8C00' },
-                            { name: 'Lila', color: '#9B59B6' },
-                            { name: 'Blau', color: '#3498DB' },
-                            { name: 'Grün', color: '#2ECC71' },
-                            { name: 'Pink', color: '#E91E63' },
-                            { name: 'Cyan', color: '#1ABC9C' },
-                          ].map((preset) => (
-                            <button
-                              key={preset.name}
-                              onClick={() => setSettings(prev => ({ 
-                                ...prev, 
-                                radio: { ...prev.radio, embedColor: preset.color }
-                              }))}
-                              className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
-                              style={{
-                                backgroundColor: preset.color,
-                                filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
-                              }}
-                              title={preset.name}
-                            >
-                              <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ankündigungs-Channel */}
-                    <div>
-                      <label className="block text-dark-text text-sm font-medium mb-2">
-                        📢 Ankündigungs-Channel (optional)
-                      </label>
-                      <select
-                        value={settings.announcements.channelId}
-                        onChange={(e) => setSettings(prev => ({ 
-                          ...prev, 
-                          announcements: { ...prev.announcements, channelId: e.target.value }
-                        }))}
-                        className="bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-4 py-2 w-full focus:border-neon-purple focus:outline-none"
-                      >
-                        <option value="">Kein Ankündigungs-Channel</option>
-                        {channels.filter(ch => ch.type === 'text').map(channel => (
-                          <option key={channel.id} value={channel.id}>
-                            #{channel.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-dark-muted text-xs mt-1">
-                        Channel für Radio-Start/Stop Ankündigungen
-                      </p>
-                    </div>
-                    
-                    {/* Interactive Panel */}
-                    <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-primary/20">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-white font-medium">🎛️ Interactive Radio Panel</h4>
-                          <p className="text-purple-300 text-sm">Discord Panel mit Radio-Auswahl Buttons</p>
-                        </div>
-                        <Switch
-                          checked={settings.interactivePanel.enabled}
-                          onCheckedChange={(checked) => setSettings(prev => ({
-                            ...prev,
-                            interactivePanel: { ...prev.interactivePanel, enabled: checked }
-                          }))}
-                        />
-                      </div>
-
-                      {settings.interactivePanel.enabled && (
-                        <div className="space-y-4 pt-4 border-t border-purple-primary/20">
-                          <div>
-                            <label className="block text-purple-200 text-sm font-medium mb-2">
-                              📺 Panel-Channel
-                            </label>
-                            <select
-                              value={settings.interactivePanel.channelId}
-                              onChange={(e) => setSettings(prev => ({
-                                ...prev,
-                                interactivePanel: { ...prev.interactivePanel, channelId: e.target.value }
-                              }))}
-                              className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
-                            >
-                              <option value="">Channel auswählen...</option>
-                              {channels.filter(ch => ch.type === 'text').map(channel => (
-                                <option key={channel.id} value={channel.id}>
-                                  #{channel.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-purple-200 text-sm">🔄 Auto-Update</span>
-                            <Switch
-                              checked={settings.interactivePanel.autoUpdate}
-                              onCheckedChange={(checked) => setSettings(prev => ({
-                                ...prev,
-                                interactivePanel: { ...prev.interactivePanel, autoUpdate: checked }
-                              }))}
-                            />
-                          </div>
-
-                          {/* Interactive Panel Embed Farbe */}
-                          <div>
-                            <label className="block text-purple-200 text-sm font-medium mb-2">
-                              🎨 Panel Embed Farbe
-                            </label>
-                            <div className="flex gap-3 items-center">
-                              {/* Color Picker */}
-                              <div className="relative">
-                                <input
-                                  type="color"
-                                  value={settings.interactivePanel.embedColor?.startsWith?.('#') ? settings.interactivePanel.embedColor : '#FF6B6B'}
-                                  onChange={(e) => {
-                                    const hexColor = e.target.value;
-                                    setSettings(prev => ({ 
-                                      ...prev, 
-                                      interactivePanel: { ...prev.interactivePanel, embedColor: hexColor }
-                                    }));
-                                  }}
-                                  className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-neon-purple transition-all duration-300 hover:scale-105"
-                                  style={{
-                                    filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                                  }}
-                                />
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-neon rounded-full animate-ping opacity-60"></div>
-                              </div>
-                              
-                              {/* Hex Input */}
-                              <div className="flex-1">
-                                <Input
-                                  type="text"
-                                  value={settings.interactivePanel.embedColor || '#FF6B6B'}
-                                  onChange={(e) => setSettings(prev => ({ 
-                                    ...prev, 
-                                    interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
-                                  }))}
-                                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
-                                  placeholder="#FF6B6B"
-                                />
-                              </div>
-
-                              {/* Color Preview */}
-                              <div 
-                                className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
-                                style={{
-                                  backgroundColor: settings.interactivePanel.embedColor?.startsWith?.('#') ? settings.interactivePanel.embedColor : '#FF6B6B',
-                                  filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                                }}
-                              >
-                                🎛️
-                              </div>
-                            </div>
-                            
-                            {/* Preset Colors */}
-                            <div className="mt-3">
-                              <p className="text-xs text-purple-300 mb-2">Beliebte Panel Farben:</p>
-                              <div className="flex gap-2 flex-wrap">
-                                {[
-                                  { name: 'Panel Rot', color: '#FF6B6B' },
-                                  { name: 'Discord Blau', color: '#5865F2' },
-                                  { name: 'Lila', color: '#9B59B6' },
-                                  { name: 'Grün', color: '#2ECC71' },
-                                  { name: 'Orange', color: '#FF8C00' },
-                                  { name: 'Pink', color: '#E91E63' },
-                                  { name: 'Cyan', color: '#1ABC9C' },
-                                  { name: 'Gold', color: '#F1C40F' },
-                                ].map((preset) => (
-                                  <button
-                                    key={preset.name}
-                                    onClick={() => setSettings(prev => ({ 
-                                      ...prev, 
-                                      interactivePanel: { ...prev.interactivePanel, embedColor: preset.color }
-                                    }))}
-                                    className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
-                                    style={{
-                                      backgroundColor: preset.color,
-                                      filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
-                                    }}
-                                    title={preset.name}
-                                  >
-                                    <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="pt-4 border-t border-purple-primary/20">
-                            <Button
-                              onClick={postInteractivePanel}
-                              disabled={!settings.interactivePanel.channelId}
-                              className="w-full"
-                            >
-                              📻 Radio Panel posten
-                            </Button>
-                            {settings.interactivePanel.messageId && (
-                              <p className="text-xs text-purple-300 mt-2 text-center">
-                                Panel bereits gepostet (ID: {settings.interactivePanel.messageId.slice(0, 8)}...)
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-dark-muted py-8">
+              <Radio className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <div>Keine Radio-Sender konfiguriert</div>
+              <div className="text-sm mt-2">
+                Radio-Sender werden aus den Backend-Einstellungen geladen
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
+        </div>
+      )}
 
-          {/* Voice Channel Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mic className="w-5 h-5 text-purple-accent" />
-                Voice Channel Einstellungen
-              </CardTitle>
-              <CardDescription>
-                Konfiguriere Voice-Channel Verhalten
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Voice Channels */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {channels.filter(c => c.type === 'voice').map(channel => (
-                    <Button
-                      key={channel.id}
-                      onClick={() => joinVoiceChannel(channel.id)}
-                      variant="outline"
-                      className="justify-between"
-                    >
-                      <span>🔊 {channel.name}</span>
-                      <Users className="w-4 h-4" />
-                    </Button>
-                  ))}
-                </div>
+      {activeTab === 'settings' && (
+        <div className="bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Einstellungen
+          </h2>
 
-                <Button
-                  onClick={leaveVoiceChannel}
-                  variant="destructive"
-                  className="w-full"
-                >
-                  👋 Voice Channel verlassen
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">Musik-Ordner:</label>
+              <input
+                type="text"
+                value={settings.localMusic.musicFolder}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  localMusic: { ...settings.localMusic, musicFolder: e.target.value }
+                })}
+                className="w-full bg-dark-bg border border-purple-primary/30 rounded-lg px-3 py-2"
+              />
+            </div>
 
-      {/* Toast-Container für Benachrichtigungen */}
-      <ToastContainer 
-        toasts={toasts} 
-        removeToast={removeToast} 
-      />
+            <div>
+              <label className="block text-sm font-medium mb-2">Standard-Lautstärke:</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={settings.localMusic.defaultVolume}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  localMusic: { ...settings.localMusic, defaultVolume: parseInt(e.target.value) }
+                })}
+                className="w-full"
+              />
+              <div className="text-sm text-dark-muted mt-1">{settings.localMusic.defaultVolume}%</div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Ankündigungs-Channel:</label>
+              <select
+                value={settings.announcements.channelId}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  announcements: { ...settings.announcements, channelId: e.target.value }
+                })}
+                className="w-full bg-dark-bg border border-purple-primary/30 rounded-lg px-3 py-2"
+              >
+                <option value="">-- Deaktiviert --</option>
+                {channels.map(channel => (
+                  <option key={channel.id} value={channel.id}>
+                    {channel.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="shuffle"
+                checked={settings.localMusic.shuffle}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  localMusic: { ...settings.localMusic, shuffle: e.target.checked }
+                })}
+                className="rounded"
+              />
+              <label htmlFor="shuffle" className="text-sm font-medium">Zufallswiedergabe</label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="radioEnabled"
+                checked={settings.radio.enabled}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  radio: { ...settings.radio, enabled: e.target.checked }
+                })}
+                className="rounded"
+              />
+              <label htmlFor="radioEnabled" className="text-sm font-medium">Radio-Sender aktiviert</label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="showNowPlaying"
+                checked={settings.radio.showNowPlaying}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  radio: { ...settings.radio, showNowPlaying: e.target.checked }
+                })}
+                className="rounded"
+              />
+              <label htmlFor="showNowPlaying" className="text-sm font-medium">Now-Playing Nachrichten</label>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <button
+              onClick={saveSettings}
+              className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Einstellungen speichern
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Music; 
+export default MusicCombined;
