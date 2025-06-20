@@ -169,6 +169,7 @@ interface MusicSettings {
     channelId: string;
     messageId: string;
     autoUpdate: boolean;
+    embedColor: string;
   };
 }
 
@@ -220,7 +221,8 @@ const Music: React.FC = () => {
       enabled: true,
       channelId: "",
       messageId: "",
-      autoUpdate: true
+      autoUpdate: true,
+      embedColor: "#FF6B6B"
     }
   });
 
@@ -1203,6 +1205,92 @@ const Music: React.FC = () => {
                                 interactivePanel: { ...prev.interactivePanel, autoUpdate: checked }
                               }))}
                             />
+                          </div>
+
+                          {/* Interactive Panel Embed Farbe */}
+                          <div>
+                            <label className="block text-purple-200 text-sm font-medium mb-2">
+                              🎨 Panel Embed Farbe
+                            </label>
+                            <div className="flex gap-3 items-center">
+                              {/* Color Picker */}
+                              <div className="relative">
+                                <input
+                                  type="color"
+                                  value={settings.interactivePanel.embedColor.startsWith('#') ? settings.interactivePanel.embedColor : '#FF6B6B'}
+                                  onChange={(e) => {
+                                    const hexColor = e.target.value;
+                                    setSettings(prev => ({ 
+                                      ...prev, 
+                                      interactivePanel: { ...prev.interactivePanel, embedColor: hexColor }
+                                    }));
+                                  }}
+                                  className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-neon-purple transition-all duration-300 hover:scale-105"
+                                  style={{
+                                    filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
+                                  }}
+                                />
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-neon rounded-full animate-ping opacity-60"></div>
+                              </div>
+                              
+                              {/* Hex Input */}
+                              <div className="flex-1">
+                                <Input
+                                  type="text"
+                                  value={settings.interactivePanel.embedColor}
+                                  onChange={(e) => setSettings(prev => ({ 
+                                    ...prev, 
+                                    interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
+                                  }))}
+                                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
+                                  placeholder="#FF6B6B"
+                                />
+                              </div>
+
+                              {/* Color Preview */}
+                              <div 
+                                className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
+                                style={{
+                                  backgroundColor: settings.interactivePanel.embedColor.startsWith('#') ? settings.interactivePanel.embedColor : '#FF6B6B',
+                                  filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
+                                }}
+                              >
+                                🎛️
+                              </div>
+                            </div>
+                            
+                            {/* Preset Colors */}
+                            <div className="mt-3">
+                              <p className="text-xs text-purple-300 mb-2">Beliebte Panel Farben:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                {[
+                                  { name: 'Panel Rot', color: '#FF6B6B' },
+                                  { name: 'Discord Blau', color: '#5865F2' },
+                                  { name: 'Lila', color: '#9B59B6' },
+                                  { name: 'Grün', color: '#2ECC71' },
+                                  { name: 'Orange', color: '#FF8C00' },
+                                  { name: 'Pink', color: '#E91E63' },
+                                  { name: 'Cyan', color: '#1ABC9C' },
+                                  { name: 'Gold', color: '#F1C40F' },
+                                ].map((preset) => (
+                                  <button
+                                    key={preset.name}
+                                    onClick={() => setSettings(prev => ({ 
+                                      ...prev, 
+                                      interactivePanel: { ...prev.interactivePanel, embedColor: preset.color }
+                                    }))}
+                                    className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
+                                    style={{
+                                      backgroundColor: preset.color,
+                                      filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
+                                    }}
+                                    title={preset.name}
+                                  >
+                                    <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
 
                           <div className="pt-4 border-t border-purple-primary/20">
