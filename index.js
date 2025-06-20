@@ -13,8 +13,18 @@ const TicketSystemV2 = require('./ticket-system-v2');
 const setupTwitchAPI = require('./twitch-api');
 // AFK System entfernt - verwende Discord Native AFK
 
-const { registerMusicAPI, loadMusicSettings, checkAutoJoinChannels, handleSongRequest, handleSongRequestButton, handleSongRequestModal, updateInteractivePanel } = require('./music-api');
-let musicSettings = require('./music-api').musicSettings;
+// 🎵 LAVALINK INTEGRATION - Ersetzt das alte music-api System
+const lavalinkSystem = require('./lavalink-music-system');
+let musicSettings = {};
+
+// Versuche alte music-settings zu laden für Kompatibilität
+try {
+    if (fs.existsSync('./music-settings.json')) {
+        musicSettings = JSON.parse(fs.readFileSync('./music-settings.json', 'utf8'));
+    }
+} catch (error) {
+    console.log('⚠️ Music-Settings laden fehlgeschlagen:', error.message);
+}
 const { OpenAI } = require('openai');
 const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
@@ -960,7 +970,7 @@ const corsOptions = {
         
         // CORS Debug (nur im Development-Modus)
         if (process.env.NODE_ENV === 'development') {
-            console.log(`🌐 CORS Request from origin: ${origin}`);
+        console.log(`🌐 CORS Request from origin: ${origin}`);
         }
         
         // Erlaube Requests ohne Origin (z.B. mobile apps oder Postman)
@@ -968,7 +978,7 @@ const corsOptions = {
         
         if (allowedOrigins.indexOf(origin) !== -1) {
             if (process.env.NODE_ENV === 'development') {
-                console.log(`✅ CORS allowed for origin: ${origin}`);
+            console.log(`✅ CORS allowed for origin: ${origin}`);
             }
             callback(null, true);
         } else {
@@ -2937,25 +2947,22 @@ registerGiveawayAPI(app, client);
 registerTicketAPI(app, client);
 console.log('🎉 Giveaway-API registriert');
 
-// Musik-System initialisieren und API registrieren
+// 🎵 LAVALINK MUSIK-SYSTEM initialisieren
 try {
-    console.log('🎵 Initialisiere Musik-System...');
-    loadMusicSettings();
-    registerMusicAPI(app);
-    global.client = client; // Für Musik-API verfügbar machen
+    console.log('🎵 Initialisiere Lavalink-Musik-System...');
     
-    // Prüfe Auto-Join Voice Channels alle 30 Sekunden
-    setInterval(() => {
-        if (musicSettings.enabled && musicSettings.autoJoinVoice) {
-            client.guilds.cache.forEach(guild => {
-                checkAutoJoinChannels(guild);
-            });
-        }
-    }, 30000);
+    // Lavalink Manager initialisieren
+    const lavalinkManager = lavalinkSystem.initializeLavalink(client);
+    global.client = client; // Für API verfügbar machen
+    global.lavalinkManager = lavalinkManager; // Lavalink Manager global verfügbar
     
-    console.log('✅ Musik-System und API aktiviert');
+    // Lavalink-API registrieren
+    const { registerLavalinkAPI } = require('./lavalink-api');
+    registerLavalinkAPI(app, client);
+    
+    console.log('✅ Lavalink-Musik-System und API aktiviert - YouTube-Bot-Detection umgangen!');
 } catch (error) {
-    console.error('❌ Fehler beim Initialisieren des Musik-Systems:', error);
+    console.error('❌ Fehler beim Initialisieren des Lavalink-Systems:', error);
 }
     console.log('✅ XP-System initialisiert');
     
@@ -7047,6 +7054,13 @@ app.get('/api/server-comparison', async (req, res) => {
 
 // Voice Channels und Categories werden für Discord Native AFK nicht benötigt
 // Discord AFK wird direkt über Server Settings konfiguriert
+
+// 🎵 LAVALINK RAW EVENT HANDLER - Wichtig für Voice-State Updates
+client.on('raw', (data) => {
+    if (lavalinkSystem) {
+        lavalinkSystem.handleRaw(data);
+    }
+});
 
 // Bot anmelden
 client.login(apiKeys.discord.bot_token);

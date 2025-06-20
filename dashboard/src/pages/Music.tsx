@@ -1502,10 +1502,10 @@ const Music: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && searchMusic()}
-                  placeholder="Nach Musik suchen..."
-                  className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-purple-primary focus:outline-none"
-                />
-                <button
+              placeholder="Nach Musik suchen..."
+              className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:border-purple-primary focus:outline-none"
+            />
+            <button
                   onClick={searchMusic}
               disabled={searching}
               className="bg-gradient-to-r from-purple-primary to-purple-secondary text-white px-6 py-2 rounded-lg font-bold hover:scale-105 transition-all duration-200 disabled:opacity-50"
@@ -1531,7 +1531,7 @@ const Music: React.FC = () => {
               </div>
             </div>
           )}
-
+          
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {searchResults.map((song, index) => {
               // Source information and styling (ohne SoundCloud)
@@ -1545,17 +1545,17 @@ const Music: React.FC = () => {
               
               return (
                 <div key={index} className={`${source.bg} rounded-lg p-4 flex items-center gap-4 border ${source.border} transition-all duration-300 hover:scale-[1.02]`}>
-                  <img
+                <img
                     src={song.thumbnail || song.image}
-                    alt={song.title}
-                    className="w-12 h-12 rounded-lg object-cover"
+                  alt={song.title}
+                  className="w-12 h-12 rounded-lg object-cover"
                     onError={(e) => {
                       e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
                     }}
-                  />
-                  <div className="flex-1">
+                />
+                <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-white font-semibold text-sm">{song.title}</h4>
+                  <h4 className="text-white font-semibold text-sm">{song.title}</h4>
                       <span className={`${source.color} text-xs font-medium px-2 py-1 rounded-full ${source.bg} border ${source.border}`}>
                         {source.emoji} {source.name}
                       </span>
@@ -1569,15 +1569,15 @@ const Music: React.FC = () => {
                         <span className="text-yellow-300 text-xs">{song.popularity}/100</span>
                       </div>
                     )}
-                  </div>
-                  <button
-                    onClick={() => addToQueue(song)}
+                </div>
+                <button
+                  onClick={() => addToQueue(song)}
                     className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded-lg transition-all duration-200 hover:scale-105 flex items-center gap-1"
                     title={`Zu Queue hinzufügen (${source.name})`}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
               );
             })}
           </div>
@@ -1654,18 +1654,18 @@ const Music: React.FC = () => {
                     
                     return (
                       <div key={index} className={`${source.bg} rounded-lg p-4 flex items-center gap-4 transition-all duration-300 hover:scale-[1.01]`}>
-                        <span className="text-purple-300 font-mono text-sm w-8">{index + 1}</span>
-                        <img
+                      <span className="text-purple-300 font-mono text-sm w-8">{index + 1}</span>
+                      <img
                           src={song.thumbnail || song.image}
-                          alt={song.title}
-                          className="w-12 h-12 rounded-lg object-cover"
+                        alt={song.title}
+                        className="w-12 h-12 rounded-lg object-cover"
                           onError={(e) => {
                             e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
                           }}
-                        />
-                        <div className="flex-1">
+                      />
+                      <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-white font-semibold">{song.title}</h4>
+                        <h4 className="text-white font-semibold">{song.title}</h4>
                             {song.source && (
                               <span className={`${source.color} text-xs`}>
                                 {source.emoji}
@@ -1675,11 +1675,11 @@ const Music: React.FC = () => {
                           <p className="text-purple-200 text-sm">
                             {song.author || song.artist} • {song.duration > 0 ? formatDuration(song.duration) : 'Live Stream'}
                           </p>
-                          {song.requestedBy && (
-                            <p className="text-purple-300 text-xs">Angefragt von: {song.requestedBy}</p>
-                          )}
-                        </div>
+                        {song.requestedBy && (
+                          <p className="text-purple-300 text-xs">Angefragt von: {song.requestedBy}</p>
+                        )}
                       </div>
+                    </div>
                     );
                   })}
                 </div>
