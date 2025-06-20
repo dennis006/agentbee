@@ -285,7 +285,7 @@ async function playRadioStation(guildId, stationId) {
         console.log(`✅ Radio-Sender ${station.name} gestartet`);
         
         // Update Interactive Panel
-        updateInteractiveRadioPanel(guildId);
+        updateInteractiveRadioPanel(guildId, true);
         
         // Sende Now-Playing Nachricht
         if (musicSettings.radio?.showNowPlaying && musicSettings.announcements?.channelId) {
@@ -344,7 +344,7 @@ function stopRadio(guildId) {
         }
 
         // Update Interactive Panel
-        updateInteractiveRadioPanel(guildId);
+        updateInteractiveRadioPanel(guildId, true);
 
         console.log(`✅ Radio gestoppt`);
         return true;
@@ -575,9 +575,10 @@ async function postInteractiveRadioPanel(guildId) {
     }
 }
 
-async function updateInteractiveRadioPanel(guildId) {
+async function updateInteractiveRadioPanel(guildId, forceUpdate = false) {
     try {
-        if (!musicSettings.interactivePanel.autoUpdate) return;
+        // Prüfe Auto-Update Setting nur wenn nicht forced
+        if (!forceUpdate && !musicSettings.interactivePanel.autoUpdate) return;
 
         const guild = global.client?.guilds.cache.get(guildId);
         if (!guild) return;
@@ -598,9 +599,11 @@ async function updateInteractiveRadioPanel(guildId) {
 
         await message.edit(panelData);
         console.log('🔄 Radio Panel aktualisiert');
+        return true;
 
     } catch (error) {
         console.log('⚠️ Fehler beim Aktualisieren des Radio Panels:', error.message);
+        return false;
     }
 }
 
@@ -879,6 +882,33 @@ function registerMusicAPI(app) {
             }
         } catch (error) {
             console.error('❌ Fehler beim Radio Panel Post:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Update Interactive Panel
+    app.post('/api/music/interactive-panel/:guildId/update', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            const success = await updateInteractiveRadioPanel(guildId, true); // Force update
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Interactive Panel aktualisiert'
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Aktualisieren des Panels'
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fehler beim Panel Update:', error);
             res.status(500).json({
                 success: false,
                 error: error.message

@@ -410,6 +410,15 @@ const Music: React.FC = () => {
       if (response.ok) {
         showSuccess('YouTube Radio', data.message);
         await loadRadioStatus();
+        
+        // Update Discord Interactive Panel
+        try {
+          await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/update`, {
+            method: 'POST'
+          });
+        } catch (updateErr) {
+          console.log('Panel Update Fehler:', updateErr);
+        }
       } else {
         showError('Radio Fehler', data.error || 'Fehler beim Starten des Radio-Senders');
       }
@@ -438,6 +447,15 @@ const Music: React.FC = () => {
       if (response.ok) {
         showSuccess('Radio', data.message);
         await loadRadioStatus();
+        
+        // Update Discord Interactive Panel
+        try {
+          await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/update`, {
+            method: 'POST'
+          });
+        } catch (updateErr) {
+          console.log('Panel Update Fehler:', updateErr);
+        }
       } else {
         showError('Radio Fehler', data.error || 'Fehler beim Stoppen des Radios');
       }
