@@ -150,13 +150,17 @@ function initializeShoukaku(client) {
     
     kazagumo = new Kazagumo({
         plugins: [],
-        defaultSearchEngine: 'youtube'
-    }, [{
+        defaultSearchEngine: 'youtube',
+        send: (guildId, payload) => {
+            const guild = client.guilds.cache.get(guildId);
+            if (guild) guild.shard.send(payload);
+        }
+    }, new Connectors.DiscordJS(client), [{
         name: 'main',
         url: `${musicSettings.lavalink.host}:${musicSettings.lavalink.port}`,
         auth: musicSettings.lavalink.password,
         secure: musicSettings.lavalink.secure
-    }], new Connectors.DiscordJS(client));
+    }]);
 
     // Kazagumo Events
     kazagumo
