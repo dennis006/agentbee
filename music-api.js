@@ -8,7 +8,7 @@ const {
     getVoiceConnection
 } = require('@discordjs/voice');
 // 🆕 Moderne YouTube-API Implementierung mit youtubei.js
-const { YoutubeiJS } = require('youtubei.js');
+const { Innertube } = require('youtubei.js');
 const yts = require('yt-search');
 
 // 🚀 youtubei.js Initialisierung
@@ -406,7 +406,7 @@ async function getVideoInfoWithYoutubei(url) {
         console.log(`🆕 Lade Video-Info mit youtubei.js: ${url}`);
         
         // Initialisiere youtubei.js Client
-        const youtube = new YoutubeiJS();
+        const youtube = await Innertube.create();
         
         // Normalisiere URL und extrahiere Video-ID
         const normalizedUrl = normalizeYouTubeURL(url);
@@ -419,7 +419,7 @@ async function getVideoInfoWithYoutubei(url) {
         console.log(`🔍 Video-ID extrahiert: ${videoId}`);
         
         // Hole Video-Details über interne YouTube-API
-        const info = await youtube.getDetails(videoId);
+        const info = await youtube.music.getInfo(videoId);
         
         if (!info) {
             throw new Error('Video-Details konnten nicht abgerufen werden');
@@ -428,19 +428,18 @@ async function getVideoInfoWithYoutubei(url) {
         console.log(`✅ youtubei.js Video-Details erhalten: ${info.basic_info.title}`);
         
         // Hole Stream-URLs über interne YouTube-API
-        const formats = await youtube.download(videoId, {
-            type: 'audio', // Nur Audio-Streams
-            quality: 'best' // Beste verfügbare Qualität
-        });
+        const formats = info.streaming_data?.adaptive_formats?.filter(format => 
+            format.mime_type?.includes('audio')
+        ) || [];
         
-        console.log(`🎵 Audio-Streams gefunden: ${formats?.length || 0}`);
+        console.log(`🎵 Audio-Streams gefunden: ${formats.length}`);
         
-        if (!formats || formats.length === 0) {
+        if (formats.length === 0) {
             throw new Error('Keine Audio-Streams verfügbar');
         }
         
-        // Wähle besten Audio-Stream
-        const bestAudioStream = formats[0]; // youtubei.js sortiert bereits nach Qualität
+        // Wähle besten Audio-Stream (höchste Bitrate)
+        const bestAudioStream = formats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
         console.log(`🎯 Bester Audio-Stream: ${bestAudioStream.mime_type} - ${bestAudioStream.bitrate}bps`);
         
         return {
@@ -463,7 +462,7 @@ async function getVideoInfoWithYoutubei(url) {
     }
 }
 
-// Normalisiere YouTube URL für play-dl
+// Normalisiere YouTube URL für youtubei.js
 function normalizeYouTubeURL(url) {
     // Entferne verschiedene URL-Varianten und normalisiere
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
@@ -1597,6 +1596,7 @@ function createPlayerForGuild(guildId) {
 
 // Play Music
 async function playMusic(guildId, song) {
+    let songData; // Declare outside try-catch for error handling
     try {
         const connection = voiceConnections.get(guildId);
         if (!connection) {
@@ -1610,7 +1610,6 @@ async function playMusic(guildId, song) {
         const queue = getQueue(guildId);
         
         // Handle both song objects and URLs
-        let songData;
         if (typeof song === 'string') {
             // If it's a URL string, get video info
             console.log(`🔍 URL erkannt, hole Video-Info: ${song}`);
@@ -1755,7 +1754,7 @@ async function playMusic(guildId, song) {
 
             
             // 🚫 Radio-Fallback temporär deaktiviert für Tests
-            // Direkter Fehler wenn play-dl fehlschlägt, kein Radio-Fallback
+            // Direkter Fehler wenn youtubei.js fehlschlägt, kein Radio-Fallback
             
             if (!streamCreated) {
                 throw new Error('Alle YouTube-Stream-Methoden fehlgeschlagen - Video möglicherweise nicht verfügbar oder Region-gesperrt.');
@@ -2281,12 +2280,22 @@ async function playMusicWithRadio(guildId, song) {
             
             // Prüfe ob es ein YouTube-Stream ist (für Lofi/ChillHop)
             if (song.url.includes('youtube.com') || song.url.includes('youtu.be')) {
-                const info = await playdl.video_info(song.url);
-                const streamInfo = await playdl.stream_from_info(info, { quality: 2 });
-                resource = createAudioResource(streamInfo.stream, {
-                    inputType: streamInfo.type,
-                    inlineVolume: true
-                });
+                const youtubeData = await getVideoInfoWithYoutubei(song.url);
+                if (youtubeData && youtubeData.streamUrl) {
+                    const fetch = require('node-fetch');
+                    const response = await fetch(youtubeData.streamUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                            'Referer': 'https://www.youtube.com/'
+                        }
+                    });
+                    resource = createAudioResource(response.body, {
+                        inputType: 'arbitrary',
+                        inlineVolume: true
+                    });
+                } else {
+                    throw new Error('Radio YouTube-Stream konnte nicht geladen werden');
+                }
             } else {
                 // Direkter Radio-Stream
                 resource = createAudioResource(song.url, {
