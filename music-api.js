@@ -25,6 +25,7 @@ playdl.setToken({
 });
 
 console.log('🍪 YouTube-Cookies beim Start gesetzt');
+console.log('✅ YouTube-Cookies gesetzt:', process.env.YOUTUBE_SID?.slice(0, 10), '...');
 
 
 // 🚀 Einfache play-dl Initialisierung
@@ -1635,6 +1636,9 @@ async function playMusic(guildId, song) {
                 const info = await playdl.video_info(normalizedUrl);
                 console.log(`📋 Video-Info erhalten: ${info.video_details.title}`);
                 
+                // 🎯 Debug: Verfügbare Formate prüfen
+                console.log("🎯 Formate gefunden:", info.format?.map(f => f.quality));
+                
                 // Erstelle Stream aus Video-Info mit expliziter Qualitäts-Zahl (automatisch mit Cookies)
                 const streamResult = await playdl.stream_from_info(info, { quality: 0 });
                 
@@ -1648,24 +1652,21 @@ async function playMusic(guildId, song) {
             } catch (infoError) {
                 console.log('⚠️ play-dl video_info fehlgeschlagen:', infoError.message);
                 
-                // Fallback mit höheren Qualitätsstufen (1, 2)
-                const qualityLevels = [1, 2];
-                for (const qualityLevel of qualityLevels) {
-                    try {
-                        console.log(`🔄 Fallback: Versuche stream_from_info mit Qualität ${qualityLevel}...`);
-                        const normalizedUrl = normalizeYouTubeURL(songData.url);
-                        const info = await playdl.video_info(normalizedUrl);
-                        const streamResult = await playdl.stream_from_info(info, { quality: qualityLevel });
-                        
-                        if (streamResult && streamResult.stream) {
-                            stream = streamResult.stream;
-                            streamCreated = true;
-                            console.log(`✅ play-dl Stream mit Qualität ${qualityLevel} erfolgreich!`);
-                            break;
-                        }
-                    } catch (fallbackError) {
-                        console.log(`⚠️ Qualität ${qualityLevel} fehlgeschlagen: ${fallbackError.message}`);
+                // 🎯 Entscheidend: Verwende IMMER quality: 0 für Railway-Kompatibilität
+                try {
+                    console.log('🔄 Fallback: Verwende quality: 0 (Railway-optimiert)...');
+                    const normalizedUrl = normalizeYouTubeURL(songData.url);
+                    const info = await playdl.video_info(normalizedUrl);
+                    console.log("🎯 Fallback Formate gefunden:", info.format?.map(f => f.quality));
+                    const streamResult = await playdl.stream_from_info(info, { quality: 0 });
+                    
+                    if (streamResult && streamResult.stream) {
+                        stream = streamResult.stream;
+                        streamCreated = true;
+                        console.log('✅ play-dl Fallback-Stream mit quality: 0 erfolgreich!');
                     }
+                } catch (fallbackError) {
+                    console.log(`⚠️ Fallback mit quality: 0 fehlgeschlagen: ${fallbackError.message}`);
                 }
             }
         }
@@ -1693,6 +1694,7 @@ async function playMusic(guildId, song) {
                             console.log(`🔗 Teste URL-Variante: ${directUrl}`);
                             
                             const info = await playdl.video_info(directUrl);
+                            console.log("🎯 URL-Variante Formate gefunden:", info.format?.map(f => f.quality));
                             const directStreamResult = await playdl.stream_from_info(info, { quality: 0 });
                             
                             if (directStreamResult && directStreamResult.stream) {
