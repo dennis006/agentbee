@@ -50,7 +50,8 @@
     "spotify-web-api-node": "^5.0.2",
     "util": "^0.12.5",
     "youtubei.js": "^14.0.0",
-    "yt-search": "^2.13.1"
+    "yt-search": "^2.13.1",
+    "ytdl-core": "^4.11.5"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
