@@ -5,7 +5,8 @@ const {
     VoiceConnectionStatus, 
     AudioPlayerStatus,
     entersState,
-    getVoiceConnection
+    getVoiceConnection,
+    StreamType
 } = require('@discordjs/voice');
 // 🆕 Moderne YouTube-API Implementierung mit youtubei.js
 const { Innertube } = require('youtubei.js');
@@ -1812,10 +1813,27 @@ async function playMusic(guildId, song) {
 
         console.log('🎧 Erstelle AudioResource...');
         
-        // Erstelle AudioResource mit Volume-Control
+        // Bestimme den korrekten StreamType basierend auf MIME-Type
+        let inputType = StreamType.Arbitrary; // Default fallback
+        
+        if (songData.mimeType) {
+            if (songData.mimeType.includes('audio/webm') && songData.mimeType.includes('opus')) {
+                inputType = StreamType.WebmOpus;
+                console.log('🎵 Verwende StreamType.WebmOpus für WebM/Opus Stream');
+            } else if (songData.mimeType.includes('audio/mp4')) {
+                inputType = StreamType.Arbitrary; // MP4 als Arbitrary
+                console.log('🎵 Verwende StreamType.Arbitrary für MP4 Stream');
+            } else {
+                console.log(`🎵 Verwende StreamType.Arbitrary für ${songData.mimeType}`);
+            }
+        } else {
+            console.log('🎵 Kein MIME-Type verfügbar, verwende StreamType.Arbitrary');
+        }
+        
+        // Erstelle AudioResource mit korrektem StreamType und Volume-Control
         const resource = createAudioResource(stream, {
             metadata: songData,
-            inputType: 'arbitrary',
+            inputType: inputType,
             inlineVolume: true
         });
         
@@ -2336,8 +2354,19 @@ async function playMusicWithRadio(guildId, song) {
                     console.log(`📻 Radio Response Status: ${response.status} ${response.statusText}`);
                     
                     if (response.ok && response.body && typeof response.body.pipe === 'function') {
+                        // Bestimme StreamType für Radio YouTube-Stream
+                        let radioInputType = StreamType.Arbitrary;
+                        if (youtubeData.mimeType) {
+                            if (youtubeData.mimeType.includes('audio/webm') && youtubeData.mimeType.includes('opus')) {
+                                radioInputType = StreamType.WebmOpus;
+                                console.log('📻 Radio: Verwende StreamType.WebmOpus');
+                            } else {
+                                console.log(`📻 Radio: Verwende StreamType.Arbitrary für ${youtubeData.mimeType}`);
+                            }
+                        }
+                        
                         resource = createAudioResource(response.body, {
-                            inputType: 'arbitrary',
+                            inputType: radioInputType,
                             inlineVolume: true
                         });
                         console.log(`✅ Radio YouTube-Stream ReadableStream validiert`);
@@ -2348,8 +2377,10 @@ async function playMusicWithRadio(guildId, song) {
                     throw new Error('Radio YouTube-Stream konnte nicht geladen werden');
                 }
             } else {
-                // Direkter Radio-Stream
+                // Direkter Radio-Stream (nicht YouTube)
+                console.log('📻 Erstelle direkter Radio-Stream Resource');
                 resource = createAudioResource(song.url, {
+                    inputType: StreamType.Arbitrary, // Für normale Radio-Streams
                     inlineVolume: true
                 });
             }
