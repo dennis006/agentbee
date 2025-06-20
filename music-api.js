@@ -1422,10 +1422,47 @@ function registerMusicAPI(app) {
             res.json({
                 success: true,
                 results: results,
-                query: query
+                query: query,
+                count: results.length,
+                apiSource: process.env.YOUTUBE_API_KEY ? 'youtube_api' : 'play_dl'
             });
         } catch (error) {
             console.error('❌ YouTube Search API Fehler:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // YouTube Video Info API (für direkte URL Eingabe)
+    app.post('/api/music/youtube/info', async (req, res) => {
+        try {
+            const { url } = req.body;
+            
+            if (!url) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'YouTube URL erforderlich'
+                });
+            }
+
+            const song = await getYouTubeVideoInfo(url);
+            
+            if (!song) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Video nicht gefunden oder URL ungültig'
+                });
+            }
+
+            res.json({
+                success: true,
+                song: song,
+                apiSource: process.env.YOUTUBE_API_KEY ? 'youtube_api' : 'play_dl'
+            });
+        } catch (error) {
+            console.error('❌ YouTube Video Info API Fehler:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -1620,31 +1657,180 @@ function deletePlaylist(playlistId) {
     return true;
 }
 
-// YouTube Search Integration
+// YouTube Search Integration mit offizieller API
 async function searchYouTubeSongs(query, maxResults = 10) {
     try {
-        // Verwende play-dl für YouTube-Suche
-        const playDl = require('play-dl');
+        const apiKey = process.env.YOUTUBE_API_KEY;
         
-        const results = await playDl.search(query, {
-            limit: maxResults,
-            source: { youtube: 'video' }
-        });
+        // Fallback: Verwende play-dl wenn kein API Key
+        if (!apiKey) {
+            console.log('📡 Verwende play-dl für YouTube Search (kein API Key)');
+            const playDl = require('play-dl');
+            
+            const results = await playDl.search(query, {
+                limit: maxResults,
+                source: { youtube: 'video' }
+            });
 
-        return results.map(video => new YouTubeSong({
-            id: video.id,
-            title: video.title,
-            url: video.url,
-            duration: video.durationInSec,
-            thumbnail: video.thumbnails?.[0]?.url || '',
-            channel: video.channel?.name || '',
-            views: video.views || 0
-        }));
+            return results.map(video => new YouTubeSong({
+                id: video.id,
+                title: video.title,
+                url: video.url,
+                duration: video.durationInSec,
+                thumbnail: video.thumbnails?.[0]?.url || '',
+                channel: video.channel?.name || '',
+                views: video.views || 0
+            }));
+        }
+
+        // Verwende offizielle YouTube API mit deinem API Key! 🚀
+        console.log('🔑 Verwende YouTube API v3 mit offiziellem API Key!');
+        
+        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=${maxResults}&type=video&key=${apiKey}`;
+        
+        const searchResponse = await fetch(searchUrl);
+        const searchData = await searchResponse.json();
+        
+        if (!searchData.items || searchData.items.length === 0) {
+            return [];
+        }
+
+        // Hole Video-Details für Dauer und Views
+        const videoIds = searchData.items.map(item => item.id.videoId).join(',');
+        const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds}&key=${apiKey}`;
+        
+        const detailsResponse = await fetch(detailsUrl);
+        const detailsData = await detailsResponse.json();
+
+        // Kombiniere Search-Results mit Details
+        return searchData.items.map((item, index) => {
+            const details = detailsData.videos?.[index];
+            const duration = details ? parseYouTubeDuration(details.contentDetails.duration) : 0;
+            const views = details ? parseInt(details.statistics.viewCount || 0) : 0;
+
+            return new YouTubeSong({
+                id: item.id.videoId,
+                title: item.snippet.title,
+                url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+                duration: duration,
+                thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
+                channel: item.snippet.channelTitle,
+                views: views,
+                addedBy: 'system',
+                addedAt: Date.now()
+            });
+        });
 
     } catch (error) {
         console.error('❌ YouTube Search Fehler:', error);
-        return [];
+        
+        // Fallback zu play-dl bei API Fehler
+        try {
+            console.log('🔄 Fallback zu play-dl...');
+            const playDl = require('play-dl');
+            
+            const results = await playDl.search(query, {
+                limit: maxResults,
+                source: { youtube: 'video' }
+            });
+
+            return results.map(video => new YouTubeSong({
+                id: video.id,
+                title: video.title,
+                url: video.url,
+                duration: video.durationInSec,
+                thumbnail: video.thumbnails?.[0]?.url || '',
+                channel: video.channel?.name || '',
+                views: video.views || 0
+            }));
+        } catch (fallbackError) {
+            console.error('❌ Auch play-dl Fallback fehlgeschlagen:', fallbackError);
+            return [];
+        }
     }
+}
+
+// YouTube Duration Parser (PT4M13S -> 253 seconds)
+function parseYouTubeDuration(duration) {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    
+    const hours = parseInt(match[1] || 0);
+    const minutes = parseInt(match[2] || 0);
+    const seconds = parseInt(match[3] || 0);
+    
+    return hours * 3600 + minutes * 60 + seconds;
+}
+
+// Enhanced YouTube URL validation und Metadata-Fetching
+async function getYouTubeVideoInfo(url) {
+    try {
+        const videoId = extractYouTubeVideoId(url);
+        if (!videoId) return null;
+
+        const apiKey = process.env.YOUTUBE_API_KEY;
+        
+        if (apiKey) {
+            // Verwende offizielle API für bessere Metadaten
+            const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`;
+            
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            
+            if (data.items && data.items.length > 0) {
+                const video = data.items[0];
+                return new YouTubeSong({
+                    id: videoId,
+                    title: video.snippet.title,
+                    url: url,
+                    duration: parseYouTubeDuration(video.contentDetails.duration),
+                    thumbnail: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.default?.url || '',
+                    channel: video.snippet.channelTitle,
+                    views: parseInt(video.statistics.viewCount || 0),
+                    addedBy: 'manual',
+                    addedAt: Date.now()
+                });
+            }
+        }
+
+        // Fallback zu play-dl
+        const playDl = require('play-dl');
+        const info = await playDl.video_info(url);
+        
+        if (info) {
+            return new YouTubeSong({
+                id: videoId,
+                title: info.video_details.title,
+                url: url,
+                duration: info.video_details.durationInSec,
+                thumbnail: info.video_details.thumbnails?.[0]?.url || '',
+                channel: info.video_details.channel?.name || '',
+                views: info.video_details.viewCount || 0,
+                addedBy: 'manual',
+                addedAt: Date.now()
+            });
+        }
+
+        return null;
+    } catch (error) {
+        console.error('❌ YouTube Video Info Fehler:', error);
+        return null;
+    }
+}
+
+// YouTube Video ID Extraktor
+function extractYouTubeVideoId(url) {
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+    }
+    
+    return null;
 }
 
 // Auto-DJ Functions

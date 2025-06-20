@@ -199,7 +199,7 @@ const DraggableSong: React.FC<{
   );
 };
 
-// YouTube Search Component
+// YouTube Search Component mit URL Support
 const YouTubeSearch: React.FC<{
   onAddSong: (song: YouTubeSong) => void;
   isLoading: boolean;
@@ -209,9 +209,51 @@ const YouTubeSearch: React.FC<{
   const [searching, setSearching] = useState(false);
   const { showSuccess, showError } = useToast();
 
+  // Check if input is YouTube URL
+  const isYouTubeUrl = (text: string) => {
+    return /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/.test(text);
+  };
+
+  const addDirectUrl = async () => {
+    if (!isYouTubeUrl(query)) return false;
+
+    setSearching(true);
+    try {
+      const response = await fetch(`${window.location.origin}/api/music/youtube/info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: query })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.song) {
+        onAddSong(data.song);
+        showSuccess('YouTube URL hinzugefügt', `"${data.song.title}" zur Playlist hinzugefügt`);
+        setQuery('');
+        return true;
+      } else {
+        showError('YouTube URL', data.error || 'Fehler beim Laden der Video-Informationen');
+        return false;
+      }
+    } catch (error) {
+      showError('YouTube URL', 'Verbindungsfehler');
+      return false;
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const searchSongs = async () => {
     if (!query.trim()) return;
 
+    // Try direct URL first
+    if (isYouTubeUrl(query)) {
+      const success = await addDirectUrl();
+      if (success) return;
+    }
+
+    // Otherwise search
     setSearching(true);
     try {
       const response = await fetch(`${window.location.origin}/api/music/youtube/search`, {
@@ -224,6 +266,9 @@ const YouTubeSearch: React.FC<{
       
       if (response.ok) {
         setSearchResults(data.results || []);
+        if (data.apiSource === 'youtube_api') {
+          showSuccess('YouTube API', '🔑 Verwende offizielle YouTube API!');
+        }
       } else {
         showError('YouTube Search', data.error || 'Fehler bei der Suche');
       }
@@ -254,20 +299,38 @@ const YouTubeSearch: React.FC<{
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="YouTube Songs suchen..."
+            placeholder={isYouTubeUrl(query) ? "📺 YouTube URL erkannt! Enter drücken..." : "YouTube Songs suchen oder URL eingeben..."}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="w-full pl-10 pr-4 py-3 bg-dark-bg/70 border border-purple-primary/30 text-white rounded-xl focus:border-purple-primary focus:ring-2 focus:ring-purple-primary/20 transition-all duration-300"
+            className={`w-full pl-10 pr-16 py-3 bg-dark-bg/70 border rounded-xl text-white focus:ring-2 transition-all duration-300 ${
+              isYouTubeUrl(query) 
+                ? 'border-red-400/50 focus:border-red-400 focus:ring-red-400/20 bg-gradient-to-r from-red-900/10 to-pink-900/10' 
+                : 'border-purple-primary/30 focus:border-purple-primary focus:ring-purple-primary/20'
+            }`}
           />
+          {isYouTubeUrl(query) && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+              <span className="text-red-400 font-bold text-sm animate-pulse">📺</span>
+              <span className="text-red-400 text-xs font-medium">URL</span>
+            </div>
+          )}
         </div>
         <button
           onClick={searchSongs}
           disabled={searching || !query.trim()}
-          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`px-6 py-3 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
+            isYouTubeUrl(query) 
+              ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600' 
+              : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
+          }`}
         >
           {searching ? (
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          ) : isYouTubeUrl(query) ? (
+            <div className="flex items-center gap-1">
+              <span className="text-lg">📺</span>
+            </div>
           ) : (
             <Search className="w-5 h-5" />
           )}
