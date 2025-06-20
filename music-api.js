@@ -20,12 +20,17 @@ playdl.setToken({
             `SSID=${process.env.YOUTUBE_SSID}; ` +
             `APISID=${process.env.YOUTUBE_APISID}; ` +
             `SAPISID=${process.env.YOUTUBE_SAPISID}; ` +
-            `LOGIN_INFO=${process.env.YOUTUBE_LOGIN_INFO};`
+            `LOGIN_INFO=${process.env.YOUTUBE_LOGIN_INFO}; ` +
+            `VISITOR_INFO1_LIVE=${process.env.YOUTUBE_VISITOR_INFO1_LIVE || ''};`,
+        headers: {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+        }
     }
 });
 
 console.log('🍪 YouTube-Cookies beim Start gesetzt');
 console.log('✅ YouTube-Cookies gesetzt:', process.env.YOUTUBE_SID?.slice(0, 10), '...');
+console.log('🔑 VISITOR_INFO1_LIVE gesetzt:', process.env.YOUTUBE_VISITOR_INFO1_LIVE ? 'Ja' : 'Nein');
 
 
 // 🚀 Einfache play-dl Initialisierung
@@ -1638,9 +1643,18 @@ async function playMusic(guildId, song) {
                 
                 // 🎯 Debug: Verfügbare Formate prüfen
                 console.log("🎯 Formate gefunden:", info.format?.map(f => f.quality));
+                console.log("🎧 Streambare Formate:", info.format?.map(f => `${f.mime_type} - ${f.quality}`));
                 
                 // Erstelle Stream aus Video-Info mit expliziter Qualitäts-Zahl (automatisch mit Cookies)
-                const streamResult = await playdl.stream_from_info(info, { quality: 0 });
+                const streamResult = await playdl.stream_from_info(info, { 
+                    quality: 0,
+                    requestOptions: {
+                        headers: {
+                            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                            "referer": "https://www.youtube.com/"
+                        }
+                    }
+                });
                 
                 if (streamResult && streamResult.stream) {
                     stream = streamResult.stream;
@@ -1658,7 +1672,15 @@ async function playMusic(guildId, song) {
                     const normalizedUrl = normalizeYouTubeURL(songData.url);
                     const info = await playdl.video_info(normalizedUrl);
                     console.log("🎯 Fallback Formate gefunden:", info.format?.map(f => f.quality));
-                    const streamResult = await playdl.stream_from_info(info, { quality: 0 });
+                    const streamResult = await playdl.stream_from_info(info, { 
+                        quality: 0,
+                        requestOptions: {
+                            headers: {
+                                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                                "referer": "https://www.youtube.com/"
+                            }
+                        }
+                    });
                     
                     if (streamResult && streamResult.stream) {
                         stream = streamResult.stream;
@@ -1695,7 +1717,15 @@ async function playMusic(guildId, song) {
                             
                             const info = await playdl.video_info(directUrl);
                             console.log("🎯 URL-Variante Formate gefunden:", info.format?.map(f => f.quality));
-                            const directStreamResult = await playdl.stream_from_info(info, { quality: 0 });
+                            const directStreamResult = await playdl.stream_from_info(info, { 
+                                quality: 0,
+                                requestOptions: {
+                                    headers: {
+                                        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                                        "referer": "https://www.youtube.com/"
+                                    }
+                                }
+                            });
                             
                             if (directStreamResult && directStreamResult.stream) {
                                 stream = directStreamResult.stream;
