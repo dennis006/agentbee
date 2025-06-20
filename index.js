@@ -14,7 +14,7 @@ const setupTwitchAPI = require('./twitch-api');
 // AFK System entfernt - verwende Discord Native AFK
 
 // 🎵 LAVALINK MUSIK-SYSTEM
-const { initializeLavalink, registerLavalinkAPI, handleVoiceStateUpdate, loadMusicSettings, musicSettings } = require('./music-api');
+const { initializeShoukaku, loadMusicSettings, musicSettings, registerMusicAPI } = require('./shoukaku-music');
 // Manager wird nach Client-Initialisierung gesetzt
 let lavalinkManager = null;
 const { OpenAI } = require('openai');
@@ -2950,16 +2950,15 @@ try {
     global.client = client;
     
     // Lavalink Manager initialisieren
-    lavalinkManager = initializeLavalink(client);
+    lavalinkManager = initializeShoukaku(client);
     
-    // Voice State Updates für Lavalink handhaben
-    handleVoiceStateUpdate(client);
+    // Voice State Updates werden von Shoukaku automatisch verwaltet
     
     // API-Routen registrieren
-    registerLavalinkAPI(app);
+    registerMusicAPI(app);
+    console.log('🎵 Shoukaku Musik-API registriert!');
     
     console.log('✅ Lavalink Musik-System erfolgreich initialisiert!');
-    console.log(`🔗 Verbindung zu Lavalink: ${musicSettings.lavalink.host}:${musicSettings.lavalink.port}`);
     
 } catch (error) {
     console.error('❌ Fehler beim Initialisieren des Lavalink Musik-Systems:', error);
@@ -4188,7 +4187,7 @@ client.on(Events.MessageCreate, async message => {
             if (command === 'play' && args[1]) {
                 const stationId = args[1];
                 try {
-                    const { playRadioStation } = require('./music-api.js');
+                    const { playRadioStation } = require('./shoukaku-music.js');
                     const success = await playRadioStation(message.guild.id, stationId);
                     
                     if (success) {
@@ -4203,7 +4202,7 @@ client.on(Events.MessageCreate, async message => {
             
             if (command === 'stop') {
                 try {
-                    const { stopRadio } = require('./music-api.js');
+                    const { stopRadio } = require('./shoukaku-music.js');
                     const success = stopRadio(message.guild.id);
                     
                     if (success) {
@@ -4218,7 +4217,7 @@ client.on(Events.MessageCreate, async message => {
             
             if (command === 'list' || command === 'stations') {
                 try {
-                    const { getRadioStations } = require('./music-api.js');
+                    const { getRadioStations } = require('./shoukaku-music.js');
                     const stations = getRadioStations();
                     
                     if (stations.length === 0) {
@@ -4250,7 +4249,7 @@ client.on(Events.MessageCreate, async message => {
             
             if (command === 'status') {
                 try {
-                    const { getCurrentRadioStation, isPlayingRadio } = require('./music-api.js');
+                    const { getCurrentRadioStation, isPlayingRadio } = require('./shoukaku-music.js');
                     const currentStation = getCurrentRadioStation(message.guild.id);
                     const isPlaying = isPlayingRadio(message.guild.id);
                     
@@ -4486,7 +4485,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.customId === 'view_queue') {
         // Show current queue in ephemeral message
         try {
-            const { getQueue } = require('./music-api');
+            const { getQueue } = require('./shoukaku-music');
             const queue = getQueue(interaction.guild.id);
             
             if (queue.songs.length === 0) {

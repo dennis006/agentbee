@@ -566,18 +566,11 @@ const Music: React.FC = () => {
         const data = await response.json();
         setSearchResults(data.results);
         
-        // Show success message with source info
+        // Show success message
         if (data.results.length > 0) {
-          const firstResult = data.results[0];
-          const sourceEmoji = {
-            'spotify': '🎵',
-            'soundcloud': '🎧', 
-            'youtube': '📺'
-          };
-          
           showSuccess(
-            `${sourceEmoji[firstResult.source] || '🎵'} Suche erfolgreich`, 
-            `${data.results.length} Songs gefunden via ${firstResult.source?.toUpperCase() || 'Multi-Source'}`
+            `🚀 Shoukaku Suche erfolgreich`, 
+            `${data.results.length} Songs über Lavalink v4 gefunden`
           );
         }
       }
@@ -1478,21 +1471,22 @@ const Music: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Search className="w-5 h-5 text-purple-accent" />
-                🆕 youtubei.js + Multi-Source Suche
+                🚀 Shoukaku + Kazagumo Suche
                 <Tooltip 
-                  title="🆕 youtubei.js Multi-Source Suche erklärt:"
+                  title="🚀 Shoukaku + Kazagumo System erklärt:"
                   content={
                     <div>
-                      <div>Moderne Musiksuche mit internen APIs:</div>
-                      <div>🆕 youtubei.js (Primär - interne YouTube-API)</div>
-                      <div>🎵 Spotify API (Metadata & Suche)</div>
-                      <div>📻 Radio-Fallback (100% verfügbar)</div>
+                      <div>Modernes Lavalink v4 Musik-System:</div>
+                      <div>🚀 Shoukaku (Native Lavalink v4 Client)</div>
+                      <div>🎵 Kazagumo (Queue Manager)</div>
+                      <div>📺 YouTube über /v4/websocket</div>
+                      <div>⚡ Keine Bot-Detection mehr!</div>
                     </div>
                   }
                 />
               </CardTitle>
               <CardDescription>
-                Direkte YouTube-API ohne Cookies oder Bot-Detection!
+                Native Lavalink v4 mit /v4/websocket - Keine Bot-Detection mehr!
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1518,30 +1512,32 @@ const Music: React.FC = () => {
           {searchResults.length === 0 && !searching && (
             <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-4 border border-purple-primary/30 mb-4">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-2xl">🆕</span>
-                <h4 className="text-white font-semibold">youtubei.js System - Keine Cookies mehr!</h4>
+                <span className="text-2xl">🚀</span>
+                <h4 className="text-white font-semibold">Shoukaku + Kazagumo System - Lavalink v4!</h4>
               </div>
                              <div className="text-sm text-purple-200 space-y-1">
-                 <p>✅ <strong>youtubei.js</strong> - Interne YouTube-API ohne Bot-Detection</p>
-                 <p>✅ <strong>Spotify API</strong> - Professionelle Metadaten & Suche</p>
-                 <p>✅ <strong>Radio Fallback</strong> - 100% Verfügbarkeit garantiert</p>
+                 <p>✅ <strong>Shoukaku</strong> - Native Lavalink v4 Client mit /v4/websocket</p>
+                 <p>✅ <strong>Kazagumo</strong> - Moderne Queue-Verwaltung und Audio-Engine</p>
+                 <p>✅ <strong>YouTube Integration</strong> - Direkt über Lavalink-Server</p>
+                 <p>✅ <strong>Bot-Detection-frei</strong> - Lavalink-Server handhabt alle Requests</p>
                </div>
               <div className="mt-3 text-xs text-green-300">
-                🚀 <strong>Komplett Cookie-frei und Bot-Detection-resistent!</strong>
+                🚀 <strong>Modernste Discord-Musik-Technologie mit nativer Lavalink v4 Unterstützung!</strong>
               </div>
             </div>
           )}
           
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {searchResults.map((song, index) => {
-              // Source information and styling (ohne SoundCloud)
+              // Source information - Shoukaku liefert YouTube via Lavalink
               const sourceInfo = {
+                'youtube': { emoji: '🚀', name: 'Shoukaku', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' },
                 'spotify': { emoji: '🎵', name: 'Spotify', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
-                'youtube': { emoji: '📺', name: 'YouTube', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30' },
                 'radio': { emoji: '📻', name: 'Radio', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' }
               };
               
-              const source = sourceInfo[song.source] || { emoji: '🎵', name: 'Unknown', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' };
+              // Standardmäßig Shoukaku für alle Suchergebnisse
+              const source = sourceInfo[song.source] || sourceInfo['youtube'];
               
               return (
                 <div key={index} className={`${source.bg} rounded-lg p-4 flex items-center gap-4 border ${source.border} transition-all duration-300 hover:scale-[1.02]`}>
@@ -1643,14 +1639,15 @@ const Music: React.FC = () => {
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {queue.songs.map((song, index) => {
-                                         // Source styling for queue items (ohne SoundCloud)
+                                         // Source styling for queue items - Shoukaku System
                      const sourceInfo = {
+                       'youtube': { emoji: '🚀', color: 'text-purple-400', bg: 'bg-purple-500/10' },
                        'spotify': { emoji: '🎵', color: 'text-green-400', bg: 'bg-green-500/10' },
-                       'youtube': { emoji: '📺', color: 'text-red-400', bg: 'bg-red-500/10' },
                        'radio': { emoji: '📻', color: 'text-blue-400', bg: 'bg-blue-500/10' }
                      };
                     
-                    const source = sourceInfo[song.source] || { emoji: '🎵', color: 'text-purple-400', bg: 'bg-purple-500/10' };
+                    // Standardmäßig Shoukaku für alle Queue-Items
+                    const source = sourceInfo[song.source] || sourceInfo['youtube'];
                     
                     return (
                       <div key={index} className={`${source.bg} rounded-lg p-4 flex items-center gap-4 transition-all duration-300 hover:scale-[1.01]`}>
