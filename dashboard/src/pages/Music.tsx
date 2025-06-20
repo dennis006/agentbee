@@ -150,7 +150,7 @@ const Input: React.FC<{
   />
 );
 
-// Interfaces
+// Interfaces - Vereinfacht für YouTube Radio-System
 interface MusicSettings {
   enabled: boolean;
   radio: {
@@ -652,8 +652,6 @@ const Music: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-
-
         {/* Radio Tab */}
         <TabsContent value="radio" className="space-y-6" activeTab={activeTab}>
           {/* Radio Status */}
@@ -989,813 +987,235 @@ const Music: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {/* Song-Request Tab */}
-        <TabsContent value="requests" className="space-y-6" activeTab={activeTab}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-purple-accent" />
-                Song-Request System
-              </CardTitle>
-              <CardDescription>
-                Konfiguriere das Song-Request System f├╝r deine Community
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-            
-            <div className="space-y-6">
-              {/* Enable Song Requests */}
-              <div className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg">
-                <div>
-                  <label className="text-white font-medium">Song-Requests aktivieren</label>
-                  <p className="text-purple-300 text-sm">Erlaubt Mitgliedern Songs ├╝ber Discord-Commands zu requesten</p>
-                </div>
-                <Switch
-                  checked={settings.songRequests.enabled}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
-                    songRequests: { ...prev.songRequests, enabled: checked }
-                  }))}
-                />
-              </div>
-
-              {settings.songRequests.enabled && (
-                <>
-
-                  {/* Interactive Panel */}
-                  <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-primary/20">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="text-white font-medium">­ƒÄ» Interactive Panel</h4>
-                        <p className="text-purple-300 text-sm">Automatisches Embed mit Buttons f├╝r Song-Requests</p>
-                      </div>
-                      <Switch
-                        checked={settings.songRequests.interactivePanel.enabled}
-                        onCheckedChange={(checked) => setSettings(prev => ({
-                          ...prev,
-                          songRequests: {
-                            ...prev.songRequests,
-                            interactivePanel: {
-                              ...prev.songRequests.interactivePanel,
-                              enabled: checked
-                            }
-                          }
-                        }))}
-                      />
-                    </div>
-
-                    {settings.songRequests.interactivePanel.enabled && (
-                      <div className="space-y-4 pt-4 border-t border-purple-primary/20">
-                        {/* Channel Selection */}
-                        <div>
-                          <label className="block text-purple-200 text-sm font-medium mb-2">
-                            ­ƒôì Panel-Channel
-                          </label>
-                          <select
-                            className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
-                            value={settings.songRequests.interactivePanel.channelId}
-                            onChange={(e) => setSettings(prev => ({
-                              ...prev,
-                              songRequests: {
-                                ...prev.songRequests,
-                                interactivePanel: {
-                                  ...prev.songRequests.interactivePanel,
-                                  channelId: e.target.value
-                                }
-                              }
-                            }))}
-                          >
-                            <option value="">Channel ausw├ñhlen...</option>
-                            {channels.filter(ch => ch.type === 'text').map(channel => (
-                              <option key={channel.id} value={channel.id}>
-                                #{channel.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Panel Options */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-purple-200 text-sm">­ƒöä Auto-Update</span>
-                            <Switch
-                              checked={settings.songRequests.interactivePanel.autoUpdate}
-                              onCheckedChange={(checked) => setSettings(prev => ({
-                                ...prev,
-                                songRequests: {
-                                  ...prev.songRequests,
-                                  interactivePanel: {
-                                    ...prev.songRequests.interactivePanel,
-                                    autoUpdate: checked
-                                  }
-                                }
-                              }))}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-purple-200 text-sm">­ƒôï Queue anzeigen</span>
-                            <Switch
-                              checked={settings.songRequests.interactivePanel.showQueue}
-                              onCheckedChange={(checked) => setSettings(prev => ({
-                                ...prev,
-                                songRequests: {
-                                  ...prev.songRequests,
-                                  interactivePanel: {
-                                    ...prev.songRequests.interactivePanel,
-                                    showQueue: checked
-                                  }
-                                }
-                              }))}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Auto Join/Leave */}
-                        <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-primary/20 mt-4">
-                          <div>
-                            <span className="text-green-200 text-sm font-medium flex items-center gap-2">
-                              ­ƒÜ¬ Auto Join/Leave Voice-Channel
-                            </span>
-                            <p className="text-green-300 text-xs mt-1">Bot tritt automatisch bei wenn Songs hinzugef├╝gt werden und verl├ñsst bei leerer Queue</p>
-                          </div>
-                          <Switch
-                            checked={settings.songRequests.interactivePanel.autoJoinLeave || false}
-                            onCheckedChange={(checked) => setSettings(prev => ({
-                              ...prev,
-                              songRequests: {
-                                ...prev.songRequests,
-                                interactivePanel: {
-                                  ...prev.songRequests.interactivePanel,
-                                  autoJoinLeave: checked
-                                }
-                              }
-                            }))}
-                          />
-                        </div>
-
-                        {/* Preferred Voice Channel */}
-                        <div className="mt-4">
-                          <label className="block text-cyan-200 text-sm font-medium mb-2 flex items-center gap-2">
-                            ­ƒÄ» Bevorzugter Voice-Channel
-                          </label>
-                          <select
-                            value={settings.voiceChannels.preferred}
-                            onChange={(e) => setSettings(prev => ({ 
-                              ...prev, 
-                              voiceChannels: { 
-                                ...prev.voiceChannels, 
-                                preferred: e.target.value 
-                              }
-                            }))}
-                            className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-cyan-400 focus:outline-none"
-                          >
-                            <option value="">Automatisch w├ñhlen</option>
-                            {channels.filter(c => c.type === 'voice').map(channel => (
-                              <option key={channel.id} value={channel.id}>
-                                ­ƒöè {channel.name}
-                              </option>
-                            ))}
-                          </select>
-                          <p className="text-cyan-300 text-xs mt-2">
-                            ­ƒÆí Falls kein User in einem Voice-Channel ist, joint der Bot diesem bevorzugten Channel. Leer lassen f├╝r automatische Auswahl.
-                          </p>
-                          {settings.voiceChannels.preferred && (
-                            <p className="text-cyan-200 text-xs mt-1 bg-cyan-500/10 rounded p-2 border border-cyan-400/20">
-                              Ô£à Bevorzugter Channel: <span className="text-white font-medium">
-                                {channels.find(c => c.id === settings.voiceChannels.preferred)?.name || 'Unbekannter Channel'}
-                              </span>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* DJ Controls Restriction */}
-                        <div className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-primary/20 mt-4">
-                          <div>
-                            <span className="text-purple-200 text-sm font-medium flex items-center gap-2">
-                              ­ƒÄº DJ-Rolle f├╝r Player-Controls
-                            </span>
-                            <p className="text-purple-300 text-xs mt-1">Nur Nutzer mit DJ-Rolle k├Ânnen Play/Pause/Skip/Stop verwenden</p>
-                          </div>
-                          <Switch
-                            checked={settings.songRequests.interactivePanel.requireDJForControls || false}
-                            onCheckedChange={(checked) => setSettings(prev => ({
-                              ...prev,
-                              songRequests: {
-                                ...prev.songRequests,
-                                interactivePanel: {
-                                  ...prev.songRequests.interactivePanel,
-                                  requireDJForControls: checked
-                                }
-                              }
-                            }))}
-                          />
-                        </div>
-
-                        {/* DJ Role Selection */}
-                        {settings.songRequests.interactivePanel.requireDJForControls && (
-                          <div className="mt-4">
-                            <label className="block text-purple-200 text-sm font-medium mb-2">
-                              ­ƒÄ¡ DJ-Rolle ausw├ñhlen
-                            </label>
-                            <div className="flex gap-2">
-                              <select
-                                value={settings.commands.djRole}
-                                onChange={(e) => setSettings(prev => ({ 
-                                  ...prev, 
-                                  commands: { ...prev.commands, djRole: e.target.value }
-                                }))}
-                                className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white flex-1 focus:border-purple-primary focus:outline-none"
-                              >
-                                <option value="">Keine DJ-Rolle</option>
-                                {roles.map(role => (
-                                  <option key={role.id} value={role.id}>
-                                    {role.name} {role.name.includes('­ƒÄÁ') ? '' : '­ƒÄÁ'}
-                                  </option>
-                                ))}
-                              </select>
-                              <Tooltip
-                                content={
-                                  <button
-                                    onClick={createDJRole}
-                                    className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-200 hover:scale-105 whitespace-nowrap"
-                                  >
-                                    ­ƒÄ¡ DJ-Rolle erstellen
-                                  </button>
-                                }
-                                title="Erstellt automatisch eine DJ-Rolle mit passenden Permissions"
-                              />
-                            </div>
-                            {settings.commands.djRole && (
-                              <p className="text-purple-300 text-xs mt-2">
-                                Ô£à Aktuelle DJ-Rolle: <span className="text-white font-medium">
-                                  {roles.find(r => r.id === settings.commands.djRole)?.name || 'Unbekannte Rolle'}
-                                </span>
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Admin Role Selection */}
-                        {settings.songRequests.interactivePanel.requireDJForControls && (
-                          <div className="mt-4">
-                            <label className="block text-purple-200 text-sm font-medium mb-2">
-                              ­ƒææ Admin-Rolle ausw├ñhlen (optional)
-                            </label>
-                            <select
-                              value={settings.songRequests.interactivePanel.adminRole}
-                              onChange={(e) => setSettings(prev => ({ 
-                                ...prev, 
-                                songRequests: {
-                                  ...prev.songRequests,
-                                  interactivePanel: {
-                                    ...prev.songRequests.interactivePanel,
-                                    adminRole: e.target.value
-                                  }
-                                }
-                              }))}
-                              className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
-                            >
-                              <option value="">Keine Admin-Rolle (nur Discord-Admins)</option>
-                              {roles.map(role => (
-                                <option key={role.id} value={role.id}>
-                                  {role.name} {role.name.includes('­ƒææ') || role.name.toLowerCase().includes('admin') ? '' : '­ƒææ'}
-                                </option>
-                              ))}
-                            </select>
-                            {settings.songRequests.interactivePanel.adminRole && (
-                              <p className="text-purple-300 text-xs mt-2">
-                                Ô£à Aktuelle Admin-Rolle: <span className="text-white font-medium">
-                                  {roles.find(r => r.id === settings.songRequests.interactivePanel.adminRole)?.name || 'Unbekannte Rolle'}
-                                </span>
-                              </p>
-                            )}
-                            <p className="text-purple-300 text-xs mt-2">
-                              ­ƒÆí Admin-Rolle kann Player-Controls nutzen, auch ohne DJ-Rolle. Leer lassen f├╝r nur Discord-Administrator-Permission.
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Max Queue Display */}
-                        {settings.songRequests.interactivePanel.showQueue && (
-                          <div>
-                            <label className="block text-purple-200 text-sm font-medium mb-2">
-                              ­ƒôè Max. Songs im Panel anzeigen
-                            </label>
-                            <input
-                              type="number"
-                              min="1"
-                              max="10"
-                              value={settings.songRequests.interactivePanel.maxQueueDisplay}
-                              onChange={(e) => setSettings(prev => ({
-                                ...prev,
-                                songRequests: {
-                                  ...prev.songRequests,
-                                  interactivePanel: {
-                                    ...prev.songRequests.interactivePanel,
-                                    maxQueueDisplay: parseInt(e.target.value) || 5
-                                  }
-                                }
-                              }))}
-                              className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
-                            />
-                          </div>
-                        )}
-
-                        {/* Rate Limiting */}
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h5 className="text-purple-200 text-sm font-medium">ÔÅ▒´©Å Rate Limiting</h5>
-                              <p className="text-purple-300 text-xs">Begrenzt Song-Requests pro User ├╝ber Zeit</p>
-                            </div>
-                            <Switch
-                              checked={settings.songRequests.rateLimit?.enabled || false}
-                              onCheckedChange={(checked) => setSettings(prev => ({
-                                ...prev,
-                                songRequests: {
-                                  ...prev.songRequests,
-                                  rateLimit: {
-                                    ...prev.songRequests.rateLimit,
-                                    enabled: checked
-                                  }
-                                }
-                              }))}
-                            />
-                          </div>
-
-                          {settings.songRequests.rateLimit?.enabled && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-purple-primary/20">
-                              <div>
-                                <label className="block text-purple-200 text-xs font-medium mb-2">
-                                  Max. Requests pro User
-                                </label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="50"
-                                  value={settings.songRequests.rateLimit?.maxRequests || 5}
-                                  onChange={(e) => setSettings(prev => ({
-                                    ...prev,
-                                    songRequests: {
-                                      ...prev.songRequests,
-                                      rateLimit: {
-                                        ...prev.songRequests.rateLimit,
-                                        maxRequests: parseInt(e.target.value) || 1
-                                      }
-                                    }
-                                  }))}
-                                  className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white w-full text-sm focus:border-purple-primary focus:outline-none"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-purple-200 text-xs font-medium mb-2">
-                                  Zeitfenster
-                                </label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="1440"
-                                  value={settings.songRequests.rateLimit?.timeWindow || 60}
-                                  onChange={(e) => setSettings(prev => ({
-                                    ...prev,
-                                    songRequests: {
-                                      ...prev.songRequests,
-                                      rateLimit: {
-                                        ...prev.songRequests.rateLimit,
-                                        timeWindow: parseInt(e.target.value) || 1
-                                      }
-                                    }
-                                  }))}
-                                  className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white w-full text-sm focus:border-purple-primary focus:outline-none"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-purple-200 text-xs font-medium mb-2">
-                                  Zeiteinheit
-                                </label>
-                                <select
-                                  value={settings.songRequests.rateLimit?.timeUnit || 'minutes'}
-                                  onChange={(e) => setSettings(prev => ({
-                                    ...prev,
-                                    songRequests: {
-                                      ...prev.songRequests,
-                                      rateLimit: {
-                                        ...prev.songRequests.rateLimit,
-                                        timeUnit: e.target.value as 'minutes' | 'hours' | 'days'
-                                      }
-                                    }
-                                  }))}
-                                  className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white w-full text-sm focus:border-purple-primary focus:outline-none"
-                                >
-                                  <option value="minutes">Minuten</option>
-                                  <option value="hours">Stunden</option>
-                                  <option value="days">Tage</option>
-                                </select>
-                              </div>
-                            </div>
-                          )}
-
-                          {settings.songRequests.rateLimit?.enabled && (
-                            <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-primary/20">
-                              <p className="text-purple-200 text-xs">
-                                <strong>Beispiel:</strong> {settings.songRequests.rateLimit?.maxRequests || 5} Request(s) pro User alle {settings.songRequests.rateLimit?.timeWindow || 60} {
-                                  (settings.songRequests.rateLimit?.timeUnit || 'minutes') === 'minutes' ? 'Minute(n)' :
-                                  (settings.songRequests.rateLimit?.timeUnit || 'minutes') === 'hours' ? 'Stunde(n)' : 'Tag(e)'
-                                }
-                              </p>
-                              <p className="text-purple-300 text-xs mt-1">
-                                ­ƒÆí Tracking erfolgt per Discord User-ID
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Cooldown */}
-                        <div>
-                          <label className="block text-purple-200 text-sm font-medium mb-2">
-                            ÔÅ░ Cooldown zwischen Requests (Minuten)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="60"
-                            value={settings.songRequests.cooldownMinutes}
-                            onChange={(e) => setSettings(prev => ({
-                              ...prev,
-                              songRequests: { ...prev.songRequests, cooldownMinutes: parseInt(e.target.value) || 0 }
-                            }))}
-                            className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
-                          />
-                          <p className="text-purple-300 text-xs mt-1">
-                            Mindestzeit zwischen zwei Requests desselben Users
-                          </p>
-                        </div>
-
-                        {/* Embed Color */}
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <label className="text-purple-200 text-sm font-medium">­ƒÄ¿ Embed Farbe</label>
-                          </div>
-                          <div className="flex gap-3 items-center">
-                            {/* Color Picker */}
-                            <div className="relative">
-                              <input
-                                type="color"
-                                value={settings.songRequests.embedColor.startsWith('#') ? settings.songRequests.embedColor : '#8B5CF6'}
-                                onChange={(e) => {
-                                  const hexColor = e.target.value;
-                                  setSettings(prev => ({
-                                    ...prev,
-                                    songRequests: { ...prev.songRequests, embedColor: hexColor }
-                                  }));
-                                }}
-                                className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-purple-primary transition-all duration-300 hover:scale-105"
-                                style={{
-                                  filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                                }}
-                              />
-                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-ping opacity-60"></div>
-                            </div>
-                            
-                            {/* Hex Input */}
-                            <div className="flex-1">
-                              <input
-                                type="text"
-                                value={settings.songRequests.embedColor}
-                                onChange={(e) => setSettings(prev => ({
-                                  ...prev,
-                                  songRequests: { ...prev.songRequests, embedColor: e.target.value }
-                                }))}
-                                className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none font-mono"
-                                placeholder="#8B5CF6"
-                              />
-                            </div>
-
-                            {/* Color Preview */}
-                            <div 
-                              className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-lg"
-                              style={{
-                                backgroundColor: settings.songRequests.embedColor.startsWith('#') ? settings.songRequests.embedColor : '#8B5CF6',
-                                filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                              }}
-                            >
-                              ­ƒÄÁ
-                            </div>
-                          </div>
-                          
-                          {/* Preset Colors */}
-                          <div className="mt-3">
-                            <p className="text-xs text-purple-300 mb-2">Beliebte Discord Farben:</p>
-                            <div className="flex gap-2 flex-wrap">
-                              {[
-                                { name: 'Lila', color: '#8B5CF6' },
-                                { name: 'Blau', color: '#3B82F6' },
-                                { name: 'Gr├╝n', color: '#10B981' },
-                                { name: 'Rot', color: '#EF4444' },
-                                { name: 'Orange', color: '#F97316' },
-                                { name: 'Pink', color: '#EC4899' },
-                                { name: 'Cyan', color: '#06B6D4' },
-                                { name: 'Gelb', color: '#EAB308' },
-                              ].map((preset) => (
-                                <button
-                                  key={preset.name}
-                                  onClick={() => setSettings(prev => ({
-                                    ...prev,
-                                    songRequests: { ...prev.songRequests, embedColor: preset.color }
-                                  }))}
-                                  className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-purple-primary transition-all duration-300 hover:scale-110 relative group"
-                                  style={{
-                                    backgroundColor: preset.color,
-                                    filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
-                                  }}
-                                  title={preset.name}
-                                >
-                                  <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Post Panel Button */}
-                        <div className="pt-4 border-t border-purple-primary/20">
-                          <button
-                            onClick={postInteractivePanel}
-                            disabled={!settings.songRequests.interactivePanel.channelId}
-                            className="w-full bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-700 hover:to-purple-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-purple-500/25"
-                          >
-                            ­ƒÄÁ Interactive Panel posten
-                          </button>
-                          {settings.songRequests.interactivePanel.messageId && (
-                            <p className="text-xs text-purple-300 mt-2 text-center">
-                              Panel bereits gepostet (ID: {settings.songRequests.interactivePanel.messageId.slice(0, 8)}...)
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-
-
-                  {/* DJ Role Requirement */}
-                  <div className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg">
-                    <div>
-                      <label className="text-white font-medium">DJ-Rolle erforderlich</label>
-                      <p className="text-purple-300 text-sm">Nur Nutzer mit DJ-Rolle k├Ânnen Songs requesten</p>
-                    </div>
-                    <Switch
-                      checked={settings.songRequests.requireDJRole}
-                      onCheckedChange={(checked) => setSettings(prev => ({ 
-                        ...prev, 
-                        songRequests: { ...prev.songRequests, requireDJRole: checked }
-                      }))}
-                    />
-                  </div>
-
-                  {/* Request Tracking */}
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-white font-semibold flex items-center gap-2">
-                        <Users className="w-5 h-5 text-purple-accent" />
-                        Request Tracking
-                      </h4>
-                      <button
-                        onClick={loadRequestTracking}
-                        disabled={trackingLoading}
-                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white px-3 py-1 rounded-lg text-sm transition-all duration-200 hover:scale-105"
-                      >
-                        {trackingLoading ? '­ƒöä' : 'Ôå╗'} Aktualisieren
-                      </button>
-                    </div>
-                    
-                    {trackingLoading ? (
-                      <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-primary mx-auto"></div>
-                      </div>
-                    ) : requestTracking.length > 0 ? (
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {requestTracking.map((user, index) => (
-                          <div key={user.userId} className="bg-purple-500/10 rounded-lg p-3 border border-purple-primary/20">
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-white font-medium text-sm">
-                                    {user.username.length > 20 ? `${user.username.slice(0, 20)}...` : user.username}
-                                  </span>
-                                  <Badge variant={user.remainingRequests > 0 ? 'success' : 'error'}>
-                                    {user.requestsUsed} verwendet
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-4 mt-1 text-xs">
-                                  <span className="text-purple-300">
-                                    ­ƒôè ├£brig: <span className="text-white font-medium">{user.remainingRequests}</span>
-                                  </span>
-                                  {user.resetTime && (
-                                    <span className="text-purple-300">
-                                      ÔÅ░ Reset: <span className="text-white font-medium">
-                                        {new Date(user.resetTime).toLocaleString('de-DE', {
-                                          day: '2-digit',
-                                          month: '2-digit',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })}
-                                      </span>
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs text-purple-300">
-                                  #{index + 1}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-purple-300">
-                        <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Noch keine Song-Requests vorhanden</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Interactive Panel Info */}
-                  <div className="bg-gray-800/50 rounded-lg p-4">
-                    <h4 className="text-white font-semibold mb-3">­ƒÄ» Interactive Panel Features</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">­ƒÄÁ Song Request</span>
-                        <span className="text-purple-300">- ├ûffnet Modal f├╝r Song-Eingabe</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">­ƒôï View Queue</span>
-                        <span className="text-purple-300">- Zeigt aktuelle Queue privat an</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-purple-500/20 text-purple-200 px-2 py-1 rounded">ÔÅ»´©Å Player Controls</span>
-                        <span className="text-purple-300">- Play/Pause/Skip/Stop Buttons</span>
-                        {settings.songRequests.interactivePanel.requireDJForControls && (
-                          <span className="bg-orange-500/20 text-orange-200 px-2 py-1 rounded text-xs">­ƒÄº DJ-Only</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-green-500/20 text-green-200 px-2 py-1 rounded">­ƒöä Auto-Update</span>
-                        <span className="text-purple-300">- Panel aktualisiert sich automatisch</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-6" activeTab={activeTab}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-purple-accent" />
-                Erweiterte Einstellungen
-                <Tooltip 
-                  title="ÔÜÖ´©Å Erweiterte Einstellungen erkl├ñrt:"
-                  content={
-                    <div>
-                      <div>Konfiguriere erweiterte Bot-Features:</div>
-                      <div>ÔÇó Queue-Verhalten und Limits</div>
-                      <div>ÔÇó YouTube-Qualit├ñt und L├ñnge</div>
-                      <div>ÔÇó Autoplay und Auto-Clear</div>
-                    </div>
-                  }
-                />
+                YouTube Radio Einstellungen
               </CardTitle>
               <CardDescription>
-                Konfiguriere erweiterte Funktionen des Musik-Bots
+                Konfiguriere dein einfaches YouTube Radio-System
               </CardDescription>
             </CardHeader>
             <CardContent>
-            
-                          <div className="space-y-6">
-                {/* Max Queue Length */}
-                <div>
-                  <label className="block text-dark-text text-sm font-medium mb-2">
-                    Maximale Queue-L├ñnge
-                  </label>
-                  <Input
-                    type="number"
-                    min="10"
-                    max="1000"
-                    value={settings.maxQueueLength}
-                    onChange={(e) => setSettings(prev => ({ ...prev, maxQueueLength: parseInt(e.target.value) }))}
+              <div className="space-y-6">
+                {/* Radio aktivieren/deaktivieren */}
+                <div className="flex items-center justify-between p-4 bg-red-500/10 rounded-lg">
+                  <div>
+                    <label className="text-white font-medium">📻 YouTube Radio aktivieren</label>
+                    <p className="text-red-300 text-sm">Hauptschalter für das gesamte Radio-System</p>
+                  </div>
+                  <Switch
+                    checked={settings.enabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enabled: checked }))}
                   />
-                  <p className="text-dark-muted text-xs mt-1">Maximale Anzahl Songs die in der Queue gespeichert werden k├Ânnen</p>
                 </div>
 
-                              {/* YouTube Settings */}
-                <div className="border-t border-purple-primary/20 pt-6">
-                  <h4 className="text-dark-text font-semibold mb-4 flex items-center gap-2">
-                    ­ƒÄÑ YouTube Einstellungen
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Radio-spezifische Einstellungen */}
+                {settings.enabled && (
+                  <>
+                    <div className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg">
+                      <div>
+                        <label className="text-white font-medium">🔊 Now Playing anzeigen</label>
+                        <p className="text-purple-300 text-sm">Zeigt aktuell gespielten Radio-Stream im Chat</p>
+                      </div>
+                      <Switch
+                        checked={settings.radio.showNowPlaying}
+                        onCheckedChange={(checked) => setSettings(prev => ({ 
+                          ...prev, 
+                          radio: { ...prev.radio, showNowPlaying: checked }
+                        }))}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-orange-500/10 rounded-lg">
+                      <div>
+                        <label className="text-white font-medium">⏹️ Auto-Stop bei Disconnect</label>
+                        <p className="text-orange-300 text-sm">Stoppt Radio automatisch wenn alle User den Voice-Channel verlassen</p>
+                      </div>
+                      <Switch
+                        checked={settings.radio.autoStop}
+                        onCheckedChange={(checked) => setSettings(prev => ({ 
+                          ...prev, 
+                          radio: { ...prev.radio, autoStop: checked }
+                        }))}
+                      />
+                    </div>
+
+                    {/* Embed Farbe */}
                     <div>
                       <label className="block text-dark-text text-sm font-medium mb-2">
-                        Audio-Qualit├ñt
+                        🎨 Radio Embed Farbe
+                      </label>
+                      <div className="flex gap-3 items-center">
+                        <input
+                          type="color"
+                          value={settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B'}
+                          onChange={(e) => setSettings(prev => ({ 
+                            ...prev, 
+                            radio: { ...prev.radio, embedColor: e.target.value }
+                          }))}
+                          className="w-12 h-12 rounded-lg border-2 border-red-primary/30 bg-dark-bg cursor-pointer hover:border-red-primary transition-all duration-300"
+                        />
+                        <Input
+                          type="text"
+                          value={settings.radio.embedColor}
+                          onChange={(e) => setSettings(prev => ({ 
+                            ...prev, 
+                            radio: { ...prev.radio, embedColor: e.target.value }
+                          }))}
+                          className="flex-1 font-mono"
+                          placeholder="#FF6B6B"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Ankündigungs-Channel */}
+                    <div>
+                      <label className="block text-dark-text text-sm font-medium mb-2">
+                        📢 Ankündigungs-Channel (optional)
                       </label>
                       <select
-                        value={settings.youtube.quality}
+                        value={settings.announcements.channelId}
                         onChange={(e) => setSettings(prev => ({ 
                           ...prev, 
-                          youtube: { ...prev.youtube, quality: e.target.value }
+                          announcements: { ...prev.announcements, channelId: e.target.value }
                         }))}
-                        className="bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-colors duration-200"
+                        className="bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-4 py-2 w-full focus:border-neon-purple focus:outline-none"
                       >
-                        <option value="highestaudio">H├Âchste Qualit├ñt</option>
-                        <option value="lowestaudio">Niedrigste Qualit├ñt</option>
+                        <option value="">Kein Ankündigungs-Channel</option>
+                        {channels.filter(ch => ch.type === 'text').map(channel => (
+                          <option key={channel.id} value={channel.id}>
+                            #{channel.name}
+                          </option>
+                        ))}
                       </select>
+                      <p className="text-dark-muted text-xs mt-1">
+                        Channel für Radio-Start/Stop Ankündigungen
+                      </p>
                     </div>
+                    
+                    {/* Interactive Panel */}
+                    <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-primary/20">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-white font-medium">🎛️ Interactive Radio Panel</h4>
+                          <p className="text-purple-300 text-sm">Discord Panel mit Radio-Auswahl Buttons</p>
+                        </div>
+                        <Switch
+                          checked={settings.interactivePanel.enabled}
+                          onCheckedChange={(checked) => setSettings(prev => ({
+                            ...prev,
+                            interactivePanel: { ...prev.interactivePanel, enabled: checked }
+                          }))}
+                        />
+                      </div>
 
-                    <div>
-                      <label className="block text-dark-text text-sm font-medium mb-2">
-                        Max. Song-L├ñnge (Minuten)
-                      </label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="180"
-                        value={settings.youtube.maxLength}
-                        onChange={(e) => setSettings(prev => ({ 
-                          ...prev, 
-                          youtube: { ...prev.youtube, maxLength: parseInt(e.target.value) }
-                        }))}
-                      />
+                      {settings.interactivePanel.enabled && (
+                        <div className="space-y-4 pt-4 border-t border-purple-primary/20">
+                          <div>
+                            <label className="block text-purple-200 text-sm font-medium mb-2">
+                              📺 Panel-Channel
+                            </label>
+                            <select
+                              value={settings.interactivePanel.channelId}
+                              onChange={(e) => setSettings(prev => ({
+                                ...prev,
+                                interactivePanel: { ...prev.interactivePanel, channelId: e.target.value }
+                              }))}
+                              className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
+                            >
+                              <option value="">Channel auswählen...</option>
+                              {channels.filter(ch => ch.type === 'text').map(channel => (
+                                <option key={channel.id} value={channel.id}>
+                                  #{channel.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-purple-200 text-sm">🔄 Auto-Update</span>
+                            <Switch
+                              checked={settings.interactivePanel.autoUpdate}
+                              onCheckedChange={(checked) => setSettings(prev => ({
+                                ...prev,
+                                interactivePanel: { ...prev.interactivePanel, autoUpdate: checked }
+                              }))}
+                            />
+                          </div>
+
+                          <div className="pt-4 border-t border-purple-primary/20">
+                            <Button
+                              onClick={postInteractivePanel}
+                              disabled={!settings.interactivePanel.channelId}
+                              className="w-full"
+                            >
+                              📻 Radio Panel posten
+                            </Button>
+                            {settings.interactivePanel.messageId && (
+                              <p className="text-xs text-purple-300 mt-2 text-center">
+                                Panel bereits gepostet (ID: {settings.interactivePanel.messageId.slice(0, 8)}...)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Voice Channel Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mic className="w-5 h-5 text-purple-accent" />
+                Voice Channel Einstellungen
+              </CardTitle>
+              <CardDescription>
+                Konfiguriere Voice-Channel Verhalten
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Voice Channels */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {channels.filter(c => c.type === 'voice').map(channel => (
+                    <Button
+                      key={channel.id}
+                      onClick={() => joinVoiceChannel(channel.id)}
+                      variant="outline"
+                      className="justify-between"
+                    >
+                      <span>🔊 {channel.name}</span>
+                      <Users className="w-4 h-4" />
+                    </Button>
+                  ))}
                 </div>
 
-                {/* Queue Settings */}
-                <div className="border-t border-purple-primary/20 pt-6">
-                  <h4 className="text-dark-text font-semibold mb-4 flex items-center gap-2">
-                    ­ƒôï Queue Verhalten
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-dark-text font-medium">Queue bei leerem Channel leeren</label>
-                        <p className="text-dark-muted text-sm">L├Âscht automatisch die Queue wenn alle User den Voice-Channel verlassen</p>
-                      </div>
-                      <Switch
-                        checked={settings.queue.clearOnEmpty}
-                        onCheckedChange={(checked) => setSettings(prev => ({ 
-                          ...prev, 
-                          queue: { ...prev.queue, clearOnEmpty: checked }
-                        }))}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="text-dark-text font-medium">Autoplay aktivieren</label>
-                        <p className="text-dark-muted text-sm">Spielt automatisch ├ñhnliche Songs wenn Queue leer ist</p>
-                      </div>
-                      <Switch
-                        checked={settings.queue.autoplay}
-                        onCheckedChange={(checked) => setSettings(prev => ({ 
-                          ...prev, 
-                          queue: { ...prev.queue, autoplay: checked }
-                        }))}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <Button
+                  onClick={leaveVoiceChannel}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  👋 Voice Channel verlassen
+                </Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Save Button */}
-        <div className="flex justify-center">
-          <Button 
-            onClick={saveSettings} 
-            disabled={saving} 
-            className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-8 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
-          >
-            <Save className="h-5 w-5" />
-            <span>{saving ? 'Speichere...' : 'Einstellungen speichern'}</span>
-          </Button>
-        </div>
       </Tabs>
 
-      {/* Toast Container */}
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      {/* Toast-Container für Benachrichtigungen */}
+      <ToastContainer 
+        toasts={toasts} 
+        removeToast={removeToast} 
+      />
     </div>
   );
 };
