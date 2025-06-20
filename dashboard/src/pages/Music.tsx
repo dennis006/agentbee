@@ -1044,31 +1044,89 @@ const Music: React.FC = () => {
                       />
                     </div>
 
-                    {/* Embed Farbe */}
+                    {/* Embed Farbe - Schönes Design wie XP.tsx */}
                     <div>
                       <label className="block text-dark-text text-sm font-medium mb-2">
                         🎨 Radio Embed Farbe
                       </label>
                       <div className="flex gap-3 items-center">
-                        <input
-                          type="color"
-                          value={settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B'}
-                          onChange={(e) => setSettings(prev => ({ 
-                            ...prev, 
-                            radio: { ...prev.radio, embedColor: e.target.value }
-                          }))}
-                          className="w-12 h-12 rounded-lg border-2 border-red-primary/30 bg-dark-bg cursor-pointer hover:border-red-primary transition-all duration-300"
-                        />
-                        <Input
-                          type="text"
-                          value={settings.radio.embedColor}
-                          onChange={(e) => setSettings(prev => ({ 
-                            ...prev, 
-                            radio: { ...prev.radio, embedColor: e.target.value }
-                          }))}
-                          className="flex-1 font-mono"
-                          placeholder="#FF6B6B"
-                        />
+                        {/* Color Picker */}
+                        <div className="relative">
+                          <input
+                            type="color"
+                            value={settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B'}
+                            onChange={(e) => {
+                              const hexColor = e.target.value;
+                              setSettings(prev => ({ 
+                                ...prev, 
+                                radio: { ...prev.radio, embedColor: hexColor }
+                              }));
+                            }}
+                            className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-neon-purple transition-all duration-300 hover:scale-105"
+                            style={{
+                              filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
+                            }}
+                          />
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-neon rounded-full animate-ping opacity-60"></div>
+                        </div>
+                        
+                        {/* Hex Input */}
+                        <div className="flex-1">
+                          <Input
+                            type="text"
+                            value={settings.radio.embedColor}
+                            onChange={(e) => setSettings(prev => ({ 
+                              ...prev, 
+                              radio: { ...prev.radio, embedColor: e.target.value }
+                            }))}
+                            className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
+                            placeholder="#FF6B6B"
+                          />
+                        </div>
+
+                        {/* Color Preview */}
+                        <div 
+                          className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
+                          style={{
+                            backgroundColor: settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B',
+                            filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
+                          }}
+                        >
+                          📻
+                        </div>
+                      </div>
+                      
+                      {/* Preset Colors */}
+                      <div className="mt-3">
+                        <p className="text-xs text-dark-muted mb-2">Beliebte Radio Farben:</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { name: 'Radio Rot', color: '#FF6B6B' },
+                            { name: 'YouTube Rot', color: '#FF0000' },
+                            { name: 'Orange', color: '#FF8C00' },
+                            { name: 'Lila', color: '#9B59B6' },
+                            { name: 'Blau', color: '#3498DB' },
+                            { name: 'Grün', color: '#2ECC71' },
+                            { name: 'Pink', color: '#E91E63' },
+                            { name: 'Cyan', color: '#1ABC9C' },
+                          ].map((preset) => (
+                            <button
+                              key={preset.name}
+                              onClick={() => setSettings(prev => ({ 
+                                ...prev, 
+                                radio: { ...prev.radio, embedColor: preset.color }
+                              }))}
+                              className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
+                              style={{
+                                backgroundColor: preset.color,
+                                filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
+                              }}
+                              title={preset.name}
+                            >
+                              <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
