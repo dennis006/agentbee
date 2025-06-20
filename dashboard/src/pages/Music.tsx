@@ -140,22 +140,20 @@ const Input: React.FC<{
   placeholder?: string; 
   value?: string | number; 
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   className?: string;
   id?: string;
-}> = ({ type = 'text', placeholder, value, onChange, onKeyPress, className = '', ...props }) => (
+}> = ({ type = 'text', placeholder, value, onChange, className = '', ...props }) => (
   <input
     type={type}
     placeholder={placeholder}
     value={value}
     onChange={onChange}
-    onKeyPress={onKeyPress}
     className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-all duration-300 focus:scale-105 hover:shadow-neon ${className}`}
     {...props}
   />
 );
 
-// Interfaces - Erweitert für Playlist-System
+// Interfaces - Vereinfacht für YouTube Radio-System
 interface MusicSettings {
   enabled: boolean;
   radio: {
@@ -175,22 +173,6 @@ interface MusicSettings {
     messageId: string;
     autoUpdate: boolean;
     embedColor: string;
-  };
-  playlists: {
-    enabled: boolean;
-    customPlaylists: Playlist[];
-    autoQueue: boolean;
-    crossfade: number;
-    voting: {
-      enabled: boolean;
-      votingTime: number;
-      skipThreshold: number;
-    };
-    schedule: {
-      enabled: boolean;
-      timeZone: string;
-      schedules: ScheduleEntry[];
-    };
   };
 }
 
@@ -213,79 +195,6 @@ interface Channel {
   id: string;
   name: string;
   type: string;
-}
-
-// Playlist Interfaces
-interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  url: string;
-  duration: number;
-  thumbnail: string;
-  addedAt: string;
-  order: number;
-}
-
-interface Playlist {
-  id: string;
-  name: string;
-  description: string;
-  songs: Song[];
-  thumbnail: string;
-  genre: string;
-  tags: string[];
-  isPublic: boolean;
-  shuffle: boolean;
-  repeat: 'none' | 'one' | 'all';
-  createdAt: string;
-  updatedAt: string;
-  playCount: number;
-  totalDuration: number;
-}
-
-interface PlaylistStatus {
-  isPlaying: boolean;
-  playlist: Playlist | null;
-  currentSong: Song | null;
-  queue: Song[];
-  queueLength: number;
-  history: Song[];
-  voting: VotingSession | null;
-  repeat: 'none' | 'one' | 'all';
-  shuffle: boolean;
-}
-
-interface VotingSession {
-  id: string;
-  type: 'skip' | 'add_song' | 'remove_song';
-  data: any;
-  startTime: number;
-  endTime: number;
-  isActive: boolean;
-}
-
-interface ScheduleEntry {
-  id: string;
-  name: string;
-  playlistId: string;
-  timeSlots: {
-    start: string; // HH:mm format
-    end: string;
-    days: number[]; // 0-6 (Sunday-Saturday)
-  }[];
-  enabled: boolean;
-}
-
-interface YouTubeSearchResult {
-  id: string;
-  title: string;
-  artist: string;
-  url: string;
-  duration: number;
-  thumbnail: string;
-  views: number;
-  uploadDate: string;
 }
 
 const Music: React.FC = () => {
@@ -317,22 +226,6 @@ const Music: React.FC = () => {
       messageId: "",
       autoUpdate: true,
       embedColor: "#FF6B6B"
-    },
-    playlists: {
-      enabled: true,
-      customPlaylists: [],
-      autoQueue: true,
-      crossfade: 3000,
-      voting: {
-        enabled: true,
-        votingTime: 30000,
-        skipThreshold: 0.5
-      },
-      schedule: {
-        enabled: false,
-        timeZone: "Europe/Berlin",
-        schedules: []
-      }
     }
   });
 
@@ -343,26 +236,6 @@ const Music: React.FC = () => {
     currentStation: null
   });
   const [radioLoading, setRadioLoading] = useState(false);
-
-  // Playlist State
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [playlistStatus, setPlaylistStatus] = useState<PlaylistStatus>({
-    isPlaying: false,
-    playlist: null,
-    currentSong: null,
-    queue: [],
-    queueLength: 0,
-    history: [],
-    voting: null,
-    repeat: 'none',
-    shuffle: false
-  });
-  const [playlistLoading, setPlaylistLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [editingPlaylist, setEditingPlaylist] = useState<string | null>(null);
-  const [editPlaylistName, setEditPlaylistName] = useState('');
 
   // Channels
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -400,72 +273,19 @@ const Music: React.FC = () => {
       }
 
       // Load data
-      const [settingsRes, channelsRes, playlistsRes] = await Promise.all([
+      const [settingsRes, channelsRes] = await Promise.all([
         fetch(`${apiUrl}/api/music/settings`),
-        fetch(`${apiUrl}/api/channels`),
-        fetch(`${apiUrl}/api/music/playlists`)
+        fetch(`${apiUrl}/api/channels`)
       ]);
 
       if (settingsRes.ok) {
         const data = await settingsRes.json();
-        console.log('🎵 Geladene Settings:', data.settings);
-        
-        // Merge mit default Settings um fehlende Properties zu ergänzen
-        const mergedSettings = {
-          enabled: true,
-          radio: {
-            enabled: true,
-            stations: [],
-            defaultStation: "lofi",
-            autoStop: false,
-            showNowPlaying: true,
-            embedColor: "#FF6B6B",
-            ...data.settings?.radio
-          },
-          announcements: {
-            channelId: "",
-            ...data.settings?.announcements
-          },
-          interactivePanel: {
-            enabled: true,
-            channelId: "",
-            messageId: "",
-            autoUpdate: true,
-            embedColor: "#FF6B6B",
-            ...data.settings?.interactivePanel
-          },
-          playlists: {
-            enabled: true,
-            customPlaylists: [],
-            autoQueue: true,
-            crossfade: 3000,
-            voting: {
-              enabled: true,
-              votingTime: 30000,
-              skipThreshold: 0.5
-            },
-            schedule: {
-              enabled: false,
-              timeZone: "Europe/Berlin",
-              schedules: []
-            },
-            ...data.settings?.playlists
-          },
-          ...data.settings
-        };
-        
-        console.log('🎵 Finale Settings:', mergedSettings);
-        setSettings(mergedSettings);
+        setSettings(data.settings);
       }
 
       if (channelsRes.ok) {
         const data = await channelsRes.json();
         setChannels(data.channels || []);
-      }
-
-      if (playlistsRes.ok) {
-        const data = await playlistsRes.json();
-        setPlaylists(data.playlists || []);
       }
 
     } catch (err) {
@@ -479,8 +299,6 @@ const Music: React.FC = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      console.log('💾 Speichere Settings:', settings);
-      
       const response = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -488,14 +306,7 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Settings erfolgreich gespeichert:', data);
         showSuccess('YouTube Radio', '🎵 Einstellungen erfolgreich gespeichert!');
-        
-        // Optional: Settings noch einmal vom Server laden um Konsistenz sicherzustellen
-        setTimeout(() => {
-          loadData();
-        }, 500);
       } else {
         showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
       }
@@ -794,250 +605,6 @@ const Music: React.FC = () => {
     }
   };
 
-  // ========================================
-  // PLAYLIST FUNCTIONS
-  // ========================================
-
-  const loadPlaylistStatus = async () => {
-    if (!guildId) return;
-    
-    try {
-      const response = await fetch(`${apiUrl}/api/music/playlists/${guildId}/status`);
-      if (response.ok) {
-        const data = await response.json();
-        setPlaylistStatus(data.status);
-      }
-    } catch (err) {
-      console.error('Fehler beim Laden des Playlist-Status:', err);
-    }
-  };
-
-  const searchYouTube = async (query: string) => {
-    if (!query.trim()) return;
-    
-    try {
-      setSearchLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/search?query=${encodeURIComponent(query)}&limit=20`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.results || []);
-      } else {
-        showError('YouTube Suche', 'Fehler bei der YouTube-Suche');
-      }
-    } catch (err) {
-      console.error('Fehler bei der YouTube-Suche:', err);
-      showError('YouTube Suche', 'Verbindungsfehler bei der Suche');
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const createNewPlaylist = async (playlistData: Partial<Playlist>) => {
-    try {
-      setPlaylistLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/playlists`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(playlistData)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('Playlist', `Playlist "${data.playlist.name}" erstellt!`);
-        loadData(); // Reload playlists
-        return data.playlist;
-      } else {
-        showError('Playlist Fehler', 'Fehler beim Erstellen der Playlist');
-      }
-    } catch (err) {
-      console.error('Fehler beim Erstellen der Playlist:', err);
-      showError('Playlist Fehler', 'Verbindungsfehler');
-    } finally {
-      setPlaylistLoading(false);
-    }
-  };
-
-  const playPlaylist = async (playlistId: string, options = {}) => {
-    if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      setPlaylistLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/playlists/${playlistId}/play/${guildId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(options)
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        showSuccess('Playlist', `Playlist "${data.playlist.name}" wird abgespielt!`);
-        await loadPlaylistStatus();
-      } else {
-        showError('Playlist Fehler', data.error || 'Fehler beim Abspielen der Playlist');
-      }
-    } catch (err) {
-      console.error('Fehler beim Abspielen der Playlist:', err);
-      showError('Playlist Fehler', 'Verbindungsfehler');
-    } finally {
-      setPlaylistLoading(false);
-    }
-  };
-
-  const stopPlaylist = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      setPlaylistLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/playlists/${guildId}/stop`, {
-        method: 'POST'
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        showSuccess('Playlist', 'Playlist gestoppt!');
-        await loadPlaylistStatus();
-      } else {
-        showError('Playlist Fehler', data.error || 'Fehler beim Stoppen der Playlist');
-      }
-    } catch (err) {
-      console.error('Fehler beim Stoppen der Playlist:', err);
-      showError('Playlist Fehler', 'Verbindungsfehler');
-    } finally {
-      setPlaylistLoading(false);
-    }
-  };
-
-  const skipToNextSong = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/playlists/${guildId}/skip`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        showSuccess('Playlist', 'Song übersprungen!');
-        await loadPlaylistStatus();
-      } else {
-        showError('Skip Fehler', 'Fehler beim Überspringen des Songs');
-      }
-    } catch (err) {
-      console.error('Fehler beim Überspringen:', err);
-      showError('Skip Fehler', 'Verbindungsfehler');
-    }
-  };
-
-  const addSongToPlaylist = async (playlistId: string, song: YouTubeSearchResult) => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/playlists/${playlistId}/songs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: song.title,
-          artist: song.artist,
-          url: song.url,
-          duration: song.duration,
-          thumbnail: song.thumbnail
-        })
-      });
-
-      if (response.ok) {
-        showSuccess('Song hinzugefügt', `"${song.title}" zur Playlist hinzugefügt!`);
-        loadData(); // Reload playlists
-      } else {
-        showError('Song Fehler', 'Fehler beim Hinzufügen des Songs');
-      }
-    } catch (err) {
-      console.error('Fehler beim Hinzufügen des Songs:', err);
-      showError('Song Fehler', 'Verbindungsfehler');
-    }
-  };
-
-  const removeSongFromPlaylist = async (playlistId: string, songId: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/playlists/${playlistId}/songs/${songId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        showSuccess('Song entfernt', 'Song aus Playlist entfernt!');
-        loadData(); // Reload playlists
-      } else {
-        showError('Song Fehler', 'Fehler beim Entfernen des Songs');
-      }
-    } catch (err) {
-      console.error('Fehler beim Entfernen des Songs:', err);
-      showError('Song Fehler', 'Verbindungsfehler');
-    }
-  };
-
-  const deletePlaylist = async (playlistId: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/playlists/${playlistId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        showSuccess('Playlist gelöscht', 'Playlist erfolgreich gelöscht!');
-        loadData(); // Reload playlists
-      } else {
-        showError('Playlist Fehler', 'Fehler beim Löschen der Playlist');
-      }
-    } catch (err) {
-      console.error('Fehler beim Löschen der Playlist:', err);
-      showError('Playlist Fehler', 'Verbindungsfehler');
-    }
-  };
-
-  const startEditingPlaylist = (playlist: Playlist) => {
-    setEditingPlaylist(playlist.id);
-    setEditPlaylistName(playlist.name);
-  };
-
-  const savePlaylistEdit = async (playlistId: string) => {
-    if (!editPlaylistName.trim()) {
-      showError('Playlist Fehler', 'Name darf nicht leer sein');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/playlists/${playlistId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editPlaylistName.trim() })
-      });
-
-      if (response.ok) {
-        showSuccess('Playlist bearbeitet', `Name geändert zu "${editPlaylistName}"`);
-        setEditingPlaylist(null);
-        setEditPlaylistName('');
-        loadData(); // Reload playlists
-      } else {
-        showError('Playlist Fehler', 'Fehler beim Speichern des Namens');
-      }
-    } catch (err) {
-      console.error('Fehler beim Bearbeiten der Playlist:', err);
-      showError('Playlist Fehler', 'Verbindungsfehler');
-    }
-  };
-
-  const cancelPlaylistEdit = () => {
-    setEditingPlaylist(null);
-    setEditPlaylistName('');
-  };
-
   useEffect(() => {
     loadData();
     loadRadioStations();
@@ -1046,13 +613,9 @@ const Music: React.FC = () => {
   useEffect(() => {
     if (guildId) {
       loadRadioStatus();
-      loadPlaylistStatus();
       
-      // Auto-update status
-      const interval = setInterval(() => {
-        loadRadioStatus();
-        loadPlaylistStatus();
-      }, 5000);
+      // Auto-update radio status
+      const interval = setInterval(loadRadioStatus, 10000);
       return () => clearInterval(interval);
     }
   }, [guildId]);
@@ -1136,7 +699,7 @@ const Music: React.FC = () => {
 
       {/* Main Tabs */}
       <Tabs defaultValue="radio" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30">
+        <TabsList className="grid w-full grid-cols-2 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30">
           <TabsTrigger 
             value="radio" 
             className={`flex items-center space-x-2 ${activeTab === 'radio' ? 'bg-red-500 text-white' : 'hover:bg-red-500/20 text-dark-text'}`}
@@ -1144,16 +707,6 @@ const Music: React.FC = () => {
           >
             <Radio className="h-4 w-4" />
             <span>📻 Radio</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="playlists" 
-            className={`flex items-center space-x-2 ${activeTab === 'playlists' ? 'bg-green-500 text-white' : 'hover:bg-green-500/20 text-dark-text'}`}
-            onClick={() => setActiveTab('playlists')}
-          >
-            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-            </svg>
-            <span>🎵 Playlists</span>
           </TabsTrigger>
           <TabsTrigger 
             value="settings" 
@@ -1586,422 +1139,6 @@ const Music: React.FC = () => {
                   <li>• Für beste Qualität verwende offizielle Radio-Streams</li>
                 </ul>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Playlists Tab - MEGA GEILE Features! 🔥 */}
-        <TabsContent value="playlists" className="space-y-6" activeTab={activeTab}>
-          {/* Playlist Status */}
-          <Card animate={true} className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-blue-500/5 animate-gradient-x"></div>
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3" animated={true}>
-                <div className={`p-2 rounded-full ${playlistStatus.isPlaying ? 'bg-green-500/20 animate-pulse' : 'bg-gray-500/20'} transition-all duration-500`}>
-                  <svg className={`w-5 h-5 ${playlistStatus.isPlaying ? 'text-green-400' : 'text-gray-400'} transition-colors duration-500`} fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                  </svg>
-                </div>
-                <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent animate-pulse">
-                  🎵 Playlist Status
-                </span>
-                {playlistStatus.isPlaying && (
-                  <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white animate-bounce shadow-neon">
-                    <span className="animate-pulse">🎵 PLAYING</span>
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription className="text-gray-300">
-                Aktueller Playlist-Status und Wiedergabe-Steuerung
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              {playlistStatus.currentSong ? (
-                <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-xl p-6 border border-green-400/40 shadow-2xl backdrop-blur-sm animate-fade-in-up">
-                  <div className="flex items-center gap-6">
-                    <div className="relative">
-                      <img 
-                        src={playlistStatus.currentSong.thumbnail} 
-                        alt={playlistStatus.currentSong.title}
-                        className="w-20 h-20 rounded-xl object-cover border-2 border-green-400/50 shadow-lg animate-float"
-                        onError={(e) => {
-                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjY2NjYiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K';
-                        }}
-                      />
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping"></div>
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-white animate-pulse-slow bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">
-                        🎵 {playlistStatus.currentSong.title}
-                      </h3>
-                      <p className="text-green-300 text-lg mt-1 animate-fade-in">{playlistStatus.currentSong.artist}</p>
-                      <div className="flex gap-3 mt-3">
-                        <Badge variant="outline" className="text-green-400 border-green-400/60 bg-green-500/10 animate-bounce-slow">
-                          🎵 {playlistStatus.playlist?.name}
-                        </Badge>
-                        <Badge variant="outline" className="text-blue-400 border-blue-400/60 bg-blue-500/10 animate-bounce-slow delay-100">
-                          📀 {playlistStatus.queueLength} in Queue
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        onClick={skipToNextSong}
-                        disabled={playlistLoading}
-                        className="flex items-center gap-2 shadow-xl hover:shadow-green-500/25 animate-pulse-subtle"
-                        animated={true}
-                      >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
-                        </svg>
-                        Skip
-                      </Button>
-                      <Button
-                        onClick={stopPlaylist}
-                        disabled={playlistLoading}
-                        variant="destructive"
-                        className="flex items-center gap-2 shadow-xl hover:shadow-red-500/25 animate-pulse-subtle"
-                        animated={true}
-                      >
-                        <Pause className="w-5 h-5" />
-                        Stop
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Queue Preview */}
-                  {playlistStatus.queue.length > 0 && (
-                    <div className="mt-6 pt-6 border-t border-green-400/30">
-                      <h4 className="text-lg font-bold text-green-300 mb-3 flex items-center gap-2">
-                        📋 Nächste Songs
-                        <Badge className="bg-green-500/20 text-green-300">
-                          {playlistStatus.queueLength}
-                        </Badge>
-                      </h4>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {playlistStatus.queue.slice(0, 5).map((song, index) => (
-                          <div key={song.id} className="flex items-center gap-3 bg-dark-surface/50 rounded-lg p-2">
-                            <span className="text-green-400 font-mono text-sm w-6">{index + 1}.</span>
-                            <img 
-                              src={song.thumbnail} 
-                              alt={song.title}
-                              className="w-8 h-8 rounded object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIxNiIgeT0iMjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-                              }}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white text-sm font-medium truncate">{song.title}</p>
-                              <p className="text-gray-400 text-xs truncate">{song.artist}</p>
-                            </div>
-                          </div>
-                        ))}
-                        {playlistStatus.queueLength > 5 && (
-                          <div className="text-center text-gray-400 text-sm py-2">
-                            ... und {playlistStatus.queueLength - 5} weitere Songs
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-dark-muted animate-fade-in">
-                  <div className="relative inline-block">
-                    <svg className="w-16 h-16 mx-auto mb-6 text-gray-500 animate-bounce-slow" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                    </svg>
-                    <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-gray-500/30 rounded-full animate-ping"></div>
-                  </div>
-                  <p className="text-lg font-medium">Keine Playlist aktiv</p>
-                  <p className="text-sm mt-2 animate-pulse">Erstelle oder wähle eine Playlist aus!</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* YouTube Search Integration */}
-          <Card animate={true} className="relative overflow-hidden border-blue-500/30">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 animate-gradient-x"></div>
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3" animated={true}>
-                <div className="p-2 rounded-full bg-blue-500/20 animate-pulse">
-                  <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/>
-                  </svg>
-                </div>
-                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  🔍 YouTube Suche
-                </span>
-              </CardTitle>
-              <CardDescription className="text-gray-300">
-                Suche nach YouTube-Videos und füge sie zu deinen Playlists hinzu
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="flex gap-3 mb-6">
-                <Input
-                  type="text"
-                  placeholder="Suche nach Songs, Künstlern oder Alben..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && searchYouTube(searchQuery)}
-                  className="flex-1 border-blue-500/30 focus:border-blue-400"
-                />
-                <Button
-                  onClick={() => searchYouTube(searchQuery)}
-                  disabled={searchLoading || !searchQuery.trim()}
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                  animated={true}
-                >
-                  {searchLoading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  ) : (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z"/>
-                    </svg>
-                  )}
-                  Suchen
-                </Button>
-              </div>
-
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  <h4 className="text-lg font-bold text-blue-300 flex items-center gap-2">
-                    🎵 Suchergebnisse
-                    <Badge className="bg-blue-500/20 text-blue-300">
-                      {searchResults.length}
-                    </Badge>
-                  </h4>
-                  {searchResults.map((result) => (
-                    <div key={result.id} className="bg-dark-surface/50 rounded-lg p-4 hover:bg-dark-surface/70 transition-all duration-300 border border-blue-500/20 hover:border-blue-500/40">
-                      <div className="flex items-center gap-4">
-                        <img 
-                          src={result.thumbnail} 
-                          alt={result.title}
-                          className="w-16 h-16 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjY2NjYiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K';
-                          }}
-                        />
-                        <div className="flex-1">
-                          <h5 className="font-bold text-white text-lg">{result.title}</h5>
-                          <p className="text-gray-400">{result.artist}</p>
-                          <div className="flex gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs">
-                              ⏱️ {Math.floor(result.duration / 60)}:{(result.duration % 60).toString().padStart(2, '0')}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              👁️ {result.views?.toLocaleString() || 'N/A'}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {playlists.map((playlist) => (
-                            <Button
-                              key={playlist.id}
-                              onClick={() => addSongToPlaylist(playlist.id, result)}
-                              className="text-xs px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                              animated={true}
-                            >
-                              📋 {playlist.name}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Custom Playlists */}
-          <Card animate={true}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 justify-between">
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                  </svg>
-                  🎵 Meine Playlists
-                </div>
-                <Button
-                  onClick={() => createNewPlaylist({ 
-                    name: `Neue Playlist ${playlists.length + 1}`,
-                    description: 'Automatisch erstellte Playlist'
-                  })}
-                  className="bg-gradient-to-r from-green-500 to-green-600"
-                  animated={true}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Neue Playlist
-                </Button>
-              </CardTitle>
-              <CardDescription>
-                Deine eigenen YouTube-Playlists mit Drag & Drop Editor
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {playlists.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {playlists.map((playlist) => (
-                    <div
-                      key={playlist.id}
-                      className="bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-xl p-6 border border-green-500/30 hover:border-green-500/50 transition-all duration-300 hover:scale-105"
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <img 
-                          src={playlist.thumbnail} 
-                          alt={playlist.name}
-                          className="w-16 h-16 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K';
-                          }}
-                        />
-                        <div className="flex-1">
-                          {editingPlaylist === playlist.id ? (
-                            <div className="space-y-2">
-                              <Input
-                                type="text"
-                                value={editPlaylistName}
-                                onChange={(e) => setEditPlaylistName(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && savePlaylistEdit(playlist.id)}
-                                className="text-lg font-bold border-green-500/50 focus:border-green-400"
-                                placeholder="Playlist Name..."
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => savePlaylistEdit(playlist.id)}
-                                  className="text-xs px-3 py-1 bg-green-600 hover:bg-green-700"
-                                  animated={true}
-                                >
-                                  ✓ Speichern
-                                </Button>
-                                <Button
-                                  onClick={cancelPlaylistEdit}
-                                  variant="outline"
-                                  className="text-xs px-3 py-1"
-                                  animated={true}
-                                >
-                                  ✕ Abbrechen
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-bold text-white text-lg">{playlist.name}</h4>
-                                <Button
-                                  onClick={() => startEditingPlaylist(playlist)}
-                                  className="w-6 h-6 p-0 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400"
-                                  animated={true}
-                                >
-                                  ✏️
-                                </Button>
-                              </div>
-                              <p className="text-gray-400 text-sm">{playlist.description}</p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2 mb-4">
-                        <Badge variant="outline" className="text-xs">
-                          🎵 {playlist.songs.length} Songs
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          ▶️ {playlist.playCount} Plays
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          🏷️ {playlist.genre}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => playPlaylist(playlist.id)}
-                          disabled={playlistLoading || playlist.songs.length === 0}
-                          className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                          animated={true}
-                        >
-                          <Play className="w-4 h-4 mr-2" />
-                          {playlistLoading ? 'Starte...' : 'Abspielen'}
-                        </Button>
-                        <Button
-                          onClick={() => deletePlaylist(playlist.id)}
-                          variant="destructive"
-                          className="px-3"
-                          animated={true}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      
-                      {/* Playlist Songs Preview */}
-                      {playlist.songs.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-green-500/20">
-                          <h5 className="text-sm font-medium text-green-300 mb-2">Vorschau:</h5>
-                          <div className="space-y-1 max-h-32 overflow-y-auto">
-                            {playlist.songs.slice(0, 3).map((song) => (
-                              <div key={song.id} className="flex items-center gap-2 text-xs">
-                                <img 
-                                  src={song.thumbnail} 
-                                  alt={song.title}
-                                  className="w-6 h-6 rounded object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIxMiIgeT0iMTQiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI4IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+TuzwvdGV4dD4KPC9zdmc+Cg==';
-                                  }}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-white truncate">{song.title}</p>
-                                  <p className="text-gray-400 truncate">{song.artist}</p>
-                                </div>
-                                <Button
-                                  onClick={() => removeSongFromPlaylist(playlist.id, song.id)}
-                                  className="w-5 h-5 p-0 bg-red-500/20 hover:bg-red-500/40 text-red-400"
-                                  animated={true}
-                                >
-                                  ✕
-                                </Button>
-                              </div>
-                            ))}
-                            {playlist.songs.length > 3 && (
-                              <div className="text-center text-gray-400 text-xs py-1">
-                                ... und {playlist.songs.length - 3} weitere
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-dark-muted">
-                  <div className="relative inline-block">
-                    <svg className="w-16 h-16 mx-auto mb-6 text-gray-500 animate-bounce-slow" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                    </svg>
-                    <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-gray-500/30 rounded-full animate-ping"></div>
-                  </div>
-                  <p className="text-lg font-medium">Keine Playlists vorhanden</p>
-                  <p className="text-sm mt-2 animate-pulse">Erstelle deine erste Playlist!</p>
-                  <Button
-                    onClick={() => createNewPlaylist({ 
-                      name: 'Meine erste Playlist',
-                      description: 'Automatisch erstellte Playlist'
-                    })}
-                    className="mt-6 bg-gradient-to-r from-green-500 to-green-600"
-                    animated={true}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Erste Playlist erstellen
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
