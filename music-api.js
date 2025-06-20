@@ -11,7 +11,7 @@ const {
 
 const fs = require('fs');
 
-// Vereinfachte Music Settings - nur Radio
+// Erweiterte Music Settings - Radio + Custom Playlists
 let musicSettings = {
     enabled: true,
     radio: {
@@ -104,6 +104,22 @@ let musicSettings = {
         messageId: "",
         autoUpdate: true,
         embedColor: "#FF6B6B"
+    },
+    playlists: {
+        enabled: true,
+        customPlaylists: [], // Array of custom playlists
+        autoQueue: true,
+        crossfade: 3000, // 3 seconds crossfade
+        voting: {
+            enabled: true,
+            votingTime: 30000, // 30 seconds
+            skipThreshold: 0.5 // 50% of users need to vote
+        },
+        schedule: {
+            enabled: false,
+            timeZone: "Europe/Berlin",
+            schedules: [] // Array of scheduled playlists
+        }
     }
 };
 
@@ -111,6 +127,13 @@ let musicSettings = {
 const voiceConnections = new Map(); // guild -> connection
 const audioPlayers = new Map(); // guild -> player
 const currentRadioStations = new Map(); // guildId -> current radio station
+
+// Playlist System
+const currentPlaylists = new Map(); // guildId -> current playlist
+const currentQueues = new Map(); // guildId -> song queue
+const currentSongs = new Map(); // guildId -> current song
+const votingSessions = new Map(); // guildId -> voting session
+const playlistHistory = new Map(); // guildId -> song history
 
 function loadMusicSettings() {
     try {
@@ -759,6 +782,518 @@ async function handleRadioStopButton(interaction) {
     }
 }
 
+// ========================================
+// PLAYLIST SYSTEM FUNCTIONS
+// ========================================
+
+// Playlist Management
+function getCustomPlaylists() {
+    return musicSettings.playlists?.customPlaylists || [];
+}
+
+function getCustomPlaylist(playlistId) {
+    const playlists = getCustomPlaylists();
+    return playlists.find(playlist => playlist.id === playlistId);
+}
+
+function createCustomPlaylist(playlistData) {
+    try {
+        const newPlaylist = {
+            id: `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: playlistData.name || 'Neue Playlist',
+            description: playlistData.description || '',
+            songs: playlistData.songs || [],
+            thumbnail: playlistData.thumbnail || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K',
+            genre: playlistData.genre || 'Mixed',
+            tags: playlistData.tags || [],
+            isPublic: playlistData.isPublic || false,
+            shuffle: playlistData.shuffle || false,
+            repeat: playlistData.repeat || 'none', // none, one, all
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            playCount: 0,
+            totalDuration: 0
+        };
+
+        if (!musicSettings.playlists) {
+            musicSettings.playlists = { customPlaylists: [] };
+        }
+        
+        musicSettings.playlists.customPlaylists.push(newPlaylist);
+        saveMusicSettings();
+        
+        console.log(`✅ Playlist "${newPlaylist.name}" erstellt`);
+        return newPlaylist;
+    } catch (error) {
+        console.error('❌ Fehler beim Erstellen der Playlist:', error);
+        return null;
+    }
+}
+
+function updateCustomPlaylist(playlistId, updateData) {
+    try {
+        const playlists = getCustomPlaylists();
+        const playlistIndex = playlists.findIndex(p => p.id === playlistId);
+        
+        if (playlistIndex === -1) {
+            throw new Error('Playlist nicht gefunden');
+        }
+        
+        playlists[playlistIndex] = {
+            ...playlists[playlistIndex],
+            ...updateData,
+            updatedAt: new Date().toISOString()
+        };
+        
+        saveMusicSettings();
+        console.log(`✅ Playlist "${playlists[playlistIndex].name}" aktualisiert`);
+        return playlists[playlistIndex];
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren der Playlist:', error);
+        return null;
+    }
+}
+
+function deleteCustomPlaylist(playlistId) {
+    try {
+        const playlists = getCustomPlaylists();
+        const playlistIndex = playlists.findIndex(p => p.id === playlistId);
+        
+        if (playlistIndex === -1) {
+            throw new Error('Playlist nicht gefunden');
+        }
+        
+        const deletedPlaylist = playlists.splice(playlistIndex, 1)[0];
+        saveMusicSettings();
+        
+        console.log(`✅ Playlist "${deletedPlaylist.name}" gelöscht`);
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen der Playlist:', error);
+        return false;
+    }
+}
+
+// Song Management in Playlists
+function addSongToPlaylist(playlistId, songData) {
+    try {
+        const playlist = getCustomPlaylist(playlistId);
+        if (!playlist) {
+            throw new Error('Playlist nicht gefunden');
+        }
+        
+        const newSong = {
+            id: `song_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            title: songData.title || 'Unbekannter Titel',
+            artist: songData.artist || 'Unbekannter Künstler',
+            url: songData.url,
+            duration: songData.duration || 0,
+            thumbnail: songData.thumbnail || '',
+            addedAt: new Date().toISOString(),
+            order: playlist.songs.length
+        };
+        
+        playlist.songs.push(newSong);
+        playlist.updatedAt = new Date().toISOString();
+        
+        saveMusicSettings();
+        console.log(`✅ Song "${newSong.title}" zu Playlist "${playlist.name}" hinzugefügt`);
+        return newSong;
+    } catch (error) {
+        console.error('❌ Fehler beim Hinzufügen des Songs:', error);
+        return null;
+    }
+}
+
+function removeSongFromPlaylist(playlistId, songId) {
+    try {
+        const playlist = getCustomPlaylist(playlistId);
+        if (!playlist) {
+            throw new Error('Playlist nicht gefunden');
+        }
+        
+        const songIndex = playlist.songs.findIndex(s => s.id === songId);
+        if (songIndex === -1) {
+            throw new Error('Song nicht gefunden');
+        }
+        
+        const removedSong = playlist.songs.splice(songIndex, 1)[0];
+        playlist.updatedAt = new Date().toISOString();
+        
+        // Update order for remaining songs
+        playlist.songs.forEach((song, index) => {
+            song.order = index;
+        });
+        
+        saveMusicSettings();
+        console.log(`✅ Song "${removedSong.title}" aus Playlist entfernt`);
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Entfernen des Songs:', error);
+        return false;
+    }
+}
+
+function reorderPlaylistSongs(playlistId, newOrder) {
+    try {
+        const playlist = getCustomPlaylist(playlistId);
+        if (!playlist) {
+            throw new Error('Playlist nicht gefunden');
+        }
+        
+        // Reorder songs based on newOrder array
+        const reorderedSongs = newOrder.map((songId, index) => {
+            const song = playlist.songs.find(s => s.id === songId);
+            if (song) {
+                song.order = index;
+                return song;
+            }
+            return null;
+        }).filter(Boolean);
+        
+        playlist.songs = reorderedSongs;
+        playlist.updatedAt = new Date().toISOString();
+        
+        saveMusicSettings();
+        console.log(`✅ Playlist "${playlist.name}" neu sortiert`);
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Sortieren der Playlist:', error);
+        return false;
+    }
+}
+
+// Playlist Playback
+async function playCustomPlaylist(guildId, playlistId, options = {}) {
+    try {
+        const playlist = getCustomPlaylist(playlistId);
+        if (!playlist) {
+            throw new Error('Playlist nicht gefunden');
+        }
+        
+        if (playlist.songs.length === 0) {
+            throw new Error('Playlist ist leer');
+        }
+        
+        console.log(`🎵 Starte Playlist: ${playlist.name} für Guild ${guildId}`);
+        
+        // Auto-Join falls nicht im Voice-Channel
+        let connection = voiceConnections.get(guildId);
+        if (!connection) {
+            console.log('🎵 Auto-Join für Playlist-Wiedergabe');
+            const autoJoinSuccess = await autoJoinForRadio(guildId);
+            if (!autoJoinSuccess) {
+                throw new Error('Bot konnte keinem Voice-Channel beitreten');
+            }
+            connection = voiceConnections.get(guildId);
+        }
+        
+        // Setup Queue
+        let songs = [...playlist.songs];
+        
+        // Shuffle if enabled
+        if (playlist.shuffle || options.shuffle) {
+            songs = shuffleArray(songs);
+        }
+        
+        // Set current playlist and queue
+        currentPlaylists.set(guildId, playlist);
+        currentQueues.set(guildId, songs);
+        playlistHistory.set(guildId, []);
+        
+        // Start playing first song
+        await playNextSongInQueue(guildId);
+        
+        // Update playlist play count
+        playlist.playCount = (playlist.playCount || 0) + 1;
+        saveMusicSettings();
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Abspielen der Playlist:', error);
+        throw error;
+    }
+}
+
+async function playNextSongInQueue(guildId) {
+    try {
+        const queue = currentQueues.get(guildId);
+        const playlist = currentPlaylists.get(guildId);
+        
+        if (!queue || !playlist) {
+            console.log('📻 Keine Queue oder Playlist aktiv');
+            return false;
+        }
+        
+        if (queue.length === 0) {
+            // Handle repeat modes
+            if (playlist.repeat === 'all') {
+                // Restart playlist
+                let songs = [...playlist.songs];
+                if (playlist.shuffle) {
+                    songs = shuffleArray(songs);
+                }
+                currentQueues.set(guildId, songs);
+                return playNextSongInQueue(guildId);
+            } else {
+                console.log('🏁 Playlist beendet');
+                currentPlaylists.delete(guildId);
+                currentQueues.delete(guildId);
+                currentSongs.delete(guildId);
+                return false;
+            }
+        }
+        
+        const nextSong = queue.shift();
+        currentSongs.set(guildId, nextSong);
+        
+        // Add to history
+        const history = playlistHistory.get(guildId) || [];
+        history.push(nextSong);
+        if (history.length > 50) { // Keep last 50 songs
+            history.shift();
+        }
+        playlistHistory.set(guildId, history);
+        
+        console.log(`🎵 Spiele nächsten Song: ${nextSong.title} von ${nextSong.artist}`);
+        
+        // Create player and play song
+        const player = createPlayerForGuild(guildId);
+        const connection = voiceConnections.get(guildId);
+        
+        const { stream, type } = await createYouTubeStream(nextSong.url);
+        const resource = createAudioResource(stream, {
+            inputType: type,
+            inlineVolume: true
+        });
+        
+        if (resource.volume) {
+            resource.volume.setVolume(0.7); // 70% Volume für Playlists
+        }
+        
+        player.play(resource);
+        connection.subscribe(player);
+        
+        // Handle song end
+        player.once(AudioPlayerStatus.Idle, () => {
+            console.log(`🏁 Song beendet: ${nextSong.title}`);
+            
+            // Handle repeat one
+            if (playlist.repeat === 'one') {
+                queue.unshift(nextSong); // Add same song back to beginning
+            }
+            
+            // Play next song after small delay
+            setTimeout(() => {
+                playNextSongInQueue(guildId);
+            }, musicSettings.playlists?.crossfade || 1000);
+        });
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Abspielen des nächsten Songs:', error);
+        return false;
+    }
+}
+
+function stopPlaylist(guildId) {
+    try {
+        console.log(`🛑 Stoppe Playlist für Guild ${guildId}`);
+        
+        // Clear playlist data
+        currentPlaylists.delete(guildId);
+        currentQueues.delete(guildId);
+        currentSongs.delete(guildId);
+        votingSessions.delete(guildId);
+        
+        // Stop player
+        const player = audioPlayers.get(guildId);
+        if (player) {
+            player.stop();
+        }
+        
+        console.log('✅ Playlist gestoppt');
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Stoppen der Playlist:', error);
+        return false;
+    }
+}
+
+// Voting System
+async function startVotingSession(guildId, type, data = {}) {
+    try {
+        if (!musicSettings.playlists?.voting?.enabled) {
+            throw new Error('Voting ist deaktiviert');
+        }
+        
+        const votingTime = musicSettings.playlists.voting.votingTime || 30000;
+        const session = {
+            id: `vote_${Date.now()}`,
+            type: type, // 'skip', 'add_song', 'remove_song'
+            data: data,
+            votes: new Map(), // userId -> vote
+            startTime: Date.now(),
+            endTime: Date.now() + votingTime,
+            isActive: true
+        };
+        
+        votingSessions.set(guildId, session);
+        
+        // Auto-end voting after time limit
+        setTimeout(() => {
+            if (votingSessions.get(guildId)?.id === session.id) {
+                endVotingSession(guildId);
+            }
+        }, votingTime);
+        
+        console.log(`🗳️ Voting-Session gestartet: ${type}`);
+        return session;
+    } catch (error) {
+        console.error('❌ Fehler beim Starten der Voting-Session:', error);
+        return null;
+    }
+}
+
+function addVote(guildId, userId, vote) {
+    try {
+        const session = votingSessions.get(guildId);
+        if (!session || !session.isActive) {
+            throw new Error('Keine aktive Voting-Session');
+        }
+        
+        session.votes.set(userId, vote);
+        console.log(`🗳️ Vote hinzugefügt: ${userId} -> ${vote}`);
+        
+        // Check if enough votes to end early
+        const connection = voiceConnections.get(guildId);
+        if (connection) {
+            const guild = global.client?.guilds.cache.get(guildId);
+            const channel = guild?.channels.cache.get(connection.joinConfig.channelId);
+            if (channel) {
+                const userCount = channel.members.filter(m => !m.user.bot).size;
+                const threshold = Math.ceil(userCount * (musicSettings.playlists.voting.skipThreshold || 0.5));
+                
+                const yesVotes = Array.from(session.votes.values()).filter(v => v === 'yes').length;
+                
+                if (yesVotes >= threshold) {
+                    endVotingSession(guildId, true);
+                }
+            }
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Hinzufügen des Votes:', error);
+        return false;
+    }
+}
+
+function endVotingSession(guildId, forceResult = null) {
+    try {
+        const session = votingSessions.get(guildId);
+        if (!session) return false;
+        
+        session.isActive = false;
+        
+        const votes = Array.from(session.votes.values());
+        const yesVotes = votes.filter(v => v === 'yes').length;
+        const noVotes = votes.filter(v => v === 'no').length;
+        
+        const result = forceResult !== null ? forceResult : yesVotes > noVotes;
+        
+        console.log(`🗳️ Voting beendet: ${result ? 'Angenommen' : 'Abgelehnt'} (${yesVotes}:${noVotes})`);
+        
+        // Handle voting result
+        if (result) {
+            switch (session.type) {
+                case 'skip':
+                    playNextSongInQueue(guildId);
+                    break;
+                case 'add_song':
+                    // Add song to queue
+                    const queue = currentQueues.get(guildId);
+                    if (queue && session.data.song) {
+                        queue.push(session.data.song);
+                    }
+                    break;
+                case 'remove_song':
+                    // Remove song from queue
+                    const currentQueue = currentQueues.get(guildId);
+                    if (currentQueue && session.data.songId) {
+                        const index = currentQueue.findIndex(s => s.id === session.data.songId);
+                        if (index > -1) {
+                            currentQueue.splice(index, 1);
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        votingSessions.delete(guildId);
+        return result;
+    } catch (error) {
+        console.error('❌ Fehler beim Beenden der Voting-Session:', error);
+        return false;
+    }
+}
+
+// Utility Functions
+function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
+function getCurrentPlaylistStatus(guildId) {
+    const playlist = currentPlaylists.get(guildId);
+    const queue = currentQueues.get(guildId);
+    const currentSong = currentSongs.get(guildId);
+    const voting = votingSessions.get(guildId);
+    const history = playlistHistory.get(guildId);
+    
+    return {
+        isPlaying: !!playlist,
+        playlist: playlist,
+        currentSong: currentSong,
+        queue: queue?.slice(0, 10) || [], // Next 10 songs
+        queueLength: queue?.length || 0,
+        history: history?.slice(-5) || [], // Last 5 songs
+        voting: voting,
+        repeat: playlist?.repeat || 'none',
+        shuffle: playlist?.shuffle || false
+    };
+}
+
+// YouTube Search Integration
+async function searchYouTubeVideos(query, maxResults = 10) {
+    try {
+        const playdl = require('play-dl');
+        
+        const searchResults = await playdl.search(query, {
+            limit: maxResults,
+            source: { youtube: 'video' }
+        });
+        
+        return searchResults.map(video => ({
+            id: video.id,
+            title: video.title || 'Unbekannter Titel',
+            artist: video.channel?.name || 'Unbekannter Künstler',
+            url: video.url,
+            duration: video.durationInSec || 0,
+            thumbnail: video.thumbnails?.[0]?.url || '',
+            views: video.views || 0,
+            uploadDate: video.uploadedAt || new Date().toISOString()
+        }));
+    } catch (error) {
+        console.error('❌ Fehler bei YouTube-Suche:', error);
+        return [];
+    }
+}
+
 // API Endpoints
 function registerMusicAPI(app) {
     console.log('📻 Registriere YouTube Radio API...');
@@ -1030,26 +1565,446 @@ function registerMusicAPI(app) {
         }
     });
 
-    console.log('✅ YouTube Radio API registriert!');
+    // ========================================
+    // PLAYLIST API ENDPOINTS
+    // ========================================
+
+    // Get all custom playlists
+    app.get('/api/music/playlists', (req, res) => {
+        try {
+            const playlists = getCustomPlaylists();
+            res.json({
+                success: true,
+                playlists: playlists,
+                total: playlists.length
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Get specific playlist
+    app.get('/api/music/playlists/:playlistId', (req, res) => {
+        try {
+            const { playlistId } = req.params;
+            const playlist = getCustomPlaylist(playlistId);
+            
+            if (!playlist) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Playlist nicht gefunden'
+                });
+            }
+            
+            res.json({
+                success: true,
+                playlist: playlist
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Create new playlist
+    app.post('/api/music/playlists', (req, res) => {
+        try {
+            const playlistData = req.body;
+            const newPlaylist = createCustomPlaylist(playlistData);
+            
+            if (newPlaylist) {
+                res.json({
+                    success: true,
+                    message: 'Playlist erstellt',
+                    playlist: newPlaylist
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Erstellen der Playlist'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Update playlist
+    app.put('/api/music/playlists/:playlistId', (req, res) => {
+        try {
+            const { playlistId } = req.params;
+            const updateData = req.body;
+            
+            const updatedPlaylist = updateCustomPlaylist(playlistId, updateData);
+            
+            if (updatedPlaylist) {
+                res.json({
+                    success: true,
+                    message: 'Playlist aktualisiert',
+                    playlist: updatedPlaylist
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Playlist nicht gefunden'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Delete playlist
+    app.delete('/api/music/playlists/:playlistId', (req, res) => {
+        try {
+            const { playlistId } = req.params;
+            const success = deleteCustomPlaylist(playlistId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Playlist gelöscht'
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Playlist nicht gefunden'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Add song to playlist
+    app.post('/api/music/playlists/:playlistId/songs', (req, res) => {
+        try {
+            const { playlistId } = req.params;
+            const songData = req.body;
+            
+            const newSong = addSongToPlaylist(playlistId, songData);
+            
+            if (newSong) {
+                res.json({
+                    success: true,
+                    message: 'Song zur Playlist hinzugefügt',
+                    song: newSong
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Playlist nicht gefunden'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Remove song from playlist
+    app.delete('/api/music/playlists/:playlistId/songs/:songId', (req, res) => {
+        try {
+            const { playlistId, songId } = req.params;
+            const success = removeSongFromPlaylist(playlistId, songId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Song aus Playlist entfernt'
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Song oder Playlist nicht gefunden'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Reorder playlist songs
+    app.put('/api/music/playlists/:playlistId/reorder', (req, res) => {
+        try {
+            const { playlistId } = req.params;
+            const { newOrder } = req.body;
+            
+            const success = reorderPlaylistSongs(playlistId, newOrder);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Playlist neu sortiert'
+                });
+            } else {
+                res.status(404).json({
+                    success: false,
+                    error: 'Playlist nicht gefunden'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Play playlist
+    app.post('/api/music/playlists/:playlistId/play/:guildId', async (req, res) => {
+        try {
+            const { playlistId, guildId } = req.params;
+            const options = req.body || {};
+            
+            const success = await playCustomPlaylist(guildId, playlistId, options);
+            
+            if (success) {
+                const playlist = getCustomPlaylist(playlistId);
+                res.json({
+                    success: true,
+                    message: `Playlist "${playlist.name}" wird abgespielt`,
+                    playlist: playlist
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Abspielen der Playlist'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Stop playlist
+    app.post('/api/music/playlists/:guildId/stop', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const success = stopPlaylist(guildId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Playlist gestoppt'
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Stoppen der Playlist'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Get current playlist status
+    app.get('/api/music/playlists/:guildId/status', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const status = getCurrentPlaylistStatus(guildId);
+            
+            res.json({
+                success: true,
+                status: status
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Skip to next song
+    app.post('/api/music/playlists/:guildId/skip', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const success = await playNextSongInQueue(guildId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Song übersprungen'
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Keine Playlist aktiv oder Fehler beim Überspringen'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // YouTube Search
+    app.get('/api/music/search', async (req, res) => {
+        try {
+            const { query, limit = 10 } = req.query;
+            
+            if (!query) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Suchquery erforderlich'
+                });
+            }
+            
+            const results = await searchYouTubeVideos(query, parseInt(limit));
+            
+            res.json({
+                success: true,
+                results: results,
+                query: query,
+                total: results.length
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Voting endpoints
+    app.post('/api/music/voting/:guildId/start', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { type, data } = req.body;
+            
+            const session = await startVotingSession(guildId, type, data);
+            
+            if (session) {
+                res.json({
+                    success: true,
+                    message: 'Voting-Session gestartet',
+                    session: {
+                        id: session.id,
+                        type: session.type,
+                        endTime: session.endTime
+                    }
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Starten der Voting-Session'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    app.post('/api/music/voting/:guildId/vote', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { userId, vote } = req.body;
+            
+            const success = addVote(guildId, userId, vote);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Vote hinzugefügt'
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    error: 'Keine aktive Voting-Session oder ungültiger Vote'
+                });
+            }
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    console.log('✅ YouTube Radio & Playlist API registriert!');
 }
 
 module.exports = {
+    // Settings
     loadMusicSettings,
     saveMusicSettings,
+    musicSettings,
+    
+    // API Registration
     registerMusicAPI,
+    
+    // Voice Channel Functions
     joinVoiceChannelSafe,
     leaveVoiceChannel,
+    autoJoinForRadio,
+    
+    // Radio Functions
     getRadioStations,
     getRadioStation,
     playRadioStation,
     stopRadio,
     getCurrentRadioStation,
     isPlayingRadio,
+    
+    // Interactive Panel Functions
     postInteractiveRadioPanel,
     updateInteractiveRadioPanel,
     handleRadioSelectButton,
     handleRadioStationSelect,
     handleRadioStopButton,
-    musicSettings,
-    autoJoinForRadio
+    
+    // Playlist Functions
+    getCustomPlaylists,
+    getCustomPlaylist,
+    createCustomPlaylist,
+    updateCustomPlaylist,
+    deleteCustomPlaylist,
+    addSongToPlaylist,
+    removeSongFromPlaylist,
+    reorderPlaylistSongs,
+    playCustomPlaylist,
+    stopPlaylist,
+    playNextSongInQueue,
+    getCurrentPlaylistStatus,
+    
+    // Voting Functions
+    startVotingSession,
+    addVote,
+    endVotingSession,
+    
+    // Utility Functions
+    searchYouTubeVideos,
+    shuffleArray
 }; 
