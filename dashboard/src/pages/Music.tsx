@@ -1056,7 +1056,7 @@ const Music: React.FC = () => {
                         <div className="relative">
                           <input
                             type="color"
-                            value={settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B'}
+                            value={settings.radio.embedColor?.startsWith?.('#') ? settings.radio.embedColor : '#FF6B6B'}
                             onChange={(e) => {
                               const hexColor = e.target.value;
                               setSettings(prev => ({ 
@@ -1076,7 +1076,7 @@ const Music: React.FC = () => {
                         <div className="flex-1">
                           <Input
                             type="text"
-                            value={settings.radio.embedColor}
+                            value={settings.radio.embedColor || '#FF6B6B'}
                             onChange={(e) => setSettings(prev => ({ 
                               ...prev, 
                               radio: { ...prev.radio, embedColor: e.target.value }
@@ -1090,7 +1090,7 @@ const Music: React.FC = () => {
                         <div 
                           className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
                           style={{
-                            backgroundColor: settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B',
+                            backgroundColor: settings.radio.embedColor?.startsWith?.('#') ? settings.radio.embedColor : '#FF6B6B',
                             filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
                           }}
                         >
@@ -1217,7 +1217,7 @@ const Music: React.FC = () => {
                               <div className="relative">
                                 <input
                                   type="color"
-                                  value={settings.interactivePanel.embedColor.startsWith('#') ? settings.interactivePanel.embedColor : '#FF6B6B'}
+                                  value={settings.interactivePanel.embedColor?.startsWith?.('#') ? settings.interactivePanel.embedColor : '#FF6B6B'}
                                   onChange={(e) => {
                                     const hexColor = e.target.value;
                                     setSettings(prev => ({ 
@@ -1237,7 +1237,7 @@ const Music: React.FC = () => {
                               <div className="flex-1">
                                 <Input
                                   type="text"
-                                  value={settings.interactivePanel.embedColor}
+                                  value={settings.interactivePanel.embedColor || '#FF6B6B'}
                                   onChange={(e) => setSettings(prev => ({ 
                                     ...prev, 
                                     interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
@@ -1251,7 +1251,7 @@ const Music: React.FC = () => {
                               <div 
                                 className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
                                 style={{
-                                  backgroundColor: settings.interactivePanel.embedColor.startsWith('#') ? settings.interactivePanel.embedColor : '#FF6B6B',
+                                  backgroundColor: settings.interactivePanel.embedColor?.startsWith?.('#') ? settings.interactivePanel.embedColor : '#FF6B6B',
                                   filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
                                 }}
                               >
