@@ -375,21 +375,68 @@ async function createYouTubeStream(url) {
         
         // Prüfe ob es ein YouTube URL ist
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            // Validate YouTube URL format
-            const validYouTubeUrl = playdl.yt_validate(url);
-            if (validYouTubeUrl === 'video' || validYouTubeUrl === 'playlist') {
-                console.log(`✅ Gültige YouTube URL gefunden: ${validYouTubeUrl}`);
+            console.log(`🔍 Validiere YouTube URL: ${url}`);
+            
+            try {
+                // Validate YouTube URL format
+                const validYouTubeUrl = playdl.yt_validate(url);
+                console.log(`📊 YouTube Validation Result: ${validYouTubeUrl}`);
                 
-                const stream = await playdl.stream(url, {
-                    quality: 2 // Beste Audio-Qualität
-                });
+                if (validYouTubeUrl === 'video' || validYouTubeUrl === 'playlist') {
+                    console.log(`✅ Gültige YouTube URL gefunden: ${validYouTubeUrl}`);
+                    
+                    // Try alternative approach - get info first
+                    console.log(`📋 Hole Video-Info für: ${url}`);
+                    const info = await playdl.video_info(url);
+                    console.log(`📊 Video-Info erhalten:`, info ? 'SUCCESS' : 'FAILED');
+                    
+                    if (!info) {
+                        throw new Error('Konnte Video-Info nicht abrufen');
+                    }
+                    
+                    console.log(`🎵 Erstelle Stream...`);
+                    const stream = await playdl.stream_from_info(info, {
+                        quality: 2 // Beste Audio-Qualität
+                    });
+                    
+                    console.log(`✅ Stream erfolgreich erstellt`);
+                    return {
+                        stream: stream.stream,
+                        type: stream.type
+                    };
+                } else if (validYouTubeUrl === false) {
+                    // Try direct stream anyway
+                    console.log(`⚠️ YouTube-Validation fehlgeschlagen, versuche direkten Stream...`);
+                    const stream = await playdl.stream(url, {
+                        quality: 2
+                    });
+                    
+                    return {
+                        stream: stream.stream,
+                        type: stream.type
+                    };
+                } else {
+                    throw new Error(`Ungültige YouTube URL: ${url} (Validation: ${validYouTubeUrl})`);
+                }
+            } catch (validationError) {
+                console.error(`❌ YouTube Validation/Stream Fehler:`, validationError);
                 
-                return {
-                    stream: stream.stream,
-                    type: stream.type
-                };
-            } else {
-                throw new Error(`Ungültige YouTube URL: ${url} (Validation: ${validYouTubeUrl})`);
+                // Fallback: Try direct URL approach
+                console.log(`🔄 Fallback: Versuche direkten playdl.stream()...`);
+                try {
+                    const stream = await playdl.stream(url, {
+                        quality: 2
+                    });
+                    
+                    console.log(`✅ Fallback Stream erfolgreich`);
+                    return {
+                        stream: stream.stream,
+                        type: stream.type
+                    };
+                } catch (fallbackError) {
+                    console.error(`❌ Auch Fallback fehlgeschlagen:`, fallbackError);
+                    throw new Error(`YouTube Stream konnte nicht erstellt werden: ${fallbackError.message}`);
+                }
             }
         } else {
             // Direkter Stream (MP3/etc.)
@@ -1368,21 +1415,44 @@ async function searchYouTubeVideos(query, maxResults = 10) {
     try {
         const playdl = require('play-dl');
         
+        console.log(`🔍 YouTube-Suche nach: "${query}"`);
+        
         const searchResults = await playdl.search(query, {
             limit: maxResults,
             source: { youtube: 'video' }
         });
         
-        return searchResults.map(video => ({
-            id: video.id,
-            title: video.title || 'Unbekannter Titel',
-            artist: video.channel?.name || 'Unbekannter Künstler',
-            url: video.url,
-            duration: video.durationInSec || 0,
-            thumbnail: video.thumbnails?.[0]?.url || '',
-            views: video.views || 0,
-            uploadDate: video.uploadedAt || new Date().toISOString()
-        }));
+        console.log(`📊 ${searchResults.length} Suchergebnisse gefunden`);
+        
+        const results = searchResults.map((video, index) => {
+            const result = {
+                id: video.id,
+                title: video.title || 'Unbekannter Titel',
+                artist: video.channel?.name || 'Unbekannter Künstler',
+                url: video.url,
+                duration: video.durationInSec || 0,
+                thumbnail: video.thumbnails?.[0]?.url || '',
+                views: video.views || 0,
+                uploadDate: video.uploadedAt || new Date().toISOString()
+            };
+            
+            // URL Validation für jedes Ergebnis
+            if (!result.url) {
+                console.warn(`⚠️ Video ${index + 1} hat keine URL:`, video);
+                result.url = `https://www.youtube.com/watch?v=${video.id}`;
+            }
+            
+            // Ensure URL is properly formatted
+            if (result.url && !result.url.startsWith('http')) {
+                result.url = `https://www.youtube.com/watch?v=${video.id}`;
+            }
+            
+            console.log(`📝 Video ${index + 1}: ${result.title} - URL: ${result.url}`);
+            return result;
+        }).filter(result => result.url); // Filter out results without URL
+        
+        console.log(`✅ ${results.length} gültige Videos bereit`);
+        return results;
     } catch (error) {
         console.error('❌ Fehler bei YouTube-Suche:', error);
         return [];
