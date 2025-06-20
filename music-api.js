@@ -359,22 +359,47 @@ async function playRadioStation(guildId, stationId) {
 
 async function createYouTubeStream(url) {
     try {
+        // URL Validation
+        if (!url || typeof url !== 'string') {
+            throw new Error(`Invalid URL provided: ${url} (type: ${typeof url})`);
+        }
+        
+        url = url.trim();
+        if (!url) {
+            throw new Error('Empty URL provided');
+        }
+        
+        console.log(`🎵 Erstelle Stream für URL: ${url}`);
+        
         const playdl = require('play-dl');
         
-        // Prüfe ob es ein YouTube Live Stream ist
+        // Prüfe ob es ein YouTube URL ist
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            const stream = await playdl.stream(url, {
-                quality: 2 // Beste Audio-Qualität
-            });
-            
-            return {
-                stream: stream.stream,
-                type: stream.type
-            };
+            // Validate YouTube URL format
+            const validYouTubeUrl = playdl.yt_validate(url);
+            if (validYouTubeUrl === 'video' || validYouTubeUrl === 'playlist') {
+                console.log(`✅ Gültige YouTube URL gefunden: ${validYouTubeUrl}`);
+                
+                const stream = await playdl.stream(url, {
+                    quality: 2 // Beste Audio-Qualität
+                });
+                
+                return {
+                    stream: stream.stream,
+                    type: stream.type
+                };
+            } else {
+                throw new Error(`Ungültige YouTube URL: ${url} (Validation: ${validYouTubeUrl})`);
+            }
         } else {
             // Direkter Stream (MP3/etc.)
+            console.log(`🌐 Direkter Stream: ${url}`);
             const fetch = require('node-fetch');
             const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             return {
                 stream: response.body,
@@ -383,6 +408,8 @@ async function createYouTubeStream(url) {
         }
     } catch (error) {
         console.error('❌ Fehler beim Erstellen des YouTube Streams:', error);
+        console.error('URL war:', url);
+        console.error('URL Typ:', typeof url);
         throw error;
     }
 }
@@ -934,6 +961,13 @@ function addSongToPlaylist(playlistId, songData) {
             throw new Error('Playlist nicht gefunden');
         }
         
+        console.log(`📥 Empfangene Song-Daten:`, JSON.stringify(songData, null, 2));
+        
+        // Validate songData
+        if (!songData.url) {
+            throw new Error(`Song-Daten haben keine URL: ${JSON.stringify(songData)}`);
+        }
+        
         const newSong = {
             id: `song_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             title: songData.title || 'Unbekannter Titel',
@@ -944,6 +978,8 @@ function addSongToPlaylist(playlistId, songData) {
             addedAt: new Date().toISOString(),
             order: playlist.songs.length
         };
+        
+        console.log(`💾 Erstelle Song:`, JSON.stringify(newSong, null, 2));
         
         playlist.songs.push(newSong);
         playlist.updatedAt = new Date().toISOString();
@@ -1108,6 +1144,13 @@ async function playNextSongInQueue(guildId) {
         playlistHistory.set(guildId, history);
         
         console.log(`🎵 Spiele nächsten Song: ${nextSong.title} von ${nextSong.artist}`);
+        console.log(`🔗 Song URL: ${nextSong.url}`);
+        console.log(`📝 Song Object:`, JSON.stringify(nextSong, null, 2));
+        
+        // Validate song data
+        if (!nextSong.url) {
+            throw new Error(`Song hat keine URL: ${nextSong.title} (ID: ${nextSong.id})`);
+        }
         
         // Create player and play song
         const player = createPlayerForGuild(guildId);
