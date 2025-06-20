@@ -12,7 +12,7 @@ const {
 const fs = require('fs');
 const path = require('path');
 
-// Einfache Music Settings - nur lokale MP3-Dateien
+// Kombinierte Music Settings - lokale MP3s + Radio
 let musicSettings = {
     enabled: true,
     localMusic: {
@@ -22,6 +22,42 @@ let musicSettings = {
         defaultVolume: 50,
         shuffle: false,
         loop: false
+    },
+    radio: {
+        enabled: true,
+        stations: [
+            {
+                id: "lofi",
+                name: "Lofi Hip Hop Radio",
+                url: "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+                genre: "Lofi/Chill",
+                country: "International",
+                description: "24/7 Lofi Hip Hop Beats",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TG9GaTwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "chillhop",
+                name: "ChillHop Radio",
+                url: "https://www.youtube.com/watch?v=5yx6BWlEVcY",
+                genre: "Chillhop/Jazz",
+                country: "International",
+                description: "Chill beats to relax/study to",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM0NEFBODgiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q2hpbGxIb3A8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "deutschrap1",
+                name: "Deutschrap One",
+                url: "https://stream.laut.fm/deutschrap",
+                genre: "Deutschrap/Hip-Hop",
+                country: "Deutschland",
+                description: "24/7 Deutschrap und Hip-Hop",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxQTFBMUEiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNGRkQ3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRFVVRTQ0g8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iI0ZGRDcwMCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UkFQPC90ZXh0Pgo8L3N2Zz4K"
+            }
+        ],
+        defaultStation: "lofi",
+        autoStop: false,
+        showNowPlaying: true,
+        embedColor: "#FF6B6B"
     },
     announcements: {
         channelId: ""
@@ -40,6 +76,7 @@ const voiceConnections = new Map(); // guild -> connection
 const audioPlayers = new Map(); // guild -> player
 const currentPlaylists = new Map(); // guildId -> current playlist
 const currentSongs = new Map(); // guildId -> current song info
+const currentRadioStations = new Map(); // guildId -> current radio station
 
 function loadMusicSettings() {
     try {
@@ -104,6 +141,118 @@ function getLocalMusicFiles() {
     }
 }
 
+// Radio System Functions
+function getRadioStations() {
+    return musicSettings.radio?.stations || [];
+}
+
+function getRadioStation(stationId) {
+    const stations = getRadioStations();
+    return stations.find(station => station.id === stationId);
+}
+
+async function playRadioStation(guildId, stationId) {
+    try {
+        const station = getRadioStation(stationId);
+        if (!station) {
+            throw new Error(`Radio-Sender "${stationId}" nicht gefunden`);
+        }
+
+        console.log(`📻 Starte Radio-Sender: ${station.name} für Guild ${guildId}`);
+
+        // Auto-Join falls nicht im Voice-Channel
+        let connection = voiceConnections.get(guildId);
+        if (!connection) {
+            console.log('📻 Auto-Join für Radio-Wiedergabe');
+            const autoJoinSuccess = await autoJoinForRadio(guildId);
+            if (!autoJoinSuccess) {
+                throw new Error('Bot konnte keinem Voice-Channel beitreten');
+            }
+            connection = voiceConnections.get(guildId);
+        }
+
+        // Erstelle Player
+        let player = audioPlayers.get(guildId);
+        if (!player) {
+            player = createAudioPlayer();
+            audioPlayers.set(guildId, player);
+            
+            player.on('stateChange', (oldState, newState) => {
+                console.log(`🎵 Audio Player: ${oldState.status} → ${newState.status}`);
+            });
+            
+            player.on('error', (error) => {
+                console.error('❌ Audio Player Error:', error);
+            });
+        }
+
+        // Verwende play-dl für YouTube Live Stream
+        const { stream, type } = await createYouTubeStream(station.url);
+        
+        const resource = createAudioResource(stream, {
+            inputType: type,
+            inlineVolume: true
+        });
+
+        if (resource.volume) {
+            resource.volume.setVolume(0.5); // 50% Volume
+        }
+
+        // Spiele ab
+        player.play(resource);
+        connection.subscribe(player);
+
+        // Setze als aktueller Radio-Sender
+        currentRadioStations.set(guildId, station);
+
+        console.log(`✅ Radio-Sender ${station.name} gestartet`);
+
+        // Update Interactive Panel
+        updateInteractiveRadioPanel(guildId, true);
+        
+        // Sende Now-Playing Nachricht
+        if (musicSettings.radio?.showNowPlaying && musicSettings.announcements?.channelId) {
+            await sendRadioNowPlayingMessage(guildId, station);
+        }
+
+        return true;
+
+    } catch (error) {
+        console.error(`❌ Fehler beim Starten des Radio-Senders:`, error);
+        throw error;
+    }
+}
+
+async function createYouTubeStream(url) {
+    try {
+        const playdl = require('play-dl');
+        
+        // Prüfe ob es ein YouTube Live Stream ist
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            const stream = await playdl.stream(url, {
+                quality: 2 // Beste Audio-Qualität
+            });
+            
+            return {
+                stream: stream.stream,
+                type: stream.type
+            };
+        } else {
+            // Direkter Stream (MP3/etc.)
+            const fetch = require('node-fetch');
+            const response = await fetch(url);
+            
+            return {
+                stream: response.body,
+                type: StreamType.Arbitrary
+            };
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Erstellen des YouTube Streams:', error);
+        throw error;
+    }
+}
+
 // Voice Connection Management (bleibt gleich)
 async function joinVoiceChannelSafe(channel) {
     try {
@@ -161,6 +310,7 @@ function leaveVoiceChannel(guildId) {
         audioPlayers.delete(guildId);
         currentPlaylists.delete(guildId);
         currentSongs.delete(guildId);
+        currentRadioStations.delete(guildId);
         console.log('👋 Voice-Channel verlassen');
     }
 }
@@ -193,15 +343,15 @@ async function playLocalMusic(guildId, songId) {
         let player = audioPlayers.get(guildId);
         if (!player) {
             player = createAudioPlayer();
-            audioPlayers.set(guildId, player);
-            
+        audioPlayers.set(guildId, player);
+        
             player.on('stateChange', (oldState, newState) => {
                 console.log(`🎵 Audio Player: ${oldState.status} → ${newState.status}`);
-            });
-            
+        });
+        
             player.on('error', (error) => {
                 console.error('❌ Audio Player Error:', error);
-            });
+        });
         }
 
         // Song-Info speichern
@@ -252,7 +402,7 @@ function registerMusicAPI(app) {
 
     // Musik-Einstellungen speichern
     app.post('/api/music/settings', (req, res) => {
-        try {
+    try {
             musicSettings = { ...musicSettings, ...req.body };
             saveMusicSettings();
             res.json({ success: true, message: 'Einstellungen gespeichert' });
@@ -307,7 +457,7 @@ function registerMusicAPI(app) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
-
+        
     // Musik abspielen
     app.post('/api/music/play', async (req, res) => {
         try {
@@ -319,14 +469,14 @@ function registerMusicAPI(app) {
             } else {
                 res.status(500).json({ success: false, error: 'Fehler beim Abspielen' });
             }
-        } catch (error) {
+    } catch (error) {
             res.status(500).json({ success: false, error: error.message });
-        }
+    }
     });
 
     // Musik stoppen
     app.post('/api/music/stop', (req, res) => {
-        try {
+    try {
             const { guildId } = req.body;
             stopMusic(guildId);
             res.json({ success: true, message: 'Musik gestoppt' });
@@ -347,7 +497,7 @@ function registerMusicAPI(app) {
                 currentSong,
                 isPlaying
             });
-        } catch (error) {
+    } catch (error) {
             res.status(500).json({ success: false, error: error.message });
         }
     });
