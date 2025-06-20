@@ -440,6 +440,213 @@ async function healthCheck() {
     };
 }
 
+// 🔗 Queue-Management Funktionen
+async function addToQueue(guildId, url, requestedBy = 'Dashboard') {
+    try {
+        const player = manager.get(guildId);
+        if (!player) {
+            return { success: false, error: 'Kein Player für diese Guild gefunden' };
+        }
+
+        // Track suchen
+        const results = await manager.search(url);
+        if (!results.tracks || results.tracks.length === 0) {
+            return { success: false, error: 'Kein Track gefunden' };
+        }
+
+        const track = results.tracks[0];
+        track.requester = requestedBy;
+
+        // Track zur Queue hinzufügen
+        player.queue.add(track);
+
+        // Wenn nichts spielt, starte Wiedergabe
+        if (!player.playing && !player.paused && player.queue.size === 1) {
+            await player.play();
+        }
+
+        return {
+            success: true,
+            song: {
+                title: track.title,
+                author: track.author,
+                url: track.uri,
+                duration: Math.floor(track.duration / 1000),
+                thumbnail: track.displayThumbnail,
+                requestedBy: requestedBy,
+                source: track.sourceName === 'youtube' ? 'youtube' : 
+                       track.sourceName === 'spotify' ? 'spotify' : 'lavalink'
+            }
+        };
+
+    } catch (error) {
+        console.error('❌ Lavalink addToQueue Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// 🎤 Voice-Channel Management
+async function joinVoiceChannel(guildId, channelId) {
+    try {
+        if (!client) {
+            return { success: false, error: 'Bot-Client nicht verfügbar' };
+        }
+
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+            return { success: false, error: 'Guild nicht gefunden' };
+        }
+
+        const channel = guild.channels.cache.get(channelId);
+        if (!channel || channel.type !== 'GUILD_VOICE') {
+            return { success: false, error: 'Voice-Channel nicht gefunden' };
+        }
+
+        // Erstelle oder hole Player
+        const player = manager.create({
+            guild: guildId,
+            voiceChannel: channelId,
+            textChannel: null,
+            volume: musicSettings.defaultVolume || 50
+        });
+
+        // Verbinde mit Voice-Channel
+        await player.connect();
+
+        return { 
+            success: true, 
+            message: `Voice-Channel "${channel.name}" erfolgreich beigetreten` 
+        };
+
+    } catch (error) {
+        console.error('❌ Lavalink joinVoiceChannel Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+function leaveVoiceChannel(guildId) {
+    try {
+        const player = manager.get(guildId);
+        if (!player) {
+            return false;
+        }
+
+        player.destroy();
+        return true;
+
+    } catch (error) {
+        console.error('❌ Lavalink leaveVoiceChannel Error:', error);
+        return false;
+    }
+}
+
+// 🔀 Queue-Manipulationen
+function clearQueue(guildId) {
+    try {
+        const player = manager.get(guildId);
+        if (!player) {
+            return false;
+        }
+
+        player.queue.clear();
+        player.stop();
+        return true;
+
+    } catch (error) {
+        console.error('❌ Lavalink clearQueue Error:', error);
+        return false;
+    }
+}
+
+function shuffleQueue(guildId) {
+    try {
+        const player = manager.get(guildId);
+        if (!player || player.queue.size === 0) {
+            return false;
+        }
+
+        // Shuffle die Queue (Fisher-Yates Algorithmus)
+        const tracks = [...player.queue];
+        for (let i = tracks.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [tracks[i], tracks[j]] = [tracks[j], tracks[i]];
+        }
+
+        // Neue shuffled Queue setzen
+        player.queue.clear();
+        tracks.forEach(track => player.queue.add(track));
+
+        return true;
+
+    } catch (error) {
+        console.error('❌ Lavalink shuffleQueue Error:', error);
+        return false;
+    }
+}
+
+// 📋 Enhanced Queue Info (kompatibel mit Dashboard)
+function getQueueInfo(guildId) {
+    try {
+        const player = manager.get(guildId);
+        if (!player) {
+            return {
+                currentSong: null,
+                songs: [],
+                volume: 50,
+                repeat: 'off',
+                shuffle: false
+            };
+        }
+
+        // Aktueller Song
+        const currentSong = player.queue.current ? {
+            title: player.queue.current.title,
+            author: player.queue.current.author,
+            url: player.queue.current.uri,
+            duration: Math.floor(player.queue.current.duration / 1000),
+            thumbnail: player.queue.current.displayThumbnail,
+            requestedBy: player.queue.current.requester || 'Unknown',
+            source: player.queue.current.sourceName === 'youtube' ? 'youtube' : 
+                   player.queue.current.sourceName === 'spotify' ? 'spotify' : 'lavalink'
+        } : null;
+
+        // Queue Songs
+        const songs = player.queue.map((track, index) => ({
+            title: track.title,
+            author: track.author,
+            url: track.uri,
+            duration: Math.floor(track.duration / 1000),
+            thumbnail: track.displayThumbnail,
+            requestedBy: track.requester || 'Unknown',
+            source: track.sourceName === 'youtube' ? 'youtube' : 
+                   track.sourceName === 'spotify' ? 'spotify' : 'lavalink',
+            position: index + 1
+        }));
+
+        return {
+            currentSong: currentSong,
+            songs: songs,
+            volume: player.volume || 50,
+            repeat: 'off', // Lavalink hat kein eingebautes Repeat, könnte später implementiert werden
+            shuffle: false, // Dito für Shuffle-Status
+            isPlaying: player.playing,
+            isPaused: player.paused,
+            position: player.position || 0,
+            connected: player.state === 'CONNECTED'
+        };
+
+    } catch (error) {
+        console.error('❌ Lavalink getQueueInfo Error:', error);
+        return {
+            currentSong: null,
+            songs: [],
+            volume: 50,
+            repeat: 'off',
+            shuffle: false
+        };
+    }
+}
+
 // 📤 Module Exports
 module.exports = {
     initializeLavalink,
@@ -450,6 +657,11 @@ module.exports = {
     skipTrack,
     setVolume,
     getQueueInfo,
+    addToQueue,
+    joinVoiceChannel,
+    leaveVoiceChannel,
+    clearQueue,
+    shuffleQueue,
     getLavalinkStats,
     handleRaw,
     healthCheck,

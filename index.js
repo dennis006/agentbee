@@ -2956,13 +2956,24 @@ try {
     global.client = client; // Für API verfügbar machen
     global.lavalinkManager = lavalinkManager; // Lavalink Manager global verfügbar
     
-    // Lavalink-API registrieren
+    // Lavalink-API registrieren (ersetzt music-api.js API)
     const { registerLavalinkAPI } = require('./lavalink-api');
     registerLavalinkAPI(app, client);
     
     console.log('✅ Lavalink-Musik-System und API aktiviert - YouTube-Bot-Detection umgangen!');
+    console.log('🔄 HINWEIS: Altes music-api.js System wurde durch Lavalink ersetzt');
 } catch (error) {
     console.error('❌ Fehler beim Initialisieren des Lavalink-Systems:', error);
+    
+    // Fallback zum alten System falls Lavalink fehlschlägt
+    console.log('🔄 Fallback: Verwende altes music-api.js System...');
+    try {
+        loadMusicSettings();
+        registerMusicAPI(app);
+        console.log('✅ Fallback Musik-System aktiviert');
+    } catch (fallbackError) {
+        console.error('❌ Auch Fallback-System fehlgeschlagen:', fallbackError);
+    }
 }
     console.log('✅ XP-System initialisiert');
     
