@@ -284,6 +284,9 @@ async function playRadioStation(guildId, stationId) {
 
         console.log(`✅ Radio-Sender ${station.name} gestartet`);
         
+        // Update Interactive Panel
+        updateInteractiveRadioPanel(guildId);
+        
         // Sende Now-Playing Nachricht
         if (musicSettings.radio?.showNowPlaying && musicSettings.announcements?.channelId) {
             await sendRadioNowPlayingMessage(guildId, station);
@@ -339,6 +342,9 @@ function stopRadio(guildId) {
         if (player) {
             player.stop();
         }
+
+        // Update Interactive Panel
+        updateInteractiveRadioPanel(guildId);
 
         console.log(`✅ Radio gestoppt`);
         return true;
