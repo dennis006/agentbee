@@ -17,12 +17,16 @@ const radioStations = new Map();
 // Lade Musik-Einstellungen
 function loadMusicSettings() {
     try {
+        const defaults = getDefaultMusicSettings();
+        
         if (fs.existsSync('./settings/music.json')) {
-            musicSettings = JSON.parse(fs.readFileSync('./settings/music.json', 'utf8'));
-            console.log('🎵 Musik-Einstellungen geladen');
+            const saved = JSON.parse(fs.readFileSync('./settings/music.json', 'utf8'));
+            // Deep merge defaults with saved settings to ensure all properties exist
+            musicSettings = deepMerge(defaults, saved);
+            console.log('🎵 Musik-Einstellungen geladen und gemerged');
         } else {
             console.log('⚠️ Musik-Einstellungen nicht gefunden, verwende Defaults');
-            musicSettings = getDefaultMusicSettings();
+            musicSettings = defaults;
         }
     } catch (error) {
         console.error('❌ Fehler beim Laden der Musik-Einstellungen:', error);
@@ -30,8 +34,34 @@ function loadMusicSettings() {
     }
 }
 
+// Helper function for deep merging objects
+function deepMerge(target, source) {
+    const result = { ...target };
+    for (const key in source) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+            result[key] = deepMerge(target[key] || {}, source[key]);
+        } else {
+            result[key] = source[key];
+        }
+    }
+    return result;
+}
+
+function saveMusicSettings() {
+    try {
+        if (!fs.existsSync('./settings')) {
+            fs.mkdirSync('./settings', { recursive: true });
+        }
+        fs.writeFileSync('./settings/music.json', JSON.stringify(musicSettings, null, 2));
+        console.log('💾 Musik-Einstellungen gespeichert');
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Musik-Einstellungen:', error);
+    }
+}
+
 function getDefaultMusicSettings() {
     return {
+        enabled: true,
         defaultVolume: 50,
         maxQueueLength: 100,
         lavalink: {
@@ -42,10 +72,74 @@ function getDefaultMusicSettings() {
             retryAmount: 5,
             retryDelay: 30000
         },
+        autoJoinVoice: true,
+        voiceChannels: {
+            autoJoin: [],
+            preferred: "",
+            blacklist: []
+        },
+        commands: {
+            enabled: true,
+            prefix: "!",
+            djRole: "",
+            allowEveryone: true
+        },
+        queue: {
+            autoplay: false,
+            shuffle: false,
+            repeat: "off",
+            clearOnEmpty: true
+        },
+        filters: {
+            bass: false,
+            nightcore: false,
+            vaporwave: false,
+            lowpass: false
+        },
+        youtube: {
+            quality: "highestaudio",
+            maxLength: 600,
+            playlistLimit: 50
+        },
+        announcements: {
+            nowPlaying: true,
+            queueAdd: true,
+            channelId: ""
+        },
+        embedColor: "#9333EA",
         songRequests: {
             enabled: true,
-            cooldownMinutes: 5,
-            maxRequestsPerUser: 10
+            channels: [],
+            prefix: "!play",
+            embedColor: "#9333EA",
+            requireDJRole: false,
+            maxRequestsPerUser: 5,
+            cooldownMinutes: 1,
+            rateLimit: {
+                enabled: true,
+                maxRequests: 5,
+                timeWindow: 60,
+                timeUnit: 'minutes'
+            },
+            interactivePanel: {
+                enabled: true,
+                channelId: "",
+                messageId: "",
+                autoUpdate: true,
+                showQueue: true,
+                maxQueueDisplay: 5,
+                requireDJForControls: false,
+                autoJoinLeave: false,
+                adminRole: ""
+            }
+        },
+        radio: {
+            enabled: true,
+            stations: [],
+            defaultStation: "lofi",
+            autoStop: false,
+            showNowPlaying: true,
+            embedColor: "#9333EA"
         }
     };
 }
