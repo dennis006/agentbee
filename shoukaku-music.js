@@ -149,19 +149,14 @@ function initializeShoukaku(client) {
     console.log('🔗 Initialisiere Kazagumo Manager (Lavalink v4)...');
     
     kazagumo = new Kazagumo({
-        defaultSearchEngine: "youtube",
-        // Shoukaku Optionen
         plugins: [],
-        send: (guildId, payload) => {
-            const guild = client.guilds.cache.get(guildId);
-            if (guild) guild.shard.send(payload);
-        }
-    }, new Connectors.DiscordJS(client), [{
+        defaultSearchEngine: 'youtube'
+    }, [{
         name: 'main',
-        url: `${musicSettings.lavalink.secure ? 'wss' : 'ws'}://${musicSettings.lavalink.host}:${musicSettings.lavalink.port}/v4/websocket`,
+        url: `${musicSettings.lavalink.host}:${musicSettings.lavalink.port}`,
         auth: musicSettings.lavalink.password,
         secure: musicSettings.lavalink.secure
-    }]);
+    }], new Connectors.DiscordJS(client));
 
     // Kazagumo Events
     kazagumo
