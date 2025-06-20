@@ -1710,7 +1710,7 @@ async function playMusic(guildId, song) {
         // 🎯 Methode 1: play-dl mit video_info + stream_from_info (Empfohlener Weg mit Cookies)
         if (!streamCreated) {
             try {
-                console.log('🎯 Versuche play-dl mit video_info + stream_from_info...');
+                console.log('🎯 Versuche play-dl mit video_info + stream_from_info (Qualität: 0)...');
                 
                 const normalizedUrl = normalizeYouTubeURL(songData.url);
                 console.log(`🔗 URL: ${normalizedUrl}`);
@@ -1719,33 +1719,37 @@ async function playMusic(guildId, song) {
                 const info = await playdl.video_info(normalizedUrl);
                 console.log(`📋 Video-Info erhalten: ${info.video_details.title}`);
                 
-                // Erstelle Stream aus Video-Info (automatisch mit Cookies)
-                const streamResult = await playdl.stream_from_info(info, { quality: 'high' });
+                // Erstelle Stream aus Video-Info mit expliziter Qualitäts-Zahl (automatisch mit Cookies)
+                const streamResult = await playdl.stream_from_info(info, { quality: 0 });
                 
                 if (streamResult && streamResult.stream) {
                     stream = streamResult.stream;
                     streamCreated = true;
-                    console.log('✅ play-dl Stream mit video_info erfolgreich erstellt!');
+                    console.log('✅ play-dl Stream mit video_info erfolgreich erstellt (Qualität: 0)!');
                     console.log('🍪 Cookie-Authentifizierung erfolgreich verwendet');
                 }
                 
             } catch (infoError) {
                 console.log('⚠️ play-dl video_info fehlgeschlagen:', infoError.message);
                 
-                // Fallback mit verschiedenen Qualitäten
-                try {
-                    console.log('🔄 Fallback: Versuche stream_from_info mit niedriger Qualität...');
-                    const normalizedUrl = normalizeYouTubeURL(songData.url);
-                    const info = await playdl.video_info(normalizedUrl);
-                    const streamResult = await playdl.stream_from_info(info, { quality: 'low' });
-                    
-                    if (streamResult && streamResult.stream) {
-                        stream = streamResult.stream;
-                        streamCreated = true;
-                        console.log('✅ play-dl Stream mit niedriger Qualität erfolgreich!');
+                // Fallback mit höheren Qualitätsstufen (1, 2)
+                const qualityLevels = [1, 2];
+                for (const qualityLevel of qualityLevels) {
+                    try {
+                        console.log(`🔄 Fallback: Versuche stream_from_info mit Qualität ${qualityLevel}...`);
+                        const normalizedUrl = normalizeYouTubeURL(songData.url);
+                        const info = await playdl.video_info(normalizedUrl);
+                        const streamResult = await playdl.stream_from_info(info, { quality: qualityLevel });
+                        
+                        if (streamResult && streamResult.stream) {
+                            stream = streamResult.stream;
+                            streamCreated = true;
+                            console.log(`✅ play-dl Stream mit Qualität ${qualityLevel} erfolgreich!`);
+                            break;
+                        }
+                    } catch (fallbackError) {
+                        console.log(`⚠️ Qualität ${qualityLevel} fehlgeschlagen: ${fallbackError.message}`);
                     }
-                } catch (fallbackError) {
-                    console.log('⚠️ Auch Fallback fehlgeschlagen:', fallbackError.message);
                 }
             }
         }
@@ -1773,12 +1777,12 @@ async function playMusic(guildId, song) {
                             console.log(`🔗 Teste URL-Variante: ${directUrl}`);
                             
                             const info = await playdl.video_info(directUrl);
-                            const directStreamResult = await playdl.stream_from_info(info, { quality: 'low' });
+                            const directStreamResult = await playdl.stream_from_info(info, { quality: 0 });
                             
                             if (directStreamResult && directStreamResult.stream) {
                                 stream = directStreamResult.stream;
                                 streamCreated = true;
-                                console.log(`✅ URL-Variante erfolgreich: ${directUrl}`);
+                                console.log(`✅ URL-Variante erfolgreich mit Qualität 0: ${directUrl}`);
                                 break;
                             }
                         } catch (directError) {
@@ -1895,7 +1899,7 @@ async function playMusic(guildId, song) {
             }
             
             if (!streamCreated) {
-                throw new Error('Alle Stream-Methoden fehlgeschlagen - YouTube blockiert Bot-Zugriff und keine Fallback-Quellen verfügbar.');
+                throw new Error('Alle play-dl Stream-Methoden fehlgeschlagen - Cookie-Authentifizierung prüfen oder YouTube-URL ist nicht verfügbar.');
             }
         }
         
