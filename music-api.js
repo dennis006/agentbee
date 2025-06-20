@@ -1643,7 +1643,16 @@ async function playMusic(guildId, song) {
                 
                 // 🎯 Debug: Verfügbare Formate prüfen
                 console.log("🎯 Formate gefunden:", info.format?.map(f => f.quality));
-                console.log("🎧 Streambare Formate:", info.format?.map(f => `${f.mime_type} - ${f.quality}`));
+                console.log("🎧 Streambare Formate:", info.format?.map(f => `${f.mime_type || 'NO-MIME'} - ${f.quality}`));
+                
+                // 🔍 Filtere Audio-Formate separat
+                const audioFormats = info.format?.filter(f => f.mime_type && f.mime_type.includes('audio'));
+                console.log("🎵 Reine Audio-Formate gefunden:", audioFormats?.length || 0);
+                if (audioFormats?.length > 0) {
+                    console.log("🎵 Audio-Formate Details:", audioFormats.map(f => `${f.mime_type} - ${f.quality} - ${f.bitrate}`));
+                } else {
+                    console.log("⚠️ KEINE Audio-Formate verfügbar - Cookie-Problem oder Region-Sperre");
+                }
                 
                 // Erstelle Stream aus Video-Info mit expliziter Qualitäts-Zahl (automatisch mit Cookies)
                 const streamResult = await playdl.stream_from_info(info, { 
@@ -1661,41 +1670,46 @@ async function playMusic(guildId, song) {
                     streamCreated = true;
                     console.log('✅ play-dl Stream mit video_info erfolgreich erstellt (Qualität: 0)!');
                     console.log('🍪 Cookie-Authentifizierung erfolgreich verwendet');
+                } else {
+                    console.log('⚠️ stream_from_info hat keinen Stream zurückgegeben');
                 }
                 
             } catch (infoError) {
                 console.log('⚠️ play-dl video_info fehlgeschlagen:', infoError.message);
+            }
+        }
+        
+        // 🔄 Methode 1.5: Direkter play-dl stream() (ohne video_info) - oft robuster bei Bot-Detection
+        if (!streamCreated) {
+            try {
+                console.log('🎯 Versuche direkten play-dl stream() (ohne video_info)...');
+                const normalizedUrl = normalizeYouTubeURL(songData.url);
                 
-                // 🎯 Entscheidend: Verwende IMMER quality: 0 für Railway-Kompatibilität
-                try {
-                    console.log('🔄 Fallback: Verwende quality: 0 (Railway-optimiert)...');
-                    const normalizedUrl = normalizeYouTubeURL(songData.url);
-                    const info = await playdl.video_info(normalizedUrl);
-                    console.log("🎯 Fallback Formate gefunden:", info.format?.map(f => f.quality));
-                    const streamResult = await playdl.stream_from_info(info, { 
-                        quality: 0,
-                        requestOptions: {
-                            headers: {
-                                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                                "referer": "https://www.youtube.com/"
-                            }
+                const directStreamResult = await playdl.stream(normalizedUrl, { 
+                    quality: 0,
+                    requestOptions: {
+                        headers: {
+                            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                            "referer": "https://www.youtube.com/"
                         }
-                    });
-                    
-                    if (streamResult && streamResult.stream) {
-                        stream = streamResult.stream;
-                        streamCreated = true;
-                        console.log('✅ play-dl Fallback-Stream mit quality: 0 erfolgreich!');
                     }
-                } catch (fallbackError) {
-                    console.log(`⚠️ Fallback mit quality: 0 fehlgeschlagen: ${fallbackError.message}`);
+                });
+                
+                if (directStreamResult && directStreamResult.stream) {
+                    stream = directStreamResult.stream;
+                    streamCreated = true;
+                    console.log('✅ Direkter play-dl stream() erfolgreich!');
+                    console.log('🎯 Stream-Type:', directStreamResult.type);
                 }
+                
+            } catch (directStreamError) {
+                console.log('⚠️ Direkter play-dl stream() fehlgeschlagen:', directStreamError.message);
             }
         }
         
 
         
-        // 🔄 Methode 2: Alternative URL-Varianten mit video_info (falls Methode 1 fehlschlägt)
+        // 🔄 Methode 2: Alternative URL-Varianten mit video_info (falls Methode 1.5 fehlschlägt)
         if (!streamCreated && songData?.url) {
             try {
                 console.log('🔄 Versuche alternative URL-Formate mit video_info...');
