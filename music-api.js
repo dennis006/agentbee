@@ -102,7 +102,8 @@ let musicSettings = {
         enabled: true,
         channelId: "",
         messageId: "",
-        autoUpdate: true
+        autoUpdate: true,
+        embedColor: "#FF6B6B"
     }
 };
 
@@ -463,7 +464,7 @@ async function createInteractiveRadioPanel(guildId) {
             return null;
         }
 
-        const embedColor = parseInt('#FF6B6B'.replace('#', ''), 16);
+        const embedColor = parseInt(musicSettings.interactivePanel?.embedColor?.replace('#', '') || 'FF6B6B', 16);
         const currentStation = getCurrentRadioStation(guildId);
 
         const embed = {

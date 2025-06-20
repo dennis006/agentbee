@@ -65,6 +65,7 @@
   },
   "radio": {
     "enabled": true,
+    "embedColor": "#FF6B6B",
     "stations": [
       {
         "id": "1live",
@@ -304,6 +305,16 @@
     "defaultStation": "1live",
     "autoStop": false,
     "showNowPlaying": true,
+    "embedColor": "#FF6B6B"
+  },
+  "announcements": {
+    "channelId": ""
+  },
+  "interactivePanel": {
+    "enabled": true,
+    "channelId": "",
+    "messageId": "",
+    "autoUpdate": true,
     "embedColor": "#FF6B6B"
   },
   "maxQueueSize": 50,
