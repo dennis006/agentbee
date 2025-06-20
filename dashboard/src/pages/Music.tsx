@@ -70,9 +70,9 @@ const Switch: React.FC<{ checked: boolean; onCheckedChange: (checked: boolean) =
   </button>
 );
 
-// Card components
-const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 shadow-purple-glow rounded-lg ${className}`}>
+// Card components mit Animationen
+const Card: React.FC<{ children: React.ReactNode; className?: string; animate?: boolean }> = ({ children, className = '', animate = true }) => (
+  <div className={`bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 shadow-purple-glow rounded-lg ${animate ? 'animate-fade-in-up hover:scale-[1.01] transition-all duration-300' : ''} ${className}`}>
     {children}
   </div>
 );
@@ -83,8 +83,8 @@ const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = 
   </div>
 );
 
-const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <h3 className={`text-xl font-bold text-dark-text ${className}`}>
+const CardTitle: React.FC<{ children: React.ReactNode; className?: string; animated?: boolean }> = ({ children, className = '', animated = true }) => (
+  <h3 className={`text-xl font-bold text-dark-text ${animated ? 'animate-pulse-slow' : ''} ${className}`}>
     {children}
   </h3>
 );
@@ -101,14 +101,15 @@ const CardContent: React.FC<{ children: React.ReactNode; className?: string }> =
   </div>
 );
 
-// Button component
+// Button component mit besseren Animationen
 const Button: React.FC<{ 
   children: React.ReactNode; 
   onClick?: () => void; 
   className?: string; 
   disabled?: boolean;
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-}> = ({ children, onClick, className = '', disabled = false, variant = 'default' }) => {
+  animated?: boolean;
+}> = ({ children, onClick, className = '', disabled = false, variant = 'default', animated = true }) => {
   const baseClasses = "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
   
   const variantClasses = {
@@ -120,11 +121,13 @@ const Button: React.FC<{
     link: "text-purple-primary underline-offset-4 hover:underline"
   };
 
+  const animatedClasses = animated ? 'transform transition-all duration-300 hover:scale-105 hover:rotate-1 active:scale-95' : '';
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${baseClasses} ${variantClasses[variant]} px-4 py-2 ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${animatedClasses} px-4 py-2 ${className}`}
     >
       {children}
     </button>
@@ -145,7 +148,7 @@ const Input: React.FC<{
     placeholder={placeholder}
     value={value}
     onChange={onChange}
-    className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-colors duration-200 ${className}`}
+    className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-all duration-300 focus:scale-105 hover:shadow-neon ${className}`}
     {...props}
   />
 );
@@ -533,15 +536,54 @@ const Music: React.FC = () => {
       return;
     }
 
+    // YouTube URL Validierung und Verbesserung
+    let processedStation = { ...newStation };
+    
+    if (newStation.url.includes('youtube.com') || newStation.url.includes('youtu.be')) {
+      // YouTube URL erkannt
+      if (!processedStation.logo) {
+        // Standard YouTube Logo setzen falls kein Custom Logo vorhanden
+        processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0ZGMDAwMCIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllUPC90ZXh0Pgo8L3N2Zz4K';
+      }
+      
+      // Automatische Metadaten für YouTube
+      if (!processedStation.genre) {
+        processedStation.genre = 'YouTube Stream';
+      }
+      if (!processedStation.country) {
+        processedStation.country = 'International';
+      }
+      if (!processedStation.description) {
+        processedStation.description = 'YouTube Live-Stream';
+      }
+    } else {
+      // Normale Radio-URL
+      if (!processedStation.logo) {
+        processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
+      }
+    }
+
+    // Generate unique ID und erweitere das Object
+    const stationWithId = {
+      ...processedStation,
+      id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    };
+
     try {
+      setRadioLoading(true);
+      
       const response = await fetch(`${apiUrl}/api/music/radio/stations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStation)
+        body: JSON.stringify(stationWithId)
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        showSuccess('Radio Station', 'Station erfolgreich hinzugefügt');
+        showSuccess('YouTube Radio', `${stationWithId.url.includes('youtube.com') ? 'YouTube-Stream' : 'Radio-Station'} "${stationWithId.name}" erfolgreich hinzugefügt!`);
+        
+        // Reset form mit Animation
         setNewStation({
           name: '',
           url: '',
@@ -550,12 +592,16 @@ const Music: React.FC = () => {
           description: '',
           logo: ''
         });
+        
         await loadRadioStations();
       } else {
-        showError('Radio Fehler', 'Fehler beim Hinzufügen der Station');
+        showError('Radio Fehler', data.error || 'Fehler beim Hinzufügen der Station');
       }
     } catch (err) {
-      showError('Radio Fehler', 'Fehler beim Hinzufügen der Station');
+      console.error('Fehler beim Hinzufügen der Station:', err);
+      showError('Radio Fehler', 'Verbindungsfehler beim Hinzufügen der Station');
+    } finally {
+      setRadioLoading(false);
     }
   };
 
@@ -674,44 +720,53 @@ const Music: React.FC = () => {
 
         {/* Radio Tab */}
         <TabsContent value="radio" className="space-y-6" activeTab={activeTab}>
-          {/* Radio Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Radio className="w-5 h-5 text-red-400" />
-                Radio Status
+          {/* Radio Status mit Animation */}
+          <Card animate={true} className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-purple-500/5 animate-gradient-x"></div>
+            <CardHeader className="relative z-10">
+              <CardTitle className="flex items-center gap-3 animated={true}">
+                <div className={`p-2 rounded-full ${radioStatus.isPlaying ? 'bg-red-500/20 animate-pulse' : 'bg-gray-500/20'} transition-all duration-500`}>
+                  <Radio className={`w-5 h-5 ${radioStatus.isPlaying ? 'text-red-400' : 'text-gray-400'} transition-colors duration-500`} />
+                </div>
+                <span className="bg-gradient-to-r from-red-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
+                  📻 Radio Status
+                </span>
                 {radioStatus.isPlaying && (
-                  <Badge className="bg-red-500 text-white animate-pulse">
-                    🎵 LIVE
+                  <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white animate-bounce shadow-neon">
+                    <span className="animate-pulse">🎵 LIVE</span>
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-300">
                 Aktueller Radio-Status und Steuerung
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               {radioStatus.currentStation ? (
-                <div className="bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-lg p-6 border border-red-400/30">
-                  <div className="flex items-center gap-4">
-                    <img 
-                      src={radioStatus.currentStation.logo} 
-                      alt={radioStatus.currentStation.name}
-                      className="w-16 h-16 rounded-lg object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjY2NjYiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K';
-                      }}
-                    />
+                <div className="bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-xl p-6 border border-red-400/40 shadow-2xl backdrop-blur-sm animate-fade-in-up">
+                  <div className="flex items-center gap-6">
+                    <div className="relative">
+                      <img 
+                        src={radioStatus.currentStation.logo} 
+                        alt={radioStatus.currentStation.name}
+                        className="w-20 h-20 rounded-xl object-cover border-2 border-red-400/50 shadow-lg animate-float"
+                        onError={(e) => {
+                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjY2NjYiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K';
+                        }}
+                      />
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-ping"></div>
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full"></div>
+                    </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white">
+                      <h3 className="text-2xl font-bold text-white animate-pulse-slow bg-gradient-to-r from-white to-red-200 bg-clip-text text-transparent">
                         🎵 {radioStatus.currentStation.name}
                       </h3>
-                      <p className="text-red-300">{radioStatus.currentStation.description}</p>
-                      <div className="flex gap-4 mt-2">
-                        <Badge variant="outline" className="text-red-400 border-red-400">
+                      <p className="text-red-300 text-lg mt-1 animate-fade-in">{radioStatus.currentStation.description}</p>
+                      <div className="flex gap-3 mt-3">
+                        <Badge variant="outline" className="text-red-400 border-red-400/60 bg-red-500/10 animate-bounce-slow">
                           🎵 {radioStatus.currentStation.genre}
                         </Badge>
-                        <Badge variant="outline" className="text-red-400 border-red-400">
+                        <Badge variant="outline" className="text-purple-400 border-purple-400/60 bg-purple-500/10 animate-bounce-slow delay-100">
                           🌍 {radioStatus.currentStation.country}
                         </Badge>
                       </div>
@@ -720,18 +775,22 @@ const Music: React.FC = () => {
                       onClick={stopRadio}
                       disabled={radioLoading}
                       variant="destructive"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 shadow-xl hover:shadow-red-500/25 animate-pulse-subtle"
+                      animated={true}
                     >
-                      <Pause className="w-4 h-4" />
+                      <Pause className="w-5 h-5 animate-pulse" />
                       {radioLoading ? 'Stoppe...' : 'Radio stoppen'}
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 text-dark-muted">
-                  <Radio className="w-12 h-12 mx-auto mb-4 text-gray-500" />
-                  <p>Kein Radio-Sender aktiv</p>
-                  <p className="text-sm">Wähle einen Sender aus der Liste unten</p>
+                <div className="text-center py-12 text-dark-muted animate-fade-in">
+                  <div className="relative inline-block">
+                    <Radio className="w-16 h-16 mx-auto mb-6 text-gray-500 animate-bounce-slow" />
+                    <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-gray-500/30 rounded-full animate-ping"></div>
+                  </div>
+                  <p className="text-lg font-medium">Kein Radio-Sender aktiv</p>
+                  <p className="text-sm mt-2 animate-pulse">Wähle einen Sender aus der Liste unten</p>
                 </div>
               )}
             </CardContent>
@@ -913,95 +972,172 @@ const Music: React.FC = () => {
             </Card>
           </div>
 
-          {/* Add Custom Radio Station */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-green-400" />
-                Eigenen Radio-Sender hinzufügen
+          {/* Add Custom Radio Station mit verbesserter YouTube-Unterstützung */}
+          <Card animate={true} className="relative overflow-hidden border-green-500/30">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-blue-500/5 animate-gradient-x"></div>
+            <CardHeader className="relative z-10">
+              <CardTitle className="flex items-center gap-3" animated={true}>
+                <div className="p-2 rounded-full bg-green-500/20 animate-pulse">
+                  <Plus className="w-5 h-5 text-green-400 animate-bounce-slow" />
+                </div>
+                <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                  🎵 YouTube Radio-Sender hinzufügen
+                </span>
               </CardTitle>
-              <CardDescription>
-                Füge deinen eigenen Radio-Stream hinzu
+              <CardDescription className="text-gray-300">
+                Füge eigene YouTube Live-Streams oder Radio-Streams hinzu
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-dark-text mb-2">
-                    Name *
-                  </label>
-                  <Input
-                    placeholder="z.B. Mein Radio"
-                    value={newStation.name}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
-                  />
+            <CardContent className="relative z-10">
+              <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-xl p-6 border border-green-400/30 mb-6 animate-fade-in-up">
+                <h4 className="text-lg font-semibold text-green-400 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  YouTube-Unterstützung
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-400">✓</span>
+                    <span>YouTube Live-Streams (z.B. 24/7 Lofi Radio)</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-400">✓</span>
+                    <span>Normale Radio-Streams (.mp3, .m3u8)</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-400">✓</span>
+                    <span>Automatische YouTube-Metadaten</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-400">✓</span>
+                    <span>Custom Logo-Upload unterstützt</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="animate-fade-in-right delay-100">
+                    <label className="block text-sm font-medium text-green-400 mb-2 flex items-center gap-2">
+                      🎵 Sender-Name *
+                    </label>
+                    <Input
+                      placeholder="z.B. Mein Lofi Radio"
+                      value={newStation.name}
+                      onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
+                      className="border-green-500/30 focus:border-green-400"
+                    />
+                  </div>
+                  
+                  <div className="animate-fade-in-right delay-200">
+                    <label className="block text-sm font-medium text-blue-400 mb-2 flex items-center gap-2">
+                      🌐 Stream-URL * 
+                      <span className="text-xs text-gray-400">(YouTube oder direkte URL)</span>
+                    </label>
+                    <Input
+                      placeholder="https://youtube.com/watch?v=... oder https://stream.radio.com/..."
+                      value={newStation.url}
+                      onChange={(e) => setNewStation(prev => ({ ...prev, url: e.target.value }))}
+                      className="border-blue-500/30 focus:border-blue-400"
+                    />
+                    {newStation.url.includes('youtube.com') && (
+                      <p className="text-xs text-green-400 mt-1 animate-pulse">✓ YouTube-Link erkannt</p>
+                    )}
+                  </div>
+                  
+                  <div className="animate-fade-in-right delay-300">
+                    <label className="block text-sm font-medium text-purple-400 mb-2 flex items-center gap-2">
+                      🎭 Genre
+                    </label>
+                    <Input
+                      placeholder="z.B. Lofi Hip Hop, Electronic, Rock"
+                      value={newStation.genre}
+                      onChange={(e) => setNewStation(prev => ({ ...prev, genre: e.target.value }))}
+                      className="border-purple-500/30 focus:border-purple-400"
+                    />
+                  </div>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-dark-text mb-2">
-                    Stream-URL *
-                  </label>
-                  <Input
-                    placeholder="https://stream.example.com/radio.mp3"
-                    value={newStation.url}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, url: e.target.value }))}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-dark-text mb-2">
-                    Genre
-                  </label>
-                  <Input
-                    placeholder="z.B. Pop/Rock"
-                    value={newStation.genre}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, genre: e.target.value }))}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-dark-text mb-2">
-                    Land
-                  </label>
-                  <Input
-                    placeholder="z.B. Deutschland"
-                    value={newStation.country}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, country: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-dark-text mb-2">
-                    Beschreibung
-                  </label>
-                  <Input
-                    placeholder="Kurze Beschreibung des Senders"
-                    value={newStation.description}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-dark-text mb-2">
-                    Logo-URL
-                  </label>
-                  <Input
-                    placeholder="https://example.com/logo.png"
-                    value={newStation.logo}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, logo: e.target.value }))}
-                  />
+                <div className="space-y-4">
+                  <div className="animate-fade-in-left delay-100">
+                    <label className="block text-sm font-medium text-orange-400 mb-2 flex items-center gap-2">
+                      🌍 Land/Region
+                    </label>
+                    <Input
+                      placeholder="z.B. Deutschland, International, USA"
+                      value={newStation.country}
+                      onChange={(e) => setNewStation(prev => ({ ...prev, country: e.target.value }))}
+                      className="border-orange-500/30 focus:border-orange-400"
+                    />
+                  </div>
+                  
+                  <div className="animate-fade-in-left delay-200">
+                    <label className="block text-sm font-medium text-cyan-400 mb-2 flex items-center gap-2">
+                      📝 Beschreibung
+                    </label>
+                    <Input
+                      placeholder="Kurze Beschreibung des Senders"
+                      value={newStation.description}
+                      onChange={(e) => setNewStation(prev => ({ ...prev, description: e.target.value }))}
+                      className="border-cyan-500/30 focus:border-cyan-400"
+                    />
+                  </div>
+                  
+                  <div className="animate-fade-in-left delay-300">
+                    <label className="block text-sm font-medium text-pink-400 mb-2 flex items-center gap-2">
+                      🖼️ Logo-URL (optional)
+                    </label>
+                    <Input
+                      placeholder="https://example.com/logo.png"
+                      value={newStation.logo}
+                      onChange={(e) => setNewStation(prev => ({ ...prev, logo: e.target.value }))}
+                      className="border-pink-500/30 focus:border-pink-400"
+                    />
+                    {newStation.logo && (
+                      <div className="mt-2">
+                        <img 
+                          src={newStation.logo} 
+                          alt="Logo Preview" 
+                          className="w-12 h-12 rounded-lg object-cover border border-pink-400/50 animate-fade-in"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               
-              <div className="flex justify-end mt-6">
+              <div className="flex justify-center mt-8 animate-fade-in-up delay-500">
                 <Button
                   onClick={addCustomRadioStation}
                   disabled={radioLoading || !newStation.name || !newStation.url}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-3 px-8 py-3 text-lg bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 shadow-xl hover:shadow-green-500/25"
+                  animated={true}
                 >
-                  <Plus className="w-4 h-4" />
-                  {radioLoading ? 'Füge hinzu...' : 'Radio-Sender hinzufügen'}
+                  <Plus className="w-5 h-5 animate-spin-slow" />
+                  {radioLoading ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Füge hinzu...
+                    </span>
+                  ) : (
+                    'YouTube Radio hinzufügen'
+                  )}
                 </Button>
+              </div>
+
+              {/* Hilfe-Sektion */}
+              <div className="mt-6 p-4 bg-dark-surface/50 rounded-lg border border-gray-600/30 animate-fade-in delay-700">
+                <h5 className="text-sm font-medium text-gray-300 mb-2">💡 Tipps für YouTube-Links:</h5>
+                <ul className="text-xs text-gray-400 space-y-1">
+                  <li>• Verwende YouTube Live-Stream URLs für 24/7 Radio</li>
+                  <li>• Normale YouTube-Videos funktionieren auch</li>
+                  <li>• Der Bot extrahiert automatisch Audio vom Video</li>
+                  <li>• Für beste Qualität verwende offizielle Radio-Streams</li>
+                </ul>
               </div>
             </CardContent>
           </Card>
