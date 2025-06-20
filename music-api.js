@@ -19,9 +19,7 @@ playdl.setToken({
 });
 
 console.log('🍪 YouTube-Cookies beim Start gesetzt');
-const { exec } = require('child_process');
-const { promisify } = require('util');
-const execAsync = promisify(exec);
+
 
 // 🚀 Einfache play-dl Initialisierung
 (async () => {
@@ -462,83 +460,7 @@ function normalizeYouTubeURL(url) {
     return url;
 }
 
-// yt-dlp Integration für robuste YouTube-Streams (mit Railway-Fallback)
-async function getStreamWithYtDlp(url) {
-    try {
-        console.log(`🚀 Verwende yt-dlp für: ${url}`);
-        
-        // Prüfe ob yt-dlp verfügbar ist
-        try {
-            await execAsync('yt-dlp --version', { timeout: 3000 });
-        } catch (versionError) {
-            console.log('⚠️ yt-dlp nicht verfügbar (normal auf Railway)');
-            throw new Error('yt-dlp nicht installiert oder nicht verfügbar');
-        }
-        
-        // yt-dlp Command mit hochwertigen Audio-Optionen
-        const command = `yt-dlp -f "bestaudio/best" --get-url "${url}"`;
-        
-        const { stdout, stderr } = await execAsync(command, {
-            timeout: 15000 // 15 Sekunden Timeout
-        });
-        
-        if (stderr && !stdout) {
-            throw new Error(`yt-dlp Fehler: ${stderr}`);
-        }
-        
-        const streamUrl = stdout.trim();
-        if (!streamUrl || !streamUrl.startsWith('http')) {
-            throw new Error('Ungültige Stream-URL von yt-dlp');
-        }
-        
-        console.log(`✅ yt-dlp Stream-URL erhalten: ${streamUrl.substring(0, 50)}...`);
-        return streamUrl;
-        
-    } catch (error) {
-        console.log('⚠️ yt-dlp Fehler (normal auf Railway):', error.message);
-        throw error;
-    }
-}
 
-// Alternative: Hole Video-Info mit yt-dlp (mit Railway-Fallback)
-async function getVideoInfoWithYtDlp(url) {
-    try {
-        console.log(`🎵 Hole Video-Info mit yt-dlp für: ${url}`);
-        
-        // Prüfe ob yt-dlp verfügbar ist
-        try {
-            await execAsync('yt-dlp --version', { timeout: 3000 });
-        } catch (versionError) {
-            console.log('⚠️ yt-dlp nicht verfügbar für Video-Info (normal auf Railway)');
-            throw new Error('yt-dlp nicht installiert oder nicht verfügbar');
-        }
-        
-        const command = `yt-dlp -j "${url}"`;
-        const { stdout, stderr } = await execAsync(command, {
-            timeout: 10000 // 10 Sekunden Timeout
-        });
-        
-        if (stderr && !stdout) {
-            throw new Error(`yt-dlp Info-Fehler: ${stderr}`);
-        }
-        
-        const info = JSON.parse(stdout);
-        console.log(`✅ yt-dlp Video-Info erhalten: ${info.title}`);
-        
-        return {
-            title: info.title || 'Unbekannter Titel',
-            url: url,
-            duration: info.duration || 0,
-            thumbnail: info.thumbnail || '',
-            author: info.uploader || 'Unbekannt',
-            requestedBy: null
-        };
-        
-    } catch (error) {
-        console.log('⚠️ yt-dlp Video-Info Fehler (normal auf Railway):', error.message);
-        throw error;
-    }
-}
 
 // Get YouTube video info mit mehreren Fallback-Methoden
 async function getVideoInfo(url) {
@@ -575,19 +497,7 @@ async function getVideoInfo(url) {
             console.log('⚠️ play-dl fehlgeschlagen:', playdlError.message);
         }
         
-        // Methode 2: yt-dlp (Nur wenn verfügbar - für lokale Entwicklung)
-        try {
-            console.log('🚀 Versuche yt-dlp...');
-            const ytdlpInfo = await getVideoInfoWithYtDlp(normalizedUrl);
-            if (ytdlpInfo) {
-                console.log('✅ yt-dlp Video-Info erfolgreich');
-                return ytdlpInfo;
-            }
-        } catch (ytdlpError) {
-            console.log('⚠️ yt-dlp fehlgeschlagen (normal auf Railway):', ytdlpError.message);
-        }
-        
-        // Methode 3: Fallback mit yt-search
+        // Methode 2: Fallback mit yt-search
         try {
             console.log('🔍 Verwende Fallback yt-search...');
             const searchResults = await searchYouTube(url);
