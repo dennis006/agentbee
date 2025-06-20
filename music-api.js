@@ -7,65 +7,13 @@ const {
     entersState,
     getVoiceConnection
 } = require('@discordjs/voice');
-// 🆕 Neue YouTube-API Implementierung
+// 🆕 Moderne YouTube-API Implementierung mit youtubei.js
 const { YoutubeiJS } = require('youtubei.js');
-// Legacy: Verwende play-dl für robuste YouTube-Integration mit Cookies
-const playdl = require('play-dl');
 const yts = require('yt-search');
 
-// 🍪 Direkte Cookie-Konfiguration beim Start (vor allen anderen Operationen)
-playdl.setToken({
-    youtube: {
-        cookie:
-            `SID=${process.env.YOUTUBE_SID}; ` +
-            `HSID=${process.env.YOUTUBE_HSID}; ` +
-            `SSID=${process.env.YOUTUBE_SSID}; ` +
-            `APISID=${process.env.YOUTUBE_APISID}; ` +
-            `SAPISID=${process.env.YOUTUBE_SAPISID}; ` +
-            `LOGIN_INFO=${process.env.YOUTUBE_LOGIN_INFO}; ` +
-            `VISITOR_INFO1_LIVE=${process.env.YOUTUBE_VISITOR_INFO1_LIVE || ''};`,
-        headers: {
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-        }
-    }
-});
-
-console.log('🍪 YouTube-Cookies beim Start gesetzt');
-console.log('✅ YouTube-Cookies gesetzt:', process.env.YOUTUBE_SID?.slice(0, 10), '...');
-console.log('🔑 VISITOR_INFO1_LIVE gesetzt:', process.env.YOUTUBE_VISITOR_INFO1_LIVE ? 'Ja' : 'Nein');
-
-
-// 🚀 Einfache play-dl Initialisierung
-(async () => {
-    try {
-        console.log('🎵 Initialisiere play-dl...');
-        await playdl.authorization();
-        console.log('✅ play-dl initialisiert und bereit');
-        
-        // Teste Cookie-Setup falls Cookies verfügbar sind
-        if (process.env.YOUTUBE_SID && process.env.YOUTUBE_LOGIN_INFO) {
-            console.log('🍪 YouTube-Cookies erkannt - Cookie-Authentifizierung aktiv');
-            
-            try {
-                const testValidation = playdl.yt_validate('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-                console.log(`🧪 Test-Validierung mit Cookies: ${testValidation}`);
-                
-                if (testValidation === 'video') {
-                    console.log('🎉 Cookie-Authentifizierung erfolgreich!');
-                } else {
-                    console.log('⚠️ Cookie-Authentifizierung möglicherweise problematisch');
-                }
-            } catch (testError) {
-                console.log('⚠️ Cookie-Test fehlgeschlagen:', testError.message);
-            }
-        } else {
-            console.log('💡 Tipp: Setze YouTube-Cookies in Railway Environment Variables für bessere Kompatibilität');
-        }
-        
-    } catch (error) {
-        console.log('⚠️ play-dl Initialisierung fehlgeschlagen:', error.message);
-    }
-})();
+// 🚀 youtubei.js Initialisierung
+console.log('🎵 Musik-System gestartet mit youtubei.js (interne YouTube-API)');
+console.log('✅ Keine Cookies oder Bot-Detection mehr nötig!');
 const fs = require('fs');
 const path = require('path');
 
@@ -548,7 +496,7 @@ async function getVideoInfo(url) {
         const normalizedUrl = normalizeYouTubeURL(url);
         console.log(`🔄 Normalisierte URL: ${normalizedUrl}`);
         
-        // 🆕 Methode 0: youtubei.js (Primär - interne YouTube-API ohne Bot-Detection)
+        // 🆕 youtubei.js (Primär und einzige Methode - interne YouTube-API ohne Bot-Detection)
         try {
             console.log('🆕 Versuche youtubei.js (interne YouTube-API)...');
             const youtubeIResult = await getVideoInfoWithYoutubei(normalizedUrl);
@@ -559,32 +507,6 @@ async function getVideoInfo(url) {
             }
         } catch (youtubeIError) {
             console.log('⚠️ youtubei.js fehlgeschlagen:', youtubeIError.message);
-        }
-        
-        // Methode 1: play-dl (Legacy Fallback)
-        try {
-            console.log('🎥 Versuche play-dl...');
-            const isValidYT = playdl.yt_validate(normalizedUrl);
-            
-            if (isValidYT) {
-                const info = await playdl.video_info(normalizedUrl);
-                
-                if (info && info.video_details) {
-                    const video = info.video_details;
-                    console.log(`✅ play-dl Video-Info erhalten: ${video.title}`);
-                    
-                    return {
-                        title: video.title,
-                        url: normalizedUrl,
-                        duration: video.durationInSec || 0,
-                        thumbnail: video.thumbnails?.[0]?.url || '',
-                        author: video.channel?.name || 'Unbekannt',
-                        requestedBy: null
-                    };
-                }
-            }
-        } catch (playdlError) {
-            console.log('⚠️ play-dl fehlgeschlagen:', playdlError.message);
         }
         
         // Methode 2: Fallback mit yt-search
@@ -1759,131 +1681,46 @@ async function playMusic(guildId, song) {
             }
         }
 
-        // 🎯 Methode 1: play-dl mit video_info + stream_from_info (Legacy Fallback)
+        // 🔄 Fallback: Alternative ytb-search für problematische URLs
         if (!streamCreated) {
             try {
-                console.log('🎯 Versuche play-dl mit video_info + stream_from_info (Qualität: 0)...');
+                console.log('🔍 Versuche alternative Suche mit yt-search...');
                 
-                const normalizedUrl = normalizeYouTubeURL(songData.url);
-                console.log(`🔗 URL: ${normalizedUrl}`);
+                // Extract title from songData if available
+                const searchQuery = songData.title || songData.url;
+                const searchResults = await searchYouTube(searchQuery);
                 
-                // Hole Video-Informationen mit Cookie-Authentifizierung
-                const info = await playdl.video_info(normalizedUrl);
-                console.log(`📋 Video-Info erhalten: ${info.video_details.title}`);
-                
-                // 🎯 Debug: Verfügbare Formate prüfen
-                console.log("🎯 Formate gefunden:", info.format?.map(f => f.quality));
-                console.log("🎧 Streambare Formate:", info.format?.map(f => `${f.mime_type || 'NO-MIME'} - ${f.quality}`));
-                
-                // 🔍 Filtere Audio-Formate separat
-                const audioFormats = info.format?.filter(f => f.mime_type && f.mime_type.includes('audio'));
-                console.log("🎵 Reine Audio-Formate gefunden:", audioFormats?.length || 0);
-                if (audioFormats?.length > 0) {
-                    console.log("🎵 Audio-Formate Details:", audioFormats.map(f => `${f.mime_type} - ${f.quality} - ${f.bitrate}`));
-                } else {
-                    console.log("⚠️ KEINE Audio-Formate verfügbar - Cookie-Problem oder Region-Sperre");
-                }
-                
-                // Erstelle Stream aus Video-Info mit expliziter Qualitäts-Zahl (automatisch mit Cookies)
-                const streamResult = await playdl.stream_from_info(info, { 
-                    quality: 0,
-                    requestOptions: {
-                        headers: {
-                            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            "referer": "https://www.youtube.com/"
-                        }
-                    }
-                });
-                
-                if (streamResult && streamResult.stream) {
-                    stream = streamResult.stream;
-                    streamCreated = true;
-                    console.log('✅ play-dl Stream mit video_info erfolgreich erstellt (Qualität: 0)!');
-                    console.log('🍪 Cookie-Authentifizierung erfolgreich verwendet');
-                } else {
-                    console.log('⚠️ stream_from_info hat keinen Stream zurückgegeben');
-                }
-                
-            } catch (infoError) {
-                console.log('⚠️ play-dl video_info fehlgeschlagen:', infoError.message);
-            }
-        }
-        
-        // 🔄 Methode 1.5: Direkter play-dl stream() (ohne video_info) - oft robuster bei Bot-Detection
-        if (!streamCreated) {
-            try {
-                console.log('🎯 Versuche direkten play-dl stream() (ohne video_info)...');
-                const normalizedUrl = normalizeYouTubeURL(songData.url);
-                
-                const directStreamResult = await playdl.stream(normalizedUrl, { 
-                    quality: 0,
-                    requestOptions: {
-                        headers: {
-                            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            "referer": "https://www.youtube.com/"
-                        }
-                    }
-                });
-                
-                if (directStreamResult && directStreamResult.stream) {
-                    stream = directStreamResult.stream;
-                    streamCreated = true;
-                    console.log('✅ Direkter play-dl stream() erfolgreich!');
-                    console.log('🎯 Stream-Type:', directStreamResult.type);
-                }
-                
-            } catch (directStreamError) {
-                console.log('⚠️ Direkter play-dl stream() fehlgeschlagen:', directStreamError.message);
-            }
-        }
-        
-
-        
-        // 🔄 Methode 2: Alternative URL-Varianten mit video_info (falls Methode 1.5 fehlschlägt)
-        if (!streamCreated && songData?.url) {
-            try {
-                console.log('🔄 Versuche alternative URL-Formate mit video_info...');
-                
-                // Extrahiere Video-ID und erstelle verschiedene URL-Varianten
-                const videoId = songData.url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
-                if (videoId) {
-                    const directUrls = [
-                        `https://www.youtube.com/watch?v=${videoId}`,
-                        `https://youtube.com/watch?v=${videoId}`,
-                        `https://youtu.be/${videoId}`
-                    ];
+                if (searchResults.length > 0) {
+                    console.log(`🎯 Gefunden: ${searchResults.length} alternative Quellen`);
                     
-                    for (const directUrl of directUrls) {
-                        if (streamCreated) break;
+                    // Try the first alternative
+                    const alternative = searchResults[0];
+                    const alternativeData = await getVideoInfoWithYoutubei(alternative.url);
+                    
+                    if (alternativeData && alternativeData.streamUrl) {
+                        console.log('🎯 Verwende alternative Quelle...');
                         
-                        try {
-                            console.log(`🔗 Teste URL-Variante: ${directUrl}`);
-                            
-                            const info = await playdl.video_info(directUrl);
-                            console.log("🎯 URL-Variante Formate gefunden:", info.format?.map(f => f.quality));
-                            const directStreamResult = await playdl.stream_from_info(info, { 
-                                quality: 0,
-                                requestOptions: {
-                                    headers: {
-                                        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                                        "referer": "https://www.youtube.com/"
-                                    }
-                                }
-                            });
-                            
-                            if (directStreamResult && directStreamResult.stream) {
-                                stream = directStreamResult.stream;
-                                streamCreated = true;
-                                console.log(`✅ URL-Variante erfolgreich mit Qualität 0: ${directUrl}`);
-                                break;
+                        const fetch = require('node-fetch');
+                        const response = await fetch(alternativeData.streamUrl, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                                'Referer': 'https://www.youtube.com/'
                             }
-                        } catch (directError) {
-                            console.log(`⚠️ URL-Variante fehlgeschlagen: ${directError.message}`);
+                        });
+                        
+                        if (response.ok) {
+                            stream = response.body;
+                            streamCreated = true;
+                            console.log(`✅ Alternative Quelle erfolgreich!`);
+                            
+                            // Update songData mit alternativen Daten
+                            Object.assign(songData, alternativeData);
                         }
                     }
                 }
-            } catch (directExtractError) {
-                console.log('⚠️ Alternative URL-Extraktion fehlgeschlagen:', directExtractError.message);
+                
+            } catch (alternativeError) {
+                console.log('⚠️ Alternative Suche fehlgeschlagen:', alternativeError.message);
             }
         }
         
@@ -1921,7 +1758,7 @@ async function playMusic(guildId, song) {
             // Direkter Fehler wenn play-dl fehlschlägt, kein Radio-Fallback
             
             if (!streamCreated) {
-                throw new Error('Alle play-dl Stream-Methoden fehlgeschlagen - Cookie-Authentifizierung prüfen oder YouTube-URL ist nicht verfügbar.');
+                throw new Error('Alle YouTube-Stream-Methoden fehlgeschlagen - Video möglicherweise nicht verfügbar oder Region-gesperrt.');
             }
         }
         
@@ -2022,9 +1859,9 @@ async function playMusic(guildId, song) {
                                 color: 0xFFA500, // Orange
                                 title: '🔄 YouTube-Blockierung erkannt',
                                 description: `YouTube blockiert den Song **${safeSongData?.title || 'Unknown'}**\n\n🔍 Versuche alternative Quellen...`,
-                                footer: {
-                                    text: 'Radio-Fallback ist für Tests deaktiviert'
-                                },
+                                                footer: {
+                    text: 'Nutze youtubei.js (interne YouTube-API ohne Cookies)'
+                },
                                 timestamp: new Date().toISOString()
                             }]
                         });
@@ -2092,7 +1929,7 @@ async function playMusic(guildId, song) {
                                 }
                             ],
                             footer: {
-                                text: 'YouTube verstärkt Anti-Bot-Maßnahmen - dies ist ein bekanntes Problem'
+                                text: 'youtubei.js nutzt interne YouTube-API - keine Cookie-Probleme mehr'
                             },
                             timestamp: new Date().toISOString()
                         }]
