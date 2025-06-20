@@ -10,53 +10,100 @@ const {
 } = require('@discordjs/voice');
 
 const fs = require('fs');
-const path = require('path');
-const fetch = require('node-fetch'); // YouTube API calls
 
-// Erweiterte Music Settings mit Playlist-Support
+// Vereinfachte Music Settings - nur Radio
 let musicSettings = {
-    enabled: false,
+    enabled: true,
     radio: {
         enabled: true,
-        stations: [], // Live Radio Stations
-        playlists: [], // Custom YouTube Playlists
-        defaultStation: '',
-        autoStop: true,
+        stations: [
+            {
+                id: "lofi",
+                name: "Lofi Hip Hop Radio",
+                url: "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+                genre: "Lofi/Chill",
+                country: "International",
+                description: "24/7 Lofi Hip Hop Beats",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TG9GaTwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "chillhop",
+                name: "ChillHop Radio",
+                url: "https://www.youtube.com/watch?v=5yx6BWlEVcY",
+                genre: "Chillhop/Jazz",
+                country: "International",
+                description: "Chill beats to relax/study to",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM0NEFBODgiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q2hpbGxIb3A8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "deephouse",
+                name: "Deep House Radio",
+                url: "https://www.youtube.com/watch?v=36YnV9STBqc",
+                genre: "Deep House/Electronic",
+                country: "International",
+                description: "24/7 Deep House Live Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDMzNjYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMEZGRkYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRFRVA8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDBGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1VTRTI8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "trapmusic",
+                name: "Trap Music 24/7",
+                url: "https://www.youtube.com/watch?v=5qap5aO4i9A",
+                genre: "Trap/Hip-Hop",
+                country: "USA",
+                description: "24/7 Trap Music Live Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwNzciLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFJBUDwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "gaming",
+                name: "Gaming Music Radio",
+                url: "https://www.youtube.com/watch?v=4xDzrJKXOOY",
+                genre: "Gaming/Electronic",
+                country: "International",
+                description: "24/7 Gaming Music Live Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMEZGMDAiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkdBTUlORzwvdGV4dD4KPHRleHQgeD0iMzIiIHk9IjQ0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk1VU0lDPC90ZXh0Pgo8L3N2Zz4K"
+            },
+            {
+                id: "jazzhop",
+                name: "Jazz Hop Cafe",
+                url: "https://www.youtube.com/watch?v=Dx5qFachd3A",
+                genre: "Jazz Hop/Chill",
+                country: "International",
+                description: "24/7 Jazz Hop Cafe Live Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM4QjQ1MTMiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNGRkQ3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkpBWlo8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZENzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1A8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "retrowave",
+                name: "Retrowave 24/7",
+                url: "https://www.youtube.com/watch?v=MV_3Dpw-BRY",
+                genre: "Retrowave/80s",
+                country: "International",
+                description: "24/7 Retrowave Live Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwRkYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SRVRST1dBVkU8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjQvNzwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "bassmusic",
+                name: "Bass Music 24/7",
+                url: "https://www.youtube.com/watch?v=6p0DAz_30qQ",
+                genre: "Bass/Dubstep",
+                country: "International",
+                description: "24/7 Bass Music Live Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QkFTUzwvdGV4dD4KPC9zdmc+Cg=="
+            }
+        ],
+        defaultStation: "lofi",
+        autoStop: false,
         showNowPlaying: true,
-        embedColor: '#FF6B6B',
-        crossfade: true,
-        crossfadeDuration: 3000,
-        autoRepeat: true,
-        shuffleMode: false,
-        autoQueue: true
+        embedColor: "#FF6B6B"
     },
     announcements: {
-        channelId: ''
+        channelId: ""
     },
     interactivePanel: {
-        enabled: false,
-        channelId: '',
-        messageId: '',
-        autoUpdate: true,
-        embedColor: '#9333EA'
-    },
-    youtube: {
-        apiKey: '', // Optional für bessere Metadaten
-        maxSongDuration: 600, // 10 Min max
-        qualityPreference: 'high', // high, medium, low
-        enableAutoSkip: true,
-        enableVoting: true
-    },
-    autoDJ: {
         enabled: true,
-        moodSchedule: {
-            morning: 'chill', // 6-12
-            afternoon: 'upbeat', // 12-18
-            evening: 'ambient', // 18-24
-            night: 'lofi' // 0-6
-        },
-        smartQueue: true,
-        preventRepeats: 10 // Verhindere Wiederholung der letzten 10 Songs
+        channelId: "",
+        messageId: "",
+        autoUpdate: true,
+        embedColor: "#FF6B6B"
     }
 };
 
@@ -64,362 +111,29 @@ let musicSettings = {
 const voiceConnections = new Map(); // guild -> connection
 const audioPlayers = new Map(); // guild -> player
 const currentRadioStations = new Map(); // guildId -> current radio station
-const currentPlaylists = new Map(); // guildId -> Playlist
-const songQueues = new Map(); // guildId -> Song Queue
-const playHistory = new Map(); // guildId -> Play History
-const userVotes = new Map(); // guildId -> { songId: [userIds] }
-const crossfadeTimeouts = new Map(); // guildId -> Timeout
-
-// YouTube Playlist Interface
-class YouTubePlaylist {
-    constructor(data) {
-        this.id = data.id || `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        this.name = data.name || 'Neue Playlist';
-        this.description = data.description || '';
-        this.thumbnail = data.thumbnail || '';
-        this.tags = data.tags || [];
-        this.mood = data.mood || 'default'; // chill, upbeat, ambient, lofi, gaming, etc.
-        this.songs = data.songs || []; // Array of YouTubeSong
-        this.isPublic = data.isPublic || false;
-        this.createdBy = data.createdBy || '';
-        this.createdAt = data.createdAt || Date.now();
-        this.playCount = data.playCount || 0;
-        this.duration = data.duration || 0;
-        this.settings = {
-            shuffle: data.settings?.shuffle || false,
-            repeat: data.settings?.repeat || 'off', // off, one, all
-            crossfade: data.settings?.crossfade || true,
-            autoQueue: data.settings?.autoQueue || true
-        };
-    }
-
-    addSong(song, position = -1) {
-        if (position === -1) {
-            this.songs.push(song);
-        } else {
-            this.songs.splice(position, 0, song);
-        }
-        this.updateDuration();
-    }
-
-    removeSong(songId) {
-        this.songs = this.songs.filter(song => song.id !== songId);
-        this.updateDuration();
-    }
-
-    moveSong(fromIndex, toIndex) {
-        const song = this.songs.splice(fromIndex, 1)[0];
-        this.songs.splice(toIndex, 0, song);
-    }
-
-    updateDuration() {
-        this.duration = this.songs.reduce((total, song) => total + (song.duration || 0), 0);
-    }
-
-    getShuffledOrder() {
-        const indices = Array.from({ length: this.songs.length }, (_, i) => i);
-        for (let i = indices.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [indices[i], indices[j]] = [indices[j], indices[i]];
-        }
-        return indices;
-    }
-}
-
-// YouTube Song Interface
-class YouTubeSong {
-    constructor(data) {
-        this.id = data.id || data.videoId;
-        this.title = data.title || '';
-        this.url = data.url || `https://youtube.com/watch?v=${this.id}`;
-        this.duration = data.duration || 0;
-        this.thumbnail = data.thumbnail || '';
-        this.channel = data.channel || '';
-        this.views = data.views || 0;
-        this.addedBy = data.addedBy || '';
-        this.addedAt = data.addedAt || Date.now();
-        this.playCount = data.playCount || 0;
-        this.skipCount = data.skipCount || 0;
-        this.rating = data.rating || 0;
-        this.tags = data.tags || [];
-        this.mood = data.mood || 'default';
-    }
-}
-
-// Auto-DJ System
-class AutoDJ {
-    constructor(guildId) {
-        this.guildId = guildId;
-        this.isActive = false;
-        this.currentPlaylist = null;
-        this.currentSongIndex = 0;
-        this.shuffledOrder = [];
-        this.playHistory = [];
-        this.upcomingQueue = [];
-    }
-
-    start(playlistId) {
-        const playlist = getPlaylist(playlistId);
-        if (!playlist) return false;
-
-        this.currentPlaylist = playlist;
-        this.isActive = true;
-        this.setupQueue();
-        this.playNext();
-        return true;
-    }
-
-    stop() {
-        this.isActive = false;
-        this.currentPlaylist = null;
-        this.currentSongIndex = 0;
-        this.clearTimeouts();
-    }
-
-    setupQueue() {
-        if (!this.currentPlaylist) return;
-
-        if (this.currentPlaylist.settings.shuffle) {
-            this.shuffledOrder = this.currentPlaylist.getShuffledOrder();
-        } else {
-            this.shuffledOrder = Array.from({ length: this.currentPlaylist.songs.length }, (_, i) => i);
-        }
-
-        // Setup upcoming queue
-        this.updateUpcomingQueue();
-    }
-
-    async playNext() {
-        if (!this.isActive || !this.currentPlaylist) return;
-
-        const songIndex = this.getCurrentSongIndex();
-        if (songIndex === -1) {
-            // Playlist Ende erreicht
-            if (this.currentPlaylist.settings.repeat === 'all') {
-                this.currentSongIndex = 0;
-                this.setupQueue();
-                return this.playNext();
-            } else {
-                return this.stop();
-            }
-        }
-
-        const song = this.currentPlaylist.songs[songIndex];
-        if (!song) return;
-
-        // Play song
-        await this.playSong(song);
-        
-        // Update history
-        this.addToHistory(song);
-        
-        // Move to next song
-        this.moveToNext();
-        
-        // Update upcoming queue
-        this.updateUpcomingQueue();
-    }
-
-    async playSong(song) {
-        try {
-            const stream = await createYouTubeStream(song.url);
-            if (!stream) return false;
-
-            const player = audioPlayers.get(this.guildId);
-            if (!player) return false;
-
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type,
-                metadata: {
-                    title: song.title,
-                    url: song.url
-                }
-            });
-
-            // Crossfade handling
-            if (musicSettings.radio.crossfade && this.playHistory.length > 0) {
-                await this.handleCrossfade(player, resource);
-            } else {
-                player.play(resource);
-            }
-
-            // Update now playing
-            currentPlaylists.set(this.guildId, {
-                playlist: this.currentPlaylist,
-                currentSong: song,
-                autoDJ: this
-            });
-
-            // Send now playing message
-            if (musicSettings.radio.showNowPlaying) {
-                await sendSongNowPlayingMessage(this.guildId, song, this.currentPlaylist);
-            }
-
-            // Update interactive panel
-            updateInteractiveRadioPanel(this.guildId, true);
-
-            // Setup next song timer
-            this.setupNextSongTimer(song.duration);
-
-            song.playCount = (song.playCount || 0) + 1;
-            this.currentPlaylist.playCount = (this.currentPlaylist.playCount || 0) + 1;
-            saveMusicSettings();
-
-            return true;
-
-        } catch (error) {
-            console.error('❌ Fehler beim Abspielen des Songs:', error);
-            return false;
-        }
-    }
-
-    async handleCrossfade(player, newResource) {
-        // Implementierung für Crossfade zwischen Songs
-        const fadeTime = musicSettings.radio.crossfadeDuration || 3000;
-        
-        // Fade out current song
-        if (player.state.status === AudioPlayerStatus.Playing) {
-            // Note: Discord.js Audio doesn't support volume control
-            // Crossfade würde eine externe Audio-Library benötigen
-            // Für jetzt: Direkter Wechsel
-            player.play(newResource);
-        } else {
-            player.play(newResource);
-        }
-    }
-
-    setupNextSongTimer(duration) {
-        const timeout = setTimeout(() => {
-            if (this.isActive) {
-                this.playNext();
-            }
-        }, (duration * 1000) - (musicSettings.radio.crossfadeDuration || 0));
-
-        crossfadeTimeouts.set(this.guildId, timeout);
-    }
-
-    clearTimeouts() {
-        const timeout = crossfadeTimeouts.get(this.guildId);
-        if (timeout) {
-            clearTimeout(timeout);
-            crossfadeTimeouts.delete(this.guildId);
-        }
-    }
-
-    getCurrentSongIndex() {
-        if (this.currentSongIndex >= this.shuffledOrder.length) return -1;
-        return this.shuffledOrder[this.currentSongIndex];
-    }
-
-    moveToNext() {
-        if (this.currentPlaylist?.settings.repeat === 'one') {
-            // Repeat current song
-            return;
-        }
-
-        this.currentSongIndex++;
-    }
-
-    addToHistory(song) {
-        this.playHistory.push({
-            song: song,
-            playedAt: Date.now()
-        });
-
-        // Keep only last X songs in history
-        const maxHistory = musicSettings.autoDJ.preventRepeats || 10;
-        if (this.playHistory.length > maxHistory) {
-            this.playHistory = this.playHistory.slice(-maxHistory);
-        }
-    }
-
-    updateUpcomingQueue() {
-        this.upcomingQueue = [];
-        const maxUpcoming = 5;
-
-        for (let i = 1; i <= maxUpcoming; i++) {
-            const nextIndex = this.currentSongIndex + i;
-            if (nextIndex < this.shuffledOrder.length) {
-                const songIndex = this.shuffledOrder[nextIndex];
-                this.upcomingQueue.push(this.currentPlaylist.songs[songIndex]);
-            } else if (this.currentPlaylist.settings.repeat === 'all') {
-                // Wrap around
-                const wrapIndex = (nextIndex) % this.shuffledOrder.length;
-                const songIndex = this.shuffledOrder[wrapIndex];
-                this.upcomingQueue.push(this.currentPlaylist.songs[songIndex]);
-            }
-        }
-    }
-
-    skipSong() {
-        this.clearTimeouts();
-        this.playNext();
-    }
-
-    addSongToQueue(song, position = -1) {
-        if (position === -1) {
-            this.upcomingQueue.push(song);
-        } else {
-            this.upcomingQueue.splice(position, 0, song);
-        }
-    }
-
-    voteSong(userId, songId, vote) {
-        // Voting system implementation
-        const guildVotes = userVotes.get(this.guildId) || {};
-        if (!guildVotes[songId]) guildVotes[songId] = { up: [], down: [] };
-
-        // Remove previous vote
-        guildVotes[songId].up = guildVotes[songId].up.filter(id => id !== userId);
-        guildVotes[songId].down = guildVotes[songId].down.filter(id => id !== userId);
-
-        // Add new vote
-        if (vote === 'up') {
-            guildVotes[songId].up.push(userId);
-        } else if (vote === 'down') {
-            guildVotes[songId].down.push(userId);
-        }
-
-        userVotes.set(this.guildId, guildVotes);
-
-        // Auto-skip if too many downvotes
-        const downvotes = guildVotes[songId].down.length;
-        const upvotes = guildVotes[songId].up.length;
-        
-        if (downvotes >= 3 && downvotes > upvotes) {
-            this.skipSong();
-        }
-    }
-}
-
-// Auto-DJ Instances
-const autoDJs = new Map(); // guildId -> AutoDJ
 
 function loadMusicSettings() {
     try {
-        if (fs.existsSync('./music-settings.json')) {
-            const data = fs.readFileSync('./music-settings.json', 'utf8');
+        if (fs.existsSync('music-settings.json')) {
+            const data = fs.readFileSync('music-settings.json', 'utf8');
             const loadedSettings = JSON.parse(data);
             musicSettings = { ...musicSettings, ...loadedSettings };
-            
-            // Convert plain objects to class instances
-            if (musicSettings.radio?.playlists) {
-                musicSettings.radio.playlists = musicSettings.radio.playlists.map(p => new YouTubePlaylist(p));
-            }
-            
-            console.log('✅ Music settings geladen');
+            console.log('🎵 Musik-Einstellungen geladen');
+        } else {
+            saveMusicSettings();
+            console.log('🎵 Standard-Musik-Einstellungen erstellt');
         }
     } catch (error) {
-        console.error('❌ Fehler beim Laden der Music Settings:', error);
+        console.error('❌ Fehler beim Laden der Musik-Einstellungen:', error);
     }
 }
 
 function saveMusicSettings() {
     try {
-        fs.writeFileSync('./music-settings.json', JSON.stringify(musicSettings, null, 2));
-        console.log('💾 Music settings gespeichert');
+        fs.writeFileSync('music-settings.json', JSON.stringify(musicSettings, null, 2));
+        console.log('💾 Musik-Einstellungen gespeichert');
     } catch (error) {
-        console.error('❌ Fehler beim Speichern der Music Settings:', error);
+        console.error('❌ Fehler beim Speichern der Musik-Einstellungen:', error);
     }
 }
 
@@ -602,6 +316,7 @@ async function createYouTubeStream(url) {
             };
         } else {
             // Direkter Stream (MP3/etc.)
+            const fetch = require('node-fetch');
             const response = await fetch(url);
             
             return {
@@ -922,7 +637,7 @@ async function updateInteractiveRadioPanel(guildId, forceUpdate = false) {
 
         // Aktualisiere Nachricht
         try {
-        await message.edit(panelData);
+            await message.edit(panelData);
             console.log('🔄 Radio Panel erfolgreich aktualisiert');
             return true;
         } catch (editError) {
@@ -1315,647 +1030,7 @@ function registerMusicAPI(app) {
         }
     });
 
-    // NEUE MEGA PLAYLIST API ENDPOINTS! 🚀
-
-    // Get all playlists
-    app.get('/api/music/playlists', (req, res) => {
-        try {
-            const playlists = getPlaylists();
-            res.json({
-                success: true,
-                playlists: playlists
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Create new playlist
-    app.post('/api/music/playlists', (req, res) => {
-        try {
-            const playlistData = req.body;
-            const playlist = createPlaylist(playlistData);
-            
-            res.json({
-                success: true,
-                message: `Playlist "${playlist.name}" erstellt!`,
-                playlist: playlist
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Update playlist
-    app.put('/api/music/playlists/:playlistId', (req, res) => {
-        try {
-            const { playlistId } = req.params;
-            const updates = req.body;
-            
-            const playlist = updatePlaylist(playlistId, updates);
-            
-            if (playlist) {
-                res.json({
-                    success: true,
-                    message: `Playlist "${playlist.name}" aktualisiert!`,
-                    playlist: playlist
-                });
-            } else {
-                res.status(404).json({
-                    success: false,
-                    error: 'Playlist nicht gefunden'
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Delete playlist
-    app.delete('/api/music/playlists/:playlistId', (req, res) => {
-        try {
-            const { playlistId } = req.params;
-            const success = deletePlaylist(playlistId);
-            
-            if (success) {
-                res.json({
-                    success: true,
-                    message: 'Playlist gelöscht!'
-                });
-            } else {
-                res.status(404).json({
-                    success: false,
-                    error: 'Playlist nicht gefunden'
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // YouTube Search API
-    app.post('/api/music/youtube/search', async (req, res) => {
-        try {
-            const { query, maxResults = 10 } = req.body;
-            
-            if (!query) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Suchbegriff erforderlich'
-                });
-            }
-
-            const results = await searchYouTubeSongs(query, maxResults);
-            
-            res.json({
-                success: true,
-                results: results,
-                query: query,
-                count: results.length,
-                apiSource: process.env.YOUTUBE_API_KEY ? 'youtube_api' : 'play_dl'
-            });
-        } catch (error) {
-            console.error('❌ YouTube Search API Fehler:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // YouTube Video Info API (für direkte URL Eingabe)
-    app.post('/api/music/youtube/info', async (req, res) => {
-        try {
-            const { url } = req.body;
-            
-            if (!url) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'YouTube URL erforderlich'
-                });
-            }
-
-            const song = await getYouTubeVideoInfo(url);
-            
-            if (!song) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Video nicht gefunden oder URL ungültig'
-                });
-            }
-
-            res.json({
-                success: true,
-                song: song,
-                apiSource: process.env.YOUTUBE_API_KEY ? 'youtube_api' : 'play_dl'
-            });
-        } catch (error) {
-            console.error('❌ YouTube Video Info API Fehler:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Start Auto-DJ with playlist
-    app.post('/api/music/autodj/:guildId/start', async (req, res) => {
-        try {
-            const { guildId } = req.params;
-            const { playlistId } = req.body;
-            
-            if (!playlistId) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Playlist-ID erforderlich'
-                });
-            }
-
-            const success = startAutoDJ(guildId, playlistId);
-            
-            if (success) {
-                const playlist = getPlaylist(playlistId);
-                res.json({
-                    success: true,
-                    message: `Auto-DJ gestartet mit "${playlist.name}"! 🎵`,
-                    playlist: playlist
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    error: 'Fehler beim Starten des Auto-DJ'
-                });
-            }
-        } catch (error) {
-            console.error('❌ Auto-DJ Start Fehler:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Stop Auto-DJ
-    app.post('/api/music/autodj/:guildId/stop', (req, res) => {
-        try {
-            const { guildId } = req.params;
-            
-            const success = stopAutoDJ(guildId);
-            
-            if (success) {
-                res.json({
-                    success: true,
-                    message: 'Auto-DJ gestoppt! ⏹️'
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    error: 'Fehler beim Stoppen des Auto-DJ'
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Skip current song
-    app.post('/api/music/autodj/:guildId/skip', (req, res) => {
-        try {
-            const { guildId } = req.params;
-            
-            const autoDJ = getAutoDJ(guildId);
-            if (autoDJ) {
-                autoDJ.skipSong();
-                res.json({
-                    success: true,
-                    message: 'Song übersprungen! ⏭️'
-                });
-            } else {
-                res.status(400).json({
-                    success: false,
-                    error: 'Kein Auto-DJ aktiv'
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Vote for song
-    app.post('/api/music/vote/:guildId', (req, res) => {
-        try {
-            const { guildId } = req.params;
-            const { userId, songId, vote } = req.body; // vote: 'up' or 'down'
-            
-            const autoDJ = getAutoDJ(guildId);
-            if (autoDJ) {
-                autoDJ.voteSong(userId, songId, vote);
-                res.json({
-                    success: true,
-                    message: `Vote ${vote === 'up' ? '👍' : '👎'} registriert!`
-                });
-            } else {
-                res.status(400).json({
-                    success: false,
-                    error: 'Kein Auto-DJ aktiv'
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Get current playlist status
-    app.get('/api/music/playlist/:guildId/status', (req, res) => {
-        try {
-            const { guildId } = req.params;
-            const playlistData = currentPlaylists.get(guildId);
-            const autoDJ = getAutoDJ(guildId);
-            
-            if (playlistData && autoDJ) {
-                res.json({
-                    success: true,
-                    isPlaying: autoDJ.isActive,
-                    currentPlaylist: playlistData.playlist,
-                    currentSong: playlistData.currentSong,
-                    upcomingQueue: autoDJ.upcomingQueue.slice(0, 5),
-                    playHistory: autoDJ.playHistory.slice(-5)
-                });
-            } else {
-                res.json({
-                    success: true,
-                    isPlaying: false,
-                    currentPlaylist: null,
-                    currentSong: null,
-                    upcomingQueue: [],
-                    playHistory: []
-                });
-            }
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    console.log('✅ YouTube Radio API + MEGA PLAYLIST SYSTEM registriert! 🎵🚀');
-}
-
-// Playlist Management Functions
-function getPlaylists() {
-    return musicSettings.radio.playlists || [];
-}
-
-function getPlaylist(playlistId) {
-    return musicSettings.radio.playlists.find(p => p.id === playlistId);
-}
-
-function createPlaylist(data) {
-    const playlist = new YouTubePlaylist(data);
-    musicSettings.radio.playlists.push(playlist);
-    saveMusicSettings();
-    return playlist;
-}
-
-function updatePlaylist(playlistId, updates) {
-    const playlist = getPlaylist(playlistId);
-    if (!playlist) return null;
-
-    Object.assign(playlist, updates);
-    saveMusicSettings();
-    return playlist;
-}
-
-function deletePlaylist(playlistId) {
-    const index = musicSettings.radio.playlists.findIndex(p => p.id === playlistId);
-    if (index === -1) return false;
-
-    musicSettings.radio.playlists.splice(index, 1);
-    saveMusicSettings();
-    return true;
-}
-
-// YouTube Search Integration mit offizieller API
-async function searchYouTubeSongs(query, maxResults = 10) {
-    try {
-        const apiKey = process.env.YOUTUBE_API_KEY;
-        
-        // Fallback: Verwende play-dl wenn kein API Key
-        if (!apiKey) {
-            console.log('📡 Verwende play-dl für YouTube Search (kein API Key)');
-            const playDl = require('play-dl');
-            
-            const results = await playDl.search(query, {
-                limit: maxResults,
-                source: { youtube: 'video' }
-            });
-
-            return results.map(video => new YouTubeSong({
-                id: video.id,
-                title: video.title,
-                url: video.url,
-                duration: video.durationInSec,
-                thumbnail: video.thumbnails?.[0]?.url || '',
-                channel: video.channel?.name || '',
-                views: video.views || 0
-            }));
-        }
-
-        // Verwende offizielle YouTube API mit deinem API Key! 🚀
-        console.log('🔑 Verwende YouTube API v3 mit offiziellem API Key!');
-        
-        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&maxResults=${maxResults}&type=video&key=${apiKey}`;
-        
-        const searchResponse = await fetch(searchUrl);
-        const searchData = await searchResponse.json();
-        
-        if (!searchData.items || searchData.items.length === 0) {
-            return [];
-        }
-
-        // Hole Video-Details für Dauer und Views
-        const videoIds = searchData.items.map(item => item.id.videoId).join(',');
-        const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${videoIds}&key=${apiKey}`;
-        
-        const detailsResponse = await fetch(detailsUrl);
-        const detailsData = await detailsResponse.json();
-
-        // Kombiniere Search-Results mit Details
-        return searchData.items.map((item, index) => {
-            const details = detailsData.videos?.[index];
-            const duration = details ? parseYouTubeDuration(details.contentDetails.duration) : 0;
-            const views = details ? parseInt(details.statistics.viewCount || 0) : 0;
-
-            return new YouTubeSong({
-                id: item.id.videoId,
-                title: item.snippet.title,
-                url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-                duration: duration,
-                thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '',
-                channel: item.snippet.channelTitle,
-                views: views,
-                addedBy: 'system',
-                addedAt: Date.now()
-            });
-        });
-
-    } catch (error) {
-        console.error('❌ YouTube Search Fehler:', error);
-        
-        // Fallback zu play-dl bei API Fehler
-        try {
-            console.log('🔄 Fallback zu play-dl...');
-            const playDl = require('play-dl');
-            
-            const results = await playDl.search(query, {
-                limit: maxResults,
-                source: { youtube: 'video' }
-            });
-
-            return results.map(video => new YouTubeSong({
-                id: video.id,
-                title: video.title,
-                url: video.url,
-                duration: video.durationInSec,
-                thumbnail: video.thumbnails?.[0]?.url || '',
-                channel: video.channel?.name || '',
-                views: video.views || 0
-            }));
-        } catch (fallbackError) {
-            console.error('❌ Auch play-dl Fallback fehlgeschlagen:', fallbackError);
-            return [];
-        }
-    }
-}
-
-// YouTube Duration Parser (PT4M13S -> 253 seconds)
-function parseYouTubeDuration(duration) {
-    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    if (!match) return 0;
-    
-    const hours = parseInt(match[1] || 0);
-    const minutes = parseInt(match[2] || 0);
-    const seconds = parseInt(match[3] || 0);
-    
-    return hours * 3600 + minutes * 60 + seconds;
-}
-
-// Enhanced YouTube URL validation und Metadata-Fetching
-async function getYouTubeVideoInfo(url) {
-    try {
-        const videoId = extractYouTubeVideoId(url);
-        if (!videoId) return null;
-
-        const apiKey = process.env.YOUTUBE_API_KEY;
-        
-        if (apiKey) {
-            // Verwende offizielle API für bessere Metadaten
-            const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`;
-            
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            
-            if (data.items && data.items.length > 0) {
-                const video = data.items[0];
-                return new YouTubeSong({
-                    id: videoId,
-                    title: video.snippet.title,
-                    url: url,
-                    duration: parseYouTubeDuration(video.contentDetails.duration),
-                    thumbnail: video.snippet.thumbnails?.high?.url || video.snippet.thumbnails?.default?.url || '',
-                    channel: video.snippet.channelTitle,
-                    views: parseInt(video.statistics.viewCount || 0),
-                    addedBy: 'manual',
-                    addedAt: Date.now()
-                });
-            }
-        }
-
-        // Fallback zu play-dl
-        const playDl = require('play-dl');
-        const info = await playDl.video_info(url);
-        
-        if (info) {
-            return new YouTubeSong({
-                id: videoId,
-                title: info.video_details.title,
-                url: url,
-                duration: info.video_details.durationInSec,
-                thumbnail: info.video_details.thumbnails?.[0]?.url || '',
-                channel: info.video_details.channel?.name || '',
-                views: info.video_details.viewCount || 0,
-                addedBy: 'manual',
-                addedAt: Date.now()
-            });
-        }
-
-        return null;
-    } catch (error) {
-        console.error('❌ YouTube Video Info Fehler:', error);
-        return null;
-    }
-}
-
-// YouTube Video ID Extraktor
-function extractYouTubeVideoId(url) {
-    const patterns = [
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-        /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
-    ];
-    
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
-    }
-    
-    return null;
-}
-
-// Auto-DJ Functions
-function startAutoDJ(guildId, playlistId) {
-    const playlist = getPlaylist(playlistId);
-    if (!playlist) return false;
-
-    let autoDJ = autoDJs.get(guildId);
-    if (!autoDJ) {
-        autoDJ = new AutoDJ(guildId);
-        autoDJs.set(guildId, autoDJ);
-    }
-
-    return autoDJ.start(playlistId);
-}
-
-function stopAutoDJ(guildId) {
-    const autoDJ = autoDJs.get(guildId);
-    if (autoDJ) {
-        autoDJ.stop();
-        autoDJs.delete(guildId);
-        currentPlaylists.delete(guildId);
-        return true;
-    }
-    return false;
-}
-
-function getAutoDJ(guildId) {
-    return autoDJs.get(guildId);
-}
-
-// Enhanced Interactive Panel for Playlists
-async function createInteractivePlaylistPanel(guildId) {
-    try {
-        const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
-
-        const currentPlaylistData = currentPlaylists.get(guildId);
-        const autoDJ = autoDJs.get(guildId);
-        
-        const embed = new EmbedBuilder()
-            .setTitle('🎵 YouTube Playlist Radio')
-            .setColor(musicSettings.interactivePanel.embedColor || '#9333EA')
-            .setTimestamp();
-
-        if (currentPlaylistData && autoDJ) {
-            const { playlist, currentSong } = currentPlaylistData;
-            
-            embed.setDescription(`**Aktuelle Playlist:** ${playlist.name}\n**Aktueller Song:** ${currentSong.title}\n**Kanal:** ${currentSong.channel}`);
-            
-            if (currentSong.thumbnail) {
-                embed.setThumbnail(currentSong.thumbnail);
-            }
-
-            embed.addFields([
-                {
-                    name: '📊 Playlist Info',
-                    value: `Songs: ${playlist.songs.length}\nModus: ${playlist.settings.shuffle ? '🔀 Shuffle' : '📑 Linear'}\nRepeat: ${playlist.settings.repeat === 'all' ? '🔁 All' : playlist.settings.repeat === 'one' ? '🔂 One' : '⏹️ Off'}`,
-                    inline: true
-                },
-                {
-                    name: '⏭️ Nächste Songs',
-                    value: autoDJ.upcomingQueue.slice(0, 3).map((song, i) => `${i + 1}. ${song.title.substring(0, 30)}...`).join('\n') || 'Keine weiteren Songs',
-                    inline: true
-                }
-            ]);
-
-            // Voting info
-            const votes = userVotes.get(guildId)?.[currentSong.id];
-            if (votes) {
-                embed.addFields([{
-                    name: '🗳️ Votes',
-                    value: `👍 ${votes.up?.length || 0} | 👎 ${votes.down?.length || 0}`,
-                    inline: true
-                }]);
-            }
-
-        } else {
-            embed.setDescription('Keine Playlist aktiv\n\nWähle eine Playlist aus oder erstelle eine neue!');
-        }
-
-        // Buttons
-        const row1 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('playlist_select')
-                .setLabel('📁 Playlist wählen')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId('playlist_skip')
-                .setLabel('⏭️ Skip')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(!currentPlaylistData),
-            new ButtonBuilder()
-                .setCustomId('playlist_shuffle')
-                .setLabel('🔀 Shuffle')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(!currentPlaylistData)
-        );
-
-        const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('song_vote_up')
-                .setLabel('👍')
-                .setStyle(ButtonStyle.Success)
-                .setDisabled(!currentPlaylistData),
-            new ButtonBuilder()
-                .setCustomId('song_vote_down')
-                .setLabel('👎')
-                .setStyle(ButtonStyle.Danger)
-                .setDisabled(!currentPlaylistData),
-            new ButtonBuilder()
-                .setCustomId('playlist_stop')
-                .setLabel('⏹️ Stop')
-                .setStyle(ButtonStyle.Danger)
-                .setDisabled(!currentPlaylistData)
-        );
-
-        return {
-            embeds: [embed],
-            components: [row1, row2]
-        };
-
-    } catch (error) {
-        console.error('❌ Fehler beim Erstellen des Playlist Panels:', error);
-        return null;
-    }
+    console.log('✅ YouTube Radio API registriert!');
 }
 
 module.exports = {
@@ -1976,15 +1051,5 @@ module.exports = {
     handleRadioStationSelect,
     handleRadioStopButton,
     musicSettings,
-    autoJoinForRadio,
-    getPlaylists,
-    getPlaylist,
-    createPlaylist,
-    updatePlaylist,
-    deletePlaylist,
-    searchYouTubeSongs,
-    startAutoDJ,
-    stopAutoDJ,
-    getAutoDJ,
-    createInteractivePlaylistPanel
+    autoJoinForRadio
 }; 
