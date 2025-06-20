@@ -401,90 +401,57 @@ async function searchYouTube(query) {
     }
 }
 
-// 🆕 Neue YouTube-Info Funktion mit youtubei.js
+// 🆕 VEREINFACHTE YouTube-Info Funktion (nach User-Muster)
 async function getVideoInfoWithYoutubei(url) {
     try {
         console.log(`🆕 Lade Video-Info mit youtubei.js: ${url}`);
         
-        // Initialisiere youtubei.js Client
-        const youtube = await Innertube.create();
-        
-        // Normalisiere URL und extrahiere Video-ID
-        const normalizedUrl = normalizeYouTubeURL(url);
-        const videoId = normalizedUrl.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
-        
+        // 🎯 SAUBERE Video-ID Extraction (nach User-Muster)
+        const videoId = extractVideoId(url);
         if (!videoId) {
-            throw new Error('Ungültige YouTube-URL: Video-ID nicht gefunden');
+            throw new Error('Ungültige YouTube-URL');
         }
         
         console.log(`🔍 Video-ID extrahiert: ${videoId}`);
         
-        // Hole Video-Details über interne YouTube-API (versuche beide APIs)
-        let info;
-        try {
-            console.log('🔄 Versuche youtube.getInfo() (normale API)...');
-            info = await youtube.getInfo(videoId);
-        } catch (normalApiError) {
-            console.log('⚠️ Normale API fehlgeschlagen, versuche music.getInfo()...');
-            info = await youtube.music.getInfo(videoId);
-        }
+        // Initialisiere youtubei.js Client
+        const youtube = await Innertube.create();
         
-        if (!info) {
-            throw new Error('Video-Details konnten nicht abgerufen werden');
+        // 🎯 DIREKTE API-Nutzung (nach User-Muster)
+        console.log('🔄 Verwende youtube.getInfo() (normale API)...');
+        const info = await youtube.getInfo(videoId);
+        
+        if (!info || !info.streaming_data) {
+            throw new Error('Video-Details oder Streaming-Daten nicht verfügbar');
         }
         
         console.log(`✅ youtubei.js Video-Details erhalten: ${info.basic_info.title}`);
         
-        // Hole Stream-URLs über interne YouTube-API
-        const formats = info.streaming_data?.adaptive_formats?.filter(format => 
-            format.mime_type?.includes('audio')
-        ) || [];
+        // 🎯 INTELLIGENTE Stream-Auswahl (nach User-Muster: AUDIO_QUALITY_MEDIUM)
+        const streamingData = info.streaming_data;
+        const audioStream = streamingData.adaptive_formats.find(f => 
+            f.mime_type.includes('audio/webm') && 
+            f.audio_quality === 'AUDIO_QUALITY_MEDIUM'
+        );
         
-        console.log(`🎵 Audio-Streams gefunden: ${formats.length}`);
-        
-        if (formats.length === 0) {
-            throw new Error('Keine Audio-Streams verfügbar');
-        }
-        
-        // Wähle besten Audio-Stream (höchste Bitrate)
-        const bestAudioStream = formats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-        console.log(`🎯 Bester Audio-Stream: ${bestAudioStream.mime_type} - ${bestAudioStream.bitrate}bps`);
-        
-        // 🔍 DEBUG: Prüfe ob Stream-URL vorhanden ist
-        console.log(`🔍 Stream-URL Debug: ${bestAudioStream.url ? 'VORHANDEN' : 'FEHLT'}`);
-        if (bestAudioStream.url) {
-            console.log(`🔗 Stream-URL: ${bestAudioStream.url.substring(0, 100)}...`);
-        } else {
-            console.error(`❌ bestAudioStream.url ist undefined!`);
-            console.error(`🔍 Available properties:`, Object.keys(bestAudioStream));
+        if (!audioStream || !audioStream.url) {
+            console.log('⚠️ AUDIO_QUALITY_MEDIUM nicht gefunden, versuche andere Qualitäten...');
             
-            // Versuche alternative URL-Properties
-            const possibleUrlKeys = ['url', 'signatureCipher', 'sig', 'stream_url'];
-            for (const key of possibleUrlKeys) {
-                if (bestAudioStream[key]) {
-                    console.log(`🔍 Alternative URL gefunden in '${key}': ${String(bestAudioStream[key]).substring(0, 100)}...`);
-                }
+            // Fallback: Suche nach anderen Audio-Qualitäten
+            const alternativeStream = streamingData.adaptive_formats.find(f => 
+                f.mime_type.includes('audio/webm') && f.url
+            );
+            
+            if (!alternativeStream || !alternativeStream.url) {
+                throw new Error('Kein gültiger Audio-Stream gefunden');
             }
+            
+            console.log(`🎯 Alternative Audio-Qualität gefunden: ${alternativeStream.audio_quality || 'UNKNOWN'}`);
+            return createVideoInfoResult(info, alternativeStream, url);
         }
         
-        // ⚠️ Fallback wenn keine URL gefunden
-        if (!bestAudioStream.url) {
-            throw new Error('Keine Stream-URL im besten Audio-Stream gefunden');
-        }
-        
-        return {
-            title: info.basic_info.title,
-            url: normalizedUrl,
-            duration: info.basic_info.duration?.seconds_total || 0,
-            thumbnail: info.basic_info.thumbnail?.[0]?.url || '',
-            author: info.basic_info.channel?.name || 'Unbekannt',
-            requestedBy: null,
-            // 🆕 youtubei.js spezifische Daten
-            streamUrl: bestAudioStream.url,
-            mimeType: bestAudioStream.mime_type,
-            bitrate: bestAudioStream.bitrate,
-            isYoutubei: true
-        };
+        console.log(`🎯 AUDIO_QUALITY_MEDIUM Stream gefunden: ${audioStream.mime_type}`);
+        return createVideoInfoResult(info, audioStream, url);
         
     } catch (error) {
         console.error('❌ youtubei.js Fehler:', error.message);
@@ -492,27 +459,30 @@ async function getVideoInfoWithYoutubei(url) {
     }
 }
 
-// Normalisiere YouTube URL für youtubei.js
-function normalizeYouTubeURL(url) {
-    // Entferne verschiedene URL-Varianten und normalisiere
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-        // Extrahiere Video-ID
-        let videoId = null;
-        
-        if (url.includes('watch?v=')) {
-            videoId = url.split('watch?v=')[1]?.split('&')[0];
-        } else if (url.includes('youtu.be/')) {
-            videoId = url.split('youtu.be/')[1]?.split('?')[0];
-        } else if (url.includes('/embed/')) {
-            videoId = url.split('/embed/')[1]?.split('?')[0];
-        }
-        
-        if (videoId) {
-            return `https://www.youtube.com/watch?v=${videoId}`;
-        }
-    }
-    return url;
+// 🎯 SAUBERE Video-ID Extraction (nach User-Muster)
+function extractVideoId(url) {
+    const match = url.match(/(?:v=|\.be\/)([\w-]{11})/);
+    return match ? match[1] : null;
 }
+
+// 🎯 Helper-Funktion für einheitliches Result-Format
+function createVideoInfoResult(info, audioStream, originalUrl) {
+    return {
+        title: info.basic_info.title,
+        url: originalUrl,
+        duration: info.basic_info.duration?.seconds_total || 0,
+        thumbnail: info.basic_info.thumbnail?.[0]?.url || '',
+        author: info.basic_info.channel?.name || 'Unbekannt',
+        requestedBy: null,
+        // 🆕 youtubei.js spezifische Daten
+        streamUrl: audioStream.url,
+        mimeType: audioStream.mime_type,
+        audioQuality: audioStream.audio_quality,
+        isYoutubei: true
+    };
+}
+
+// 🗑️ normalizeYouTubeURL() entfernt - wird durch extractVideoId() ersetzt
 
 
 
@@ -1658,107 +1628,73 @@ async function playMusic(guildId, song) {
         let stream;
         let streamCreated = false;
         
-        // 🆕 METHODE 1: youtubei.js - Direkte YouTube-API (VEREINFACHT)
+        // 🎯 VEREINFACHTE YOUTUBE-STREAMING (nach User-Muster)
         if (!streamCreated) {
             try {
-                console.log('🆕 Versuche youtubei.js (interne YouTube-API)...');
+                console.log('🆕 Versuche sauberes youtubei.js Streaming...');
                 
-                // Hole youtubei.js Daten (entweder aus songData oder frisch)
-                let youtubeData = null;
+                // Hole oder verwende vorhandene youtubei.js Daten
+                let youtubeData = songData.isYoutubei ? songData : await getVideoInfoWithYoutubei(songData.url);
                 
-                if (songData.isYoutubei && songData.streamUrl) {
-                    console.log('🎯 Verwende bereits abgerufene youtubei.js Daten...');
-                    youtubeData = songData;
-                } else {
-                    console.log('🔄 Hole frische youtubei.js Daten...');
-                    youtubeData = await getVideoInfoWithYoutubei(songData.url);
-                    if (youtubeData) {
-                        // Update songData mit youtubei.js Daten
+                if (youtubeData && youtubeData.streamUrl) {
+                    console.log(`🎯 Stream-URL gefunden (${youtubeData.audioQuality || 'UNKNOWN'}): ${youtubeData.mimeType}`);
+                    
+                    // 🎯 DIREKTER FETCH → RESPONSE.BODY ANSATZ (nach User-Muster)
+                    const fetch = require('node-fetch');
+                    const response = await fetch(youtubeData.streamUrl);
+                    
+                    if (!response.ok || !response.body) {
+                        throw new Error('Stream konnte nicht geladen werden');
+                    }
+                    
+                    console.log(`📡 Stream Response: ${response.status} OK`);
+                    
+                    // ✅ DIREKTER STREAM WIE USER VORGESCHLAGEN
+                    stream = response.body;
+                    streamCreated = true;
+                    console.log(`✅ youtubei.js Stream bereit für Discord!`);
+                    
+                    // Update songData falls nötig
+                    if (!songData.isYoutubei) {
                         Object.assign(songData, youtubeData);
                     }
-                }
-                
-                // Wenn wir eine gültige streamUrl haben, hole den Stream
-                if (youtubeData && youtubeData.streamUrl) {
-                    console.log(`🎯 youtubei.js Stream-URL gefunden: ${youtubeData.streamUrl.substring(0, 100)}...`);
-                    console.log(`🎵 MIME-Type: ${youtubeData.mimeType}`);
-                    console.log(`🎵 Bitrate: ${youtubeData.bitrate}bps`);
-                    
-                    const fetch = require('node-fetch');
-                    const streamResponse = await fetch(youtubeData.streamUrl, {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                            'Referer': 'https://www.youtube.com/'
-                        }
-                    });
-                    
-                    console.log(`📡 Stream Response: ${streamResponse.status} ${streamResponse.statusText}`);
-                    console.log(`📡 Stream Content-Type: ${streamResponse.headers.get('content-type')}`);
-                    
-                    if (!streamResponse.ok || !streamResponse.body) {
-                        throw new Error(`Stream konnte nicht geladen werden: ${streamResponse.status} ${streamResponse.statusText}`);
-                    }
-                    
-                    // ✅ DIREKTER STREAM-ANSATZ wie vom User vorgeschlagen
-                    stream = streamResponse.body;
-                    streamCreated = true;
-                    console.log(`✅ youtubei.js Stream erfolgreich geladen! ReadableStream bereit.`);
                     
                 } else {
-                    console.log('❌ Keine gültige Stream-URL von youtubei.js erhalten');
+                    console.log('❌ Keine gültige Stream-URL erhalten');
                 }
                 
-            } catch (youtubeIError) {
-                console.log('⚠️ youtubei.js fehlgeschlagen:', youtubeIError.message);
+            } catch (youtubeError) {
+                console.log('⚠️ youtubei.js Streaming fehlgeschlagen:', youtubeError.message);
             }
         }
 
-        // 🔄 METHODE 2: Alternative yt-search Fallback (VEREINFACHT) 
+        // 🔄 FALLBACK: Alternative yt-search (vereinfacht)
         if (!streamCreated) {
             try {
-                console.log('🔍 Fallback: Alternative Suche mit yt-search...');
+                console.log('🔍 Fallback: Suche Alternativen...');
                 
-                const searchQuery = songData.title || songData.url;
-                const searchResults = await searchYouTube(searchQuery);
+                const searchResults = await searchYouTube(songData.title || songData.url);
                 
                 if (searchResults.length > 0) {
-                    console.log(`🎯 Alternative gefunden: ${searchResults.length} Ergebnisse`);
+                    console.log(`🔄 Teste Alternative: ${searchResults[0].title}`);
                     
-                    // Versuche erste Alternative
-                    const alternative = searchResults[0];
-                    console.log(`🔄 Teste Alternative: ${alternative.title}`);
-                    
-                    const alternativeData = await getVideoInfoWithYoutubei(alternative.url);
+                    const alternativeData = await getVideoInfoWithYoutubei(searchResults[0].url);
                     
                     if (alternativeData && alternativeData.streamUrl) {
-                        console.log(`🎯 Alternative Stream-URL gefunden: ${alternativeData.streamUrl.substring(0, 100)}...`);
-                        
                         const fetch = require('node-fetch');
-                        const streamResponse = await fetch(alternativeData.streamUrl, {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-                                'Referer': 'https://www.youtube.com/'
-                            }
-                        });
+                        const response = await fetch(alternativeData.streamUrl);
                         
-                        console.log(`📡 Alternative Response: ${streamResponse.status} ${streamResponse.statusText}`);
-                        
-                        if (!streamResponse.ok || !streamResponse.body) {
-                            throw new Error(`Alternative Stream failed: ${streamResponse.status}`);
+                        if (response.ok && response.body) {
+                            stream = response.body;
+                            streamCreated = true;
+                            Object.assign(songData, alternativeData);
+                            console.log(`✅ Alternative erfolgreich!`);
                         }
-                        
-                        // ✅ DIREKTER STREAM-ANSATZ für Alternative
-                        stream = streamResponse.body;
-                        streamCreated = true;
-                        console.log(`✅ Alternative Quelle erfolgreich geladen!`);
-                        
-                        // Update songData mit alternativen Daten
-                        Object.assign(songData, alternativeData);
                     }
                 }
                 
             } catch (alternativeError) {
-                console.log('⚠️ Alternative Suche fehlgeschlagen:', alternativeError.message);
+                console.log('⚠️ Alternative fehlgeschlagen:', alternativeError.message);
             }
         }
         
@@ -1799,41 +1735,17 @@ async function playMusic(guildId, song) {
                 throw new Error('Alle YouTube-Stream-Methoden fehlgeschlagen - Video möglicherweise nicht verfügbar oder Region-gesperrt.');
             }
         }
-        
-        // Event-Handler für alle Stream-Typen
-        stream.on('error', (streamErr) => {
-            console.error('❌ Stream Error:', streamErr);
-        });
-        
-        stream.on('end', () => {
-            console.log('📻 Stream beendet');
-        });
 
         console.log('🎧 Erstelle AudioResource...');
         
-        // Bestimme den korrekten StreamType basierend auf MIME-Type
-        let inputType = StreamType.Arbitrary; // Default fallback
-        
-        if (songData.mimeType) {
-            if (songData.mimeType.includes('audio/webm') && songData.mimeType.includes('opus')) {
-                inputType = StreamType.WebmOpus;
-                console.log('🎵 Verwende StreamType.WebmOpus für WebM/Opus Stream');
-            } else if (songData.mimeType.includes('audio/mp4')) {
-                inputType = StreamType.Arbitrary; // MP4 als Arbitrary
-                console.log('🎵 Verwende StreamType.Arbitrary für MP4 Stream');
-            } else {
-                console.log(`🎵 Verwende StreamType.Arbitrary für ${songData.mimeType}`);
-            }
-        } else {
-            console.log('🎵 Kein MIME-Type verfügbar, verwende StreamType.Arbitrary');
-        }
-        
-        // Erstelle AudioResource mit korrektem StreamType und Volume-Control
+        // 🎯 DIREKTER AUDIORESSOURCE-ANSATZ (nach User-Muster)
         const resource = createAudioResource(stream, {
+            inputType: StreamType.WebmOpus, // YouTube liefert immer WebM/Opus
             metadata: songData,
-            inputType: inputType,
             inlineVolume: true
         });
+        
+        console.log(`🎵 AudioResource erstellt: StreamType.WebmOpus`);
         
         // Setze initiale Lautstärke
         const currentQueue = getQueue(guildId);
@@ -1842,41 +1754,17 @@ async function playMusic(guildId, song) {
             console.log(`🔊 Lautstärke gesetzt: ${currentQueue.volume}%`);
         }
         
-        console.log('✅ AudioResource mit Volume-Control erstellt');
+        console.log('✅ AudioResource erstellt');
 
-        resource.playStream.on('error', (resourceErr) => {
-            console.error('❌ AudioResource Error:', resourceErr);
-        });
-        
-        resource.playStream.on('end', () => {
-            console.log('🔚 AudioResource Stream beendet');
-        });
-        
-        resource.playStream.on('close', () => {
-            console.log('🔒 AudioResource Stream geschlossen');
-        });
-
-        console.log('▶️ Starte Player...');
+        // 🎯 SAUBERES PLAYER-HANDLING (nach User-Muster)
         player.play(resource);
+        connection.subscribe(player);
         
-        console.log('📻 Verbinde Player mit Connection...');
-        const subscription = connection.subscribe(player);
-        
-        if (!subscription) {
-            console.error('❌ Subscription fehlgeschlagen!');
-            return false;
-        }
-        
-        console.log('✅ Player erfolgreich verbunden');
+        // Update Queue Status
         queue.currentSong = songData;
-        console.log(`🎵 Spielt jetzt: ${songData.title}`);
-        
-        // Start Progress Tracking
         startProgressTracking(guildId, songData.duration || 0);
         
-        // Debug Player Status
-        console.log(`🎮 Player Status: ${player.state.status}`);
-        
+        console.log(`🎵 Spielt jetzt: ${songData.title}`);
         return true;
     } catch (error) {
         console.error('❌ Fehler beim Abspielen:', error.message);
