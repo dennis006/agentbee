@@ -704,6 +704,8 @@ const Music: React.FC = () => {
     
     try {
       setVolumeLoading(true);
+      console.log(`🔊 Setze Lautstärke auf ${newVolume}%`);
+      
       const response = await fetch(`${apiUrl}/api/music/volume/${guildId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -712,14 +714,25 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log(`✅ Lautstärke Response:`, data);
+        
+        // Bestätige die Lautstärke vom Server
         setCurrentVolume(data.volume);
-        showSuccess('Lautstärke', data.message);
+        showSuccess('Lautstärke', `🔊 Lautstärke auf ${data.volume}% gesetzt`);
       } else {
         const data = await response.json();
+        console.error('❌ Volume Fehler:', data);
         showError('Volume Fehler', data.error || 'Fehler beim Setzen der Lautstärke');
+        
+        // Lade die aktuelle Lautstärke neu bei Fehler
+        await loadVolumeStatus(guildId);
       }
     } catch (error) {
+      console.error('❌ Volume Exception:', error);
       showError('Volume Fehler', 'Verbindungsfehler beim Setzen der Lautstärke');
+      
+      // Lade die aktuelle Lautstärke neu bei Fehler
+      if (guildId) await loadVolumeStatus(guildId);
     } finally {
       setVolumeLoading(false);
     }
@@ -1471,7 +1484,13 @@ const Music: React.FC = () => {
                     min="0"
                     max="100"
                     value={currentVolume}
-                    onChange={(e) => setVolume(parseInt(e.target.value))}
+                    onChange={(e) => {
+                      const newVolume = parseInt(e.target.value);
+                      // Sofort visuell aktualisieren
+                      setCurrentVolume(newVolume);
+                      // Dann an Server senden
+                      setVolume(newVolume);
+                    }}
                     disabled={volumeLoading}
                     className="w-full h-2 bg-dark-bg rounded-lg appearance-none cursor-pointer slider"
                     style={{

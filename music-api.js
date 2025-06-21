@@ -1687,16 +1687,22 @@ function getVolumeForGuild(guildId) {
 }
 
 function setVolumeForGuild(guildId, volume) {
-    currentVolume.set(guildId, Math.max(0, Math.min(100, volume)));
+    const newVolume = Math.max(0, Math.min(100, volume));
+    currentVolume.set(guildId, newVolume);
+    
+    console.log(`🔊 Volume für Guild ${guildId} gesetzt auf: ${newVolume}%`);
     
     // Aktualisiere aktuelle Audio-Resource Volume
     const player = audioPlayers.get(guildId);
     if (player && player.state.status === AudioPlayerStatus.Playing) {
         const resource = player.state.resource;
         if (resource && resource.volume) {
-            resource.volume.setVolume(volume / 100);
+            resource.volume.setVolume(newVolume / 100);
+            console.log(`🎵 Audio-Resource Volume aktualisiert: ${newVolume / 100}`);
         }
     }
+    
+    return newVolume;
 }
 
 function increaseVolume(guildId, amount = 10) {
