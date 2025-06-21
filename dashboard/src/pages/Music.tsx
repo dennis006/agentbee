@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle } from 'lucide-react';
+import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -982,7 +982,7 @@ const Music: React.FC = () => {
       {/* Page Header */}
       <div className="text-center py-8">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <Radio className="w-12 h-12 text-purple-400 animate-pulse" />
+                          <MusicIcon className="w-12 h-12 text-purple-400 animate-pulse" />
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
             Musik System
           </h1>
@@ -998,14 +998,7 @@ const Music: React.FC = () => {
       {/* Tabs */}
       <div className="flex justify-center mb-8">
         <div className="bg-dark-surface/50 rounded-lg p-1 flex gap-1">
-          <Button
-            onClick={() => setActiveTab('radio')}
-            variant={activeTab === 'radio' ? 'default' : 'ghost'}
-            className="flex items-center gap-2"
-          >
-            <Radio className="w-4 h-4" />
-            Radio Streams
-          </Button>
+
           <Button
             onClick={() => setActiveTab('local')}
             variant={activeTab === 'local' ? 'default' : 'ghost'}
@@ -1102,19 +1095,7 @@ const Music: React.FC = () => {
                 />
                       </div>
                       
-                      <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-white">📻 Radio System aktivieren</h4>
-                  <p className="text-sm text-gray-400">Aktiviert die Radio-Stream Funktionen</p>
-                        </div>
-                <Switch
-                  checked={settings.radio.enabled}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
-                    radio: { ...prev.radio, enabled: checked }
-                  }))}
-                  />
-                </div>
+
                 
               <div className="flex items-center justify-between">
                   <div>
