@@ -2478,38 +2478,41 @@ const Music: React.FC = () => {
                         
                         <div className="flex items-center gap-2">
                           {/* Song Info kopieren */}
-                          <Button
-                            onClick={() => copySongInfo(song)}
-                            variant="outline"
-                            className="flex items-center gap-1 text-xs h-8 px-2"
-                            title="Song-Info kopieren"
-                          >
-                            <Copy className="w-3 h-3" />
-                            Copy
-                          </Button>
+                          <div title="Song-Info kopieren">
+                            <Button
+                              onClick={() => copySongInfo(song)}
+                              variant="outline"
+                              className="flex items-center gap-1 text-xs h-8 px-2"
+                            >
+                              <Copy className="w-3 h-3" />
+                              Copy
+                            </Button>
+                          </div>
                           
                           {/* Spotify Link */}
                           {song.spotifyUrl && (
-                            <Button
-                              onClick={() => window.open(song.spotifyUrl, '_blank')}
-                              variant="outline"
-                              className="flex items-center gap-1 text-xs h-8 px-2 bg-green-500/20 border-green-500/30 text-green-300"
-                              title="Auf Spotify suchen"
-                            >
-                              🎵 Spotify
-                            </Button>
+                            <div title="Auf Spotify suchen">
+                              <Button
+                                onClick={() => window.open(song.spotifyUrl, '_blank')}
+                                variant="outline"
+                                className="flex items-center gap-1 text-xs h-8 px-2 bg-green-500/20 border-green-500/30 text-green-300"
+                              >
+                                🎵 Spotify
+                              </Button>
+                            </div>
                           )}
                           
                           {/* YouTube Link */}
                           {song.youtubeUrl && (
-                            <Button
-                              onClick={() => window.open(song.youtubeUrl, '_blank')}
-                              variant="outline"
-                              className="flex items-center gap-1 text-xs h-8 px-2 bg-red-500/20 border-red-500/30 text-red-300"
-                              title="Auf YouTube suchen"
-                            >
-                              📺 YouTube
-                            </Button>
+                            <div title="Auf YouTube suchen">
+                              <Button
+                                onClick={() => window.open(song.youtubeUrl, '_blank')}
+                                variant="outline"
+                                className="flex items-center gap-1 text-xs h-8 px-2 bg-red-500/20 border-red-500/30 text-red-300"
+                              >
+                                📺 YouTube
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
