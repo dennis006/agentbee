@@ -4503,6 +4503,62 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
 
+    // Vollständiges Musik-System Button Handlers
+    if (interaction.customId === 'music_radio_select') {
+        const { handleMusicRadioSelectButton } = require('./music-api');
+        await handleMusicRadioSelectButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_mp3_select') {
+        const { handleMusicMP3SelectButton } = require('./music-api');
+        await handleMusicMP3SelectButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_playlist_select') {
+        const { handleMusicPlaylistSelectButton } = require('./music-api');
+        await handleMusicPlaylistSelectButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_stop_all') {
+        const { handleMusicStopAllButton } = require('./music-api');
+        await handleMusicStopAllButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_voice_join') {
+        const { handleMusicVoiceJoinButton } = require('./music-api');
+        await handleMusicVoiceJoinButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_voice_leave') {
+        const { handleMusicVoiceLeaveButton } = require('./music-api');
+        await handleMusicVoiceLeaveButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_refresh') {
+        const { handleMusicRefreshButton } = require('./music-api');
+        await handleMusicRefreshButton(interaction);
+        return;
+    }
+
+    // Vollständiges Musik-System Select Menu Handlers
+    if (interaction.customId === 'music_mp3_song_select') {
+        const { handleMusicMP3SongSelect } = require('./music-api');
+        await handleMusicMP3SongSelect(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_playlist_station_select') {
+        const { handleMusicPlaylistStationSelect } = require('./music-api');
+        await handleMusicPlaylistStationSelect(interaction);
+        return;
+    }
+
     // Old Music Interactive Panel Buttons (DEPRECATED - für kompatibilität)
     if (interaction.customId === 'song_request') {
         await interaction.reply({

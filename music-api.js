@@ -816,7 +816,7 @@ async function updateInteractiveMusicPanel(guildId, forceUpdate = false) {
     }
 }
 
-// Interactive Panel für Radio-Auswahl
+// Interactive Panel für vollständiges Musik-System (Radio + MP3)
 async function createInteractiveRadioPanel(guildId) {
     try {
         const guild = global.client?.guilds.cache.get(guildId);
@@ -826,62 +826,126 @@ async function createInteractiveRadioPanel(guildId) {
         }
 
         const embedColor = parseInt(musicSettings.interactivePanel?.embedColor?.replace('#', '') || 'FF6B6B', 16);
-        const currentStation = getCurrentRadioStation(guildId);
+        
+        // Aktueller Status prüfen
+        const currentRadioStation = getCurrentRadioStation(guildId);
+        const currentSong = getCurrentSong(guildId);
+        const currentMusicStation = getCurrentStation(guildId);
 
         const embed = {
             color: embedColor,
-            title: '📻 Radio Panel',
-            description: '**Wähle einen Radio-Stream!**\n\n' +
-                        '🎯 **Wie funktioniert es?**\n' +
-                        '• Klicke auf "📻 Radio auswählen"\n' +
-                        '• Wähle einen der verfügbaren Streams\n' +
-                        '• Der Bot joint automatisch deinen Voice-Channel!\n\n' +
-                        '🎧 **Verfügbare Streams:**\n' +
-                        '• 24/7 Radio-Streams\n' +
-                        '• Lofi, ChillHop, Gaming Music & mehr\n' +
-                        '• Einfach und zuverlässig',
+            title: '🎵 Musik Control Panel',
+            description: '**Vollständiges Musik-System!**\n\n' +
+                        '🎯 **Verfügbare Funktionen:**\n' +
+                        '• 📻 **Radio-Streams** - 24/7 Live-Streams\n' +
+                        '• 🎵 **MP3-Bibliothek** - Lokale Musik-Dateien\n' +
+                        '• 🎼 **Playlists** - Custom Musik-Sammlungen\n' +
+                        '• 🔊 **Voice-Control** - Automatisches Join/Leave\n\n' +
+                        '👆 **Wähle eine Option:**',
             fields: [],
             footer: {
-                text: '📻 Einfaches Radio System'
+                text: '🎵 Vollständiges Musik-System • Radio, MP3s & Playlists'
             },
             timestamp: new Date().toISOString()
         };
 
-        // Zeige aktuellen Radio-Stream
-        if (currentStation) {
+        // Zeige aktuellen Status
+        if (currentRadioStation) {
             embed.fields.push({
-                name: '📻 Aktuell läuft',
-                value: `**${currentStation.name}**\n${currentStation.description}`,
-                inline: false
+                name: '📻 Radio läuft',
+                value: `**${currentRadioStation.name}**\n🎧 ${currentRadioStation.genre || currentRadioStation.description}`,
+                inline: true
+            });
+        } else if (currentSong) {
+            embed.fields.push({
+                name: '🎵 MP3 läuft',
+                value: `**${currentSong.title || currentSong.filename}**\n👤 ${currentSong.artist || 'Lokale Datei'}`,
+                inline: true
+            });
+        } else if (currentMusicStation) {
+            embed.fields.push({
+                name: '🎼 Playlist läuft',
+                value: `**${currentMusicStation.name}**\n📀 ${currentMusicStation.playlist?.length || 0} Songs`,
+                inline: true
             });
         } else {
             embed.fields.push({
-                name: '📻 Radio Status',
-                value: '🔇 Kein Radio-Stream aktiv\nWähle einen Stream aus der Liste!',
-                inline: false
+                name: '🔇 Musik Status',
+                value: 'Keine Musik aktiv\nWähle eine Option unten!',
+                inline: true
             });
         }
+
+        // Statistiken über verfügbare Inhalte
+        const availableSongs = getAvailableSongs();
+        const musicStations = getMusicStations();
+        const radioStations = getRadioStations();
+        
+        embed.fields.push({
+            name: '📊 Verfügbare Inhalte',
+            value: `📻 **${radioStations.length}** Radio-Streams\n🎵 **${availableSongs.length}** MP3-Dateien\n🎼 **${musicStations.length}** Playlists`,
+            inline: true
+        });
+
+        // Voice-Channel Status
+        const { getVoiceConnection } = require('@discordjs/voice');
+        const voiceConnection = getVoiceConnection(guildId);
+        const voiceStatus = voiceConnection ? '🔊 Im Voice-Channel' : '🚪 Nicht verbunden';
+        
+        embed.fields.push({
+            name: '🎤 Voice Status',
+            value: voiceStatus,
+            inline: true
+        });
 
         // Erstelle Buttons
         const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
         
-        const buttons = new ActionRowBuilder()
+        // Erste Reihe: Hauptfunktionen
+        const mainButtons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId('radio_select')
-                    .setLabel('📻 Radio auswählen')
+                    .setCustomId('music_radio_select')
+                    .setLabel('📻 Radio')
                     .setStyle(ButtonStyle.Primary),
                 new ButtonBuilder()
-                    .setCustomId('radio_stop')
-                    .setLabel('⏹️ Radio stoppen')
+                    .setCustomId('music_mp3_select')
+                    .setLabel('🎵 MP3 Bibliothek')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('music_playlist_select')
+                    .setLabel('🎼 Playlists')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('music_stop_all')
+                    .setLabel('⏹️ Stop')
                     .setStyle(ButtonStyle.Danger)
-                    .setDisabled(!currentStation)
+                    .setDisabled(!currentRadioStation && !currentSong && !currentMusicStation)
             );
 
-        return { embeds: [embed], components: [buttons] };
+        // Zweite Reihe: Voice-Control
+        const controlButtons = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('music_voice_join')
+                    .setLabel('🔊 Voice Join')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(!!voiceConnection),
+                new ButtonBuilder()
+                    .setCustomId('music_voice_leave')
+                    .setLabel('🚪 Voice Leave')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(!voiceConnection),
+                new ButtonBuilder()
+                    .setCustomId('music_refresh')
+                    .setLabel('🔄 Aktualisieren')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+
+        return { embeds: [embed], components: [mainButtons, controlButtons] };
 
     } catch (error) {
-        console.error('❌ Fehler beim Erstellen des Radio Panels:', error);
+        console.error('❌ Fehler beim Erstellen des Musik Panels:', error);
         return null;
     }
 }
@@ -1030,8 +1094,8 @@ async function updateInteractiveRadioPanel(guildId, forceUpdate = false) {
     }
 }
 
-// Button Interactions
-async function handleRadioSelectButton(interaction) {
+// Button Interactions für vollständiges Musik-System
+async function handleMusicRadioSelectButton(interaction) {
     try {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
 
@@ -1134,6 +1198,275 @@ async function handleRadioStopButton(interaction) {
         console.error('❌ Fehler beim Radio Stop Button:', error);
         await interaction.editReply({
             content: '❌ Ein Fehler ist aufgetreten.'
+        });
+    }
+}
+
+// Neue Button Handler für vollständiges Musik-System
+async function handleMusicMP3SelectButton(interaction) {
+    try {
+        const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+        
+        const availableSongs = getAvailableSongs();
+        
+        if (availableSongs.length === 0) {
+            await interaction.reply({
+                content: '❌ **Keine MP3-Dateien gefunden!**\n\nBitte füge MP3-Dateien zum Musik-Ordner hinzu.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        // Erstelle Select Menu für Songs (max 25 Optionen)
+        const songOptions = availableSongs.slice(0, 25).map(song => ({
+            label: (song.title || song.filename).substring(0, 100),
+            description: `${song.artist || 'Unbekannter Künstler'} • ${Math.round(song.duration || 0)}s`.substring(0, 100),
+            value: song.id
+        }));
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('music_mp3_song_select')
+            .setPlaceholder('🎵 Wähle eine MP3-Datei...')
+            .addOptions(songOptions);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        await interaction.reply({
+            content: `🎵 **MP3-Bibliothek** (${availableSongs.length} Dateien verfügbar)\n\nWähle einen Song aus der Liste:`,
+            components: [row],
+            ephemeral: true
+        });
+
+    } catch (error) {
+        console.error('❌ Fehler bei MP3-Auswahl:', error);
+        await interaction.reply({
+            content: '❌ Fehler beim Laden der MP3-Bibliothek.',
+            ephemeral: true
+        });
+    }
+}
+
+async function handleMusicPlaylistSelectButton(interaction) {
+    try {
+        const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+        
+        const musicStations = getMusicStations();
+        
+        if (musicStations.length === 0) {
+            await interaction.reply({
+                content: '❌ **Keine Playlists gefunden!**\n\nErstelle zuerst Playlists im Dashboard.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        // Erstelle Select Menu für Playlists
+        const stationOptions = musicStations.map(station => ({
+            label: station.name.substring(0, 100),
+            description: `${station.playlist?.length || 0} Songs • ${station.genre || 'Custom Playlist'}`.substring(0, 100),
+            value: station.id
+        }));
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('music_playlist_station_select')
+            .setPlaceholder('🎼 Wähle eine Playlist...')
+            .addOptions(stationOptions);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        await interaction.reply({
+            content: `🎼 **Playlists** (${musicStations.length} verfügbar)\n\nWähle eine Playlist:`,
+            components: [row],
+            ephemeral: true
+        });
+
+    } catch (error) {
+        console.error('❌ Fehler bei Playlist-Auswahl:', error);
+        await interaction.reply({
+            content: '❌ Fehler beim Laden der Playlists.',
+            ephemeral: true
+        });
+    }
+}
+
+async function handleMusicStopAllButton(interaction) {
+    try {
+        const guildId = interaction.guild?.id;
+        if (!guildId) return;
+
+        // Stoppe alles
+        stopRadio(guildId);
+        stopMusic(guildId);
+
+        await interaction.reply({
+            content: '⏹️ **Musik gestoppt**\n\nAlle Radio-Streams und MP3s wurden beendet.',
+            ephemeral: true
+        });
+
+        // Update Panel
+        setTimeout(() => {
+            updateInteractiveRadioPanel(guildId, true);
+        }, 1000);
+
+    } catch (error) {
+        console.error('❌ Fehler beim Stoppen der Musik:', error);
+        await interaction.reply({
+            content: '❌ Fehler beim Stoppen der Musik.',
+            ephemeral: true
+        });
+    }
+}
+
+async function handleMusicVoiceJoinButton(interaction) {
+    try {
+        const guildId = interaction.guild?.id;
+        const member = interaction.member;
+
+        if (!member?.voice?.channel) {
+            await interaction.reply({
+                content: '❌ **Du musst in einem Voice-Channel sein!**\n\nJoine einen Voice-Channel und versuche es erneut.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        const connection = await joinVoiceChannelSafe(member.voice.channel);
+        
+        if (connection) {
+            await interaction.reply({
+                content: `🔊 **Voice-Channel beigetreten!**\n\n✅ Verbunden mit: **${member.voice.channel.name}**`,
+                ephemeral: true
+            });
+
+            // Update Panel
+            setTimeout(() => {
+                updateInteractiveRadioPanel(guildId, true);
+            }, 1000);
+        } else {
+            await interaction.reply({
+                content: '❌ Konnte dem Voice-Channel nicht beitreten.\n\nÜberprüfe die Bot-Berechtigungen.',
+                ephemeral: true
+            });
+        }
+
+    } catch (error) {
+        console.error('❌ Fehler beim Voice-Join:', error);
+        await interaction.reply({
+            content: '❌ Fehler beim Beitreten des Voice-Channels.',
+            ephemeral: true
+        });
+    }
+}
+
+async function handleMusicVoiceLeaveButton(interaction) {
+    try {
+        const guildId = interaction.guild?.id;
+        if (!guildId) return;
+
+        // Stoppe Musik und verlasse Channel
+        stopRadio(guildId);
+        stopMusic(guildId);
+        leaveVoiceChannel(guildId);
+
+        await interaction.reply({
+            content: '🚪 **Voice-Channel verlassen**\n\n✅ Musik gestoppt und Channel verlassen.',
+            ephemeral: true
+        });
+
+        // Update Panel
+        setTimeout(() => {
+            updateInteractiveRadioPanel(guildId, true);
+        }, 1000);
+
+    } catch (error) {
+        console.error('❌ Fehler beim Voice-Leave:', error);
+        await interaction.reply({
+            content: '❌ Fehler beim Verlassen des Voice-Channels.',
+            ephemeral: true
+        });
+    }
+}
+
+async function handleMusicRefreshButton(interaction) {
+    try {
+        const guildId = interaction.guild?.id;
+        if (!guildId) return;
+
+        await interaction.reply({
+            content: '🔄 **Panel wird aktualisiert...**',
+            ephemeral: true
+        });
+
+        // Update Panel
+        setTimeout(() => {
+            updateInteractiveRadioPanel(guildId, true);
+        }, 500);
+
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren:', error);
+        await interaction.reply({
+            content: '❌ Fehler beim Aktualisieren des Panels.',
+            ephemeral: true
+        });
+    }
+}
+
+// Handler für MP3-Song Auswahl
+async function handleMusicMP3SongSelect(interaction) {
+    try {
+        const songId = interaction.values[0];
+        const guildId = interaction.guild?.id;
+
+        if (!guildId) return;
+
+        await interaction.reply({
+            content: '🎵 **MP3 wird gestartet...**\n\nEinen Moment bitte...',
+            ephemeral: true
+        });
+
+        // Spiele MP3-Song
+        await playLocalSong(guildId, songId);
+
+        // Update Panel nach kurzer Verzögerung
+        setTimeout(() => {
+            updateInteractiveRadioPanel(guildId, true);
+        }, 2000);
+
+    } catch (error) {
+        console.error('❌ Fehler beim Abspielen des MP3-Songs:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Abspielen der MP3-Datei.',
+            ephemeral: true
+        });
+    }
+}
+
+// Handler für Playlist-Station Auswahl
+async function handleMusicPlaylistStationSelect(interaction) {
+    try {
+        const stationId = interaction.values[0];
+        const guildId = interaction.guild?.id;
+
+        if (!guildId) return;
+
+        await interaction.reply({
+            content: '🎼 **Playlist wird gestartet...**\n\nEinen Moment bitte...',
+            ephemeral: true
+        });
+
+        // Spiele Music Station/Playlist
+        await playMusicStation(guildId, stationId);
+
+        // Update Panel nach kurzer Verzögerung
+        setTimeout(() => {
+            updateInteractiveRadioPanel(guildId, true);
+        }, 2000);
+
+    } catch (error) {
+        console.error('❌ Fehler beim Abspielen der Playlist:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Abspielen der Playlist.',
+            ephemeral: true
         });
     }
 }
@@ -1951,5 +2284,15 @@ module.exports = {
     updateInteractiveRadioPanel,
     handleRadioSelectButton,
     handleRadioStationSelect,
-    handleRadioStopButton
+    handleRadioStopButton,
+    // Interactive Panel Functions (Vollständiges Musik-System)
+    handleMusicRadioSelectButton,
+    handleMusicMP3SelectButton,
+    handleMusicPlaylistSelectButton,
+    handleMusicStopAllButton,
+    handleMusicVoiceJoinButton,
+    handleMusicVoiceLeaveButton,
+    handleMusicRefreshButton,
+    handleMusicMP3SongSelect,
+    handleMusicPlaylistStationSelect
 }; 
