@@ -1134,6 +1134,22 @@ router.get('/api/server-stats/current', async (req, res) => {
 // GET /api/server-stats/timer-status - Lade Timer Status
 router.get('/api/server-stats/timer-status', (req, res) => {
   try {
+    // Fallback falls Discord Client nicht verfügbar ist
+    if (!client || !client.guilds) {
+      return res.json({
+        success: true,
+        enabled: false,
+        lastUpdateTime: null,
+        nextUpdateTime: null,
+        timeRemaining: 0,
+        totalInterval: 300000,
+        progress: 0,
+        currentTime: Date.now(),
+        _source: supabase ? 'supabase-hybrid' : 'json-file',
+        _note: 'Discord Client nicht verfügbar'
+      });
+    }
+
     const timerStatus = getTimerStatus();
     res.json({
       success: true,
