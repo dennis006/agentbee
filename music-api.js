@@ -191,10 +191,14 @@ function loadMusicSettings() {
             musicSettings = { ...musicSettings, ...loadedSettings };
             console.log('🎵 Musik-Einstellungen geladen');
             
-            // Migriere Channel-Namen zu Channel-IDs bei Bot-Start
-            setTimeout(() => {
-                migrateChannelNamesToIds();
-            }, 3000); // Warte 3 Sekunden bis Discord Client bereit ist
+            // Migriere Channel-Namen zu Channel-IDs bei Bot-Start (nur einmal)
+            if (!musicSettings.migrationCompleted) {
+                setTimeout(() => {
+                    migrateChannelNamesToIds();
+                }, 3000); // Warte 3 Sekunden bis Discord Client bereit ist
+            } else {
+                console.log('✅ Channel-Migration bereits abgeschlossen - überspringe');
+            }
         } else {
             saveMusicSettings();
             console.log('🎵 Standard-Musik-Einstellungen erstellt');
@@ -276,13 +280,22 @@ function migrateChannelNamesToIds() {
             }
         }
         
-        // Speichere wenn Änderungen vorgenommen wurden
+        // Speichere nur wenn wirklich Änderungen vorgenommen wurden
         if (needsSave) {
             saveMusicSettings();
             console.log('✅ Channel-Migration abgeschlossen und gespeichert');
         } else {
             console.log('✅ Keine Channel-Migration erforderlich - alle IDs sind bereits korrekt');
         }
+        
+        // Markiere Migration als abgeschlossen
+        if (!musicSettings.migrationCompleted) {
+            musicSettings.migrationCompleted = true;
+            saveMusicSettings();
+            console.log('🔒 Migration als abgeschlossen markiert');
+        }
+        
+        console.log('🔒 Channel-Migration abgeschlossen - keine weiteren Migrationen erforderlich');
         
     } catch (error) {
         console.error('❌ Fehler bei Channel-Migration:', error);
@@ -291,8 +304,14 @@ function migrateChannelNamesToIds() {
 
 function saveMusicSettings() {
     try {
+        // Backup erstellen vor dem Speichern
+        if (fs.existsSync('music-settings.json')) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            fs.copyFileSync('music-settings.json', `music-settings-backup-${timestamp}.json`);
+        }
+        
         fs.writeFileSync('music-settings.json', JSON.stringify(musicSettings, null, 2));
-        console.log('💾 Musik-Einstellungen gespeichert');
+        console.log('💾 Musik-Einstellungen gespeichert (mit Backup)');
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Musik-Einstellungen:', error);
     }
@@ -527,11 +546,20 @@ async function playRadioStation(guildId, stationId) {
         let connection = voiceConnections.get(guildId);
         if (!connection) {
             console.log('📻 Auto-Join für Radio-Wiedergabe');
-            const autoJoinSuccess = await autoJoinForRadio(guildId);
-            if (!autoJoinSuccess) {
-                throw new Error('Bot konnte keinem Voice-Channel beitreten');
+            try {
+                const autoJoinSuccess = await autoJoinForRadio(guildId);
+                if (!autoJoinSuccess) {
+                    throw new Error('Bot konnte keinem Voice-Channel beitreten');
+                }
+                connection = voiceConnections.get(guildId);
+                
+                if (!connection) {
+                    throw new Error('Voice-Connection nach Auto-Join nicht verfügbar');
+                }
+            } catch (joinError) {
+                console.error('❌ Auto-Join für Radio fehlgeschlagen:', joinError);
+                throw new Error(`Voice-Join failed: ${joinError.message}`);
             }
-            connection = voiceConnections.get(guildId);
         }
 
         if (!connection) {
@@ -1148,21 +1176,23 @@ async function postInteractiveRadioPanel(guildId) {
 
         console.log(`📻 Channel gefunden: #${channel.name} (ID: ${channel.id})`);
 
-        // Prüfe ob bereits ein Panel existiert
+        // Prüfe ob bereits ein Panel existiert und verhindere Doppel-Posting
         const existingMessageId = musicSettings.interactivePanel.messageId;
         if (existingMessageId) {
             console.log(`🔄 Existierende Panel-Message gefunden: ${existingMessageId}`);
             
             try {
                 const existingMessage = await channel.messages.fetch(existingMessageId);
-                if (existingMessage) {
-                    console.log('✅ Panel existiert bereits - aktualisiere es');
+                if (existingMessage && existingMessage.author.id === global.client.user.id) {
+                    console.log('✅ Panel existiert bereits und ist vom Bot - ÜBERSPRINGE neues Posting');
+                    console.log('🔄 Aktualisiere nur das bestehende Panel...');
                     return await updateInteractiveRadioPanel(guildId, true);
                 }
             } catch (error) {
                 console.log('⚠️ Existierende Message nicht mehr gültig, erstelle neue');
                 // Message existiert nicht mehr, erstelle neue
                 musicSettings.interactivePanel.messageId = '';
+                saveMusicSettings();
             }
         }
 
