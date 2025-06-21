@@ -131,10 +131,6 @@ const currentSongs = new Map(); // guildId -> current song info
 const currentRadioStations = new Map(); // guildId -> current radio station
 const currentVolume = new Map(); // Neue Map für Guild-Volume Tracking
 
-// Stream Restart Control Maps
-const streamRestartAttempts = new Map(); // Guild -> restart attempts count
-const streamRestartCooldown = new Map(); // Guild -> last restart timestamp
-
 // Genre-Liste für Dropdown
 const musicGenres = [
     'Hip-Hop', 'Rap', 'Trap', 'Lofi', 'Chill', 'Electronic', 'House', 'Techno',
@@ -191,14 +187,10 @@ function loadMusicSettings() {
             musicSettings = { ...musicSettings, ...loadedSettings };
             console.log('🎵 Musik-Einstellungen geladen');
             
-            // Migriere Channel-Namen zu Channel-IDs bei Bot-Start (nur einmal)
-            if (!musicSettings.migrationCompleted) {
-                setTimeout(() => {
-                    migrateChannelNamesToIds();
-                }, 3000); // Warte 3 Sekunden bis Discord Client bereit ist
-            } else {
-                console.log('✅ Channel-Migration bereits abgeschlossen - überspringe');
-            }
+            // Migriere Channel-Namen zu Channel-IDs bei Bot-Start
+            setTimeout(() => {
+                migrateChannelNamesToIds();
+            }, 3000); // Warte 3 Sekunden bis Discord Client bereit ist
         } else {
             saveMusicSettings();
             console.log('🎵 Standard-Musik-Einstellungen erstellt');
@@ -280,22 +272,13 @@ function migrateChannelNamesToIds() {
             }
         }
         
-        // Speichere nur wenn wirklich Änderungen vorgenommen wurden
+        // Speichere wenn Änderungen vorgenommen wurden
         if (needsSave) {
             saveMusicSettings();
             console.log('✅ Channel-Migration abgeschlossen und gespeichert');
         } else {
             console.log('✅ Keine Channel-Migration erforderlich - alle IDs sind bereits korrekt');
         }
-        
-        // Markiere Migration als abgeschlossen
-        if (!musicSettings.migrationCompleted) {
-            musicSettings.migrationCompleted = true;
-            saveMusicSettings();
-            console.log('🔒 Migration als abgeschlossen markiert');
-        }
-        
-        console.log('🔒 Channel-Migration abgeschlossen - keine weiteren Migrationen erforderlich');
         
     } catch (error) {
         console.error('❌ Fehler bei Channel-Migration:', error);
@@ -304,14 +287,8 @@ function migrateChannelNamesToIds() {
 
 function saveMusicSettings() {
     try {
-        // Backup erstellen vor dem Speichern
-        if (fs.existsSync('music-settings.json')) {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            fs.copyFileSync('music-settings.json', `music-settings-backup-${timestamp}.json`);
-        }
-        
         fs.writeFileSync('music-settings.json', JSON.stringify(musicSettings, null, 2));
-        console.log('💾 Musik-Einstellungen gespeichert (mit Backup)');
+        console.log('💾 Musik-Einstellungen gespeichert');
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Musik-Einstellungen:', error);
     }
@@ -546,20 +523,11 @@ async function playRadioStation(guildId, stationId) {
         let connection = voiceConnections.get(guildId);
         if (!connection) {
             console.log('📻 Auto-Join für Radio-Wiedergabe');
-            try {
-                const autoJoinSuccess = await autoJoinForRadio(guildId);
-                if (!autoJoinSuccess) {
-                    throw new Error('Bot konnte keinem Voice-Channel beitreten');
-                }
-                connection = voiceConnections.get(guildId);
-                
-                if (!connection) {
-                    throw new Error('Voice-Connection nach Auto-Join nicht verfügbar');
-                }
-            } catch (joinError) {
-                console.error('❌ Auto-Join für Radio fehlgeschlagen:', joinError);
-                throw new Error(`Voice-Join failed: ${joinError.message}`);
+            const autoJoinSuccess = await autoJoinForRadio(guildId);
+            if (!autoJoinSuccess) {
+                throw new Error('Bot konnte keinem Voice-Channel beitreten');
             }
+            connection = voiceConnections.get(guildId);
         }
 
         if (!connection) {
@@ -597,16 +565,9 @@ async function playRadioStation(guildId, stationId) {
             try {
                 // Verwende FFmpeg über prism-media für bessere Kompatibilität
                 const ffmpegArgs = [
-                    '-re', // Read input at native frame rate (wichtig für Live-Streams)
                     '-i', station.url,
-                    '-analyzeduration', '100000',
-                    '-probesize', '100000', 
-                    '-loglevel', 'warning',
-                    '-reconnect', '1',
-                    '-reconnect_streamed', '1',
-                    '-reconnect_delay_max', '10',
-                    '-timeout', '30000000', // 30 second timeout
-                    '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    '-analyzeduration', '0',
+                    '-loglevel', '0',
                     '-f', 's16le',
                     '-ar', '48000',
                     '-ac', '2',
@@ -624,16 +585,7 @@ async function playRadioStation(guildId, stationId) {
                 });
                 
                 ffmpeg.on('error', (error) => {
-                    // Nur wichtige FFmpeg-Fehler loggen
-                    if (error.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
-                        console.error('❌ FFmpeg Stream Error:', error.message);
-                    }
-                });
-                
-                ffmpeg.on('close', (code) => {
-                    if (code && code !== 0) {
-                        console.log(`🔧 FFmpeg closed with code: ${code}`);
-                    }
+                    console.error('❌ FFmpeg Stream Error:', error);
                 });
                 
             } catch (ffmpegError) {
@@ -649,18 +601,7 @@ async function playRadioStation(guildId, stationId) {
         if (resource.volume) {
             const volume = getVolumeForGuild(guildId) / 100; // 0.0-1.0
             resource.volume.setVolume(volume);
-            console.log(`🔊 Volume gesetzt auf ${volume} (${getVolumeForGuild(guildId)}%)`);
-        } else {
-            console.log('⚠️ Keine Volume-Kontrolle verfügbar für diesen Stream');
         }
-        
-        // Audio-Resource Debug-Info
-        console.log(`🎵 AudioResource erstellt:`, {
-            readable: resource.readable,
-            ended: resource.ended,
-            silencePaddingFrames: resource.silencePaddingFrames,
-            volume: !!resource.volume
-        });
 
         // Event-Listener für bessere Fehlerbehandlung
         player.on(AudioPlayerStatus.Playing, () => {
@@ -674,88 +615,36 @@ async function playRadioStation(guildId, stationId) {
         player.on(AudioPlayerStatus.Idle, (oldState) => {
             console.log(`⏸️ Radio idle: ${station.name} (von ${oldState.status})`);
             
-            // Prüfe ob Stream noch aktiv sein sollte
-            if (!currentRadioStations.has(guildId)) {
-                console.log('📻 Stream wurde manuell gestoppt - kein Restart');
-                return;
-            }
-            
-            // Nur bei unexpectedem Ende neu starten, mit strengen Limits
+            // Wenn der Stream unexpectedly idle wird, versuche neu zu starten
             if (oldState.status === AudioPlayerStatus.Playing || oldState.status === AudioPlayerStatus.Buffering) {
-                const now = Date.now();
-                const lastRestart = streamRestartCooldown.get(guildId) || 0;
-                const attempts = streamRestartAttempts.get(guildId) || 0;
-                
-                // Cooldown: Mindestens 15 Sekunden zwischen Restarts
-                if (now - lastRestart < 15000) {
-                    console.log('🕐 Stream-Restart Cooldown aktiv (15s), überspringe...');
-                    return;
-                }
-                
-                // Maximum 2 Restart-Versuche (reduziert von 3)
-                if (attempts >= 2) {
-                    console.log('🚫 Maximum Restart-Versuche erreicht, stoppe Stream dauerhaft');
-                    stopRadio(guildId);
-                    streamRestartAttempts.delete(guildId);
-                    streamRestartCooldown.delete(guildId);
-                    return;
-                }
-                
-                console.log(`🔄 Stream unterbrochen, versuche Neustart (${attempts + 1}/2)...`);
-                streamRestartCooldown.set(guildId, now);
-                streamRestartAttempts.set(guildId, attempts + 1);
-                
+                console.log('🔄 Stream unterbrochen, versuche Neustart...');
                 setTimeout(async () => {
-                    // Doppelt prüfen ob Stream noch gewünscht ist
                     if (currentRadioStations.has(guildId)) {
                         try {
-                            console.log('🔄 Starte Stream-Neuaufbau...');
-                            
-                            // Stoppe aktuellen Player sauber
-                            player.stop();
-                            
-                            // Neuer Versuch mit frischem Player
                             await playRadioStation(guildId, stationId);
                         } catch (error) {
                             console.error('❌ Neustart fehlgeschlagen:', error);
-                            stopRadio(guildId);
                         }
-                    } else {
-                        console.log('📻 Stream nicht mehr aktiv - kein Restart');
                     }
-                }, 8000); // Längere Wartezeit
+                }, 3000);
             }
         });
 
         player.on('error', (error) => {
             console.error(`❌ Radio Player Fehler:`, error);
-            
-            // Ignoriere FFmpeg Stream-Close Fehler
-            if (error.code === 'ERR_STREAM_PREMATURE_CLOSE') {
-                console.log('🔧 FFmpeg Stream Close (normal bei Stream-Ende)');
-                return;
-            }
-            
             console.error(`❌ Error Stack:`, error.stack);
             
-            // Andere Fehler: Versuche einmalig neu zu starten
-            const attempts = streamRestartAttempts.get(guildId) || 0;
-            if (attempts < 1) {
-                streamRestartAttempts.set(guildId, attempts + 1);
-                setTimeout(async () => {
-                    if (currentRadioStations.has(guildId)) {
-                        console.log('🔄 Versuche Radio nach Fehler neu zu starten...');
-                        try {
-                            await playRadioStation(guildId, stationId);
-                        } catch (retryError) {
-                            console.error('❌ Neustart nach Fehler fehlgeschlagen:', retryError);
-                        }
+            // Versuche neu zu starten
+            setTimeout(async () => {
+                if (currentRadioStations.has(guildId)) {
+                    console.log('🔄 Versuche Radio nach Fehler neu zu starten...');
+                    try {
+                        await playRadioStation(guildId, stationId);
+                    } catch (retryError) {
+                        console.error('❌ Neustart nach Fehler fehlgeschlagen:', retryError);
                     }
-                }, 8000);
-            } else {
-                console.log('🚫 Neustart-Limit erreicht, stoppe Radio');
-                stopRadio(guildId);
-            }
+                }
+            }, 5000);
         });
 
         // Resource Error Handling
@@ -763,44 +652,12 @@ async function playRadioStation(guildId, stationId) {
             console.error(`❌ Audio Resource Stream Fehler:`, error);
         });
 
-        // Prüfe Connection-Status vor dem Abspielen
-        if (connection.state.status !== 'ready') {
-            console.log(`⚠️ Connection Status: ${connection.state.status} - warte auf ready...`);
-            try {
-                await entersState(connection, VoiceConnectionStatus.Ready, 10000);
-                console.log('✅ Connection jetzt ready');
-            } catch (timeoutError) {
-                console.log('⚠️ Connection Timeout, versuche trotzdem abzuspielen');
-            }
-        }
-
-        // Spiele ab und prüfe sofort den Status
+        // Spiele ab
         player.play(resource);
-        const subscription = connection.subscribe(player);
-        
-        if (!subscription) {
-            console.error('❌ Subscription fehlgeschlagen - kein Audio möglich');
-            throw new Error('Failed to subscribe audio player to voice connection');
-        }
-        
-        console.log(`🔗 AudioPlayer subscribed to connection (Status: ${connection.state.status})`);
+        connection.subscribe(player);
 
         // Setze als aktueller Radio-Sender
         currentRadioStations.set(guildId, station);
-        
-        // Reset Stream-Restart-Counter bei erfolgreichem Start
-        streamRestartAttempts.delete(guildId);
-        streamRestartCooldown.delete(guildId);
-
-        // Warte kurz und prüfe Player-Status
-        setTimeout(() => {
-            console.log(`🎵 Player Status nach Start: ${player.state.status}`);
-            if (player.state.status === AudioPlayerStatus.Playing) {
-                console.log('✅ Audio spielt erfolgreich');
-            } else {
-                console.log(`⚠️ Audio spielt nicht - Status: ${player.state.status}`);
-            }
-        }, 1000);
 
         console.log(`✅ Radio-Station ${station.name} gestartet`);
         
@@ -874,10 +731,6 @@ function stopRadio(guildId) {
         
         // Entferne aktuellen Radio-Sender
         currentRadioStations.delete(guildId);
-        
-        // Reset Stream-Restart-Counter
-        streamRestartAttempts.delete(guildId);
-        streamRestartCooldown.delete(guildId);
         
         // Stoppe Player
         const player = audioPlayers.get(guildId);
@@ -1234,23 +1087,21 @@ async function postInteractiveRadioPanel(guildId) {
 
         console.log(`📻 Channel gefunden: #${channel.name} (ID: ${channel.id})`);
 
-        // Prüfe ob bereits ein Panel existiert und verhindere Doppel-Posting
+        // Prüfe ob bereits ein Panel existiert
         const existingMessageId = musicSettings.interactivePanel.messageId;
         if (existingMessageId) {
             console.log(`🔄 Existierende Panel-Message gefunden: ${existingMessageId}`);
             
             try {
                 const existingMessage = await channel.messages.fetch(existingMessageId);
-                if (existingMessage && existingMessage.author.id === global.client.user.id) {
-                    console.log('✅ Panel existiert bereits und ist vom Bot - ÜBERSPRINGE neues Posting');
-                    console.log('🔄 Aktualisiere nur das bestehende Panel...');
+                if (existingMessage) {
+                    console.log('✅ Panel existiert bereits - aktualisiere es');
                     return await updateInteractiveRadioPanel(guildId, true);
                 }
             } catch (error) {
                 console.log('⚠️ Existierende Message nicht mehr gültig, erstelle neue');
                 // Message existiert nicht mehr, erstelle neue
                 musicSettings.interactivePanel.messageId = '';
-                saveMusicSettings();
             }
         }
 
