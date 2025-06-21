@@ -356,15 +356,21 @@ const Music: React.FC = () => {
   const loadGuildChannels = async (targetGuildId: string) => {
     try {
       console.log(`🔄 Lade Channels für Guild: ${targetGuildId}`);
+      console.log(`🔗 Channel API URL: ${apiUrl}/api/music/channels/${targetGuildId}`);
       
       const response = await fetch(`${apiUrl}/api/music/channels/${targetGuildId}`);
+      console.log(`📡 Channel Response Status: ${response.status}`);
+      
       if (response.ok) {
         const channels = await response.json();
-        console.log(`✅ ${channels.length} Channels geladen`);
+        console.log(`✅ ${channels.length} Channels geladen:`, channels);
         
         // Separiere Text- und Voice-Channels
         const textChannels = channels.filter((ch: any) => ch.type === 'text');
         const voiceChannels = channels.filter((ch: any) => ch.type === 'voice');
+        
+        console.log(`📺 Text-Channels: ${textChannels.length}`, textChannels.map((ch: any) => ch.name));
+        console.log(`🔊 Voice-Channels: ${voiceChannels.length}`, voiceChannels.map((ch: any) => ch.name));
         
         setChannels({ 
           text: textChannels.map((ch: any) => ({ id: ch.id, name: ch.name, position: 0 })), 
@@ -374,11 +380,14 @@ const Music: React.FC = () => {
         // Setze Guild-Info (falls verfügbar vom Discord Client)
         setGuildInfo({ id: targetGuildId, name: 'Discord Server', icon: '' });
       } else {
-        console.warn('⚠️ Fehler beim Laden der Guild-Channels:', response.status);
+        const errorText = await response.text();
+        console.error(`❌ Channel API Fehler: ${response.status} - ${errorText}`);
+        showError('Channel Fehler', `Konnte Channels nicht laden: ${response.status}`);
         setChannels({ text: [], voice: [] });
       }
     } catch (error) {
       console.error('❌ Fehler beim Laden der Guild-Channels:', error);
+      showError('Verbindungsfehler', 'Konnte Channels nicht laden');
       setChannels({ text: [], voice: [] });
     }
   };
@@ -413,13 +422,17 @@ const Music: React.FC = () => {
         // Lade Guild-Channels
         await loadGuildChannels(finalGuildId);
       } else {
-        console.log('⚠️ Keine Guild ID gefunden');
+        console.log('⚠️ Keine Guild ID gefunden - versuche vom Server zu laden');
         // Versuche eine Standard-Guild-ID vom Server zu holen
         try {
+          console.log(`🔗 Lade Guilds von: ${apiUrl}/api/guilds`);
           const guildResponse = await fetch(`${apiUrl}/api/guilds`);
+          console.log(`📡 Guild Response Status: ${guildResponse.status}`);
+          
           if (guildResponse.ok) {
             const guildData = await guildResponse.json();
             console.log('📡 Guild Antwort vom Server:', guildData);
+            
             if (guildData.primaryGuild) {
               setGuildId(guildData.primaryGuild);
               localStorage.setItem('selectedGuildId', guildData.primaryGuild);
@@ -431,10 +444,18 @@ const Music: React.FC = () => {
               localStorage.setItem('selectedGuildId', firstGuild.id);
               console.log(`🏠 Erste verfügbare Guild ID gesetzt: ${firstGuild.id} (${firstGuild.name})`);
               await loadGuildChannels(firstGuild.id);
+            } else {
+              console.error('❌ Keine Guilds vom Server erhalten');
+              showError('Server Fehler', 'Keine Discord-Server gefunden. Bot ist möglicherweise nicht mit Servern verbunden.');
             }
+          } else {
+            const errorText = await guildResponse.text();
+            console.error(`❌ Guild API Fehler: ${guildResponse.status} - ${errorText}`);
+            showError('API Fehler', `Konnte Server-Informationen nicht laden: ${guildResponse.status}`);
           }
         } catch (error) {
-          console.warn('Konnte keine Guilds vom Server laden:', error);
+          console.error('❌ Fehler beim Laden der Guilds:', error);
+          showError('Verbindungsfehler', 'Konnte keine Verbindung zum Bot-Server herstellen');
         }
       }
 
