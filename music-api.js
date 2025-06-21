@@ -14,6 +14,16 @@ const path = require('path');
 const { PassThrough } = require('stream');
 const axios = require('axios');
 
+// Supabase Integration
+const { 
+    initSupabase, 
+    loadMusicSettingsFromDB, 
+    saveMusicSettingsToDB,
+    loadMusicStatsFromDB,
+    saveMusicStatsToDB,
+    logMusicAction
+} = require('./supabase-music');
+
 // Nur noch lokale MP3-Settings
 let musicSettings = {
     enabled: true,
@@ -97,13 +107,33 @@ function scanMusicDirectory() {
     }
 }
 
-function loadMusicSettings() {
+async function loadMusicSettings() {
     try {
+        // Initialisiere Supabase
+        const supabaseReady = initSupabase();
+        
+        if (supabaseReady) {
+            console.log('🎵 Versuche Musik-Einstellungen aus Supabase zu laden...');
+            
+            // Lade für jede Guild separat (hier nehmen wir die erste Guild als Beispiel)
+            // In einer echten Implementierung würdest du für jede Guild separat laden
+            const guildId = process.env.GUILD_ID || '1203994020779532348';
+            const dbSettings = await loadMusicSettingsFromDB(guildId);
+            
+            if (dbSettings) {
+                musicSettings = { ...musicSettings, ...dbSettings };
+                console.log('✅ Musik-Einstellungen aus Supabase geladen');
+                return;
+            }
+        }
+        
+        // Fallback: Lokale JSON-Datei
+        console.log('📁 Fallback: Lade lokale Musik-Einstellungen...');
         if (fs.existsSync('music-settings.json')) {
             const data = fs.readFileSync('music-settings.json', 'utf8');
             const loadedSettings = JSON.parse(data);
             musicSettings = { ...musicSettings, ...loadedSettings };
-            console.log('🎵 Musik-Einstellungen geladen');
+            console.log('🎵 Lokale Musik-Einstellungen geladen');
             
             // Migriere Channel-Namen zu Channel-IDs bei Bot-Start (nur einmal)
             if (!musicSettings.migrationCompleted) {
@@ -114,7 +144,7 @@ function loadMusicSettings() {
                 console.log('✅ Channel-Migration bereits abgeschlossen - überspringe');
             }
         } else {
-            saveMusicSettings();
+            await saveMusicSettings();
             console.log('🎵 Standard-Musik-Einstellungen erstellt');
         }
     } catch (error) {
@@ -216,16 +246,33 @@ function migrateChannelNamesToIds() {
     }
 }
 
-function saveMusicSettings() {
+async function saveMusicSettings(guildId = null) {
     try {
-        // Backup erstellen vor dem Speichern
+        // Versuche zuerst in Supabase zu speichern
+        const targetGuildId = guildId || process.env.GUILD_ID || '1203994020779532348';
+        const dbSaved = await saveMusicSettingsToDB(targetGuildId, musicSettings);
+        
+        if (dbSaved) {
+            console.log('💾 Musik-Einstellungen in Supabase gespeichert');
+            
+            // Log die Aktion
+            await logMusicAction(targetGuildId, 'settings_update', {
+                settings: Object.keys(musicSettings),
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            console.log('⚠️ Supabase-Speicherung fehlgeschlagen - verwende lokale JSON');
+        }
+        
+        // Fallback: Lokale JSON-Datei (immer als Backup)
         if (fs.existsSync('music-settings.json')) {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             fs.copyFileSync('music-settings.json', `music-settings-backup-${timestamp}.json`);
         }
         
         fs.writeFileSync('music-settings.json', JSON.stringify(musicSettings, null, 2));
-        console.log('💾 Musik-Einstellungen gespeichert (mit Backup)');
+        console.log('💾 Musik-Einstellungen lokal gespeichert (Backup)');
+        
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Musik-Einstellungen:', error);
     }
