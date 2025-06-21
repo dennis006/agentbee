@@ -5283,7 +5283,7 @@ function updateBotStatus() {
     }
 }
 
-// Verification Settings
+// Verification Settings (Supabase + JSON Fallback)
 let verificationSettings = {
     enabled: true,
     requireCaptcha: true,
@@ -5309,7 +5309,7 @@ let verificationSettings = {
     }
 };
 
-// Verification Stats
+// Verification Stats (Supabase + JSON Fallback)
 let verificationStats = {
     totalVerifications: 0,
     todayVerifications: 0,
@@ -5318,65 +5318,250 @@ let verificationStats = {
     platformStats: []
 };
 
-// Entfernt - doppelte Endpoints wurden weiter unten zusammengeführt
+// ============================
+// VERIFICATION SUPABASE FUNCTIONS
+// ============================
 
-// Verification Stats laden (mit echten User-Daten)
-app.get('/api/verification/stats', (req, res) => {
+// Lade Verification-Config aus Supabase oder JSON Fallback
+async function loadVerificationConfig() {
     try {
-        let stats = { totalVerifications: 0, todayVerifications: 0, popularGames: [], platformStats: [] };
-        let users = [];
-        
-        // Lade alte Stats (für Kompatibilität)
-        if (fs.existsSync('./verification-stats.json')) {
-            stats = JSON.parse(fs.readFileSync('./verification-stats.json', 'utf8'));
+        // Versuche zuerst Supabase
+        if (supabase) {
+            const { data, error } = await supabase
+                .from('verification_config')
+                .select('*')
+                .limit(1)
+                .single();
+
+            if (data && !error) {
+                console.log('📋 Verification-Config aus Supabase geladen');
+                return data.config;
+            }
         }
-        
-        // Lade echte User-Daten
+
+        // Fallback auf JSON
+        if (fs.existsSync('./verification.json')) {
+            const configData = fs.readFileSync('./verification.json', 'utf8');
+            const config = JSON.parse(configData);
+            console.log('📋 Verification-Config aus JSON geladen (Fallback)');
+            return config;
+        }
+
+        // Default-Config
+        console.log('⚠️ Verwende Standard Verification-Config');
+        return verificationSettings;
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Verification-Config:', error);
+        return verificationSettings;
+    }
+}
+
+// Speichere Verification-Config in Supabase oder JSON Fallback
+async function saveVerificationConfig(config) {
+    try {
+        // Versuche zuerst Supabase
+        if (supabase) {
+            const { error } = await supabase
+                .from('verification_config')
+                .upsert({
+                    config: config,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (!error) {
+                console.log('💾 Verification-Config in Supabase gespeichert');
+                return true;
+            }
+        }
+
+        // Fallback auf JSON
+        fs.writeFileSync('./verification.json', JSON.stringify(config, null, 2));
+        console.log('💾 Verification-Config in JSON gespeichert (Fallback)');
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Verification-Config:', error);
+        return false;
+    }
+}
+
+// Lade alle verifizierten User aus Supabase oder JSON Fallback
+async function loadVerifiedUsers() {
+    try {
+        // Versuche zuerst Supabase
+        if (supabase) {
+            const { data, error } = await supabase
+                .from('verification_users')
+                .select('*')
+                .order('verification_date', { ascending: false });
+
+            if (data && !error) {
+                console.log(`👥 ${data.length} verifizierte User aus Supabase geladen`);
+                return {
+                    users: data.map(user => ({
+                        discordId: user.discord_id,
+                        username: user.username,
+                        discriminator: user.discriminator,
+                        avatar: user.avatar,
+                        games: user.games,
+                        platform: user.platform,
+                        agents: user.agents,
+                        assignedRoles: user.assigned_roles,
+                        verificationDate: user.verification_date,
+                        guildId: user.guild_id,
+                        guildName: user.guild_name,
+                        wantsBotUpdates: user.wants_bot_updates
+                    })),
+                    totalCount: data.length,
+                    lastUpdated: new Date().toISOString()
+                };
+            }
+        }
+
+        // Fallback auf JSON
         if (fs.existsSync('./verified-users.json')) {
             const userData = JSON.parse(fs.readFileSync('./verified-users.json', 'utf8'));
-            users = userData.users || [];
-            
-            // Berechne echte Statistiken aus User-Daten
-            stats.totalVerifications = users.length;
-            
-            // Heute-Zähler
-            const today = new Date().toDateString();
-            stats.todayVerifications = users.filter(user => {
-                const userDate = new Date(user.verificationDate).toDateString();
-                return userDate === today;
-            }).length;
-            
-            // Spiel-Statistiken aus echten Daten
-            const gameStats = {};
-            users.forEach(user => {
-                user.games?.forEach(game => {
-                    gameStats[game] = (gameStats[game] || 0) + 1;
-                });
-            });
-            stats.popularGames = Object.entries(gameStats)
-                .map(([game, count]) => ({ game, count }))
-                .sort((a, b) => b.count - a.count);
-            
-            // Plattform-Statistiken aus echten Daten
-            const platformStats = {};
-            users.forEach(user => {
-                if (user.platform) {
-                    platformStats[user.platform] = (platformStats[user.platform] || 0) + 1;
-                }
-            });
-            stats.platformStats = Object.entries(platformStats)
-                .map(([platform, count]) => ({ platform, count }))
-                .sort((a, b) => b.count - a.count);
+            console.log(`👥 ${userData.users?.length || 0} verifizierte User aus JSON geladen (Fallback)`);
+            return userData;
         }
+
+        return { users: [], totalCount: 0, lastUpdated: new Date().toISOString() };
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der verifizierten User:', error);
+        return { users: [], totalCount: 0, lastUpdated: new Date().toISOString() };
+    }
+}
+
+// Speichere verifizierten User in Supabase oder JSON Fallback
+async function saveVerifiedUserToSupabase(userData) {
+    try {
+        // Versuche zuerst Supabase
+        if (supabase) {
+            const { error } = await supabase
+                .from('verification_users')
+                .upsert({
+                    discord_id: userData.discordId,
+                    username: userData.username,
+                    discriminator: userData.discriminator || '0',
+                    avatar: userData.avatar,
+                    games: userData.games,
+                    platform: userData.platform,
+                    agents: userData.agents,
+                    assigned_roles: userData.assignedRoles,
+                    wants_bot_updates: userData.wantsBotUpdates || false,
+                    guild_id: userData.guildId,
+                    guild_name: userData.guildName,
+                    verification_date: userData.verificationDate || new Date().toISOString()
+                }, {
+                    onConflict: 'discord_id'
+                });
+
+            if (!error) {
+                console.log(`✅ User ${userData.username} in Supabase gespeichert`);
+                return true;
+            }
+        }
+
+        // Fallback auf JSON (alte Funktion)
+        await saveVerifiedUser(userData);
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern des Users in Supabase:', error);
+        // Fallback auf JSON
+        await saveVerifiedUser(userData);
+        return false;
+    }
+}
+
+// Lade Verification-Stats aus Supabase oder JSON Fallback
+async function loadVerificationStats() {
+    try {
+        // Versuche zuerst Supabase
+        if (supabase) {
+            const { data, error } = await supabase
+                .from('verification_stats')
+                .select('*')
+                .limit(1)
+                .single();
+
+            if (data && !error) {
+                console.log('📊 Verification-Stats aus Supabase geladen');
+                return {
+                    totalVerifications: data.total_verifications,
+                    todayVerifications: data.today_verifications,
+                    failedAttempts: data.failed_attempts,
+                    popularGames: data.popular_games,
+                    platformStats: data.platform_stats,
+                    lastDay: data.last_day
+                };
+            }
+        }
+
+        // Fallback auf JSON
+        if (fs.existsSync('./verification-stats.json')) {
+            const stats = JSON.parse(fs.readFileSync('./verification-stats.json', 'utf8'));
+            console.log('📊 Verification-Stats aus JSON geladen (Fallback)');
+            return stats;
+        }
+
+        return verificationStats;
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Verification-Stats:', error);
+        return verificationStats;
+    }
+}
+
+// Entfernt - doppelte Endpoints wurden weiter unten zusammengeführt
+
+// Verification Stats laden (Supabase + JSON Fallback)
+app.get('/api/verification/stats', async (req, res) => {
+    try {
+        // Lade User-Daten und Stats aus Supabase oder JSON
+        const userData = await loadVerifiedUsers();
+        const stats = await loadVerificationStats();
+        const users = userData.users || [];
+        
+        // Berechne aktuelle Statistiken aus User-Daten
+        const today = new Date().toDateString();
+        const todayCount = users.filter(user => {
+            const userDate = new Date(user.verificationDate).toDateString();
+            return userDate === today;
+        }).length;
+        
+        // Spiel-Statistiken aus echten Daten
+        const gameStats = {};
+        users.forEach(user => {
+            user.games?.forEach(game => {
+                gameStats[game] = (gameStats[game] || 0) + 1;
+            });
+        });
+        const popularGames = Object.entries(gameStats)
+            .map(([game, count]) => ({ game, count }))
+            .sort((a, b) => b.count - a.count);
+        
+        // Plattform-Statistiken aus echten Daten
+        const platformStats = {};
+        users.forEach(user => {
+            if (user.platform) {
+                platformStats[user.platform] = (platformStats[user.platform] || 0) + 1;
+            }
+        });
+        const platformStatsArray = Object.entries(platformStats)
+            .map(([platform, count]) => ({ platform, count }))
+            .sort((a, b) => b.count - a.count);
         
         // Erweiterte Statistiken
         const extendedStats = {
-            ...stats,
+            totalVerifications: users.length,
+            todayVerifications: todayCount,
+            failedAttempts: stats.failedAttempts || 0,
+            popularGames: popularGames,
+            platformStats: platformStatsArray,
             recentUsers: users.slice(-5).reverse(), // Letzte 5 User
             totalUsers: users.length,
-            activeToday: stats.todayVerifications,
-            mostPopularGame: stats.popularGames[0]?.game || 'Keine Daten',
-            mostPopularPlatform: stats.platformStats[0]?.platform || 'Keine Daten'
+            activeToday: todayCount,
+            mostPopularGame: popularGames[0]?.game || 'Keine Daten',
+            mostPopularPlatform: platformStatsArray[0]?.platform || 'Keine Daten',
+            lastDay: stats.lastDay || today
         };
         
         res.json(extendedStats);
@@ -5386,25 +5571,69 @@ app.get('/api/verification/stats', (req, res) => {
     }
 });
 
-// Alle verifizierten User laden
-app.get('/api/verification/users', (req, res) => {
+// Alle verifizierten User laden (Supabase + JSON Fallback)
+app.get('/api/verification/users', async (req, res) => {
     try {
-        if (fs.existsSync('./verified-users.json')) {
-            const userData = JSON.parse(fs.readFileSync('./verified-users.json', 'utf8'));
-            res.json(userData);
-        } else {
-            res.json({ users: [], totalCount: 0, lastUpdated: new Date().toISOString() });
-        }
+        const userData = await loadVerifiedUsers();
+        res.json(userData);
     } catch (error) {
         console.error('❌ Fehler beim Laden der verifizierten User:', error);
         res.status(500).json({ error: 'Fehler beim Laden der User-Daten' });
     }
 });
 
-// Verifizierung eines Users löschen
+// Verifizierung eines Users löschen (Supabase + JSON Fallback)
 app.delete('/api/verification/users/:discordId', async (req, res) => {
     try {
         const { discordId } = req.params;
+        
+        // Versuche zuerst Supabase
+        if (supabase) {
+            const { data: userData, error: fetchError } = await supabase
+                .from('verification_users')
+                .select('*')
+                .eq('discord_id', discordId)
+                .single();
+
+            if (userData && !fetchError) {
+                // Lösche aus Supabase
+                const { error: deleteError } = await supabase
+                    .from('verification_users')
+                    .delete()
+                    .eq('discord_id', discordId);
+
+                if (!deleteError) {
+                    console.log(`🗑️ User ${userData.username} aus Supabase gelöscht`);
+                    
+                    // Entferne Discord-Rollen
+                    const guild = client.guilds.cache.first();
+                    if (guild) {
+                        const member = await guild.members.fetch(discordId).catch(() => null);
+                        if (member && userData.assigned_roles) {
+                            for (const roleName of userData.assigned_roles) {
+                                const role = guild.roles.cache.find(r => r.name === roleName);
+                                if (role && member.roles.cache.has(role.id)) {
+                                    try {
+                                        await member.roles.remove(role);
+                                        console.log(`🗑️ Rolle "${roleName}" von ${userData.username} entfernt`);
+                                    } catch (error) {
+                                        console.error(`❌ Fehler beim Entfernen der Rolle "${roleName}":`, error.message);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    return res.json({ 
+                        success: true, 
+                        message: `Verifizierung von ${userData.username} entfernt`, 
+                        user: userData 
+                    });
+                }
+            }
+        }
+
+        // Fallback auf JSON-System
         const result = await removeVerifiedUser(discordId);
         
         if (result.success) {
@@ -5418,16 +5647,12 @@ app.delete('/api/verification/users/:discordId', async (req, res) => {
     }
 });
 
-// Einzelnen User abrufen
-app.get('/api/verification/users/:discordId', (req, res) => {
+// Einzelnen User abrufen (Supabase + JSON Fallback)
+app.get('/api/verification/users/:discordId', async (req, res) => {
     try {
         const { discordId } = req.params;
         
-        if (!fs.existsSync('./verified-users.json')) {
-            return res.status(404).json({ error: 'User nicht gefunden' });
-        }
-        
-        const userData = JSON.parse(fs.readFileSync('./verified-users.json', 'utf8'));
+        const userData = await loadVerifiedUsers();
         const user = userData.users.find(u => u.discordId === discordId);
         
         if (!user) {
@@ -5543,53 +5768,19 @@ app.post('/api/auth/discord/token', async (req, res) => {
     }
 });
 
-// Verification-Konfiguration laden (Dashboard-Integration)
-app.get('/api/verification/config', (req, res) => {
+// Verification-Konfiguration laden (Supabase + JSON Fallback)
+app.get('/api/verification/config', async (req, res) => {
     try {
-        let verificationConfig;
-        
-        // Bevorzuge die Dashboard-verwaltete verification.json
-        if (fs.existsSync('./verification.json')) {
-            const configData = fs.readFileSync('./verification.json', 'utf8');
-            verificationConfig = JSON.parse(configData);
-        } else {
-            // Default-Konfiguration nur als Fallback
-            verificationConfig = {
-                enabled: true,
-                requireCaptcha: true,
-                allowedGames: [
-                    { id: 'valorant', label: 'Valorant', emoji: '🎯' },
-                    { id: 'lol', label: 'League of Legends', emoji: '⚔️' },
-                    { id: 'minecraft', label: 'Minecraft', emoji: '🧱' },
-                    { id: 'fortnite', label: 'Fortnite', emoji: '🪂' },
-                    { id: 'cs2', label: 'Counter-Strike 2', emoji: '💥' },
-                    { id: 'apex', label: 'Apex Legends', emoji: '🚀' }
-                ],
-                allowedPlatforms: [
-                    { id: 'pc', label: 'PC (Windows/Mac/Linux)', emoji: '💻' },
-                    { id: 'ps5', label: 'PlayStation 5', emoji: '🎮' },
-                    { id: 'xbox', label: 'Xbox Series X/S', emoji: '🎮' },
-                    { id: 'switch', label: 'Nintendo Switch', emoji: '🎮' },
-                    { id: 'mobile', label: 'Mobile (iOS/Android)', emoji: '📱' }
-                ],
-                defaultRoles: ['Member', 'Verified'],
-                welcomeMessage: 'Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.',
-                logChannel: 'verify-logs',
-                autoAssignRoles: true
-            };
-        }
-        
-        console.log('📋 Verification-Config geladen (Dashboard)');
+        const verificationConfig = await loadVerificationConfig();
         res.json(verificationConfig);
-        
     } catch (error) {
         console.error('❌ Fehler beim Laden der Verification-Config:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Konfiguration' });
     }
 });
 
-// Verification-Konfiguration speichern (Dashboard-Integration)
-app.post('/api/verification/config', (req, res) => {
+// Verification-Konfiguration speichern (Supabase + JSON Fallback)
+app.post('/api/verification/config', async (req, res) => {
     try {
         const configData = req.body;
         
@@ -5598,16 +5789,18 @@ app.post('/api/verification/config', (req, res) => {
             return res.status(400).json({ error: 'Ungültige Konfigurationsdaten' });
         }
 
-        // Konfiguration in verification.json speichern (Dashboard-Standard)
-        fs.writeFileSync('./verification.json', JSON.stringify(configData, null, 2));
+        const success = await saveVerificationConfig(configData);
         
-        console.log('💾 Verification-Config gespeichert (Dashboard)');
-        console.log('🎮 Spiele:', configData.allowedGames?.length || 0);
-        console.log('💻 Plattformen:', configData.allowedPlatforms?.length || 0);
-        console.log('👥 Rollen:', configData.defaultRoles?.length || 0);
-        console.log('📺 Log-Kanal:', configData.logChannel || 'nicht gesetzt');
-        
-        res.json({ success: true, message: 'Konfiguration erfolgreich gespeichert' });
+        if (success) {
+            console.log('🎮 Spiele:', configData.allowedGames?.length || 0);
+            console.log('💻 Plattformen:', configData.allowedPlatforms?.length || 0);
+            console.log('👥 Rollen:', configData.defaultRoles?.length || 0);
+            console.log('📺 Log-Kanal:', configData.logChannel || 'nicht gesetzt');
+            
+            res.json({ success: true, message: 'Konfiguration erfolgreich gespeichert' });
+        } else {
+            res.status(500).json({ error: 'Fehler beim Speichern der Konfiguration' });
+        }
         
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Verification-Config:', error);
@@ -5705,21 +5898,8 @@ app.post('/api/verification', async (req, res) => {
         
         console.log('🔐 Neue Verifizierung erhalten:', { discordId, games, platform, agents, wantsBotUpdates });
         
-        // Lade aktuelle Verification-Config (Dashboard-gesteuert)
-        let verificationConfig;
-        if (fs.existsSync('./verification.json')) {
-            verificationConfig = JSON.parse(fs.readFileSync('./verification.json', 'utf8'));
-            console.log('📋 Config geladen aus verification.json (Dashboard)');
-        } else {
-            verificationConfig = { 
-                enabled: true, 
-                autoAssignRoles: true, 
-                defaultRoles: ['Member'], 
-                logChannel: 'verify-logs', 
-                welcomeMessage: '🎉 Willkommen auf dem Server!' 
-            };
-            console.log('⚠️ Fallback-Config verwendet - Dashboard-Einstellungen nicht gefunden');
-        }
+        // Lade aktuelle Verification-Config (Supabase + JSON Fallback)
+        const verificationConfig = await loadVerificationConfig();
         
         if (!verificationConfig.enabled) {
             return res.status(400).json({ error: 'Verifizierung ist deaktiviert' });
@@ -5863,8 +6043,8 @@ app.post('/api/verification', async (req, res) => {
             }
         }
 
-        // Vollständige User-Daten speichern
-        await saveVerifiedUser({
+        // Vollständige User-Daten speichern (Supabase + JSON Fallback)
+        await saveVerifiedUserToSupabase({
             discordId: discordId,
             username: member.user.username,
             discriminator: member.user.discriminator,
@@ -5879,8 +6059,11 @@ app.post('/api/verification', async (req, res) => {
             wantsBotUpdates: wantsBotUpdates || false
         });
 
-        // Statistiken aktualisieren
-        updateVerificationStats(games, platform);
+        // Statistiken werden automatisch in Supabase über Trigger aktualisiert
+        // Fallback für JSON-System
+        if (!supabase) {
+            updateVerificationStats(games, platform);
+        }
 
         res.json({ 
             success: true, 
