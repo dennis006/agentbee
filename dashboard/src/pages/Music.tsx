@@ -1371,7 +1371,8 @@ const Music: React.FC = () => {
           description: station.description,
           currentSongs: station.playlist,
           genre: station.genre
-        }
+        },
+        availableSongs: availableSongs // Verfügbare Songs mitschicken
       };
 
       const response = await fetch(`${apiUrl}/api/music/ai/recommend`, {
@@ -1382,8 +1383,20 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('🤖 AI Response:', data); // Debug-Output
         setAiRecommendations(data.suggestions || []);
-        showSuccess('AI Vorschläge', `${data.suggestions.length} passende Songs gefunden!`);
+        
+        if (data.suggestions.length > 0) {
+          showSuccess('AI Vorschläge', `${data.suggestions.length} passende Songs gefunden!`);
+        } else {
+          // Debug-Informationen anzeigen
+          const debugInfo = data.debug || {};
+          console.log('🔍 Debug Info:', debugInfo);
+          showError('AI Debug', 
+            `Keine Matches gefunden. AI schlug ${debugInfo.aiSuggestions?.length || 0} Songs vor. ` +
+            `${availableSongs.length} Songs verfügbar.`
+          );
+        }
       } else {
         const data = await response.json();
         setAiError(data.error || 'AI-Empfehlung fehlgeschlagen');

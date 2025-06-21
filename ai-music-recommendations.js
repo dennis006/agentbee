@@ -71,23 +71,37 @@ router.post('/ai/recommend', async (req, res) => {
       });
     }
 
-    const { type, data } = req.body;
+    const { type, data, availableSongs: frontendSongs } = req.body;
     let prompt = '';
     let maxTokens = 150;
 
-    // Lade verfügbare Songs
-    const fs = require('fs');
-    const path = require('path');
+    // Lade verfügbare Songs - Priorität: Frontend > API > Datei
     let availableSongs = [];
     
-    try {
-      const musicLibPath = path.join(__dirname, 'music-library.json');
-      if (fs.existsSync(musicLibPath)) {
-        const musicLib = JSON.parse(fs.readFileSync(musicLibPath, 'utf8'));
-        availableSongs = musicLib.songs || [];
+    if (frontendSongs && frontendSongs.length > 0) {
+      availableSongs = frontendSongs;
+      console.log(`📱 ${availableSongs.length} Songs vom Frontend erhalten`);
+    } else {
+      try {
+        // Versuche Songs direkt von der Musik-API zu laden
+        const musicApiModule = require('./music-api');
+        if (musicApiModule && musicApiModule.getAvailableSongs) {
+          availableSongs = await musicApiModule.getAvailableSongs();
+          console.log(`🎵 ${availableSongs.length} Songs aus Musik-API geladen`);
+        } else {
+          // Fallback: Lade aus music-library.json
+          const fs = require('fs');
+          const path = require('path');
+          const musicLibPath = path.join(__dirname, 'music-library.json');
+          if (fs.existsSync(musicLibPath)) {
+            const musicLib = JSON.parse(fs.readFileSync(musicLibPath, 'utf8'));
+            availableSongs = musicLib.songs || musicLib.tracks || [];
+            console.log(`📚 ${availableSongs.length} Songs aus music-library.json geladen`);
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Fehler beim Laden der Musik-Bibliothek:', error.message);
       }
-    } catch (error) {
-      console.log('⚠️ Musik-Bibliothek nicht gefunden');
     }
 
     // Prompt basierend auf Typ generieren
@@ -145,24 +159,80 @@ router.post('/ai/recommend', async (req, res) => {
     }
 
     // Validiere Vorschläge gegen verfügbare Songs
-    const validSuggestions = suggestions
-      .map(title => {
-        const found = availableSongs.find(song => 
-          song.title.toLowerCase().includes(title.toLowerCase()) ||
-          title.toLowerCase().includes(song.title.toLowerCase())
+    const validSuggestions = [];
+    
+    if (availableSongs.length === 0) {
+      console.log('⚠️ Keine verfügbaren Songs zum Abgleichen gefunden');
+      // Für Debug: Zeige alle AI-Vorschläge auch wenn keine Songs verfügbar sind
+      return res.json({
+        success: true,
+        type: type,
+        suggestions: [],
+        rawResponse: aiResponse,
+        availableSongsCount: 0,
+        debug: {
+          aiSuggestions: suggestions,
+          message: 'Keine Songs in der Bibliothek verfügbar'
+        }
+      });
+    }
+
+    // Verbesserter Song-Matching-Algorithmus
+    for (const suggestion of suggestions) {
+      const found = availableSongs.find(song => {
+        const songTitle = song.title.toLowerCase().trim();
+        const suggestionLower = suggestion.toLowerCase().trim();
+        
+        // Exakte Übereinstimmung
+        if (songTitle === suggestionLower) return true;
+        
+        // Teilstring-Übereinstimmung (beidseitig)
+        if (songTitle.includes(suggestionLower) || suggestionLower.includes(songTitle)) return true;
+        
+        // Ähnlichkeitscheck ohne Sonderzeichen
+        const cleanSongTitle = songTitle.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
+        const cleanSuggestion = suggestionLower.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
+        
+        if (cleanSongTitle.includes(cleanSuggestion) || cleanSuggestion.includes(cleanSongTitle)) return true;
+        
+        // Wort-für-Wort Übereinstimmung
+        const songWords = cleanSongTitle.split(' ');
+        const suggestionWords = cleanSuggestion.split(' ');
+        const matchingWords = songWords.filter(word => 
+          suggestionWords.some(sugWord => 
+            word.length > 2 && sugWord.length > 2 && 
+            (word.includes(sugWord) || sugWord.includes(word))
+          )
         );
-        return found;
-      })
-      .filter(song => song !== undefined);
+        
+        return matchingWords.length >= Math.min(2, suggestionWords.length);
+      });
+      
+      if (found) {
+        validSuggestions.push(found);
+      }
+    }
 
     console.log(`✅ ${validSuggestions.length} gültige Vorschläge gefunden`);
+    console.log('🔍 Debug Info:', {
+      totalAiSuggestions: suggestions.length,
+      validMatches: validSuggestions.length,
+      availableSongs: availableSongs.length,
+      aiSuggestions: suggestions.slice(0, 3), // Erste 3 AI Vorschläge
+      availableTitles: availableSongs.slice(0, 3).map(s => s.title) // Erste 3 verfügbare Songs
+    });
 
     res.json({
       success: true,
       type: type,
       suggestions: validSuggestions,
       rawResponse: aiResponse,
-      availableSongsCount: availableSongs.length
+      availableSongsCount: availableSongs.length,
+      debug: {
+        aiSuggestions: suggestions,
+        matchedSongs: validSuggestions.map(s => s.title),
+        availableSongTitles: availableSongs.map(s => s.title)
+      }
     });
 
   } catch (error) {
@@ -282,6 +352,52 @@ router.get('/ai/status', (req, res) => {
     hasApiKey: !!(process.env.OPENAI_API_KEY || process.env.CHATGPT_API_KEY),
     service: 'AI Music Recommendations'
   });
+});
+
+// Debug Route für verfügbare Songs
+router.get('/ai/debug-songs', async (req, res) => {
+  try {
+    let availableSongs = [];
+    
+    // Versuche Songs von verschiedenen Quellen zu laden
+    try {
+      const musicApiModule = require('./music-api');
+      if (musicApiModule && musicApiModule.getAvailableSongs) {
+        availableSongs = await musicApiModule.getAvailableSongs();
+      }
+    } catch (error) {
+      console.log('Musik-API nicht verfügbar:', error.message);
+    }
+    
+    // Fallback: music-library.json
+    if (availableSongs.length === 0) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const musicLibPath = path.join(__dirname, 'music-library.json');
+        if (fs.existsSync(musicLibPath)) {
+          const musicLib = JSON.parse(fs.readFileSync(musicLibPath, 'utf8'));
+          availableSongs = musicLib.songs || musicLib.tracks || [];
+        }
+      } catch (error) {
+        console.log('music-library.json Fehler:', error.message);
+      }
+    }
+    
+    res.json({
+      count: availableSongs.length,
+      songs: availableSongs.slice(0, 10), // Erste 10 Songs für Debug
+      sources: {
+        musicApi: 'checked',
+        musicLibrary: 'checked'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Debug-Fehler',
+      message: error.message
+    });
+  }
 });
 
 module.exports = router; 
