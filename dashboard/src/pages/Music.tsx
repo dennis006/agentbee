@@ -256,6 +256,10 @@ interface MusicSettings {
     showNowPlaying: boolean;
     embedColor: string;
   };
+  voiceChannel: {
+    preferredChannelId: string;
+    autoJoin: boolean;
+  };
   announcements: {
     channelId: string;
   };
@@ -306,6 +310,10 @@ const Music: React.FC = () => {
       showNowPlaying: true,
       embedColor: '#FF6B6B'
     },
+    voiceChannel: {
+      preferredChannelId: '',
+      autoJoin: true
+    },
     announcements: {
       channelId: ''
     },
@@ -342,8 +350,38 @@ const Music: React.FC = () => {
 
   // Drag & Drop State
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Guild & Channel State
+  const [guildInfo, setGuildInfo] = useState<{
+    id: string;
+    name: string;
+    icon: string | null;
+  } | null>(null);
+  const [channels, setChannels] = useState<{
+    text: Array<{ id: string; name: string; position: number }>;
+    voice: Array<{ id: string; name: string; position: number; members: number; joinable: boolean }>;
+  }>({ text: [], voice: [] });
   
 
+
+  // Load Guild Channels
+  const loadGuildChannels = async (targetGuildId: string) => {
+    try {
+      console.log(`🔄 Lade Channels für Guild: ${targetGuildId}`);
+      
+      const response = await fetch(`${apiUrl}/api/music/guild/${targetGuildId}/channels`);
+      if (response.ok) {
+        const data = await response.json();
+        setGuildInfo(data.guild);
+        setChannels(data.channels);
+        console.log(`✅ Guild-Channels geladen: ${data.channels.text.length} Text, ${data.channels.voice.length} Voice`);
+      } else {
+        console.warn('⚠️ Fehler beim Laden der Guild-Channels');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Laden der Guild-Channels:', error);
+    }
+  };
 
   // Load Data
   const loadData = async () => {
@@ -371,6 +409,9 @@ const Music: React.FC = () => {
         setGuildId(finalGuildId);
         localStorage.setItem('selectedGuildId', finalGuildId);
         console.log(`🏠 Guild ID gesetzt: ${finalGuildId}`);
+        
+        // Lade Guild-Channels
+        await loadGuildChannels(finalGuildId);
       } else {
         console.log('⚠️ Keine Guild ID gefunden');
         // Versuche eine Standard-Guild-ID vom Server zu holen
@@ -383,11 +424,13 @@ const Music: React.FC = () => {
               setGuildId(guildData.primaryGuild);
               localStorage.setItem('selectedGuildId', guildData.primaryGuild);
               console.log(`🏠 Primary Guild ID gesetzt: ${guildData.primaryGuild}`);
+              await loadGuildChannels(guildData.primaryGuild);
             } else if (guildData.guilds && guildData.guilds.length > 0) {
               const firstGuild = guildData.guilds[0];
               setGuildId(firstGuild.id);
               localStorage.setItem('selectedGuildId', firstGuild.id);
               console.log(`🏠 Erste verfügbare Guild ID gesetzt: ${firstGuild.id} (${firstGuild.name})`);
+              await loadGuildChannels(firstGuild.id);
             }
           }
         } catch (error) {
@@ -914,13 +957,15 @@ const Music: React.FC = () => {
           {settings.enabled ? '✅ Musik System Aktiviert' : '❌ Musik System Deaktiviert'}
         </Badge>
         
-        {/* Guild ID Status */}
+        {/* Guild Status */}
         <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-blue-primary/30 rounded-lg px-3 py-2">
-          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${guildId ? 'bg-blue-400 animate-pulse' : 'bg-red-500'}`}></div>
+          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${guildInfo ? 'bg-blue-400 animate-pulse' : 'bg-red-500'}`}></div>
           <span className="text-sm text-dark-muted">
-            {guildId 
-              ? `🏠 Server: ${guildId.slice(0, 8)}...` 
-              : '❌ Keine Server ID'
+            {guildInfo 
+              ? `🏠 Server: ${guildInfo.name}` 
+              : guildId 
+                ? `🔄 Lade Server: ${guildId.slice(0, 8)}...`
+                : '❌ Kein Server verbunden'
             }
           </span>
         </div>
@@ -1032,21 +1077,63 @@ const Music: React.FC = () => {
                 Channel Einstellungen
               </CardTitle>
               <CardDescription>
-                Konfiguriere Channels für Ankündigungen und Interactive Panel
+                Konfiguriere Voice-Channel für Musik und Text-Channels für Ankündigungen
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-dark-text mb-2 block">📢 Ankündigungs-Channel</label>
-                <Input
-                  value={settings.announcements.channelId}
-                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
-                  onChange={(e) => setSettings(prev => ({
+                <label className="text-sm font-medium text-dark-text mb-2 block">🔊 Voice-Channel für Musik</label>
+                <Select
+                  value={settings.voiceChannel.preferredChannelId}
+                  onChange={(value) => setSettings(prev => ({
                     ...prev,
-                    announcements: { ...prev.announcements, channelId: e.target.value }
+                    voiceChannel: { ...prev.voiceChannel, preferredChannelId: value }
                   }))}
-                  placeholder="music-announcements"
-                />
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
+                >
+                  <option value="">Channel auswählen...</option>
+                  {channels.voice.map(channel => (
+                    <option key={channel.id} value={channel.id}>
+                      🔊 {channel.name} {channel.members > 0 ? `(${channel.members} Mitglieder)` : ''}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Bevorzugter Voice-Channel für automatische Bot-Verbindung bei Musik-Wiedergabe
+                </p>
+                
+                <div className="flex items-center justify-between mt-3 p-2 bg-dark-surface/50 rounded-lg border border-purple-primary/20">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">🔄 Auto-Join aktivieren</h4>
+                    <p className="text-xs text-gray-400">Bot verbindet sich automatisch beim Musik-Start</p>
+                  </div>
+                  <Switch
+                    checked={settings.voiceChannel.autoJoin}
+                    onCheckedChange={(checked) => setSettings(prev => ({
+                      ...prev,
+                      voiceChannel: { ...prev.voiceChannel, autoJoin: checked }
+                    }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-dark-text mb-2 block">📢 Ankündigungs-Channel</label>
+                <Select
+                  value={settings.announcements.channelId}
+                  onChange={(value) => setSettings(prev => ({
+                    ...prev,
+                    announcements: { ...prev.announcements, channelId: value }
+                  }))}
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
+                >
+                  <option value="">Channel auswählen...</option>
+                  {channels.text.map(channel => (
+                    <option key={channel.id} value={channel.id}>
+                      # {channel.name}
+                    </option>
+                  ))}
+                </Select>
                 <p className="text-xs text-gray-500 mt-1">
                   Channel für Now-Playing Nachrichten und Musik-Updates
                 </p>
@@ -1054,15 +1141,21 @@ const Music: React.FC = () => {
 
               <div>
                 <label className="text-sm font-medium text-dark-text mb-2 block">🎛️ Interactive Panel Channel</label>
-                <Input
+                <Select
                   value={settings.interactivePanel.channelId}
-                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
-                  onChange={(e) => setSettings(prev => ({
+                  onChange={(value) => setSettings(prev => ({
                     ...prev,
-                    interactivePanel: { ...prev.interactivePanel, channelId: e.target.value }
+                    interactivePanel: { ...prev.interactivePanel, channelId: value }
                   }))}
-                  placeholder="music-control"
-                />
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
+                >
+                  <option value="">Channel auswählen...</option>
+                  {channels.text.map(channel => (
+                    <option key={channel.id} value={channel.id}>
+                      # {channel.name}
+                    </option>
+                  ))}
+                </Select>
                 <p className="text-xs text-gray-500 mt-1">
                   Channel für das interaktive Musik-Control Panel
                 </p>

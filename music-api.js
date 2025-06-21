@@ -106,6 +106,10 @@ let musicSettings = {
         showNowPlaying: true,
         embedColor: "#FF6B6B"
     },
+    voiceChannel: {
+        preferredChannelId: "",
+        autoJoin: true
+    },
     announcements: {
         channelId: ""
     },
@@ -1653,6 +1657,73 @@ function registerMusicAPI(app) {
                 message: testResult.success ? 'Station erfolgreich getestet' : 'Station-Test fehlgeschlagen'
             });
         } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Guild Channels abrufen
+    app.get('/api/music/guild/:guildId/channels', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            if (!global.client) {
+                return res.status(503).json({
+                    success: false,
+                    error: 'Discord Client nicht verfügbar'
+                });
+            }
+
+            const guild = global.client.guilds.cache.get(guildId);
+            if (!guild) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Server nicht gefunden'
+                });
+            }
+
+            // Text-Channels sammeln
+            const textChannels = guild.channels.cache
+                .filter(channel => channel.type === 0) // Text-Channels
+                .map(channel => ({
+                    id: channel.id,
+                    name: channel.name,
+                    type: 'text',
+                    position: channel.position
+                }));
+
+            // Voice-Channels sammeln
+            const voiceChannels = guild.channels.cache
+                .filter(channel => channel.type === 2) // Voice-Channels
+                .map(channel => ({
+                    id: channel.id,
+                    name: channel.name,
+                    type: 'voice',
+                    position: channel.position,
+                    members: channel.members.size,
+                    joinable: channel.joinable
+                }));
+
+            // Nach Position sortieren
+            textChannels.sort((a, b) => a.position - b.position);
+            voiceChannels.sort((a, b) => a.position - b.position);
+
+            res.json({
+                success: true,
+                guild: {
+                    id: guild.id,
+                    name: guild.name,
+                    icon: guild.iconURL()
+                },
+                channels: {
+                    text: textChannels,
+                    voice: voiceChannels
+                }
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Guild-Channels:', error);
             res.status(500).json({
                 success: false,
                 error: error.message

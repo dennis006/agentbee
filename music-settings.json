@@ -307,6 +307,10 @@
     "showNowPlaying": true,
     "embedColor": "#FF6B6B"
   },
+  "voiceChannel": {
+    "preferredChannelId": "",
+    "autoJoin": true
+  },
   "announcements": {
     "channelId": ""
   },
