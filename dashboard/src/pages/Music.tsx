@@ -239,14 +239,6 @@ interface RadioStation {
 
 interface MusicSettings {
   enabled: boolean;
-  radio: {
-    enabled: boolean;
-    stations: RadioStation[];
-    defaultStation: string;
-    autoStop: boolean;
-    showNowPlaying: boolean;
-    embedColor: string;
-  };
   localMusic: {
     enabled: boolean;
     musicDirectory: string;
@@ -287,20 +279,12 @@ const Music: React.FC = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'radio' | 'local' | 'settings'>('settings');
+  const [activeTab, setActiveTab] = useState<'local' | 'settings'>('settings');
   const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
   
   // State
   const [settings, setSettings] = useState<MusicSettings>({
     enabled: true,
-    radio: {
-      enabled: true,
-      stations: [],
-      defaultStation: 'lofi',
-      autoStop: false,
-      showNowPlaying: true,
-      embedColor: '#FF6B6B'
-    },
     localMusic: {
       enabled: true,
       musicDirectory: './music',
@@ -308,7 +292,7 @@ const Music: React.FC = () => {
       defaultStation: 'custom1',
       autoStop: false,
       showNowPlaying: true,
-      embedColor: '#FF6B6B'
+      embedColor: '0x00FF7F'
     },
     voiceChannel: {
       preferredChannelId: '',
@@ -322,7 +306,7 @@ const Music: React.FC = () => {
       channelId: '',
       messageId: '',
       autoUpdate: true,
-      embedColor: '#FF6B6B'
+      embedColor: '0x00FF7F'
     }
   });
 
@@ -368,22 +352,15 @@ const Music: React.FC = () => {
   
 
 
-  // Load Guild Channels
+  // Load Guild Channels - DEAKTIVIERT (Radio-System entfernt)
   const loadGuildChannels = async (targetGuildId: string) => {
     try {
-      console.log(`🔄 Lade Channels für Guild: ${targetGuildId}`);
-      
-      const response = await fetch(`${apiUrl}/api/music/guild/${targetGuildId}/channels`);
-      if (response.ok) {
-        const data = await response.json();
-        setGuildInfo(data.guild);
-        setChannels(data.channels);
-        console.log(`✅ Guild-Channels geladen: ${data.channels.text.length} Text, ${data.channels.voice.length} Voice`);
-      } else {
-        console.warn('⚠️ Fehler beim Laden der Guild-Channels');
-      }
+      console.log(`🔄 Guild-Channels Laden übersprungen (Radio-System entfernt)`);
+      // Setze leere Standardwerte
+      setGuildInfo({ id: targetGuildId, name: 'Discord Server', icon: '' });
+      setChannels({ text: [], voice: [] });
     } catch (error) {
-      console.error('❌ Fehler beim Laden der Guild-Channels:', error);
+      console.error('❌ Fehler beim Setzen der Guild-Channels:', error);
     }
   };
 
@@ -1327,13 +1304,12 @@ const Music: React.FC = () => {
                   <div className="relative">
                     <input
                       type="color"
-                      value={settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#00FF7F'}
+                      value={settings.localMusic?.embedColor?.startsWith('0x') ? `#${settings.localMusic.embedColor.slice(2)}` : settings.localMusic?.embedColor?.startsWith('#') ? settings.localMusic.embedColor : '#00FF7F'}
                       onChange={(e) => {
                         const hexColor = e.target.value;
                         const discordColor = `0x${hexColor.slice(1).toUpperCase()}`;
                         setSettings(prev => ({
                           ...prev,
-                          radio: { ...prev.radio, embedColor: discordColor },
                           localMusic: { ...prev.localMusic, embedColor: discordColor },
                           interactivePanel: { ...prev.interactivePanel, embedColor: discordColor }
                         }));
@@ -1349,11 +1325,10 @@ const Music: React.FC = () => {
                   {/* Hex Input */}
                   <div className="flex-1">
                     <Input
-                      value={settings.radio.embedColor}
+                      value={settings.localMusic?.embedColor || '0x00FF7F'}
                       className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
                       onChange={(e) => setSettings(prev => ({
                         ...prev,
-                        radio: { ...prev.radio, embedColor: e.target.value },
                         localMusic: { ...prev.localMusic, embedColor: e.target.value },
                         interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
                       }))}
@@ -1365,7 +1340,7 @@ const Music: React.FC = () => {
                   <div 
                     className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
                     style={{
-                      backgroundColor: settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#00FF7F',
+                      backgroundColor: settings.localMusic?.embedColor?.startsWith('0x') ? `#${settings.localMusic.embedColor.slice(2)}` : settings.localMusic?.embedColor?.startsWith('#') ? settings.localMusic.embedColor : '#00FF7F',
                       filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
                     }}
                   >
@@ -1391,7 +1366,6 @@ const Music: React.FC = () => {
                         key={preset.name}
                         onClick={() => setSettings(prev => ({
                           ...prev,
-                          radio: { ...prev.radio, embedColor: preset.color },
                           localMusic: { ...prev.localMusic, embedColor: preset.color },
                           interactivePanel: { ...prev.interactivePanel, embedColor: preset.color }
                         }))}
