@@ -316,7 +316,7 @@
   },
   "interactivePanel": {
     "enabled": true,
-    "channelId": "musik",
+    "channelId": "",
     "messageId": "",
     "autoUpdate": true,
     "embedColor": "#FF6B6B"

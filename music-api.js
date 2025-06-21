@@ -185,12 +185,102 @@ function loadMusicSettings() {
             const loadedSettings = JSON.parse(data);
             musicSettings = { ...musicSettings, ...loadedSettings };
             console.log('🎵 Musik-Einstellungen geladen');
+            
+            // Migriere Channel-Namen zu Channel-IDs bei Bot-Start
+            setTimeout(() => {
+                migrateChannelNamesToIds();
+            }, 3000); // Warte 3 Sekunden bis Discord Client bereit ist
         } else {
             saveMusicSettings();
             console.log('🎵 Standard-Musik-Einstellungen erstellt');
         }
     } catch (error) {
         console.error('❌ Fehler beim Laden der Musik-Einstellungen:', error);
+    }
+}
+
+// Migration: Konvertiert Channel-Namen zu Channel-IDs für bessere Persistierung
+function migrateChannelNamesToIds() {
+    try {
+        if (!global.client?.guilds) {
+            console.log('⚠️ Discord Client noch nicht bereit für Channel-Migration');
+            return;
+        }
+
+        let needsSave = false;
+        
+        // Prüfe Interactive Panel channelId
+        if (musicSettings.interactivePanel?.channelId && 
+            typeof musicSettings.interactivePanel.channelId === 'string' && 
+            musicSettings.interactivePanel.channelId !== '' &&
+            !musicSettings.interactivePanel.channelId.match(/^\d+$/)) {
+            
+            console.log(`🔄 Migriere Interactive Panel Channel-Name "${musicSettings.interactivePanel.channelId}" zu Channel-ID...`);
+            
+            // Suche Channel-ID durch Name
+            let foundChannel = null;
+            for (const guild of global.client.guilds.cache.values()) {
+                const channel = guild.channels.cache.find(ch => 
+                    ch.name === musicSettings.interactivePanel.channelId && ch.type === 0
+                );
+                if (channel) {
+                    foundChannel = channel;
+                    break;
+                }
+            }
+            
+            if (foundChannel) {
+                console.log(`✅ Channel-Migration: "${musicSettings.interactivePanel.channelId}" → ${foundChannel.id} (#${foundChannel.name} in ${foundChannel.guild.name})`);
+                musicSettings.interactivePanel.channelId = foundChannel.id;
+                needsSave = true;
+            } else {
+                console.log(`⚠️ Channel "${musicSettings.interactivePanel.channelId}" nicht gefunden - leere Einstellung`);
+                musicSettings.interactivePanel.channelId = '';
+                musicSettings.interactivePanel.messageId = '';
+                needsSave = true;
+            }
+        }
+        
+        // Prüfe Announcements Channel
+        if (musicSettings.announcements?.channelId && 
+            typeof musicSettings.announcements.channelId === 'string' && 
+            musicSettings.announcements.channelId !== '' &&
+            !musicSettings.announcements.channelId.match(/^\d+$/)) {
+            
+            console.log(`🔄 Migriere Announcements Channel-Name "${musicSettings.announcements.channelId}" zu Channel-ID...`);
+            
+            let foundChannel = null;
+            for (const guild of global.client.guilds.cache.values()) {
+                const channel = guild.channels.cache.find(ch => 
+                    ch.name === musicSettings.announcements.channelId && ch.type === 0
+                );
+                if (channel) {
+                    foundChannel = channel;
+                    break;
+                }
+            }
+            
+            if (foundChannel) {
+                console.log(`✅ Announcements Channel-Migration: "${musicSettings.announcements.channelId}" → ${foundChannel.id}`);
+                musicSettings.announcements.channelId = foundChannel.id;
+                needsSave = true;
+            } else {
+                console.log(`⚠️ Announcements Channel nicht gefunden - leere Einstellung`);
+                musicSettings.announcements.channelId = '';
+                needsSave = true;
+            }
+        }
+        
+        // Speichere wenn Änderungen vorgenommen wurden
+        if (needsSave) {
+            saveMusicSettings();
+            console.log('✅ Channel-Migration abgeschlossen und gespeichert');
+        } else {
+            console.log('✅ Keine Channel-Migration erforderlich - alle IDs sind bereits korrekt');
+        }
+        
+    } catch (error) {
+        console.error('❌ Fehler bei Channel-Migration:', error);
     }
 }
 
@@ -1847,40 +1937,48 @@ function registerMusicAPI(app) {
     // Interactive Panel Management (neue Route ohne Guild ID)
     app.post('/api/music/interactive-panel/post', async (req, res) => {
         try {
-            const { channelName, embedColor } = req.body;
+            const { channelId, embedColor } = req.body;
             
-            if (!channelName) {
+            if (!channelId) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Channel-Name ist erforderlich'
+                    error: 'Channel-ID ist erforderlich'
                 });
             }
             
-            // Update settings
-            musicSettings.interactivePanel.channelId = channelName;
-            if (embedColor) {
-                musicSettings.interactivePanel.embedColor = embedColor;
-            }
-            saveMusicSettings();
+            console.log(`📻 Interactive Panel Post angefragt für Channel-ID: ${channelId}`);
             
-            // Finde Guild durch Channel-Name
+            // Finde Guild und Channel durch Channel-ID
             let targetGuild = null;
+            let targetChannel = null;
+            
             if (global.client && global.client.guilds) {
                 for (const guild of global.client.guilds.cache.values()) {
-                    const channel = guild.channels.cache.find(ch => ch.name === channelName && ch.type === 0);
-                    if (channel) {
+                    const channel = guild.channels.cache.get(channelId);
+                    if (channel && channel.type === 0) { // Text-Channel
                         targetGuild = guild;
+                        targetChannel = channel;
                         break;
                     }
                 }
             }
             
-            if (!targetGuild) {
+            if (!targetGuild || !targetChannel) {
                 return res.status(404).json({
                     success: false,
-                    error: `Channel "${channelName}" nicht gefunden`
+                    error: `Channel mit ID "${channelId}" nicht gefunden`
                 });
             }
+            
+            console.log(`✅ Channel gefunden: #${targetChannel.name} in Guild: ${targetGuild.name}`);
+            
+            // Update settings mit Channel-ID (nicht Name!)
+            musicSettings.interactivePanel.channelId = channelId;
+            if (embedColor) {
+                musicSettings.interactivePanel.embedColor = embedColor;
+            }
+            saveMusicSettings();
+            console.log(`💾 Einstellungen gespeichert - Channel-ID: ${channelId}`);
             
             const success = await postInteractiveRadioPanel(targetGuild.id);
             
@@ -1889,6 +1987,8 @@ function registerMusicAPI(app) {
                     success: true,
                     message: 'Interactive Panel erfolgreich gepostet!',
                     channelId: musicSettings.interactivePanel.channelId,
+                    channelName: targetChannel.name,
+                    guildName: targetGuild.name,
                     messageId: musicSettings.interactivePanel.messageId
                 });
             } else {

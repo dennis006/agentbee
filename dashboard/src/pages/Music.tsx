@@ -796,9 +796,13 @@ const Music: React.FC = () => {
       
       console.log(`🏠 Verwende Guild ID: ${targetGuildId}`);
       
-      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${targetGuildId}/post`, {
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/post`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelId: settings.interactivePanel.channelId,
+          embedColor: settings.interactivePanel.embedColor
+        })
       });
 
       if (response.ok) {
