@@ -39,10 +39,10 @@ async function loadServerStatsSettings(guildId = PRIMARY_GUILD_ID) {
       console.error('❌ Supabase nicht initialisiert');
       return null;
     }
-
+    
     const { data, error } = await supabase
       .rpc('get_server_stats_config', { p_guild_id: guildId });
-
+    
     if (error) {
       console.error('❌ Fehler beim Laden der Server Stats Konfiguration:', error);
       return null;
@@ -56,7 +56,7 @@ async function loadServerStatsSettings(guildId = PRIMARY_GUILD_ID) {
 
     console.log(`📊 Server Stats Konfiguration geladen für Guild: ${guildId}`);
     return data;
-
+    
   } catch (error) {
     console.error('❌ Fehler beim Laden der Server Stats Einstellungen:', error);
     return null;
@@ -70,18 +70,18 @@ async function saveServerStatsSettings(settings, guildId = PRIMARY_GUILD_ID) {
       console.error('❌ Supabase nicht initialisiert');
       return false;
     }
-
+    
     const { data, error } = await supabase
       .rpc('save_server_stats_config', { 
         p_guild_id: guildId, 
         p_config: settings 
       });
-
+    
     if (error) {
       console.error('❌ Fehler beim Speichern der Server Stats Konfiguration:', error);
       return false;
     }
-
+    
     // Log the activity
     await logServerStatsActivity(
       guildId,
@@ -98,7 +98,7 @@ async function saveServerStatsSettings(settings, guildId = PRIMARY_GUILD_ID) {
 
     console.log(`💾 Server Stats Konfiguration gespeichert für Guild: ${guildId}`);
     return true;
-
+    
   } catch (error) {
     console.error('❌ Fehler beim Speichern der Server Stats Einstellungen:', error);
     return false;
@@ -256,14 +256,14 @@ async function updateTimerStatus(timerData, guildId = PRIMARY_GUILD_ID) {
         p_guild_id: guildId, 
         p_timer_data: timerData 
       });
-
+    
     if (error) {
       console.error('❌ Fehler beim Aktualisieren des Timer Status:', error);
       return false;
     }
-
+    
     return true;
-
+    
   } catch (error) {
     console.error('❌ Fehler beim Aktualisieren des Timer Status:', error);
     return false;
@@ -283,7 +283,7 @@ async function getTimerStatus(guildId = PRIMARY_GUILD_ID) {
       .select('*')
       .eq('guild_id', guildId)
       .single();
-
+    
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
       console.error('❌ Fehler beim Laden des Timer Status:', error);
       return getDefaultTimerStatus();
@@ -298,7 +298,7 @@ async function getTimerStatus(guildId = PRIMARY_GUILD_ID) {
     const timeSinceLastUpdate = now - data.last_update_time;
     const timeRemaining = Math.max(0, data.total_interval - timeSinceLastUpdate);
     const progress = Math.min(100, (timeSinceLastUpdate / data.total_interval) * 100);
-
+    
     return {
       enabled: data.enabled,
       lastUpdateTime: data.last_update_time,
@@ -309,7 +309,7 @@ async function getTimerStatus(guildId = PRIMARY_GUILD_ID) {
       isRunning: data.is_running,
       currentTime: now
     };
-
+    
   } catch (error) {
     console.error('❌ Fehler beim Laden des Timer Status:', error);
     return getDefaultTimerStatus();
@@ -318,12 +318,12 @@ async function getTimerStatus(guildId = PRIMARY_GUILD_ID) {
 
 // Default Timer Status
 function getDefaultTimerStatus() {
-  return {
-    enabled: false,
-    lastUpdateTime: null,
-    nextUpdateTime: null,
-    timeRemaining: 0,
-    totalInterval: 300000,
+    return {
+      enabled: false,
+      lastUpdateTime: null,
+      nextUpdateTime: null,
+      timeRemaining: 0,
+      totalInterval: 300000,
     progress: 0,
     isRunning: false,
     currentTime: Date.now()
@@ -363,14 +363,14 @@ async function logServerStatsActivity(
         p_duration: duration,
         p_performed_by: performedBy
       });
-
+    
     if (error) {
       console.error('❌ Fehler beim Logging der Activity:', error);
       return null;
     }
-
+    
     return data;
-
+    
   } catch (error) {
     console.error('❌ Fehler beim Logging der Activity:', error);
     return null;
@@ -394,14 +394,14 @@ async function getActiveChannels(guildId = PRIMARY_GUILD_ID) {
       .select('*')
       .eq('guild_id', guildId)
       .order('position');
-
+    
     if (error) {
       console.error('❌ Fehler beim Laden der aktiven Channels:', error);
       return [];
     }
-
+    
     return data || [];
-
+    
   } catch (error) {
     console.error('❌ Fehler beim Laden der aktiven Channels:', error);
     return [];
@@ -424,7 +424,7 @@ async function updateChannelStats(guildId, statType, channelId, newValue, succes
       })
       .eq('guild_id', guildId)
       .eq('stat_type', statType);
-
+    
     if (error) {
       console.error('❌ Fehler beim Aktualisieren der Channel Stats:', error);
       return false;
@@ -445,7 +445,7 @@ async function updateChannelStats(guildId, statType, channelId, newValue, succes
     );
 
     return true;
-
+    
   } catch (error) {
     console.error('❌ Fehler beim Aktualisieren der Channel Stats:', error);
     return false;
@@ -657,7 +657,7 @@ const serverStatsRoutes = {
       // Neustart des Updaters mit neuen Einstellungen
       if (req.body.enabled) {
         startStatsUpdater(req.body);
-      } else {
+    } else {
         stopStatsUpdater();
       }
       
@@ -716,7 +716,7 @@ const serverStatsRoutes = {
     try {
       await updateAllServerStats();
       res.json({ success: true, message: 'Server-Stats erfolgreich aktualisiert' });
-    } catch (error) {
+  } catch (error) {
       console.error('❌ Fehler beim manuellen Update:', error);
       res.status(500).json({ error: 'Serverfehler beim manuellen Update' });
     }
