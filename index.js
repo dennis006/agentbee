@@ -19,8 +19,7 @@ const aiMusicRecommendations = require('./ai-music-recommendations');
 const { OpenAI } = require('openai');
 const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
-const ServerStats = require('./supabase-server-stats');
-const serverStatsRoutes = require('./server-stats-routes');
+const ServerStats = require('./server-stats-api');
 const settingsAPI = require('./settings-api');
 const AnomalyDetectionAPI = require('./anomaly-detection-api');
 const ServerHealthAPI = require('./server-health-api');
@@ -7015,7 +7014,7 @@ app.use(settingsAPI);
 
 // ================== SERVER STATS ROUTES ==================
 // Server-Stats Routen registrieren
-app.use(serverStatsRoutes);
+app.use(ServerStats.router);
 app.set('discordClient', client); // Client für Routen verfügbar machen
 
 // Server Manager Analytics Routen registrieren (wird später mit dem Client verbunden)
