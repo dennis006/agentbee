@@ -68,6 +68,12 @@ CREATE TABLE server_stats_config (
                 "channelId": "",
                 "name": "🤖 Bots: {count}",
                 "position": 7
+            },
+            "valorantSeason": {
+                "enabled": true,
+                "channelId": "",
+                "name": "🎮 Valorant Season Start: {countdown}",
+                "position": 8
             }
         },
         "categoryId": "",
