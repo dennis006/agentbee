@@ -1022,6 +1022,45 @@ function registerMusicAPI(app) {
         }
     });
 
+    // Get Channels (für Channel-Auswahl im Frontend)
+    app.get('/api/music/channels/:guildId', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            if (!client || !client.guilds) {
+                return res.status(500).json({ error: 'Bot nicht verfügbar' });
+            }
+
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) {
+                return res.status(404).json({ error: 'Guild nicht gefunden' });
+            }
+
+            // Text-Channels sammeln
+            const textChannels = guild.channels.cache
+                .filter(channel => channel.type === 0) // GUILD_TEXT
+                .map(channel => ({
+                    id: channel.id,
+                    name: channel.name,
+                    type: 'text'
+                }));
+
+            // Voice-Channels sammeln
+            const voiceChannels = guild.channels.cache
+                .filter(channel => channel.type === 2) // GUILD_VOICE
+                .map(channel => ({
+                    id: channel.id,
+                    name: channel.name,
+                    type: 'voice'
+                }));
+
+            res.json([...textChannels, ...voiceChannels]);
+        } catch (error) {
+            console.error('❌ Fehler beim Abrufen der Channels:', error);
+            res.status(500).json({ error: 'Fehler beim Abrufen der Channels' });
+        }
+    });
+
     // Get verfügbare Songs
     app.get('/api/music/songs', (req, res) => {
         try {

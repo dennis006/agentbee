@@ -412,10 +412,10 @@ const Music: React.FC = () => {
 
   const loadChannels = async (guildId: string) => {
     try {
-      const response = await fetch(`${apiUrl}/api/channels/${guildId}`);
+      const response = await fetch(`${apiUrl}/api/music/channels/${guildId}`);
       if (response.ok) {
         const data = await response.json();
-        setChannels(data.channels || []);
+        setChannels(data || []);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Channels:', error);
@@ -696,6 +696,57 @@ const Music: React.FC = () => {
       ...prev,
       playlist: prev.playlist.filter((_, i) => i !== index)
     }));
+  };
+
+  // Interactive Panel Functions
+  const postInteractivePanel = async () => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Interactive Panel', '🎛️ Interactive Panel erfolgreich erstellt!');
+        
+        // Update settings with new message ID
+        setSettings(prev => ({
+          ...prev,
+          interactivePanel: {
+            ...prev.interactivePanel,
+            messageId: data.messageId
+          }
+        }));
+      } else {
+        const data = await response.json();
+        showError('Panel Fehler', data.error || 'Fehler beim Erstellen des Interactive Panels');
+      }
+    } catch (error) {
+      showError('Panel Fehler', 'Verbindungsfehler beim Erstellen des Interactive Panels');
+    }
+  };
+
+  const updateInteractivePanel = async () => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        showSuccess('Interactive Panel', '🔄 Interactive Panel erfolgreich aktualisiert!');
+      } else {
+        const data = await response.json();
+        showError('Panel Fehler', data.error || 'Fehler beim Aktualisieren des Interactive Panels');
+      }
+    } catch (error) {
+      showError('Panel Fehler', 'Verbindungsfehler beim Aktualisieren des Interactive Panels');
+    }
   };
 
   useEffect(() => {
@@ -986,6 +1037,29 @@ const Music: React.FC = () => {
                   </p>
                 </div>
               )}
+
+              {/* Interactive Panel Actions */}
+              <div className="space-y-3">
+                <Button
+                  onClick={postInteractivePanel}
+                  disabled={!settings.interactivePanel.channelId || !guildId}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Users className="w-4 h-4" />
+                  Interactive Panel erstellen/aktualisieren
+                </Button>
+                
+                {settings.interactivePanel.messageId && (
+                  <Button
+                    onClick={updateInteractivePanel}
+                    disabled={!settings.interactivePanel.enabled || !guildId}
+                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Panel aktualisieren
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -1002,74 +1076,97 @@ const Music: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">
-                  🎨 Embed Farbe
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={settings.radio.embedColor}
-                    onChange={(e) => setSettings(prev => ({ 
-                      ...prev, 
-                      radio: { ...prev.radio, embedColor: e.target.value },
-                      localMusic: { ...prev.localMusic, embedColor: e.target.value },
-                      interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
-                    }))}
-                    className="w-16 h-10"
-                  />
-                  <Input
-                    type="text"
-                    value={settings.radio.embedColor}
-                    onChange={(e) => setSettings(prev => ({ 
-                      ...prev, 
-                      radio: { ...prev.radio, embedColor: e.target.value },
-                      localMusic: { ...prev.localMusic, embedColor: e.target.value },
-                      interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
-                    }))}
-                    placeholder="#FF6B6B"
-                    className="flex-1"
-                  />
+                <div className="flex items-center gap-2 mb-2">
+                  <label className="text-sm font-medium text-purple-200">🎨 Embed Farbe</label>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <div className="flex gap-3 items-center">
+                  {/* Color Picker */}
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B'}
+                      onChange={(e) => {
+                        const hexColor = e.target.value;
+                        const discordColor = hexColor.startsWith('#') ? hexColor : `#${hexColor}`;
+                        setSettings(prev => ({
+                          ...prev,
+                          radio: { ...prev.radio, embedColor: discordColor },
+                          localMusic: { ...prev.localMusic, embedColor: discordColor },
+                          interactivePanel: { ...prev.interactivePanel, embedColor: discordColor }
+                        }));
+                      }}
+                      className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-neon-purple transition-all duration-300 hover:scale-105"
+                      style={{
+                        filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
+                      }}
+                    />
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-neon rounded-full animate-ping opacity-60"></div>
+                  </div>
+                  
+                  {/* Hex Input */}
+                  <div className="flex-1">
+                    <Input
+                      value={settings.radio.embedColor}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        radio: { ...prev.radio, embedColor: e.target.value },
+                        localMusic: { ...prev.localMusic, embedColor: e.target.value },
+                        interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
+                      }))}
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
+                      placeholder="#FF6B6B"
+                    />
+                  </div>
+
+                  {/* Color Preview */}
+                  <div 
+                    className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
+                    style={{
+                      backgroundColor: settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B',
+                      filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
+                    }}
+                  >
+                    🎵
+                  </div>
+                </div>
+                
+                {/* Preset Colors */}
+                <div className="mt-3">
+                  <p className="text-xs text-dark-muted mb-2">Beliebte Discord Farben:</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { name: 'Musik Rot', color: '#FF6B6B' },
+                      { name: 'Discord Blau', color: '#5865F2' },
+                      { name: 'Spotify Grün', color: '#1DB954' },
+                      { name: 'YouTube Rot', color: '#FF0000' },
+                      { name: 'SoundCloud Orange', color: '#FF5500' },
+                      { name: 'Twitch Lila', color: '#9146FF' },
+                      { name: 'Bass Violett', color: '#8B5CF6' },
+                      { name: 'Neon Pink', color: '#FF10F0' }
+                    ].map((preset) => (
+                      <button
+                        key={preset.name}
+                        onClick={() => setSettings(prev => ({
+                          ...prev,
+                          radio: { ...prev.radio, embedColor: preset.color },
+                          localMusic: { ...prev.localMusic, embedColor: preset.color },
+                          interactivePanel: { ...prev.interactivePanel, embedColor: preset.color }
+                        }))}
+                        className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
+                        style={{
+                          backgroundColor: preset.color,
+                          filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
+                        }}
+                        title={preset.name}
+                      >
+                        <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
                   Farbe für Discord-Embeds und Nachrichten
                 </p>
-              </div>
-
-              {/* Color Presets */}
-              <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">
-                  🎨 Farb-Presets
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { name: 'Musik Rot', color: '#FF6B6B' },
-                    { name: 'Discord Blau', color: '#5865F2' },
-                    { name: 'Spotify Grün', color: '#1DB954' },
-                    { name: 'YouTube Rot', color: '#FF0000' },
-                    { name: 'SoundCloud Orange', color: '#FF5500' },
-                    { name: 'Twitch Lila', color: '#9146FF' },
-                    { name: 'Bass Violett', color: '#8B5CF6' },
-                    { name: 'Neon Pink', color: '#FF10F0' }
-                  ].map((preset) => (
-                    <Button
-                      key={preset.name}
-                      onClick={() => setSettings(prev => ({ 
-                        ...prev, 
-                        radio: { ...prev.radio, embedColor: preset.color },
-                        localMusic: { ...prev.localMusic, embedColor: preset.color },
-                        interactivePanel: { ...prev.interactivePanel, embedColor: preset.color }
-                      }))}
-                      variant="outline"
-                      className="p-2 h-auto flex flex-col items-center gap-1"
-                    >
-                      <div 
-                        className="w-6 h-6 rounded-full border-2 border-white"
-                        style={{ backgroundColor: preset.color }}
-                      />
-                      <span className="text-xs">{preset.name}</span>
-                    </Button>
-                  ))}
-                </div>
               </div>
             </CardContent>
           </Card>
