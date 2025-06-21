@@ -1,79 +1,69 @@
-# Node.js
-node_modules/
+# Node modules
+node_modules
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Dashboard build artifacts
+dashboard/node_modules
+dashboard/dist
+dashboard/.next
 
 # Git
-.git/
+.git
 .gitignore
 
-# IDE
-.vscode/
-.idea/
+# Docker
+Dockerfile
+.dockerignore
+
+# Development files
+.env.local
+.env.development
+.env.test
+
+# IDE files
+.vscode
+.idea
 *.swp
 *.swo
-*~
 
-# OS generated files
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # Logs
-logs/
 *.log
+logs
+
+# Temporary files
+tmp
+temp
+
+# Cache directories
+.cache
+.npm
 
 # Runtime data
-pids/
+pids
 *.pid
 *.seed
 *.pid.lock
 
 # Coverage directory used by tools like istanbul
-coverage/
-
-# Build outputs
-dist/
-build/
-
-# Temporary files
-tmp/
-temp/
-
-# Documentation
-*.md
-docs/
+coverage
 
 # Test files
-test/
-tests/
+test
+tests
 *.test.js
 *.spec.js
 
-# Docker files themselves
-Dockerfile*
-docker-compose*
-.dockerignore
+# Documentation
+README.md
+docs
 
-# Railway files
-railway.json
-
-# Dashboard source (not needed for backend)
-dashboard/src/
-dashboard/node_modules/
-dashboard/dist/
-
-# Keep only built dashboard files for serving static assets
-!dashboard/public/ 
+# Bot data files (these should be mounted as volumes)
+giveaway-data.json
+music-library.json
+xp-data.json
+verified-users.json
+moderation-logs.json 
