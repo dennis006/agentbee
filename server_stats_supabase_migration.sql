@@ -18,27 +18,27 @@ CREATE TABLE server_stats_config (
     
     -- Die komplette serverStatsSettings als JSON (wie ursprünglich, aber in Supabase)
     config JSONB NOT NULL DEFAULT '{
-        "enabled": false,
+        "enabled": true,
         "updateInterval": 300000,
-        "channels": {
-            "memberCount": {
-                "enabled": false,
-                "channelId": "",
-                "name": "👥 Mitglieder: {count}",
-                "position": 0
-            },
-            "onlineCount": {
-                "enabled": false,
-                "channelId": "",
-                "name": "🟢 Online: {count}",
-                "position": 1
-            },
-            "boostCount": {
-                "enabled": false,
-                "channelId": "",
-                "name": "🚀 Boosts: {count}",
-                "position": 2
-            },
+                 "channels": {
+             "memberCount": {
+                 "enabled": true,
+                 "channelId": "",
+                 "name": "👥 Mitglieder: {count}",
+                 "position": 0
+             },
+             "onlineCount": {
+                 "enabled": true,
+                 "channelId": "",
+                 "name": "🟢 Online: {count}",
+                 "position": 1
+             },
+             "boostCount": {
+                 "enabled": true,
+                 "channelId": "",
+                 "name": "🚀 Boosts: {count}",
+                 "position": 2
+             },
             "channelCount": {
                 "enabled": false,
                 "channelId": "",

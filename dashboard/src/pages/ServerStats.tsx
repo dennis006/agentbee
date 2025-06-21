@@ -112,7 +112,7 @@ const ServerStats: React.FC = () => {
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         // KOMPLETT ERSETZEN - keine Defaults verwenden!
-        setSettings(settingsData);
+        setSettings(settingsData.settings || settingsData);
       }
       
       // Lade aktuelle Stats
