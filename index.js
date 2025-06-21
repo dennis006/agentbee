@@ -32,6 +32,7 @@ const { setupServerManagerAnalyticsRoutes } = require('./server-manager-analytic
 const { setupBulkServerManagementRoutes } = require('./bulk-server-management-routes');
 const { setupAIOptimizationRoutes } = require('./ai-optimization-routes');
 const { setupRulesSupabaseRoutes } = require('./rules-supabase-api');
+const { setupModerationSupabaseRoutes } = require('./moderation-supabase-api');
 require('dotenv').config();
 
 // ================== API KEYS MANAGEMENT ==================
@@ -7006,8 +7007,9 @@ setupBulkServerManagementRoutes(app);
 // AI Optimization Routen registrieren
 setupAIOptimizationRoutes(app);
 
-// Rules Supabase Routen registrieren
+// Supabase API Routen registrieren
 setupRulesSupabaseRoutes(app);
+setupModerationSupabaseRoutes(app);
 
 // ================== ANOMALY DETECTION & SERVER HEALTH ==================
 // API-Endpunkte für Anomalie-Erkennung und Server-Health

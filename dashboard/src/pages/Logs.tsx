@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Clock, Zap, Shield, Ban, Volume2, VolumeX, AlertTriangle, User, Calendar, Filter, Search, RefreshCw, Eye, EyeOff, RotateCcw, Timer } from 'lucide-react';
+import { FileText, Clock, Zap, Shield, Ban, Volume2, VolumeX, AlertTriangle, User, Calendar, Filter, Search, RefreshCw, Eye, EyeOff, RotateCcw, Timer, Database } from 'lucide-react';
 
 interface ModerationLog {
   id: string;
@@ -53,6 +53,7 @@ const Logs = () => {
   const [stats, setStats] = useState<ModerationStats | null>(null);
   const [activeMutes, setActiveMutes] = useState<ActiveMute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [supabaseLoading, setSupabaseLoading] = useState(false);
   
   // API Base URL
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -104,7 +105,7 @@ const Logs = () => {
 
   const fetchLogs = async (page = 1) => {
     try {
-      setLoading(true);
+      setSupabaseLoading(true);
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '20',
@@ -113,28 +114,31 @@ const Logs = () => {
         ...(filterDays && { days: filterDays })
       });
 
-      const response = await fetch(`${apiUrl}/api/moderation/logs?${params}`);
+      const response = await fetch(`${apiUrl}/api/moderation/supabase/logs?${params}`);
       const data = await response.json();
       
       setLogs(data.logs || []);
       setCurrentPage(data.pagination?.currentPage || 1);
       setTotalPages(data.pagination?.totalPages || 1);
     } catch (error) {
-      console.error('Fehler beim Laden der Logs:', error);
-      setLogs([]); // Fallback zu leerem Array
+      console.error('Fehler beim Laden der Logs aus Supabase:', error);
+      setLogs([]);
     } finally {
-      setLoading(false);
+      setSupabaseLoading(false);
     }
   };
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/moderation/stats`);
+      setSupabaseLoading(true);
+      const response = await fetch(`${apiUrl}/api/moderation/supabase/stats`);
       const data = await response.json();
       setStats(data);
     } catch (error) {
-      console.error('Fehler beim Laden der Statistiken:', error);
-      setStats(null); // Fallback zu null
+      console.error('Fehler beim Laden der Statistiken aus Supabase:', error);
+      setStats(null);
+    } finally {
+      setSupabaseLoading(false);
     }
   };
 
@@ -145,7 +149,7 @@ const Logs = () => {
       setActiveMutes(data.activeMutes || []);
     } catch (error) {
       console.error('Fehler beim Laden der aktiven Mutes:', error);
-      setActiveMutes([]); // Fallback zu leerem Array
+      setActiveMutes([]);
     }
   };
 
@@ -208,10 +212,18 @@ const Logs = () => {
   };
 
   useEffect(() => {
-    fetchLogs();
-    fetchStats();
-    fetchActiveMutes();
-    fetchResetStats();
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchLogs(),
+        fetchStats(),
+        fetchActiveMutes(),
+        fetchResetStats()
+      ]);
+      setLoading(false);
+    };
+    
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -313,6 +325,21 @@ const Logs = () => {
         </div>
       </div>
 
+      {/* Supabase Loading Overlay */}
+      {supabaseLoading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-dark-surface/90 backdrop-blur-xl rounded-xl border border-purple-primary/30 p-8 shadow-purple-glow">
+            <div className="flex items-center gap-4">
+              <Database className="w-8 h-8 text-purple-accent animate-pulse" />
+              <div>
+                <h3 className="text-white font-bold text-lg">Lade Moderation-Logs aus Supabase...</h3>
+                <p className="text-dark-text">Datenbank wird abgefragt</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="text-center py-12">
         <div className="flex items-center justify-center gap-3 mb-4">
@@ -320,6 +347,10 @@ const Logs = () => {
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
             Moderations-Logs
           </h1>
+          <div className="flex items-center gap-2 px-3 py-1 bg-purple-primary/20 rounded-full">
+            <Database className="w-4 h-4 text-purple-accent" />
+            <span className="text-purple-accent text-sm font-medium">Supabase</span>
+          </div>
         </div>
         <p className="text-dark-text text-lg max-w-2xl mx-auto">
           Vollständige Übersicht aller Moderations-Aktionen und Server-Events 📊
@@ -421,21 +452,21 @@ const Logs = () => {
       )}
 
       {/* Daily Reset System */}
-      <div className="bg-dark-surface/90 backdrop-blur-xl rounded-xl border border-green-500/30 p-6 shadow-green-glow mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <RotateCcw className="w-6 h-6 text-green-400" />
-            <h2 className="text-xl font-bold text-white">Daily Reset System</h2>
+      {resetStats && (
+        <div className="bg-dark-surface/90 backdrop-blur-xl rounded-xl border border-green-500/30 p-6 shadow-green-glow mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <RotateCcw className="w-6 h-6 text-green-400" />
+              <h2 className="text-xl font-bold text-white">Daily Reset System</h2>
+            </div>
+            <button
+              onClick={() => setShowResetSection(!showResetSection)}
+              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+            >
+              {showResetSection ? 'Ausblenden' : 'Details anzeigen'}
+            </button>
           </div>
-          <button
-            onClick={() => setShowResetSection(!showResetSection)}
-            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
-          >
-            {showResetSection ? 'Ausblenden' : 'Details anzeigen'}
-          </button>
-        </div>
-        
-        {resetStats && (
+          
           <div className="space-y-4">
             {/* Info Panel */}
             <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
@@ -451,28 +482,28 @@ const Logs = () => {
             
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-green-400" />
-                    <div>
-                      <h3 className="text-white font-bold">{resetStats.currentStats?.currentWarnings || 0}</h3>
-                      <p className="text-dark-text text-sm">Aktive Warnungen</p>
-                      <p className="text-xs text-gray-400">(werden bei Reset gelöscht)</p>
-                    </div>
+              <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-green-400" />
+                  <div>
+                    <h3 className="text-white font-bold">{resetStats.currentStats?.currentWarnings || 0}</h3>
+                    <p className="text-dark-text text-sm">Aktive Warnungen</p>
+                    <p className="text-xs text-gray-400">(werden bei Reset gelöscht)</p>
                   </div>
                 </div>
-              
-                              <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-                  <div className="flex items-center gap-2">
-                    <User className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <h3 className="text-white font-bold">{resetStats.currentStats?.usersWithWarnings || 0}</h3>
-                      <p className="text-dark-text text-sm">User mit aktiven Warnungen</p>
-                      <p className="text-xs text-gray-400">(bekommen fresh start bei Reset)</p>
-                    </div>
+              </div>
+            
+              <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <User className="w-5 h-5 text-blue-400" />
+                  <div>
+                    <h3 className="text-white font-bold">{resetStats.currentStats?.usersWithWarnings || 0}</h3>
+                    <p className="text-dark-text text-sm">User mit aktiven Warnungen</p>
+                    <p className="text-xs text-gray-400">(bekommen fresh start bei Reset)</p>
                   </div>
                 </div>
-              
+              </div>
+            
               <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
                 <div className="flex items-center gap-2">
                   <Timer className="w-5 h-5 text-purple-400" />
@@ -558,8 +589,8 @@ const Logs = () => {
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Filter Controls */}
       <div className="bg-dark-surface/90 backdrop-blur-xl rounded-xl border border-purple-primary/30 p-6 shadow-purple-glow">
@@ -642,13 +673,17 @@ const Logs = () => {
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <FileText className="w-6 h-6 text-purple-accent" />
             Moderations-Verlauf
+            <div className="flex items-center gap-2 px-2 py-1 bg-purple-primary/20 rounded-full ml-2">
+              <Database className="w-3 h-3 text-purple-accent" />
+              <span className="text-purple-accent text-xs">Supabase</span>
+            </div>
           </h2>
         </div>
         
         {loading ? (
           <div className="p-8 text-center">
             <RefreshCw className="w-8 h-8 text-purple-accent animate-spin mx-auto mb-4" />
-            <p className="text-dark-text">Lade Logs...</p>
+            <p className="text-dark-text">Lade Logs aus Supabase...</p>
           </div>
         ) : logs.length === 0 ? (
           <div className="p-8 text-center">
