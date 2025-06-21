@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const play = require('play-dl');
 const prism = require('prism-media');
+const { audioVisualizer } = require('./audio-visualizer');
 
 // Music Settings mit Radio UND lokalen MP3s
 let musicSettings = {
@@ -441,6 +442,10 @@ async function playLocalSong(guildId, songId) {
 
         // Erstelle lokale Datei-Ressource mit Guild-spezifischem Volume
         const volume = getVolumeForGuild(guildId) / 100; // 0.0-1.0
+        
+        // Audio-Analyzer für Visualisierung hinzufügen
+        const audioAnalyzer = audioVisualizer.createAudioAnalyzer();
+        
         const resource = createAudioResource(song.path, {
             inputType: StreamType.Arbitrary,
             inlineVolume: true
@@ -449,6 +454,15 @@ async function playLocalSong(guildId, songId) {
         if (resource.volume) {
             resource.volume.setVolume(volume);
         }
+
+        // Audio-Stream durch Visualizer leiten
+        resource.audioPlayer?.on('stateChange', (oldState, newState) => {
+            if (newState.status === AudioPlayerStatus.Playing) {
+                audioVisualizer.startAnalysis(guildId);
+            } else if (newState.status === AudioPlayerStatus.Idle) {
+                audioVisualizer.stopAnalysis(guildId);
+            }
+        });
 
         // Spiele ab
         player.play(resource);
@@ -602,6 +616,15 @@ async function playRadioStation(guildId, stationId) {
             const volume = getVolumeForGuild(guildId) / 100; // 0.0-1.0
             resource.volume.setVolume(volume);
         }
+
+        // Audio-Visualizer für Radio starten
+        player.on('stateChange', (oldState, newState) => {
+            if (newState.status === AudioPlayerStatus.Playing) {
+                audioVisualizer.startAnalysis(guildId);
+            } else if (newState.status === AudioPlayerStatus.Idle) {
+                audioVisualizer.stopAnalysis(guildId);
+            }
+        });
 
         // Event-Listener für bessere Fehlerbehandlung
         player.on(AudioPlayerStatus.Playing, () => {
@@ -2403,7 +2426,100 @@ function registerMusicAPI(app) {
         }
     });
 
+    // Audio-Visualizer WebSocket Server
+    const WebSocket = require('ws');
+    const wss = new WebSocket.Server({ port: 8080 });
+    
+    wss.on('connection', (ws) => {
+        console.log('🌊 Neuer Audio Visualizer Client verbunden');
+        audioVisualizer.addWebSocketClient(ws);
+        
+        ws.on('message', (message) => {
+            try {
+                const data = JSON.parse(message);
+                if (data.type === 'requestVisualization') {
+                    // Aktuelle Visualisierung senden
+                    const currentData = audioVisualizer.audioData;
+                    ws.send(JSON.stringify({
+                        type: 'audioVisualization',
+                        data: currentData
+                    }));
+                }
+            } catch (error) {
+                console.error('❌ WebSocket Message Error:', error);
+            }
+        });
+    });
+
+    // Audio-Visualizer API Endpoints
+    app.get('/api/music/visualizer/:guildId', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const audioData = audioVisualizer.audioData;
+            
+            res.json({
+                success: true,
+                guildId: guildId,
+                isAnalyzing: audioVisualizer.isAnalyzing,
+                audioData: audioData
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Abrufen der Visualizer-Daten:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    app.get('/api/music/visualizer/:guildId/image', (req, res) => {
+        try {
+            const visualizationBuffer = audioVisualizer.getVisualizationBuffer();
+            
+            res.set({
+                'Content-Type': 'image/png',
+                'Content-Length': visualizationBuffer.length,
+                'Cache-Control': 'no-cache'
+            });
+            
+            res.send(visualizationBuffer);
+        } catch (error) {
+            console.error('❌ Fehler beim Erstellen der Visualisierung:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    app.post('/api/music/visualizer/:guildId/toggle', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { enable } = req.body;
+            
+            if (enable) {
+                audioVisualizer.startAnalysis(guildId);
+            } else {
+                audioVisualizer.stopAnalysis(guildId);
+            }
+            
+            res.json({
+                success: true,
+                guildId: guildId,
+                isAnalyzing: audioVisualizer.isAnalyzing,
+                message: enable ? 'Audio Visualizer gestartet' : 'Audio Visualizer gestoppt'
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Umschalten des Visualizers:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     console.log('✅ Musik API registriert!');
+    console.log('🌊 Audio Visualizer WebSocket Server läuft auf Port 8080');
 }
 
 // Auto-Join für Radio (identisch aber separiert)
