@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "defaultVolume": 10,
+  "defaultVolume": 50,
   "maxQueueLength": 100,
   "autoJoinVoice": true,
   "voiceChannels": {

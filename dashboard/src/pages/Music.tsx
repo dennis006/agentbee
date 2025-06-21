@@ -351,6 +351,10 @@ const Music: React.FC = () => {
   // Drag & Drop State
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
+  // Volume State
+  const [currentVolume, setCurrentVolume] = useState(50);
+  const [volumeLoading, setVolumeLoading] = useState(false);
+
   // Guild & Channel State
   const [guildInfo, setGuildInfo] = useState<{
     id: string;
@@ -454,6 +458,7 @@ const Music: React.FC = () => {
       if (currentGuildId) {
         await loadMusicStatus(currentGuildId);
         await loadRadioStatus(currentGuildId);
+        await loadVolumeStatus(currentGuildId);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
@@ -650,6 +655,97 @@ const Music: React.FC = () => {
       }
     } catch (error) {
       showError('Radio Fehler', 'Verbindungsfehler beim Stoppen');
+    }
+  };
+
+  const loadVolumeStatus = async (guildId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/api/music/volume/${guildId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentVolume(data.volume || 50);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Lautstärke:', error);
+    }
+  };
+
+  // Volume Controls
+  const setVolume = async (newVolume: number) => {
+    if (!guildId) return;
+    
+    try {
+      setVolumeLoading(true);
+      const response = await fetch(`${apiUrl}/api/music/volume/${guildId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ volume: newVolume })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentVolume(data.volume);
+        showSuccess('Lautstärke', data.message);
+      } else {
+        const data = await response.json();
+        showError('Volume Fehler', data.error || 'Fehler beim Setzen der Lautstärke');
+      }
+    } catch (error) {
+      showError('Volume Fehler', 'Verbindungsfehler beim Setzen der Lautstärke');
+    } finally {
+      setVolumeLoading(false);
+    }
+  };
+
+  const increaseVolume = async () => {
+    if (!guildId) return;
+    
+    try {
+      setVolumeLoading(true);
+      const response = await fetch(`${apiUrl}/api/music/volume/${guildId}/increase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 10 })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentVolume(data.volume);
+        showSuccess('Lautstärke', data.message);
+      } else {
+        const data = await response.json();
+        showError('Volume Fehler', data.error || 'Fehler beim Erhöhen der Lautstärke');
+      }
+    } catch (error) {
+      showError('Volume Fehler', 'Verbindungsfehler');
+    } finally {
+      setVolumeLoading(false);
+    }
+  };
+
+  const decreaseVolume = async () => {
+    if (!guildId) return;
+    
+    try {
+      setVolumeLoading(true);
+      const response = await fetch(`${apiUrl}/api/music/volume/${guildId}/decrease`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 10 })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentVolume(data.volume);
+        showSuccess('Lautstärke', data.message);
+      } else {
+        const data = await response.json();
+        showError('Volume Fehler', data.error || 'Fehler beim Verringern der Lautstärke');
+      }
+    } catch (error) {
+      showError('Volume Fehler', 'Verbindungsfehler');
+    } finally {
+      setVolumeLoading(false);
     }
   };
 
@@ -1339,6 +1435,107 @@ const Music: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Volume Control */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mic className="w-5 h-5 text-orange-400" />
+                Lautstärke Kontrolle
+              </CardTitle>
+              <CardDescription>
+                Steuere die Lautstärke für MP3s und Radio-Streams
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Current Volume Display */}
+              <div className="text-center p-4 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-lg border border-orange-500/30">
+                <div className="text-3xl font-bold text-orange-300 mb-2">
+                  {currentVolume}%
+                </div>
+                <p className="text-sm text-gray-400">Aktuelle Lautstärke</p>
+              </div>
+
+              {/* Volume Slider */}
+              <div className="space-y-4">
+                <label className="text-sm font-medium text-dark-text">🔊 Lautstärke einstellen</label>
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={currentVolume}
+                    onChange={(e) => setVolume(parseInt(e.target.value))}
+                    disabled={volumeLoading}
+                    className="w-full h-2 bg-dark-bg rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #f97316 0%, #f97316 ${currentVolume}%, #1f2937 ${currentVolume}%, #1f2937 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Volume Control Buttons */}
+              <div className="grid grid-cols-3 gap-3">
+                <Button
+                  onClick={decreaseVolume}
+                  disabled={volumeLoading || currentVolume <= 0}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  🔉 -10%
+                </Button>
+                
+                <Button
+                  onClick={() => setVolume(50)}
+                  disabled={volumeLoading}
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                >
+                  🔊 50%
+                </Button>
+                
+                <Button
+                  onClick={increaseVolume}
+                  disabled={volumeLoading || currentVolume >= 100}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  🔊 +10%
+                </Button>
+              </div>
+
+              {/* Quick Volume Presets */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-dark-text">⚡ Schnellauswahl</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[10, 25, 75, 100].map((volume) => (
+                    <Button
+                      key={volume}
+                      onClick={() => setVolume(volume)}
+                      disabled={volumeLoading || currentVolume === volume}
+                      variant="ghost"
+                      className="text-xs"
+                    >
+                      {volume}%
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {volumeLoading && (
+                <div className="text-center text-sm text-gray-400">
+                  <div className="animate-spin w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                  Lautstärke wird angepasst...
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

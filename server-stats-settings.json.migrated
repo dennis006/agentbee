@@ -4,19 +4,19 @@
   "channels": {
     "memberCount": {
       "enabled": true,
-      "channelId": "1385954447510999100",
+      "channelId": "1385954645343469578",
       "name": "👥 Mitglieder: {count}",
       "position": 0
     },
     "onlineCount": {
       "enabled": true,
-      "channelId": "1385954453278036089",
+      "channelId": "1385954651203174532",
       "name": "🟢 Online: {count}",
       "position": 1
     },
     "boostCount": {
       "enabled": true,
-      "channelId": "1385954459359907941",
+      "channelId": "1385954657523728495",
       "name": "🚀 Boosts: {count}",
       "position": 2
     },
@@ -51,7 +51,7 @@
       "position": 7
     }
   },
-  "categoryId": "1385954445916901438",
+  "categoryId": "1385954642722291861",
   "categoryName": "📊 Server Statistiken",
   "permissions": {
     "viewChannel": true,

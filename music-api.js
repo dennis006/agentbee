@@ -129,6 +129,7 @@ const audioPlayers = new Map(); // guild -> player
 const currentStations = new Map(); // guildId -> current station
 const currentSongs = new Map(); // guildId -> current song info
 const currentRadioStations = new Map(); // guildId -> current radio station
+const currentVolume = new Map(); // Neue Map für Guild-Volume Tracking
 
 // Genre-Liste für Dropdown
 const musicGenres = [
@@ -438,14 +439,15 @@ async function playLocalSong(guildId, songId) {
         // Erstelle Player
         const player = createPlayerForGuild(guildId);
 
-        // Erstelle lokale Datei-Ressource
+        // Erstelle lokale Datei-Ressource mit Guild-spezifischem Volume
+        const volume = getVolumeForGuild(guildId) / 100; // 0.0-1.0
         const resource = createAudioResource(song.path, {
             inputType: StreamType.Arbitrary,
             inlineVolume: true
         });
 
         if (resource.volume) {
-            resource.volume.setVolume(0.5); // 50% Volume
+            resource.volume.setVolume(volume);
         }
 
         // Spiele ab
@@ -597,7 +599,8 @@ async function playRadioStation(guildId, stationId) {
         }
 
         if (resource.volume) {
-            resource.volume.setVolume(0.3); // 30% Volume für bessere Performance
+            const volume = getVolumeForGuild(guildId) / 100; // 0.0-1.0
+            resource.volume.setVolume(volume);
         }
 
         // Event-Listener für bessere Fehlerbehandlung
@@ -1032,7 +1035,28 @@ async function createInteractiveRadioPanel(guildId) {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-        return { embeds: [embed], components: [mainButtons, controlButtons] };
+        // Dritte Reihe: Volume-Control
+        const currentVolume = getVolumeForGuild(guildId);
+        const volumeButtons = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('music_volume_down')
+                    .setLabel('🔉 -10%')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(currentVolume <= 0),
+                new ButtonBuilder()
+                    .setCustomId('music_volume_show')
+                    .setLabel(`🔊 ${currentVolume}%`)
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(true),
+                new ButtonBuilder()
+                    .setCustomId('music_volume_up')
+                    .setLabel('🔊 +10%')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(currentVolume >= 100)
+            );
+
+        return { embeds: [embed], components: [mainButtons, controlButtons, volumeButtons] };
 
     } catch (error) {
         console.error('❌ Fehler beim Erstellen des Musik Panels:', error);
@@ -1562,6 +1586,59 @@ async function handleMusicPlaylistStationSelect(interaction) {
 }
 
 // Kompatibilitätsfunktion für alte Radio-Select Buttons
+// Volume-Control Handler
+async function handleMusicVolumeUpButton(interaction) {
+    try {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const guildId = interaction.guild.id;
+        const newVolume = increaseVolume(guildId, 10);
+        
+        await interaction.editReply({
+            content: `🔊 **Lautstärke erhöht!**\n\`${newVolume}%\` Volume`,
+            ephemeral: true
+        });
+
+        // Update Panel nach Volume-Änderung
+        if (musicSettings.interactivePanel?.enabled) {
+            await updateInteractiveRadioPanel(guildId, true);
+        }
+
+    } catch (error) {
+        console.error('❌ Fehler bei Volume Up:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Erhöhen der Lautstärke!',
+            ephemeral: true
+        });
+    }
+}
+
+async function handleMusicVolumeDownButton(interaction) {
+    try {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const guildId = interaction.guild.id;
+        const newVolume = decreaseVolume(guildId, 10);
+        
+        await interaction.editReply({
+            content: `🔉 **Lautstärke verringert!**\n\`${newVolume}%\` Volume`,
+            ephemeral: true
+        });
+
+        // Update Panel nach Volume-Änderung
+        if (musicSettings.interactivePanel?.enabled) {
+            await updateInteractiveRadioPanel(guildId, true);
+        }
+
+    } catch (error) {
+        console.error('❌ Fehler bei Volume Down:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Verringern der Lautstärke!',
+            ephemeral: true
+        });
+    }
+}
+
 async function handleRadioSelectButton(interaction) {
     // Leite an die neue Musik-Radio-Select Funktion weiter
     return await handleMusicRadioSelectButton(interaction);
@@ -2233,6 +2310,99 @@ function registerMusicAPI(app) {
         }
     });
 
+    // Volume Control Endpoints
+    app.get('/api/music/volume/:guildId', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const volume = getVolumeForGuild(guildId);
+            
+            res.json({
+                success: true,
+                volume: volume,
+                guildId: guildId
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Abrufen der Lautstärke:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    app.post('/api/music/volume/:guildId', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { volume } = req.body;
+            
+            if (typeof volume !== 'number' || volume < 0 || volume > 100) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Volume muss eine Zahl zwischen 0 und 100 sein'
+                });
+            }
+            
+            const newVolume = setVolumeForGuild(guildId, volume);
+            
+            res.json({
+                success: true,
+                volume: newVolume,
+                guildId: guildId,
+                message: `Lautstärke auf ${newVolume}% gesetzt`
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Setzen der Lautstärke:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    app.post('/api/music/volume/:guildId/increase', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { amount = 10 } = req.body;
+            
+            const newVolume = increaseVolume(guildId, amount);
+            
+            res.json({
+                success: true,
+                volume: newVolume,
+                guildId: guildId,
+                message: `Lautstärke um ${amount}% erhöht auf ${newVolume}%`
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Erhöhen der Lautstärke:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    app.post('/api/music/volume/:guildId/decrease', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { amount = 10 } = req.body;
+            
+            const newVolume = decreaseVolume(guildId, amount);
+            
+            res.json({
+                success: true,
+                volume: newVolume,
+                guildId: guildId,
+                message: `Lautstärke um ${amount}% verringert auf ${newVolume}%`
+            });
+        } catch (error) {
+            console.error('❌ Fehler beim Verringern der Lautstärke:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     console.log('✅ Musik API registriert!');
 }
 
@@ -2354,6 +2524,39 @@ async function testRadioStation(stationUrl) {
     }
 }
 
+// Volume Management
+function getVolumeForGuild(guildId) {
+    return currentVolume.get(guildId) || musicSettings.defaultVolume;
+}
+
+function setVolumeForGuild(guildId, volume) {
+    const normalizedVolume = Math.max(0, Math.min(100, volume)); // 0-100 Range
+    currentVolume.set(guildId, normalizedVolume);
+    
+    // Aktualisiere AudioPlayer Volume wenn aktiv
+    const player = audioPlayers.get(guildId);
+    if (player && player.state.status === AudioPlayerStatus.Playing) {
+        const resource = player.state.resource;
+        if (resource && resource.volume) {
+            const actualVolume = normalizedVolume / 100; // 0.0-1.0 für AudioResource
+            resource.volume.setVolume(actualVolume);
+            console.log(`🔊 Volume für Guild ${guildId} auf ${normalizedVolume}% gesetzt (${actualVolume})`);
+        }
+    }
+    
+    return normalizedVolume;
+}
+
+function increaseVolume(guildId, amount = 10) {
+    const currentVol = getVolumeForGuild(guildId);
+    return setVolumeForGuild(guildId, currentVol + amount);
+}
+
+function decreaseVolume(guildId, amount = 10) {
+    const currentVol = getVolumeForGuild(guildId);
+    return setVolumeForGuild(guildId, currentVol - amount);
+}
+
 module.exports = {
     loadMusicSettings,
     saveMusicSettings,
@@ -2400,5 +2603,12 @@ module.exports = {
     handleMusicVoiceLeaveButton,
     handleMusicRefreshButton,
     handleMusicMP3SongSelect,
-    handleMusicPlaylistStationSelect
+    handleMusicPlaylistStationSelect,
+    // Volume Management
+    getVolumeForGuild,
+    setVolumeForGuild,
+    increaseVolume,
+    decreaseVolume,
+    handleMusicVolumeUpButton,
+    handleMusicVolumeDownButton
 }; 

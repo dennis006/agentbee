@@ -4546,6 +4546,19 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
 
+    // Volume Control Button Handlers
+    if (interaction.customId === 'music_volume_up') {
+        const { handleMusicVolumeUpButton } = require('./music-api');
+        await handleMusicVolumeUpButton(interaction);
+        return;
+    }
+
+    if (interaction.customId === 'music_volume_down') {
+        const { handleMusicVolumeDownButton } = require('./music-api');
+        await handleMusicVolumeDownButton(interaction);
+        return;
+    }
+
     // Vollständiges Musik-System Select Menu Handlers
     if (interaction.customId === 'music_mp3_song_select') {
         const { handleMusicMP3SongSelect } = require('./music-api');
