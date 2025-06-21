@@ -6,7 +6,8 @@ const {
     AudioPlayerStatus,
     VoiceConnectionStatus, 
     joinVoiceChannel, 
-    AudioResource 
+    AudioResource,
+    entersState
 } = require('@discordjs/voice');
 
 const fs = require('fs');
@@ -1203,39 +1204,52 @@ function registerMusicAPI(app) {
     });
 
     // Update Music Settings
-    app.post('/api/music/settings', (req, res) => {
+    app.post('/api/music/settings', async (req, res) => {
         try {
             const newSettings = req.body;
+            console.log('💾 Musik-Einstellungen Update Request:', JSON.stringify(newSettings, null, 2));
             
             // Validierung und sichere Aktualisierung
             if (newSettings.localMusic) {
                 musicSettings.localMusic = { ...musicSettings.localMusic, ...newSettings.localMusic };
+                console.log('✅ LocalMusic Settings aktualisiert');
             }
             
             if (newSettings.voiceChannel) {
                 musicSettings.voiceChannel = { ...musicSettings.voiceChannel, ...newSettings.voiceChannel };
+                console.log('✅ VoiceChannel Settings aktualisiert');
             }
             
             if (newSettings.announcements) {
                 musicSettings.announcements = { ...musicSettings.announcements, ...newSettings.announcements };
+                console.log('✅ Announcements Settings aktualisiert');
             }
             
             if (newSettings.interactivePanel) {
                 musicSettings.interactivePanel = { ...musicSettings.interactivePanel, ...newSettings.interactivePanel };
+                console.log('✅ InteractivePanel Settings aktualisiert');
             }
             
-            saveMusicSettings();
+            // Guild-ID aus Request extrahieren oder Default verwenden
+            const guildId = newSettings.guildId || process.env.GUILD_ID || '1203994020779532348';
+            console.log(`💾 Speichere Musik-Einstellungen für Guild: ${guildId}`);
+            
+            // Asynchron speichern (Supabase + lokale JSON)
+            await saveMusicSettings(guildId);
             
             res.json({
                 success: true,
-                message: 'Musik-Einstellungen erfolgreich aktualisiert',
-                settings: musicSettings
+                message: 'Musik-Einstellungen erfolgreich aktualisiert und in Supabase gespeichert',
+                settings: musicSettings,
+                savedToDatabase: true
             });
             
         } catch (error) {
+            console.error('❌ Fehler beim Aktualisieren der Musik-Einstellungen:', error);
             res.status(500).json({
                 success: false,
-                error: error.message
+                error: error.message,
+                savedToDatabase: false
             });
         }
     });
@@ -1246,15 +1260,15 @@ function registerMusicAPI(app) {
             const { guildId } = req.params;
             console.log(`🔍 Channels Request für Guild: ${guildId}`);
             
-            if (!client || !client.guilds) {
+            if (!global.client || !global.client.guilds) {
                 console.log('❌ Bot nicht verfügbar');
                 return res.status(500).json({ error: 'Bot nicht verfügbar' });
             }
 
-            const guild = client.guilds.cache.get(guildId);
+            const guild = global.client.guilds.cache.get(guildId);
             if (!guild) {
                 console.log(`❌ Guild ${guildId} nicht gefunden`);
-                console.log(`📋 Verfügbare Guilds: ${client.guilds.cache.map(g => `${g.name} (${g.id})`).join(', ')}`);
+                console.log(`📋 Verfügbare Guilds: ${global.client.guilds.cache.map(g => `${g.name} (${g.id})`).join(', ')}`);
                 return res.status(404).json({ error: 'Guild nicht gefunden' });
             }
 

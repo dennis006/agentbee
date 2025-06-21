@@ -540,18 +540,35 @@ const Music: React.FC = () => {
   const saveSettings = async () => {
     try {
       setSaving(true);
+      
+      // Füge guildId zu den Settings hinzu
+      const settingsWithGuild = {
+        ...settings,
+        guildId: guildId || '1203994020779532348' // Fallback Guild-ID
+      };
+      
+      console.log('💾 Speichere Musik-Einstellungen:', settingsWithGuild);
+      
       const response = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        body: JSON.stringify(settingsWithGuild)
       });
       
       if (response.ok) {
-        showSuccess('Musik', '🎵 Einstellungen erfolgreich gespeichert!');
+        const data = await response.json();
+        console.log('✅ Speicher-Response:', data);
+        showSuccess('Musik', data.savedToDatabase ? 
+          '🎵 Einstellungen in Supabase gespeichert!' : 
+          '🎵 Einstellungen lokal gespeichert!'
+        );
       } else {
-        showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
+        const errorData = await response.json();
+        console.error('❌ Speicher-Fehler:', errorData);
+        showError('Speicher Fehler', errorData.error || 'Fehler beim Speichern der Einstellungen');
       }
     } catch (error) {
+      console.error('❌ Speicher-Exception:', error);
       showError('Speicher Fehler', 'Verbindungsfehler beim Speichern');
     } finally {
       setSaving(false);
