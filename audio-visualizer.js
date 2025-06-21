@@ -36,6 +36,7 @@ class AudioVisualizer {
         // WebSocket Server für Live-Updates
         this.wsServer = null;
         this.clients = new Set();
+        this.wsPort = 8080; // Default Port
         
         // Canvas für Visualisierung (falls verfügbar)
         this.canvas = null;
@@ -51,12 +52,43 @@ class AudioVisualizer {
         console.log('🌊 Audio Visualizer initialisiert');
     }
 
-    initializeWebSocketServer() {
+    async findAvailablePort(startPort = 8080) {
+        const net = require('net');
+        
+        return new Promise((resolve) => {
+            const server = net.createServer();
+            
+            server.listen(startPort, (err) => {
+                if (err) {
+                    server.close();
+                    // Versuche nächsten Port
+                    this.findAvailablePort(startPort + 1).then(resolve);
+                } else {
+                    const port = server.address().port;
+                    server.close();
+                    resolve(port);
+                }
+            });
+            
+            server.on('error', () => {
+                // Port nicht verfügbar, versuche nächsten
+                this.findAvailablePort(startPort + 1).then(resolve);
+            });
+        });
+    }
+
+    async initializeWebSocketServer() {
         try {
-            this.wsServer = new WebSocket.Server({ port: 8080 });
+            // Finde einen verfügbaren Port
+            this.wsPort = await this.findAvailablePort(8080);
+            
+            this.wsServer = new WebSocket.Server({ 
+                port: this.wsPort,
+                perMessageDeflate: false
+            });
             
             this.wsServer.on('connection', (ws) => {
-                console.log('🌊 Neuer Audio Visualizer Client verbunden');
+                console.log(`🌊 Neuer Audio Visualizer Client verbunden auf Port ${this.wsPort}`);
                 this.clients.add(ws);
                 
                 // Sende aktuelle Audio-Daten
@@ -83,9 +115,22 @@ class AudioVisualizer {
                         console.error('WebSocket Message Error:', error);
                     }
                 });
+                
+                ws.on('error', (error) => {
+                    console.error('WebSocket Client Error:', error);
+                    this.clients.delete(ws);
+                });
             });
             
-            console.log('🌊 Audio Visualizer WebSocket Server gestartet auf Port 8080');
+            this.wsServer.on('error', (error) => {
+                console.error('❌ WebSocket Server Error:', error);
+                if (error.code === 'EADDRINUSE') {
+                    console.log('🔄 Port belegt, versuche anderen Port...');
+                    setTimeout(() => this.initializeWebSocketServer(), 1000);
+                }
+            });
+            
+            console.log(`🌊 Audio Visualizer WebSocket Server gestartet auf Port ${this.wsPort}`);
         } catch (error) {
             console.error('❌ Fehler beim Starten des WebSocket Servers:', error);
         }
@@ -426,6 +471,7 @@ class AudioVisualizer {
         return {
             ...this.audioData,
             isAnalyzing: this.isAnalyzing,
+            wsPort: this.wsPort,
             timestamp: Date.now()
         };
     }
