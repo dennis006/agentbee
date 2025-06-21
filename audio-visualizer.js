@@ -137,13 +137,14 @@ class AudioVisualizer {
 
     // Audio Stream Transformer für Echtzeit-Analyse
     createAudioTransform() {
+        const self = this;
         return new Transform({
             transform(chunk, encoding, callback) {
-                if (this.isAnalyzing) {
-                    this.processAudioChunk(chunk);
+                if (self.isAnalyzing) {
+                    self.processAudioChunk(chunk);
                 }
                 callback(null, chunk); // Pass-through
-            }.bind(this)
+            }
         });
     }
 
