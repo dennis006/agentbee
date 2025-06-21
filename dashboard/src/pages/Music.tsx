@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X } from 'lucide-react';
+import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -544,6 +544,9 @@ const Music: React.FC = () => {
   const [currentVolume, setCurrentVolume] = useState(50);
   const [volumeLoading, setVolumeLoading] = useState(false);
 
+  // MP3 Bibliothek Filter State
+  const [songFilter, setSongFilter] = useState<'all' | 'inPlaylist' | 'unused'>('all');
+
   // Guild & Channel State
   const [guildInfo, setGuildInfo] = useState<{
     id: string;
@@ -556,6 +559,17 @@ const Music: React.FC = () => {
   }>({ text: [], voice: [] });
   
 
+  // Hilfsfunktion: Prüft ob ein Song in Playlists ist
+  const getSongPlaylistInfo = (songId: string) => {
+    const playlistsWithSong = settings.localMusic.stations.filter(station => 
+      station.playlist.some(song => song.id === songId)
+    );
+    return {
+      isInPlaylist: playlistsWithSong.length > 0,
+      playlistCount: playlistsWithSong.length,
+      playlists: playlistsWithSong
+    };
+  };
 
   // Load Guild Channels
   const loadGuildChannels = async (targetGuildId: string) => {
@@ -1886,45 +1900,141 @@ const Music: React.FC = () => {
               MP3 Bibliothek
                 </CardTitle>
                 <CardDescription>
-              {availableSongs.length} Songs verfügbar
+                  <div className="flex items-center gap-4">
+                    <span>{availableSongs.length} Songs verfügbar</span>
+                    {availableSongs.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-green-400" />
+                          <span className="text-xs text-green-400">
+                            {availableSongs.filter(song => getSongPlaylistInfo(song.id).isInPlaylist).length} in Playlists
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MusicIcon className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-400">
+                            {availableSongs.filter(song => !getSongPlaylistInfo(song.id).isInPlaylist).length} ungenutzt
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardDescription>
               </CardHeader>
               <CardContent>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {availableSongs.map((song) => (
-                <div
-                  key={song.id}
-                  className="flex items-center gap-2 p-2 bg-dark-bg/50 rounded-lg border border-gray-600/30 hover:border-purple-primary/50 transition-all duration-300"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{song.title}</p>
-                    <p className="text-xs text-gray-400 truncate">{song.artist}</p>
-                        </div>
-                  <div className="flex items-center gap-1">
-                          <Button
-                      onClick={() => playSong(song.id)}
-                      disabled={musicStatus.currentSong?.id === song.id}
-                      className="px-2 py-1 text-xs"
-                    >
-                      {musicStatus.currentSong?.id === song.id ? (
-                        <Pause className="w-3 h-3" />
-                      ) : (
-                                <Play className="w-3 h-3" />
-                            )}
-                          </Button>
-                    {isCreatingStation && (
-                            <Button
-                        onClick={() => addSongToPlaylist(song)}
-                        variant="outline"
-                              className="px-2 py-1 text-xs"
-                            >
-                        <Plus className="w-3 h-3" />
-                            </Button>
-                )}
-              </div>
-                    </div>
-                  ))}
+                {/* Filter Buttons */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    onClick={() => setSongFilter('all')}
+                    variant={songFilter === 'all' ? 'default' : 'outline'}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <MusicIcon className="w-3 h-3" />
+                    Alle ({availableSongs.length})
+                  </Button>
+                  <Button
+                    onClick={() => setSongFilter('inPlaylist')}
+                    variant={songFilter === 'inPlaylist' ? 'default' : 'outline'}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    In Playlists ({availableSongs.filter(song => getSongPlaylistInfo(song.id).isInPlaylist).length})
+                  </Button>
+                  <Button
+                    onClick={() => setSongFilter('unused')}
+                    variant={songFilter === 'unused' ? 'default' : 'outline'}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <Upload className="w-3 h-3" />
+                    Ungenutzt ({availableSongs.filter(song => !getSongPlaylistInfo(song.id).isInPlaylist).length})
+                  </Button>
                 </div>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {availableSongs
+                .filter(song => {
+                  const playlistInfo = getSongPlaylistInfo(song.id);
+                  if (songFilter === 'inPlaylist') return playlistInfo.isInPlaylist;
+                  if (songFilter === 'unused') return !playlistInfo.isInPlaylist;
+                  return true; // 'all'
+                })
+                .map((song) => {
+                const playlistInfo = getSongPlaylistInfo(song.id);
+                return (
+                  <div
+                    key={song.id}
+                    className={`relative flex items-center gap-2 p-2 bg-dark-bg/50 rounded-lg border transition-all duration-300 ${
+                      playlistInfo.isInPlaylist 
+                        ? 'border-green-400/50 bg-green-500/10 hover:border-green-400/70' 
+                        : 'border-gray-600/30 hover:border-purple-primary/50'
+                    }`}
+                  >
+                    {/* Playlist Status Indicator */}
+                    {playlistInfo.isInPlaylist && (
+                      <div className="absolute -top-1 -right-1 flex items-center gap-1">
+                        <div className="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-lg">
+                          <CheckCircle className="w-3 h-3" />
+                          <span>{playlistInfo.playlistCount}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Playlist Status Icon */}
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-dark-surface/50">
+                      {playlistInfo.isInPlaylist ? (
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <MusicIcon className="w-4 h-4 text-gray-400" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-white truncate">{song.title}</p>
+                        {playlistInfo.playlistCount > 1 && (
+                          <div className="relative group">
+                            <Star className="w-3 h-3 text-yellow-400" />
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-dark-bg text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                              In mehreren Playlists
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 truncate">{song.artist}</p>
+                      {playlistInfo.isInPlaylist && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-xs text-green-400">
+                            In: {playlistInfo.playlists.map(p => p.name).join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Button
+                        onClick={() => playSong(song.id)}
+                        disabled={musicStatus.currentSong?.id === song.id}
+                        className="px-2 py-1 text-xs"
+                      >
+                        {musicStatus.currentSong?.id === song.id ? (
+                          <Pause className="w-3 h-3" />
+                        ) : (
+                          <Play className="w-3 h-3" />
+                        )}
+                      </Button>
+                      {isCreatingStation && (
+                        <Button
+                          onClick={() => addSongToPlaylist(song)}
+                          variant="outline"
+                          className="px-2 py-1 text-xs"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
             
             {availableSongs.length === 0 && (
               <div className="text-center py-8">
