@@ -2035,8 +2035,8 @@ app.post('/api/rules/repost', async (req, res) => {
                     const rulesEmbed = createRulesEmbed(guild.name);
                     const rulesMessage = await rulesChannel.send({ embeds: [rulesEmbed] });
                     
-                    // Füge Reaktion hinzu
-                    await rulesMessage.react(rulesData.reaction.emoji);
+                                    // Füge Reaktion hinzu
+                await rulesMessage.react(rules.reaction.emoji);
                     
                     // Speichere Nachrichten-ID
                     rulesMessages.set(rulesMessage.id, {
@@ -2086,6 +2086,36 @@ let rulesData = {
         acceptedMessage: "Willkommen! Du hast die Regeln akzeptiert."
     }
 };
+
+// Globale Variable für aktuelle Regeln aus Supabase
+let currentRulesData = null;
+
+// Funktion zum Laden der aktuellen Regeln aus Supabase
+async function loadCurrentRules() {
+    try {
+        const { loadRulesFromSupabase } = require('./rules-supabase-api');
+        const rules = await loadRulesFromSupabase(process.env.GUILD_ID || '1203994020779532348');
+        
+        if (rules) {
+            currentRulesData = rules;
+            console.log('✅ Aktuelle Regeln aus Supabase geladen');
+            return rules;
+        } else {
+            console.log('⚠️ Keine Regeln in Supabase gefunden, verwende Fallback');
+            currentRulesData = rulesData;
+            return rulesData;
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Regeln:', error);
+        currentRulesData = rulesData;
+        return rulesData;
+    }
+}
+
+// Hilfsfunktion um die aktuellen Regeln zu bekommen
+function getCurrentRules() {
+    return currentRulesData || rulesData;
+}
 
 // Daily Message Counter für echte "heute" Statistiken
 let dailyMessageCount = 0;
@@ -2177,18 +2207,30 @@ function initializeOpenAI() {
 initializeOpenAI();
 
 // Funktion um Regeln zu erstellen
-function createRulesEmbed(guildName) {
-    const description = rulesData.description.replace('{serverName}', guildName);
+async function createRulesEmbed(guildName) {
+    // Lade Regeln aus Supabase
+    const { loadRulesFromSupabase } = require('./rules-supabase-api');
+    let rules = await loadRulesFromSupabase(process.env.GUILD_ID || '1203994020779532348');
+    
+    // Fallback zu Standard-Regeln falls Supabase nicht verfügbar
+    if (!rules) {
+        rules = rulesData;
+        console.log('⚠️ Verwende Fallback-Regeln für Embed');
+    } else {
+        console.log('✅ Regeln aus Supabase für Embed geladen');
+    }
+    
+    const description = rules.description.replace('{serverName}', guildName);
     
     const embed = new EmbedBuilder()
-        .setColor(parseInt(rulesData.color, 16))
-        .setTitle(rulesData.title)
+        .setColor(parseInt(rules.color, 16))
+        .setTitle(rules.title)
         .setDescription(description)
-        .setFooter({ text: rulesData.footer })
+        .setFooter({ text: rules.footer })
         .setTimestamp();
 
     // Füge alle Regeln hinzu
-    rulesData.rules.forEach(rule => {
+    rules.rules.forEach(rule => {
         embed.addFields({
             name: `${rule.emoji} ${rule.name}`,
             value: rule.value,
@@ -2199,7 +2241,7 @@ function createRulesEmbed(guildName) {
     // Füge Reaktions-Anweisung hinzu
     embed.addFields({
         name: '📝 Bestätigung',
-        value: rulesData.reaction.message,
+        value: rules.reaction.message,
         inline: false
     });
 
@@ -2444,10 +2486,22 @@ function createLeaveEmbed(guild, member, leaveSettings) {
 async function autoPostRules() {
     console.log('🔍 Suche nach Rules-Kanälen...');
     
+    // Lade Regeln aus Supabase
+    const { loadRulesFromSupabase } = require('./rules-supabase-api');
+    let rules = await loadRulesFromSupabase(process.env.GUILD_ID || '1203994020779532348');
+    
+    // Fallback zu Standard-Regeln falls Supabase nicht verfügbar
+    if (!rules) {
+        rules = rulesData;
+        console.log('⚠️ Verwende Fallback-Regeln für Auto-Post');
+    } else {
+        console.log('✅ Regeln aus Supabase für Auto-Post geladen');
+    }
+    
     // Durchlaufe alle Server (Guilds) in denen der Bot ist
     client.guilds.cache.forEach(async guild => {
         // Verwende den konfigurierten Channel-Namen aus den Regeln
-        const channelName = rulesData.channelName || rulesData.channel || 'rules';
+        const channelName = rules.channelName || rules.channel || 'rules';
         // Finde den Rules-Kanal
         const rulesChannel = guild.channels.cache.find(ch => 
             ch.name.toLowerCase().includes(channelName.toLowerCase()) ||
@@ -2466,11 +2520,11 @@ async function autoPostRules() {
                 }
 
                 // Poste neue Regeln
-                const rulesEmbed = createRulesEmbed(guild.name);
+                const rulesEmbed = await createRulesEmbed(guild.name);
                 const rulesMessage = await rulesChannel.send({ embeds: [rulesEmbed] });
                 
                 // Füge Reaktion hinzu
-                await rulesMessage.react(rulesData.reaction.emoji);
+                await rulesMessage.react(rules.reaction.emoji);
                 
                 // Speichere Nachrichten-ID für Reaktions-Handling
                 rulesMessages.set(rulesMessage.id, {
@@ -3535,9 +3589,10 @@ client.on(Events.GuildCreate, async guild => {
         );
 
         if (rulesChannel) {
-            const rulesEmbed = createRulesEmbed(guild.name);
+            const rulesEmbed = await createRulesEmbed(guild.name);
             const rulesMessage = await rulesChannel.send({ embeds: [rulesEmbed] });
-            await rulesMessage.react(rulesData.reaction.emoji);
+            const currentRules = getCurrentRules();
+            await rulesMessage.react(currentRules.reaction.emoji);
             
             rulesMessages.set(rulesMessage.id, {
                 guildId: guild.id,
@@ -3560,12 +3615,15 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
         const guild = client.guilds.cache.get(rulesInfo.guildId);
         const member = guild.members.cache.get(user.id);
 
+        // Lade aktuelle Regeln für Reaktions-Handling
+        const currentRules = getCurrentRules();
+        
         // Prüfe ob es die richtige Reaktion ist
-        if (reaction.emoji.name === rulesData.reaction.emoji) {
+        if (reaction.emoji.name === currentRules.reaction.emoji) {
             try {
                 // Suche nach "verified" oder ähnlicher Rolle
                 const verifiedRole = guild.roles.cache.find(role => 
-                    role.name.toLowerCase().includes(rulesData.reaction.acceptedRole) ||
+                    role.name.toLowerCase().includes(currentRules.reaction.acceptedRole) ||
                     role.name.toLowerCase().includes('verified') ||
                     role.name.toLowerCase().includes('member') ||
                     role.name.toLowerCase().includes('user')
@@ -3577,7 +3635,7 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
 
                     // Sende DM an User (optional)
                     try {
-                        await user.send(`🎉 ${rulesData.reaction.acceptedMessage}`);
+                        await user.send(`🎉 ${currentRules.reaction.acceptedMessage}`);
                     } catch (error) {
                         console.log(`⚠️ Konnte keine DM an ${user.tag} senden`);
                     }
@@ -3616,15 +3674,18 @@ client.on(Events.MessageReactionRemove, async (reaction, user) => {
     // Ignoriere Bot-Reaktionen
     if (user.bot) return;
 
+    // Lade aktuelle Regeln für Reaktions-Handling
+    const currentRules = getCurrentRules();
+    
     // Prüfe ob es eine Regeln-Nachricht ist und die richtige Reaktion
-    if (rulesMessages.has(reaction.message.id) && reaction.emoji.name === rulesData.reaction.emoji) {
+    if (rulesMessages.has(reaction.message.id) && reaction.emoji.name === currentRules.reaction.emoji) {
         const rulesInfo = rulesMessages.get(reaction.message.id);
         const guild = client.guilds.cache.get(rulesInfo.guildId);
         const member = guild.members.cache.get(user.id);
 
         // Optional: Rolle entfernen wenn Reaktion entfernt wird
         const verifiedRole = guild.roles.cache.find(role => 
-            role.name.toLowerCase().includes(rulesData.reaction.acceptedRole) ||
+            role.name.toLowerCase().includes(currentRules.reaction.acceptedRole) ||
             role.name.toLowerCase().includes('verified') ||
             role.name.toLowerCase().includes('member')
         );
@@ -4057,9 +4118,10 @@ client.on(Events.MessageCreate, async message => {
         );
 
         if (rulesChannel) {
-            const rulesEmbed = createRulesEmbed(message.guild.name);
+            const rulesEmbed = await createRulesEmbed(message.guild.name);
             const rulesMessage = await rulesChannel.send({ embeds: [rulesEmbed] });
-            await rulesMessage.react(rulesData.reaction.emoji);
+            const currentRules = getCurrentRules();
+            await rulesMessage.react(currentRules.reaction.emoji);
             
             rulesMessages.set(rulesMessage.id, {
                 guildId: message.guild.id,
@@ -7080,6 +7142,13 @@ app.get('/api/server-comparison', async (req, res) => {
 
 // Voice Channels und Categories werden für Discord Native AFK nicht benötigt
 // Discord AFK wird direkt über Server Settings konfiguriert
+
+// Lade Regeln aus Supabase beim Start
+loadCurrentRules().then(() => {
+    console.log('✅ Regeln beim Bot-Start geladen');
+}).catch(error => {
+    console.error('❌ Fehler beim Laden der Regeln beim Start:', error);
+});
 
 // Bot anmelden
 client.login(apiKeys.discord.bot_token);
