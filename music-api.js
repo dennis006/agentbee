@@ -597,13 +597,16 @@ async function playRadioStation(guildId, stationId) {
             try {
                 // Verwende FFmpeg über prism-media für bessere Kompatibilität
                 const ffmpegArgs = [
+                    '-re', // Read input at native frame rate (wichtig für Live-Streams)
                     '-i', station.url,
-                    '-analyzeduration', '0',
-                    '-probesize', '32',
-                    '-loglevel', 'error',
+                    '-analyzeduration', '100000',
+                    '-probesize', '100000', 
+                    '-loglevel', 'warning',
                     '-reconnect', '1',
                     '-reconnect_streamed', '1',
-                    '-reconnect_delay_max', '5',
+                    '-reconnect_delay_max', '10',
+                    '-timeout', '30000000', // 30 second timeout
+                    '-user_agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                     '-f', 's16le',
                     '-ar', '48000',
                     '-ac', '2',
@@ -646,7 +649,18 @@ async function playRadioStation(guildId, stationId) {
         if (resource.volume) {
             const volume = getVolumeForGuild(guildId) / 100; // 0.0-1.0
             resource.volume.setVolume(volume);
+            console.log(`🔊 Volume gesetzt auf ${volume} (${getVolumeForGuild(guildId)}%)`);
+        } else {
+            console.log('⚠️ Keine Volume-Kontrolle verfügbar für diesen Stream');
         }
+        
+        // Audio-Resource Debug-Info
+        console.log(`🎵 AudioResource erstellt:`, {
+            readable: resource.readable,
+            ended: resource.ended,
+            silencePaddingFrames: resource.silencePaddingFrames,
+            volume: !!resource.volume
+        });
 
         // Event-Listener für bessere Fehlerbehandlung
         player.on(AudioPlayerStatus.Playing, () => {
@@ -660,40 +674,56 @@ async function playRadioStation(guildId, stationId) {
         player.on(AudioPlayerStatus.Idle, (oldState) => {
             console.log(`⏸️ Radio idle: ${station.name} (von ${oldState.status})`);
             
-            // Nur bei unexpectedem Ende neu starten, mit Cooldown und Limits
+            // Prüfe ob Stream noch aktiv sein sollte
+            if (!currentRadioStations.has(guildId)) {
+                console.log('📻 Stream wurde manuell gestoppt - kein Restart');
+                return;
+            }
+            
+            // Nur bei unexpectedem Ende neu starten, mit strengen Limits
             if (oldState.status === AudioPlayerStatus.Playing || oldState.status === AudioPlayerStatus.Buffering) {
                 const now = Date.now();
                 const lastRestart = streamRestartCooldown.get(guildId) || 0;
                 const attempts = streamRestartAttempts.get(guildId) || 0;
                 
-                // Cooldown: Mindestens 10 Sekunden zwischen Restarts
-                if (now - lastRestart < 10000) {
-                    console.log('🕐 Stream-Restart Cooldown aktiv, überspringe...');
+                // Cooldown: Mindestens 15 Sekunden zwischen Restarts
+                if (now - lastRestart < 15000) {
+                    console.log('🕐 Stream-Restart Cooldown aktiv (15s), überspringe...');
                     return;
                 }
                 
-                // Maximum 3 Restart-Versuche
-                if (attempts >= 3) {
-                    console.log('🚫 Maximum Restart-Versuche erreicht, stoppe Stream');
+                // Maximum 2 Restart-Versuche (reduziert von 3)
+                if (attempts >= 2) {
+                    console.log('🚫 Maximum Restart-Versuche erreicht, stoppe Stream dauerhaft');
                     stopRadio(guildId);
                     streamRestartAttempts.delete(guildId);
                     streamRestartCooldown.delete(guildId);
                     return;
                 }
                 
-                console.log(`🔄 Stream unterbrochen, versuche Neustart (${attempts + 1}/3)...`);
+                console.log(`🔄 Stream unterbrochen, versuche Neustart (${attempts + 1}/2)...`);
                 streamRestartCooldown.set(guildId, now);
                 streamRestartAttempts.set(guildId, attempts + 1);
                 
                 setTimeout(async () => {
+                    // Doppelt prüfen ob Stream noch gewünscht ist
                     if (currentRadioStations.has(guildId)) {
                         try {
+                            console.log('🔄 Starte Stream-Neuaufbau...');
+                            
+                            // Stoppe aktuellen Player sauber
+                            player.stop();
+                            
+                            // Neuer Versuch mit frischem Player
                             await playRadioStation(guildId, stationId);
                         } catch (error) {
                             console.error('❌ Neustart fehlgeschlagen:', error);
+                            stopRadio(guildId);
                         }
+                    } else {
+                        console.log('📻 Stream nicht mehr aktiv - kein Restart');
                     }
-                }, 5000); // Längere Wartezeit
+                }, 8000); // Längere Wartezeit
             }
         });
 
@@ -733,9 +763,27 @@ async function playRadioStation(guildId, stationId) {
             console.error(`❌ Audio Resource Stream Fehler:`, error);
         });
 
-        // Spiele ab
+        // Prüfe Connection-Status vor dem Abspielen
+        if (connection.state.status !== 'ready') {
+            console.log(`⚠️ Connection Status: ${connection.state.status} - warte auf ready...`);
+            try {
+                await entersState(connection, VoiceConnectionStatus.Ready, 10000);
+                console.log('✅ Connection jetzt ready');
+            } catch (timeoutError) {
+                console.log('⚠️ Connection Timeout, versuche trotzdem abzuspielen');
+            }
+        }
+
+        // Spiele ab und prüfe sofort den Status
         player.play(resource);
-        connection.subscribe(player);
+        const subscription = connection.subscribe(player);
+        
+        if (!subscription) {
+            console.error('❌ Subscription fehlgeschlagen - kein Audio möglich');
+            throw new Error('Failed to subscribe audio player to voice connection');
+        }
+        
+        console.log(`🔗 AudioPlayer subscribed to connection (Status: ${connection.state.status})`);
 
         // Setze als aktueller Radio-Sender
         currentRadioStations.set(guildId, station);
@@ -743,6 +791,16 @@ async function playRadioStation(guildId, stationId) {
         // Reset Stream-Restart-Counter bei erfolgreichem Start
         streamRestartAttempts.delete(guildId);
         streamRestartCooldown.delete(guildId);
+
+        // Warte kurz und prüfe Player-Status
+        setTimeout(() => {
+            console.log(`🎵 Player Status nach Start: ${player.state.status}`);
+            if (player.state.status === AudioPlayerStatus.Playing) {
+                console.log('✅ Audio spielt erfolgreich');
+            } else {
+                console.log(`⚠️ Audio spielt nicht - Status: ${player.state.status}`);
+            }
+        }, 1000);
 
         console.log(`✅ Radio-Station ${station.name} gestartet`);
         
