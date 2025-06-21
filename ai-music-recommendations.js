@@ -12,44 +12,50 @@ try {
   console.log('⚠️ OpenAI nicht verfügbar:', error.message);
 }
 
-// Musik-Analyse Prompts
+// Musik-Discovery Prompts für NEUE Songs
 const MUSIC_PROMPTS = {
-  similarSongs: (songs, availableSongs) => `
-Du bist ein Musik-Experte. Analysiere diese Songs aus einer Playlist:
+  similarSongs: (songs) => `
+Du bist ein Musik-Experte für Song-Discovery. Analysiere diese Playlist:
 ${songs.map(s => `- ${s.title} von ${s.artist}`).join('\n')}
 
-Verfügbare Songs zum Vorschlagen:
-${availableSongs.map(s => `- ${s.artist} von ${s.title}`).join('\n')}
+Schlage 10-15 NEUE Songs vor, die perfekt zu dieser Playlist passen würden.
+Berücksichtige: Genre, Stimmung, Tempo, Energie-Level, Künstler-Stil und Jahrzehnt.
 
-Finde 5-8 ähnliche Songs aus der verfügbaren Liste, die perfekt zu dieser Playlist passen würden.
-Berücksichtige: Genre, Stimmung, Tempo, Künstler-Stil, und Jahrzehnt.
+WICHTIG: Schlage Songs vor, die der User noch NICHT hat, aber die thematisch und stilistisch perfekt passen!
 
-Antworte NUR mit einem JSON Array von Song-Titeln (exakt wie in der verfügbaren Liste):
-["Titel 1", "Titel 2", "Titel 3"]
+Antworte mit einem JSON Array mit Objekten:
+[
+  {"title": "Song Titel", "artist": "Künstler Name", "reason": "Passt weil ähnlicher Vibe/Genre"},
+  {"title": "Song Titel 2", "artist": "Künstler Name 2", "reason": "Ähnliche Energie und Stimmung"}
+]
 `,
 
-  moodBasedSuggestions: (mood, genre, availableSongs) => `
-Erstelle eine ${mood} ${genre} Playlist. Verfügbare Songs:
-${availableSongs.map(s => `- ${s.title} von ${s.artist}`).join('\n')}
+  moodBasedSuggestions: (mood, genre) => `
+Erstelle Song-Empfehlungen für eine ${mood} ${genre} Playlist.
 
-Wähle 6-10 Songs die perfekt zu "${mood} ${genre}" passen.
-Antworte NUR mit einem JSON Array von Song-Titeln:
-["Titel 1", "Titel 2", "Titel 3"]
+Schlage 12-18 Songs vor, die perfekt zu "${mood} ${genre}" passen.
+Mische bekannte und weniger bekannte Tracks, die alle das gewünschte Feeling haben.
+
+Antworte mit einem JSON Array mit Objekten:
+[
+  {"title": "Song Titel", "artist": "Künstler Name", "reason": "Perfekt für ${mood} Stimmung"},
+  {"title": "Song Titel 2", "artist": "Künstler Name 2", "reason": "Klassiker des ${genre} Genres"}
+]
 `,
 
-  playlistCompletion: (playlistName, description, currentSongs, availableSongs) => `
+  playlistCompletion: (playlistName, description, currentSongs) => `
 Diese Playlist heißt "${playlistName}" - ${description}
 Aktuelle Songs:
 ${currentSongs.map(s => `- ${s.title} von ${s.artist}`).join('\n')}
 
-Verfügbare Songs:
-${availableSongs.map(s => `- ${s.title} von ${s.artist}`).join('\n')}
+Schlage 8-12 NEUE Songs vor, die diese Playlist perfekt vervollständigen würden.
+Berücksichtige das Thema, die Stimmung und den Stil der vorhandenen Songs.
 
-Welche Songs aus der verfügbaren Liste würden diese Playlist perfekt vervollständigen?
-Wähle 4-7 Songs die das Thema und die Stimmung ergänzen.
-
-Antworte NUR mit einem JSON Array von Song-Titeln:
-["Titel 1", "Titel 2", "Titel 3"]
+Antworte mit einem JSON Array mit Objekten:
+[
+  {"title": "Song Titel", "artist": "Künstler Name", "reason": "Ergänzt das Thema perfekt"},
+  {"title": "Song Titel 2", "artist": "Künstler Name 2", "reason": "Passt zur Playlist-Stimmung"}
+]
 `,
 
   playlistNaming: (songs) => `
@@ -61,7 +67,7 @@ Antworte NUR mit einem JSON Array von Namen:
 `
 };
 
-// AI Musik-Empfehlungen
+// AI Song-Discovery für NEUE Songs
 router.post('/ai/recommend', async (req, res) => {
   try {
     if (!openai) {
@@ -71,53 +77,23 @@ router.post('/ai/recommend', async (req, res) => {
       });
     }
 
-    const { type, data, availableSongs: frontendSongs } = req.body;
+    const { type, data } = req.body;
     let prompt = '';
-    let maxTokens = 150;
-
-    // Lade verfügbare Songs - Priorität: Frontend > API > Datei
-    let availableSongs = [];
-    
-    if (frontendSongs && frontendSongs.length > 0) {
-      availableSongs = frontendSongs;
-      console.log(`📱 ${availableSongs.length} Songs vom Frontend erhalten`);
-    } else {
-      try {
-        // Versuche Songs direkt von der Musik-API zu laden
-        const musicApiModule = require('./music-api');
-        if (musicApiModule && musicApiModule.getAvailableSongs) {
-          availableSongs = await musicApiModule.getAvailableSongs();
-          console.log(`🎵 ${availableSongs.length} Songs aus Musik-API geladen`);
-        } else {
-          // Fallback: Lade aus music-library.json
-          const fs = require('fs');
-          const path = require('path');
-          const musicLibPath = path.join(__dirname, 'music-library.json');
-          if (fs.existsSync(musicLibPath)) {
-            const musicLib = JSON.parse(fs.readFileSync(musicLibPath, 'utf8'));
-            availableSongs = musicLib.songs || musicLib.tracks || [];
-            console.log(`📚 ${availableSongs.length} Songs aus music-library.json geladen`);
-          }
-        }
-      } catch (error) {
-        console.log('⚠️ Fehler beim Laden der Musik-Bibliothek:', error.message);
-      }
-    }
+    let maxTokens = 500; // Mehr Tokens für detaillierte Empfehlungen
 
     // Prompt basierend auf Typ generieren
     switch (type) {
       case 'similar':
-        prompt = MUSIC_PROMPTS.similarSongs(data.currentSongs, availableSongs);
+        prompt = MUSIC_PROMPTS.similarSongs(data.currentSongs);
         break;
       case 'mood':
-        prompt = MUSIC_PROMPTS.moodBasedSuggestions(data.mood, data.genre, availableSongs);
+        prompt = MUSIC_PROMPTS.moodBasedSuggestions(data.mood, data.genre);
         break;
       case 'complete':
         prompt = MUSIC_PROMPTS.playlistCompletion(
           data.playlistName, 
           data.description, 
-          data.currentSongs, 
-          availableSongs
+          data.currentSongs
         );
         break;
       case 'naming':
@@ -128,7 +104,8 @@ router.post('/ai/recommend', async (req, res) => {
         return res.status(400).json({ error: 'Unbekannter AI-Typ' });
     }
 
-    console.log('🤖 AI Anfrage:', type, prompt.substring(0, 200) + '...');
+    console.log('🎵 AI Song-Discovery Anfrage:', type);
+    console.log('📝 Prompt:', prompt.substring(0, 300) + '...');
 
     // OpenAI API Aufruf
     const completion = await openai.chat.completions.create({
@@ -136,16 +113,16 @@ router.post('/ai/recommend', async (req, res) => {
       messages: [
         { 
           role: "system", 
-          content: "Du bist ein Musik-Experte, der perfekte Song-Empfehlungen gibt. Antworte immer nur mit validen JSON Arrays." 
+          content: "Du bist ein Musik-Experte für Song-Discovery. Du hilfst dabei, neue Songs zu entdecken, die perfekt zu bestehenden Playlists passen. Antworte immer mit validen JSON Arrays." 
         },
         { role: "user", content: prompt }
       ],
       max_tokens: maxTokens,
-      temperature: 0.7
+      temperature: 0.8 // Mehr Kreativität für Song-Discovery
     });
 
     const aiResponse = completion.choices[0].message.content.trim();
-    console.log('🤖 AI Antwort:', aiResponse);
+    console.log('🤖 AI Song-Discovery Antwort:', aiResponse);
 
     // Parse JSON Response
     let suggestions = [];
@@ -153,92 +130,59 @@ router.post('/ai/recommend', async (req, res) => {
       suggestions = JSON.parse(aiResponse);
     } catch (parseError) {
       console.log('⚠️ JSON Parse Fehler:', parseError);
-      // Fallback: Extrahiere Song-Namen aus Text
-      const lines = aiResponse.split('\n').filter(line => line.includes('-') || line.includes('•'));
-      suggestions = lines.map(line => line.replace(/[-•"'\[\]]/g, '').trim()).filter(s => s.length > 0);
-    }
-
-    // Validiere Vorschläge gegen verfügbare Songs
-    const validSuggestions = [];
-    
-    if (availableSongs.length === 0) {
-      console.log('⚠️ Keine verfügbaren Songs zum Abgleichen gefunden');
-      // Für Debug: Zeige alle AI-Vorschläge auch wenn keine Songs verfügbar sind
-      return res.json({
-        success: true,
-        type: type,
-        suggestions: [],
-        rawResponse: aiResponse,
-        availableSongsCount: 0,
-        debug: {
-          aiSuggestions: suggestions,
-          message: 'Keine Songs in der Bibliothek verfügbar'
+      // Fallback: Versuche AI-Antwort zu extrahieren
+      try {
+        // Suche nach JSON-ähnlichen Strukturen
+        const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          suggestions = JSON.parse(jsonMatch[0]);
+        } else {
+          // Erstelle Basic-Struktur aus Text
+          const lines = aiResponse.split('\n').filter(line => 
+            line.includes('-') && (line.includes('von') || line.includes('by') || line.includes('feat'))
+          );
+          suggestions = lines.map(line => {
+            const parts = line.replace(/[-•"'\[\]]/g, '').trim().split(/\s*von\s*|\s*by\s*|\s*-\s*/);
+            return {
+              title: parts[0]?.trim() || 'Unbekannt',
+              artist: parts[1]?.trim() || 'Unbekannt',
+              reason: 'AI Empfehlung'
+            };
+          });
         }
-      });
-    }
-
-    // Verbesserter Song-Matching-Algorithmus
-    for (const suggestion of suggestions) {
-      const found = availableSongs.find(song => {
-        const songTitle = song.title.toLowerCase().trim();
-        const suggestionLower = suggestion.toLowerCase().trim();
-        
-        // Exakte Übereinstimmung
-        if (songTitle === suggestionLower) return true;
-        
-        // Teilstring-Übereinstimmung (beidseitig)
-        if (songTitle.includes(suggestionLower) || suggestionLower.includes(songTitle)) return true;
-        
-        // Ähnlichkeitscheck ohne Sonderzeichen
-        const cleanSongTitle = songTitle.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
-        const cleanSuggestion = suggestionLower.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ');
-        
-        if (cleanSongTitle.includes(cleanSuggestion) || cleanSuggestion.includes(cleanSongTitle)) return true;
-        
-        // Wort-für-Wort Übereinstimmung
-        const songWords = cleanSongTitle.split(' ');
-        const suggestionWords = cleanSuggestion.split(' ');
-        const matchingWords = songWords.filter(word => 
-          suggestionWords.some(sugWord => 
-            word.length > 2 && sugWord.length > 2 && 
-            (word.includes(sugWord) || sugWord.includes(word))
-          )
-        );
-        
-        return matchingWords.length >= Math.min(2, suggestionWords.length);
-      });
-      
-      if (found) {
-        validSuggestions.push(found);
+      } catch (fallbackError) {
+        console.log('⚠️ Fallback Parse auch fehlgeschlagen:', fallbackError);
+        suggestions = [];
       }
     }
 
-    console.log(`✅ ${validSuggestions.length} gültige Vorschläge gefunden`);
-    console.log('🔍 Debug Info:', {
-      totalAiSuggestions: suggestions.length,
-      validMatches: validSuggestions.length,
-      availableSongs: availableSongs.length,
-      aiSuggestions: suggestions.slice(0, 3), // Erste 3 AI Vorschläge
-      availableTitles: availableSongs.slice(0, 3).map(s => s.title) // Erste 3 verfügbare Songs
-    });
+    // Filtere und validiere Empfehlungen
+    const validSuggestions = suggestions
+      .filter(song => song && song.title && song.artist)
+      .map(song => ({
+        title: song.title.trim(),
+        artist: song.artist.trim(),
+        reason: song.reason || 'AI Empfehlung',
+        isNewDiscovery: true, // Markiere als neue Entdeckung
+        spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`,
+        youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(song.artist + ' ' + song.title)}`
+      }));
+
+    console.log(`✨ ${validSuggestions.length} neue Song-Empfehlungen erstellt`);
 
     res.json({
       success: true,
       type: type,
       suggestions: validSuggestions,
-      rawResponse: aiResponse,
-      availableSongsCount: availableSongs.length,
-      debug: {
-        aiSuggestions: suggestions,
-        matchedSongs: validSuggestions.map(s => s.title),
-        availableSongTitles: availableSongs.map(s => s.title)
-      }
+      discoveryMode: true, // Kennzeichnet als Song-Discovery
+      message: `${validSuggestions.length} neue Songs entdeckt, die perfekt zu deiner Musik passen!`,
+      rawResponse: aiResponse
     });
 
   } catch (error) {
-    console.error('❌ AI Empfehlungs-Fehler:', error);
+    console.error('❌ AI Song-Discovery Fehler:', error);
     res.status(500).json({ 
-      error: 'AI-Empfehlung fehlgeschlagen',
+      error: 'Song-Discovery fehlgeschlagen',
       message: error.message
     });
   }

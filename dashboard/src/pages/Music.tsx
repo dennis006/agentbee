@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star, Bot, Sparkles, Zap } from 'lucide-react';
+import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star, Bot, Sparkles, Zap, Copy } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -432,6 +432,11 @@ interface Song {
   duration: number;
   size: number;
   path: string;
+  // Song-Discovery Properties
+  reason?: string;
+  isNewDiscovery?: boolean;
+  spotifyUrl?: string;
+  youtubeUrl?: string;
 }
 
 interface Station {
@@ -1371,9 +1376,11 @@ const Music: React.FC = () => {
           description: station.description,
           currentSongs: station.playlist,
           genre: station.genre
-        },
-        availableSongs: availableSongs // Verfügbare Songs mitschicken
+        }
+        // Entfernt: availableSongs - nicht mehr nötig für Song-Discovery
       };
+
+      console.log('🎵 Song-Discovery Anfrage:', requestData);
 
       const response = await fetch(`${apiUrl}/api/music/ai/recommend`, {
         method: 'POST',
@@ -1383,26 +1390,24 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🤖 AI Response:', data); // Debug-Output
+        console.log('✨ AI Song-Discovery Response:', data);
+        
         setAiRecommendations(data.suggestions || []);
         
-        if (data.suggestions.length > 0) {
-          showSuccess('AI Vorschläge', `${data.suggestions.length} passende Songs gefunden!`);
-        } else {
-          // Debug-Informationen anzeigen
-          const debugInfo = data.debug || {};
-          console.log('🔍 Debug Info:', debugInfo);
-          showError('AI Debug', 
-            `Keine Matches gefunden. AI schlug ${debugInfo.aiSuggestions?.length || 0} Songs vor. ` +
-            `${availableSongs.length} Songs verfügbar.`
+        if (data.suggestions && data.suggestions.length > 0) {
+          showSuccess('🎵 Neue Songs entdeckt!', 
+            data.message || `${data.suggestions.length} neue Songs gefunden, die zu deiner Playlist passen!`
           );
+        } else {
+          showError('AI Discovery', 'Keine neuen Songs gefunden. Versuche es mit einem anderen Typ.');
         }
       } else {
         const data = await response.json();
-        setAiError(data.error || 'AI-Empfehlung fehlgeschlagen');
-        showError('AI Fehler', data.message || 'Fehler bei AI-Empfehlung');
+        setAiError(data.error || 'Song-Discovery fehlgeschlagen');
+        showError('AI Fehler', data.message || 'Fehler bei Song-Discovery');
       }
     } catch (error) {
+      console.error('❌ AI Song-Discovery Fehler:', error);
       setAiError('Verbindungsfehler zur AI');
       showError('AI Fehler', 'Verbindungsfehler zur AI');
     } finally {
@@ -1444,17 +1449,14 @@ const Music: React.FC = () => {
     setAiError(null);
   };
 
-  const addAiSongToStation = async (song: Song) => {
-    if (!aiModalStation) return;
-    
-    try {
-      await addSongToExistingStation(aiModalStation.id, song);
-      // Entferne den Song aus den AI-Empfehlungen
-      setAiRecommendations(prev => prev.filter(s => s.id !== song.id));
-      showSuccess('Song hinzugefügt', `${song.title} zur Playlist hinzugefügt`);
-    } catch (error) {
-      showError('Fehler', 'Song konnte nicht hinzugefügt werden');
-    }
+  // Song-Discovery: Kopiere Song-Info zum Suchen
+  const copySongInfo = (song: any) => {
+    const songInfo = `${song.artist} - ${song.title}`;
+    navigator.clipboard.writeText(songInfo).then(() => {
+      showSuccess('📋 Kopiert!', `"${songInfo}" in die Zwischenablage kopiert`);
+    }).catch(() => {
+      showError('Fehler', 'Konnte nicht in die Zwischenablage kopieren');
+    });
   };
 
   // Auto-Save Effect
@@ -2497,13 +2499,42 @@ const Music: React.FC = () => {
                           <p className="text-xs text-gray-400 truncate">{song.artist}</p>
                         </div>
                         
-                        <Button
-                          onClick={() => addAiSongToStation(song)}
-                          className="flex items-center gap-2 text-xs"
-                        >
-                          <Plus className="w-3 h-3" />
-                          Hinzufügen
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {/* Song Info kopieren */}
+                          <Button
+                            onClick={() => copySongInfo(song)}
+                            variant="outline"
+                            className="flex items-center gap-1 text-xs h-8 px-2"
+                            title="Song-Info kopieren"
+                          >
+                            <Copy className="w-3 h-3" />
+                            Copy
+                          </Button>
+                          
+                          {/* Spotify Link */}
+                          {song.spotifyUrl && (
+                            <Button
+                              onClick={() => window.open(song.spotifyUrl, '_blank')}
+                              variant="outline"
+                              className="flex items-center gap-1 text-xs h-8 px-2 bg-green-500/20 border-green-500/30 text-green-300"
+                              title="Auf Spotify suchen"
+                            >
+                              🎵 Spotify
+                            </Button>
+                          )}
+                          
+                          {/* YouTube Link */}
+                          {song.youtubeUrl && (
+                            <Button
+                              onClick={() => window.open(song.youtubeUrl, '_blank')}
+                              variant="outline"
+                              className="flex items-center gap-1 text-xs h-8 px-2 bg-red-500/20 border-red-500/30 text-red-300"
+                              title="Auf YouTube suchen"
+                            >
+                              📺 YouTube
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
