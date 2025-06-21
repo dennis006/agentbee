@@ -12,6 +12,7 @@ const {
 const fs = require('fs');
 const path = require('path');
 const play = require('play-dl');
+const prism = require('prism-media');
 
 // Music Settings mit Radio UND lokalen MP3s
 let musicSettings = {
@@ -468,42 +469,36 @@ async function playRadioStation(guildId, stationId) {
                 });
             }
         } else {
-            console.log('📻 Direkter HTTP-Stream erkannt...');
-            // Für direkte HTTP-Streams mit besserer Kompatibilität
+            console.log('📻 HTTP-Stream über FFmpeg...');
             try {
-                const https = require('https');
-                const http = require('http');
+                // Verwende FFmpeg über prism-media für bessere Kompatibilität
+                const ffmpegArgs = [
+                    '-i', station.url,
+                    '-analyzeduration', '0',
+                    '-loglevel', '0',
+                    '-f', 's16le',
+                    '-ar', '48000',
+                    '-ac', '2',
+                    '-'
+                ];
                 
-                // Erstelle Stream-Request mit besseren Headers
-                const requestModule = station.url.startsWith('https:') ? https : http;
-                const request = requestModule.get(station.url, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                        'Accept': 'audio/mpeg, audio/x-mpeg, audio/mp3, audio/x-mp3, audio/mpeg3, audio/x-mpeg3, audio/mpg, audio/x-mpg, audio/x-mpegaudio, audio/*',
-                        'Connection': 'keep-alive',
-                        'Cache-Control': 'no-cache',
-                        'Pragma': 'no-cache'
-                    }
+                const ffmpeg = new prism.FFmpeg({
+                    args: ffmpegArgs,
+                    shell: false
                 });
                 
-                request.on('response', (response) => {
-                    console.log(`📻 Stream Response: ${response.statusCode} - ${response.headers['content-type']}`);
-                    if (response.statusCode !== 200) {
-                        console.warn(`⚠️ Unerwarteter Stream Status: ${response.statusCode}`);
-                    }
-                });
-                
-                request.on('error', (err) => {
-                    console.error('❌ Stream Request Error:', err);
-                });
-                
-                resource = createAudioResource(request, {
-                    inputType: StreamType.Arbitrary,
+                resource = createAudioResource(ffmpeg, {
+                    inputType: StreamType.Raw,
                     inlineVolume: true
                 });
-            } catch (streamError) {
-                console.error('❌ Erweiterte Stream-Erstellung fehlgeschlagen:', streamError);
-                // Fallback zu einfachem Stream
+                
+                ffmpeg.on('error', (error) => {
+                    console.error('❌ FFmpeg Stream Error:', error);
+                });
+                
+            } catch (ffmpegError) {
+                console.error('❌ FFmpeg failed, fallback zu direktem Stream:', ffmpegError);
+                // Fallback zu direktem Stream
                 resource = createAudioResource(station.url, {
                     inputType: StreamType.Arbitrary,
                     inlineVolume: true
