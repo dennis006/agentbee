@@ -15,6 +15,7 @@ const setupTwitchAPI = require('./twitch-api');
 
 // 🎵 YOUTUBE RADIO-SYSTEM
 const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
+const aiMusicRecommendations = require('./ai-music-recommendations');
 const { OpenAI } = require('openai');
 const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
@@ -7140,6 +7141,9 @@ app.listen(API_PORT, HOST, () => {
     // 🎵 Musik-API-Routen registrieren (nach Express-Server-Start)
     try {
         registerMusicAPI(app);
+        
+        // AI Musik-Empfehlungen API registrieren
+        app.use('/api/music', aiMusicRecommendations);
         console.log('🎵 YouTube Radio-API erfolgreich registriert!');
     } catch (error) {
         console.error('❌ Fehler beim Registrieren der Musik-API:', error);

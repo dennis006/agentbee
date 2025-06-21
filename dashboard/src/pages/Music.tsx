@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star } from 'lucide-react';
+import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star, Bot, Sparkles, Zap } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -224,6 +224,8 @@ const EditableStation: React.FC<{
   draggedIndex: number | null;
   onPlay: () => void;
   isPlaying: boolean;
+  onAiRecommend?: (station: Station) => void;
+  aiStatus?: { available: boolean; hasApiKey: boolean };
 }> = ({ 
   station, 
   availableSongs, 
@@ -239,7 +241,9 @@ const EditableStation: React.FC<{
   onDrop,
   draggedIndex,
   onPlay,
-  isPlaying
+  isPlaying,
+  onAiRecommend,
+  aiStatus
 }) => {
   const [editData, setEditData] = useState({
     name: station.name,
@@ -325,6 +329,15 @@ const EditableStation: React.FC<{
                 <Button onClick={() => setShowSongSelector(!showSongSelector)} variant="secondary" className="px-3 py-1 text-sm">
                   <Plus className="w-4 h-4" />
                 </Button>
+                {onAiRecommend && aiStatus?.available && (
+                  <Button 
+                    onClick={() => onAiRecommend(station)} 
+                    variant="outline" 
+                    className="px-3 py-1 text-sm bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-purple-400/50"
+                  >
+                    <Bot className="w-4 h-4" />
+                  </Button>
+                )}
                 <Button onClick={onDelete} variant="destructive" className="px-3 py-1 text-sm">
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -547,6 +560,17 @@ const Music: React.FC = () => {
   // MP3 Bibliothek Filter State
   const [songFilter, setSongFilter] = useState<'all' | 'inPlaylist' | 'unused'>('all');
 
+  // AI State
+  const [aiRecommendations, setAiRecommendations] = useState<Song[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiModalStation, setAiModalStation] = useState<Station | null>(null);
+  const [aiStatus, setAiStatus] = useState<{
+    available: boolean;
+    hasApiKey: boolean;
+  }>({ available: false, hasApiKey: false });
+
   // Guild & Channel State
   const [guildInfo, setGuildInfo] = useState<{
     id: string;
@@ -688,6 +712,7 @@ const Music: React.FC = () => {
       // Verfügbare Songs und Radio-Stationen laden
       await loadAvailableSongs();
       await loadRadioStations();
+      await checkAiStatus();
 
       // Status laden
       const currentGuildId = guildId || finalGuildId;
@@ -1308,6 +1333,114 @@ const Music: React.FC = () => {
       }
     } catch (error) {
       showError('Panel Fehler', 'Verbindungsfehler beim Aktualisieren des Interactive Panels');
+    }
+  };
+
+  // AI Funktionen
+  const checkAiStatus = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/music/ai/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setAiStatus({
+          available: data.aiAvailable,
+          hasApiKey: data.hasApiKey
+        });
+      }
+    } catch (error) {
+      console.error('AI Status Check Fehler:', error);
+      setAiStatus({ available: false, hasApiKey: false });
+    }
+  };
+
+  const getAiRecommendations = async (type: 'similar' | 'mood' | 'complete', station: Station, options?: any) => {
+    if (!aiStatus.available) {
+      showError('AI Fehler', 'AI-Service ist nicht verfügbar');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError(null);
+    
+    try {
+      const requestData = {
+        type,
+        data: {
+          ...options,
+          playlistName: station.name,
+          description: station.description,
+          currentSongs: station.playlist,
+          genre: station.genre
+        }
+      };
+
+      const response = await fetch(`${apiUrl}/api/music/ai/recommend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAiRecommendations(data.suggestions || []);
+        showSuccess('AI Vorschläge', `${data.suggestions.length} passende Songs gefunden!`);
+      } else {
+        const data = await response.json();
+        setAiError(data.error || 'AI-Empfehlung fehlgeschlagen');
+        showError('AI Fehler', data.message || 'Fehler bei AI-Empfehlung');
+      }
+    } catch (error) {
+      setAiError('Verbindungsfehler zur AI');
+      showError('AI Fehler', 'Verbindungsfehler zur AI');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const getAiPlaylistNames = async (genre: string, mood: string, description: string) => {
+    if (!aiStatus.available) return [];
+
+    try {
+      const response = await fetch(`${apiUrl}/api/music/ai/suggest-names`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ genre, mood, description })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.names || [];
+      }
+    } catch (error) {
+      console.error('AI Namen-Vorschlag Fehler:', error);
+    }
+    return [];
+  };
+
+  const openAiModal = (station: Station) => {
+    setAiModalStation(station);
+    setShowAiModal(true);
+    setAiRecommendations([]);
+    setAiError(null);
+  };
+
+  const closeAiModal = () => {
+    setShowAiModal(false);
+    setAiModalStation(null);
+    setAiRecommendations([]);
+    setAiError(null);
+  };
+
+  const addAiSongToStation = async (song: Song) => {
+    if (!aiModalStation) return;
+    
+    try {
+      await addSongToExistingStation(aiModalStation.id, song);
+      // Entferne den Song aus den AI-Empfehlungen
+      setAiRecommendations(prev => prev.filter(s => s.id !== song.id));
+      showSuccess('Song hinzugefügt', `${song.title} zur Playlist hinzugefügt`);
+    } catch (error) {
+      showError('Fehler', 'Song konnte nicht hinzugefügt werden');
     }
   };
 
@@ -2180,6 +2313,8 @@ const Music: React.FC = () => {
                   draggedIndex={draggedStationId === station.id ? draggedIndex : null}
                   onPlay={() => playStation(station.id)}
                   isPlaying={musicStatus.currentStation?.id === station.id}
+                  onAiRecommend={openAiModal}
+                  aiStatus={aiStatus}
                 />
               ))}
             </div>
@@ -2221,6 +2356,165 @@ const Music: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+      )}
+
+      {/* AI Recommendations Modal */}
+      {showAiModal && aiModalStation && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-4xl max-h-[80vh] overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Bot className="w-6 h-6" />
+                  <div>
+                    <CardTitle>🤖 AI Musik-Empfehlungen</CardTitle>
+                    <CardDescription className="text-blue-100">
+                      Für "{aiModalStation.name}" • {aiModalStation.genre}
+                    </CardDescription>
+                  </div>
+                </div>
+                <Button 
+                  onClick={closeAiModal}
+                  variant="ghost"
+                  className="text-white hover:bg-white/20"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="p-6 overflow-y-auto">
+              {/* AI Status */}
+              <div className="flex items-center gap-4 mb-6 p-4 bg-dark-surface/50 rounded-lg">
+                <div className={`w-3 h-3 rounded-full ${aiStatus.available ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    AI Status: {aiStatus.available ? '🟢 Verfügbar' : '🔴 Nicht verfügbar'}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    API Key: {aiStatus.hasApiKey ? '✅ Konfiguriert' : '❌ Fehlt'}
+                  </p>
+                </div>
+              </div>
+
+              {/* AI Action Buttons */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <Button
+                  onClick={() => getAiRecommendations('similar', aiModalStation)}
+                  disabled={aiLoading || !aiStatus.available}
+                  className="flex items-center gap-2 h-auto p-4 flex-col"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  <div className="text-center">
+                    <div className="font-medium">Ähnliche Songs</div>
+                    <div className="text-xs opacity-75">Basierend auf aktueller Playlist</div>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={() => getAiRecommendations('complete', aiModalStation)}
+                  disabled={aiLoading || !aiStatus.available}
+                  className="flex items-center gap-2 h-auto p-4 flex-col"
+                >
+                  <Zap className="w-5 h-5" />
+                  <div className="text-center">
+                    <div className="font-medium">Playlist Vervollständigen</div>
+                    <div className="text-xs opacity-75">Fehlende Vibes hinzufügen</div>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={() => getAiRecommendations('mood', aiModalStation, { 
+                    mood: aiModalStation.description || 'Energetic',
+                    genre: aiModalStation.genre 
+                  })}
+                  disabled={aiLoading || !aiStatus.available}
+                  className="flex items-center gap-2 h-auto p-4 flex-col"
+                >
+                  <Bot className="w-5 h-5" />
+                  <div className="text-center">
+                    <div className="font-medium">Mood-Match</div>
+                    <div className="text-xs opacity-75">Passend zu Genre & Stimmung</div>
+                  </div>
+                </Button>
+              </div>
+
+              {/* AI Loading */}
+              {aiLoading && (
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg px-6 py-4">
+                    <div className="animate-spin w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full"></div>
+                    <div>
+                      <p className="text-white font-medium">🤖 AI denkt nach...</p>
+                      <p className="text-xs text-gray-400">Analysiere Musik-Patterns</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Error */}
+              {aiError && (
+                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+                  <div className="flex items-center gap-2">
+                    <X className="w-5 h-5 text-red-400" />
+                    <p className="text-red-400 font-medium">AI Fehler</p>
+                  </div>
+                  <p className="text-red-300 text-sm mt-1">{aiError}</p>
+                </div>
+              )}
+
+              {/* AI Recommendations */}
+              {aiRecommendations.length > 0 && (
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    ✨ AI Vorschläge ({aiRecommendations.length})
+                  </h4>
+                  <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto">
+                    {aiRecommendations.map((song) => (
+                      <div
+                        key={song.id}
+                        className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-primary/30 hover:border-purple-primary/50 transition-all"
+                      >
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
+                          <Sparkles className="w-5 h-5 text-white" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{song.title}</p>
+                          <p className="text-xs text-gray-400 truncate">{song.artist}</p>
+                        </div>
+                        
+                        <Button
+                          onClick={() => addAiSongToStation(song)}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Current Playlist Preview */}
+              <div className="mt-6 p-4 bg-dark-surface/30 rounded-lg">
+                <h5 className="font-medium text-white mb-2">📋 Aktuelle Playlist ({aiModalStation.playlist.length} Songs)</h5>
+                {aiModalStation.playlist.length > 0 ? (
+                  <div className="text-xs text-gray-400 max-h-20 overflow-y-auto">
+                    {aiModalStation.playlist.map((song, index) => (
+                      <div key={index} className="truncate">
+                        {index + 1}. {song.title} - {song.artist}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">Noch keine Songs in der Playlist</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Toast Container */}
