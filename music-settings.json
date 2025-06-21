@@ -124,16 +124,16 @@
       {
         "id": "lofi",
         "name": "Lofi Hip Hop Radio",
-        "url": "https://www.youtube.com/watch?v=jfKfPfyJRdk",
+        "url": "http://streams.ilovemusic.de/iloveradio-lounge.mp3",
         "genre": "Lofi/Chill",
         "country": "International",
-        "description": "24/7 Lofi Hip Hop Beats",
+        "description": "Chill Lofi Hip Hop Beats",
         "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TG9GaTwvdGV4dD4KPC9zdmc+Cg=="
       },
       {
         "id": "chillhop",
         "name": "ChillHop Radio",
-        "url": "https://www.youtube.com/watch?v=5yx6BWlEVcY",
+        "url": "http://stream.laut.fm/chillhop",
         "genre": "Chillhop/Jazz",
         "country": "International",
         "description": "Chill beats to relax/study to",
@@ -205,10 +205,10 @@
       {
         "id": "deephouse",
         "name": "Deep House Radio",
-        "url": "https://www.youtube.com/watch?v=36YnV9STBqc",
+        "url": "http://stream.laut.fm/deephouse",
         "genre": "Deep House/Electronic",
         "country": "International",
-        "description": "24/7 Deep House Live Stream",
+        "description": "24/7 Deep House Radio Stream",
         "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDMzNjYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMEZGRkYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRFRVA8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDBGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1VTRTI8L3RleHQ+Cjwvc3ZnPgo="
       },
       {
@@ -223,10 +223,10 @@
       {
         "id": "gaming",
         "name": "Gaming Music Radio",
-        "url": "https://www.youtube.com/watch?v=4xDzrJKXOOY",
+        "url": "http://stream.laut.fm/gaming",
         "genre": "Gaming/Electronic",
         "country": "International",
-        "description": "24/7 Gaming Music Live Stream",
+        "description": "24/7 Gaming Music Radio Stream",
         "logo": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMEZGMDAiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkdBTUlORzwvdGV4dD4KPHRleHQgeD0iMzIiIHk9IjQ0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk1VU0lDPC90ZXh0Pgo8L3N2Zz4K"
       },
       {

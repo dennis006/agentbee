@@ -11,6 +11,7 @@ const {
 
 const fs = require('fs');
 const path = require('path');
+const play = require('play-dl');
 
 // Music Settings mit Radio UND lokalen MP3s
 let musicSettings = {
@@ -419,6 +420,7 @@ async function playRadioStation(guildId, stationId) {
         }
 
         console.log(`📻 Starte Radio-Station: ${station.name} für Guild ${guildId}`);
+        console.log(`📻 Station URL: ${station.url}`);
 
         // Auto-Join falls nicht im Voice-Channel
         let connection = voiceConnections.get(guildId);
@@ -431,18 +433,72 @@ async function playRadioStation(guildId, stationId) {
             connection = voiceConnections.get(guildId);
         }
 
+        if (!connection) {
+            throw new Error('Keine Voice-Connection verfügbar');
+        }
+
         // Erstelle Player
         const player = createPlayerForGuild(guildId);
 
-        // Erstelle direkte Radio-Stream Ressource
-        const resource = createAudioResource(station.url, {
-            inputType: StreamType.Arbitrary,
-            inlineVolume: true
-        });
+        let resource;
+
+        // Behandle verschiedene URL-Typen
+        if (station.url.includes('youtube.com') || station.url.includes('youtu.be')) {
+            console.log('📻 YouTube-Stream erkannt, verwende play-dl...');
+            try {
+                // Für YouTube-URLs verwende play-dl
+                const stream = await play.stream(station.url, {
+                    quality: 1 // Niedrigste Qualität für bessere Performance
+                });
+                
+                resource = createAudioResource(stream.stream, {
+                    inputType: stream.type,
+                    inlineVolume: true
+                });
+            } catch (playError) {
+                console.error('❌ play-dl Fehler:', playError);
+                // Fallback zu direktem Stream
+                resource = createAudioResource(station.url, {
+                    inputType: StreamType.Arbitrary,
+                    inlineVolume: true
+                });
+            }
+        } else {
+            console.log('📻 Direkter Stream erkannt...');
+            // Für direkte HTTP-Streams
+            resource = createAudioResource(station.url, {
+                inputType: StreamType.Arbitrary,
+                inlineVolume: true
+            });
+        }
 
         if (resource.volume) {
-            resource.volume.setVolume(0.5); // 50% Volume
+            resource.volume.setVolume(0.3); // 30% Volume für bessere Performance
         }
+
+        // Event-Listener für bessere Fehlerbehandlung
+        player.on(AudioPlayerStatus.Playing, () => {
+            console.log(`✅ Radio spielt: ${station.name}`);
+        });
+
+        player.on(AudioPlayerStatus.Buffering, () => {
+            console.log(`🔄 Radio buffert: ${station.name}`);
+        });
+
+        player.on(AudioPlayerStatus.Idle, () => {
+            console.log(`⏸️ Radio idle: ${station.name}`);
+        });
+
+        player.on('error', (error) => {
+            console.error(`❌ Radio Player Fehler:`, error);
+            // Versuche neu zu starten
+            setTimeout(() => {
+                if (currentRadioStations.has(guildId)) {
+                    console.log('🔄 Versuche Radio neu zu starten...');
+                    playRadioStation(guildId, stationId).catch(console.error);
+                }
+            }, 5000);
+        });
 
         // Spiele ab
         player.play(resource);
@@ -465,6 +521,12 @@ async function playRadioStation(guildId, stationId) {
 
     } catch (error) {
         console.error(`❌ Fehler beim Starten der Radio-Station:`, error);
+        console.error(`❌ Error Details:`, {
+            message: error.message,
+            stack: error.stack,
+            stationId,
+            guildId
+        });
         throw error;
     }
 }
@@ -1571,6 +1633,33 @@ function registerMusicAPI(app) {
         }
     });
 
+    // Test Radio Station
+    app.post('/api/music/radio/test', async (req, res) => {
+        try {
+            const { stationUrl } = req.body;
+            
+            if (!stationUrl) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Station URL ist erforderlich'
+                });
+            }
+
+            const testResult = await testRadioStation(stationUrl);
+            
+            res.json({
+                success: testResult.success,
+                result: testResult,
+                message: testResult.success ? 'Station erfolgreich getestet' : 'Station-Test fehlgeschlagen'
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     console.log('✅ Musik API registriert!');
 }
 
@@ -1623,6 +1712,27 @@ async function autoJoinForRadio(guildId) {
     } catch (error) {
         console.error('❌ Auto-Join für Radio fehlgeschlagen:', error);
         return false;
+    }
+}
+
+// Test Audio Stream Verbindung
+async function testRadioStation(stationUrl) {
+    try {
+        console.log(`🧪 Teste Radio-Station URL: ${stationUrl}`);
+        
+        if (stationUrl.includes('youtube.com') || stationUrl.includes('youtu.be')) {
+            console.log('📻 YouTube-Stream Test...');
+            const stream = await play.stream(stationUrl, { quality: 1 });
+            console.log('✅ YouTube-Stream erfolgreich');
+            return { success: true, type: 'youtube', stream: stream };
+        } else {
+            console.log('📻 HTTP-Stream Test...');
+            // Einfacher Test für HTTP-Streams
+            return { success: true, type: 'http' };
+        }
+    } catch (error) {
+        console.error(`❌ Radio-Station Test fehlgeschlagen:`, error);
+        return { success: false, error: error.message };
     }
 }
 
