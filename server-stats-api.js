@@ -74,6 +74,12 @@ let serverStatsSettings = {
       channelId: '',
       name: '🤖 Bots: {count}',
       position: 7
+    },
+    valorantSeason: {
+      enabled: true,
+      channelId: '',
+      name: '🎮 Valorant S25 Act 4: {countdown}',
+      position: 8
     }
   },
   categoryId: '',
@@ -474,16 +480,43 @@ function calculateServerStats(guild) {
     roleCount: guild.roles.cache.size - 1, // -1 für @everyone
     serverLevel: guild.premiumTier,
     createdDate: guild.createdAt.toLocaleDateString('de-DE'),
-    botCount: guild.members.cache.filter(member => member.user.bot).size
+    botCount: guild.members.cache.filter(member => member.user.bot).size,
+    valorantSeason: calculateValorantCountdown()
   };
   
   return stats;
+}
+
+// Berechne Valorant Season Countdown
+function calculateValorantCountdown() {
+  // Valorant Season V25 Act 4 startet am 25. Juni 2025, 02:00-05:00 UTC (Europa)
+  const nextActDate = new Date('2025-06-26T02:00:00.000Z'); // 26. Juni 2025, 02:00 UTC
+  const now = new Date();
+  
+  const diffMs = nextActDate.getTime() - now.getTime();
+  
+  if (diffMs <= 0) {
+    return 'LIVE!';
+  }
+  
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  } else if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  } else {
+    return `${minutes}m`;
+  }
 }
 
 // Formatiere Channel-Namen
 function formatChannelName(template, value, statType) {
   let formatted = template.replace('{count}', value);
   formatted = formatted.replace('{date}', value);
+  formatted = formatted.replace('{countdown}', value);
   
   // Spezielle Formatierung für verschiedene Stat-Typen
   switch (statType) {
@@ -493,6 +526,9 @@ function formatChannelName(template, value, statType) {
       break;
     case 'boostCount':
       formatted = formatted.replace('{count}', `${value}/14`);
+      break;
+    case 'valorantSeason':
+      // Countdown wird bereits als String übergeben
       break;
   }
   

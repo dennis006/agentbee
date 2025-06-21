@@ -81,6 +81,7 @@ interface CurrentStats {
   serverLevel: number;
   createdDate: string;
   botCount: number;
+  valorantSeason: string;
 }
 
 const ServerStats: React.FC = () => {
@@ -346,7 +347,8 @@ const ServerStats: React.FC = () => {
       roleCount: '🎭',
       serverLevel: '⭐',
       createdDate: '📅',
-      botCount: '🤖'
+      botCount: '🤖',
+      valorantSeason: '🎮'
     };
     return icons[statType] || '📊';
   };
@@ -360,7 +362,8 @@ const ServerStats: React.FC = () => {
       roleCount: 'Rollen',
       serverLevel: 'Server Level',
       createdDate: 'Erstellt am',
-      botCount: 'Bots'
+      botCount: 'Bots',
+      valorantSeason: 'Valorant Season'
     };
     return names[statType] || statType;
   };
