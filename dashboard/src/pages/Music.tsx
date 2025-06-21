@@ -1486,104 +1486,6 @@ const Music: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      ) : activeTab === 'radio' ? (
-        /* Radio Tab Content */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Radio Stations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Radio className="w-5 h-5 text-blue-400" />
-                Radio Streams
-              </CardTitle>
-              <CardDescription>
-                {radioStations.length} Radio-Stationen verfügbar
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {radioStations.map((station) => (
-                  <div
-                    key={station.id}
-                    className="flex items-center gap-3 p-3 bg-dark-bg/50 rounded-lg border border-gray-600/30 hover:border-blue-primary/50 transition-all duration-300"
-                  >
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                      {station.logo ? (
-                        <img src={station.logo} alt={station.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Radio className="w-6 h-6 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{station.name}</p>
-                      <p className="text-xs text-blue-400 truncate">{station.genre}</p>
-                      <p className="text-xs text-gray-400 truncate">{station.description}</p>
-                      </div>
-                    <div className="flex items-center gap-2">
-                            <Button
-                        onClick={() => playRadioStation(station.id)}
-                        disabled={radioStatus.currentStation?.id === station.id}
-                        className="px-3 py-1 text-xs"
-                      >
-                        {radioStatus.currentStation?.id === station.id ? (
-                          <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
-                        ) : (
-                          <Play className="w-3 h-3" />
-                        )}
-                            </Button>
-                  </div>
-                </div>
-                ))}
-                  </div>
-              
-              {radioStations.length === 0 && (
-                <div className="text-center py-8">
-                  <Radio className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-400">Keine Radio-Stationen verfügbar</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Radio Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                <Waves className="w-5 h-5 text-green-400" />
-                Radio Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-              {radioStatus.isPlaying ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
-                    <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
-                        <div className="flex-1">
-                      <p className="font-semibold text-blue-300">📻 Läuft gerade</p>
-                      <p className="text-sm text-white">{radioStatus.currentStation?.name}</p>
-                      <p className="text-xs text-gray-400">{radioStatus.currentStation?.description}</p>
-                          </div>
-                        </div>
-                      
-                          <Button
-                    onClick={stopRadio}
-                              variant="destructive"
-                    className="w-full flex items-center gap-2"
-                            >
-                    <StopCircle className="w-4 h-4" />
-                    Radio stoppen
-                            </Button>
-                        </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Radio className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-400 mb-4">Kein Radio aktiv</p>
-                  <p className="text-xs text-gray-500">Wähle eine Station zum Abspielen</p>
-                      </div>
-              )}
-              </CardContent>
-            </Card>
-                    </div>
       ) : (
         /* Local Music Tab Content */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1653,7 +1555,7 @@ const Music: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
               <CardTitle className="flex items-center gap-2">
-                  <Radio className="w-5 h-5 text-purple-400" />
+                  <MusicIcon className="w-5 h-5 text-purple-400" />
                   Meine Stationen
               </CardTitle>
               <CardDescription>
@@ -1806,7 +1708,7 @@ const Music: React.FC = () => {
 
             {settings.localMusic.stations.length === 0 && !isCreatingStation && (
               <div className="text-center py-8">
-                <Radio className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <MusicIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-400">Keine Stationen erstellt</p>
                 <p className="text-xs text-gray-500 mt-1">
                   Erstelle deine erste Station mit eigenen Playlists
