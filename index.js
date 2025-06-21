@@ -5336,6 +5336,8 @@ async function loadVerificationConfig() {
             if (data && !error) {
                 console.log('📋 Verification-Config aus Supabase geladen');
                 return data.config;
+            } else {
+                console.log('⚠️ Supabase Verification-Config nicht gefunden:', error?.message || 'Keine Daten');
             }
         }
 
@@ -5347,9 +5349,40 @@ async function loadVerificationConfig() {
             return config;
         }
 
-        // Default-Config
+        // Default-Config mit erweiterten Objekten (wie JSON-Struktur)
         console.log('⚠️ Verwende Standard Verification-Config');
-        return verificationSettings;
+        return {
+            enabled: true,
+            requireCaptcha: true,
+            allowedGames: [
+                { id: 'valorant', label: 'Valorant', emoji: '🎯', role: 'Valorant' },
+                { id: 'league-of-legends', label: 'League of Legends', emoji: '⭐', role: 'League of Legends' },
+                { id: 'world-of-warcraft', label: 'World Of Warcraft', emoji: '⚔️', role: 'World of Warcraft' },
+                { id: 'fragpunk', label: 'Fragpunk', emoji: '🔞' },
+                { id: 'minecraft', label: 'Minecraft', emoji: '🧱' },
+                { id: 'fortnite', label: 'Fortnite', emoji: '🪂' },
+                { id: 'cs2', label: 'Counter-Strike 2', emoji: '💥' },
+                { id: 'apex', label: 'Apex Legends', emoji: '🚀' }
+            ],
+            allowedPlatforms: [
+                { id: 'pc', label: 'PC', emoji: '💻', role: '🖥️PC' },
+                { id: 'xbox', label: 'Xbox', emoji: '❎', role: '❎Xbox' },
+                { id: 'ps5', label: 'PS5', emoji: '🎮', role: '🎮PS5' },
+                { id: 'switch', label: 'Nintendo Switch', emoji: '🎮', role: 'Switch' },
+                { id: 'mobile', label: 'Mobile', emoji: '📱', role: 'Mobile' }
+            ],
+            defaultRoles: ['Member', 'verify'],
+            welcomeMessage: 'Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.',
+            logChannel: 'verify-logs',
+            autoAssignRoles: true,
+            verificationChannel: 'verify',
+            botUpdates: {
+                enabled: true,
+                optInText: '📢 Ich möchte Bot-Updates und Neuigkeiten erhalten',
+                updatesRole: 'Bot Updates',
+                channelName: 'bot-updates'
+            }
+        };
     } catch (error) {
         console.error('❌ Fehler beim Laden der Verification-Config:', error);
         return verificationSettings;
@@ -5521,33 +5554,33 @@ app.get('/api/verification/stats', async (req, res) => {
         const users = userData.users || [];
         
         // Berechne aktuelle Statistiken aus User-Daten
-        const today = new Date().toDateString();
+            const today = new Date().toDateString();
         const todayCount = users.filter(user => {
-            const userDate = new Date(user.verificationDate).toDateString();
-            return userDate === today;
-        }).length;
-        
-        // Spiel-Statistiken aus echten Daten
-        const gameStats = {};
-        users.forEach(user => {
-            user.games?.forEach(game => {
-                gameStats[game] = (gameStats[game] || 0) + 1;
+                const userDate = new Date(user.verificationDate).toDateString();
+                return userDate === today;
+            }).length;
+            
+            // Spiel-Statistiken aus echten Daten
+            const gameStats = {};
+            users.forEach(user => {
+                user.games?.forEach(game => {
+                    gameStats[game] = (gameStats[game] || 0) + 1;
+                });
             });
-        });
         const popularGames = Object.entries(gameStats)
-            .map(([game, count]) => ({ game, count }))
-            .sort((a, b) => b.count - a.count);
-        
-        // Plattform-Statistiken aus echten Daten
-        const platformStats = {};
-        users.forEach(user => {
-            if (user.platform) {
-                platformStats[user.platform] = (platformStats[user.platform] || 0) + 1;
-            }
-        });
+                .map(([game, count]) => ({ game, count }))
+                .sort((a, b) => b.count - a.count);
+            
+            // Plattform-Statistiken aus echten Daten
+            const platformStats = {};
+            users.forEach(user => {
+                if (user.platform) {
+                    platformStats[user.platform] = (platformStats[user.platform] || 0) + 1;
+                }
+            });
         const platformStatsArray = Object.entries(platformStats)
-            .map(([platform, count]) => ({ platform, count }))
-            .sort((a, b) => b.count - a.count);
+                .map(([platform, count]) => ({ platform, count }))
+                .sort((a, b) => b.count - a.count);
         
         // Erweiterte Statistiken
         const extendedStats = {
@@ -5575,7 +5608,7 @@ app.get('/api/verification/stats', async (req, res) => {
 app.get('/api/verification/users', async (req, res) => {
     try {
         const userData = await loadVerifiedUsers();
-        res.json(userData);
+            res.json(userData);
     } catch (error) {
         console.error('❌ Fehler beim Laden der verifizierten User:', error);
         res.status(500).json({ error: 'Fehler beim Laden der User-Daten' });
@@ -5792,12 +5825,12 @@ app.post('/api/verification/config', async (req, res) => {
         const success = await saveVerificationConfig(configData);
         
         if (success) {
-            console.log('🎮 Spiele:', configData.allowedGames?.length || 0);
-            console.log('💻 Plattformen:', configData.allowedPlatforms?.length || 0);
-            console.log('👥 Rollen:', configData.defaultRoles?.length || 0);
-            console.log('📺 Log-Kanal:', configData.logChannel || 'nicht gesetzt');
-            
-            res.json({ success: true, message: 'Konfiguration erfolgreich gespeichert' });
+        console.log('🎮 Spiele:', configData.allowedGames?.length || 0);
+        console.log('💻 Plattformen:', configData.allowedPlatforms?.length || 0);
+        console.log('👥 Rollen:', configData.defaultRoles?.length || 0);
+        console.log('📺 Log-Kanal:', configData.logChannel || 'nicht gesetzt');
+        
+        res.json({ success: true, message: 'Konfiguration erfolgreich gespeichert' });
         } else {
             res.status(500).json({ error: 'Fehler beim Speichern der Konfiguration' });
         }
@@ -6062,7 +6095,7 @@ app.post('/api/verification', async (req, res) => {
         // Statistiken werden automatisch in Supabase über Trigger aktualisiert
         // Fallback für JSON-System
         if (!supabase) {
-            updateVerificationStats(games, platform);
+        updateVerificationStats(games, platform);
         }
 
         res.json({ 
