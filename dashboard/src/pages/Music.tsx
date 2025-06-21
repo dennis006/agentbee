@@ -603,22 +603,14 @@ const Music: React.FC = () => {
   // Load Guild Channels
   const loadGuildChannels = async (targetGuildId: string) => {
     try {
-      console.log(`🔄 Lade Channels für Guild: ${targetGuildId}`);
-      console.log(`🔗 Channel API URL: ${apiUrl}/api/music/channels/${targetGuildId}`);
-      
       const response = await fetch(`${apiUrl}/api/music/channels/${targetGuildId}`);
-      console.log(`📡 Channel Response Status: ${response.status}`);
       
       if (response.ok) {
         const channels = await response.json();
-        console.log(`✅ ${channels.length} Channels geladen:`, channels);
         
         // Separiere Text- und Voice-Channels
         const textChannels = channels.filter((ch: any) => ch.type === 'text');
         const voiceChannels = channels.filter((ch: any) => ch.type === 'voice');
-        
-        console.log(`📺 Text-Channels: ${textChannels.length}`, textChannels.map((ch: any) => ch.name));
-        console.log(`🔊 Voice-Channels: ${voiceChannels.length}`, voiceChannels.map((ch: any) => ch.name));
         
         setChannels({ 
           text: textChannels.map((ch: any) => ({ id: ch.id, name: ch.name, position: 0 })), 
@@ -644,7 +636,6 @@ const Music: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Lade Musik-System Daten...');
       
       // Guild ID aus URL oder localStorage
       const params = new URLSearchParams(window.location.search);
@@ -655,42 +646,28 @@ const Music: React.FC = () => {
       
       const finalGuildId = urlGuildId || storedGuildId;
       
-      console.log('🔍 Guild ID Suche:', {
-        urlGuildId,
-        storedGuildId,
-        finalGuildId,
-        currentUrl: window.location.href
-      });
-      
       if (finalGuildId) {
         setGuildId(finalGuildId);
         localStorage.setItem('selectedGuildId', finalGuildId);
-        console.log(`🏠 Guild ID gesetzt: ${finalGuildId}`);
         
         // Lade Guild-Channels
         await loadGuildChannels(finalGuildId);
       } else {
-        console.log('⚠️ Keine Guild ID gefunden - versuche vom Server zu laden');
         // Versuche eine Standard-Guild-ID vom Server zu holen
         try {
-          console.log(`🔗 Lade Guilds von: ${apiUrl}/api/guilds`);
           const guildResponse = await fetch(`${apiUrl}/api/guilds`);
-          console.log(`📡 Guild Response Status: ${guildResponse.status}`);
           
           if (guildResponse.ok) {
             const guildData = await guildResponse.json();
-            console.log('📡 Guild Antwort vom Server:', guildData);
             
             if (guildData.primaryGuild) {
               setGuildId(guildData.primaryGuild);
               localStorage.setItem('selectedGuildId', guildData.primaryGuild);
-              console.log(`🏠 Primary Guild ID gesetzt: ${guildData.primaryGuild}`);
               await loadGuildChannels(guildData.primaryGuild);
             } else if (guildData.guilds && guildData.guilds.length > 0) {
               const firstGuild = guildData.guilds[0];
               setGuildId(firstGuild.id);
               localStorage.setItem('selectedGuildId', firstGuild.id);
-              console.log(`🏠 Erste verfügbare Guild ID gesetzt: ${firstGuild.id} (${firstGuild.name})`);
               await loadGuildChannels(firstGuild.id);
             } else {
               console.error('❌ Keine Guilds vom Server erhalten');
@@ -796,7 +773,7 @@ const Music: React.FC = () => {
         guildId: guildId || '1203994020779532348' // Fallback Guild-ID
       };
       
-      console.log('💾 Speichere Musik-Einstellungen:', settingsWithGuild);
+      // Settings werden gespeichert
       
       const response = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
@@ -806,7 +783,7 @@ const Music: React.FC = () => {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Speicher-Response:', data);
+        // Settings erfolgreich gespeichert
         showSuccess('Musik', data.savedToDatabase ? 
           '🎵 Einstellungen in Supabase gespeichert!' : 
           '🎵 Einstellungen lokal gespeichert!'
@@ -1380,7 +1357,7 @@ const Music: React.FC = () => {
         // Entfernt: availableSongs - nicht mehr nötig für Song-Discovery
       };
 
-      console.log('🎵 Song-Discovery Anfrage:', requestData);
+      // AI Song-Discovery wird angefragt
 
       const response = await fetch(`${apiUrl}/api/music/ai/recommend`, {
         method: 'POST',
@@ -1390,7 +1367,7 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✨ AI Song-Discovery Response:', data);
+        // AI Song-Discovery Response erhalten
         
         setAiRecommendations(data.suggestions || []);
         
