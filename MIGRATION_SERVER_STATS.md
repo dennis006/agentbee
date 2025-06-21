@@ -18,7 +18,7 @@ server_stats_supabase_migration.sql
 # .env Datei erweitern:
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
-GUILD_ID=your_discord_guild_id
+# GUILD_ID ist optional (Fallback: 1203994020779532348)
 ```
 
 ### 1.3 Dependencies installieren

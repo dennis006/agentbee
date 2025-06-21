@@ -6,8 +6,8 @@ let supabase = null;
 let client = null;
 let updateInterval = null;
 
-// Guild ID vom Bot (wird bei der Initialisierung gesetzt)
-let PRIMARY_GUILD_ID = null;
+// Guild ID vom Bot (mit Fallback auf Standard-Guild)
+const PRIMARY_GUILD_ID = process.env.GUILD_ID || '1203994020779532348';
 
 // ============================
 // 1. SUPABASE INITIALISIERUNG
@@ -466,10 +466,7 @@ async function initializeServerStats(discordClient) {
     return;
   }
   
-  // Ermittle Primary Guild ID
-  if (client.guilds.cache.size > 0) {
-    PRIMARY_GUILD_ID = client.guilds.cache.first().id;
-  }
+
   
   // Lade alle Mitglieder für bessere Presence-Daten
   try {
