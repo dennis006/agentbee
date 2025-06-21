@@ -274,11 +274,7 @@ interface MusicStatus {
   currentStation: Station | null;
 }
 
-interface Channel {
-  id: string;
-  name: string;
-  type: string;
-}
+
 
 const Music: React.FC = () => {
   // API Base URL
@@ -332,9 +328,7 @@ const Music: React.FC = () => {
     isPlaying: false,
     currentStation: null as RadioStation | null
   });
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [guildId, setGuildId] = useState<string | null>(null);
-  const [tempGuildId, setTempGuildId] = useState<string>('');
 
   // Station Creation State
   const [isCreatingStation, setIsCreatingStation] = useState(false);
@@ -383,9 +377,8 @@ const Music: React.FC = () => {
       await loadAvailableSongs();
       await loadRadioStations();
 
-      // Channels laden
+      // Status laden
       if (finalGuildId) {
-        await loadChannels(finalGuildId);
         await loadMusicStatus(finalGuildId);
         await loadRadioStatus(finalGuildId);
       }
@@ -421,26 +414,7 @@ const Music: React.FC = () => {
     }
   };
 
-  const loadChannels = async (guildId: string) => {
-    try {
-      console.log(`🔍 Lade Channels für Guild: ${guildId}`);
-      const response = await fetch(`${apiUrl}/api/music/channels/${guildId}`);
-      console.log(`📡 Response Status: ${response.status}`);
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`📺 Geladene Channels:`, data);
-        setChannels(data || []);
-      } else {
-        const errorData = await response.json();
-        console.error('❌ Channel Load Error:', errorData);
-        showError('Channel Fehler', errorData.error || 'Fehler beim Laden der Channels');
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden der Channels:', error);
-      showError('Channel Fehler', 'Verbindungsfehler beim Laden der Channels');
-    }
-  };
 
   const loadMusicStatus = async (guildId: string) => {
     try {
@@ -962,95 +936,38 @@ const Music: React.FC = () => {
                 Konfiguriere Channels für Ankündigungen und Interactive Panel
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Guild Info & Channel Reload */}
-              <div className="bg-dark-surface/50 rounded-lg p-4 border border-purple-primary/20">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-purple-200">🏠 Server (Guild ID)</p>
-                      <p className="text-xs text-gray-400 font-mono">{guildId || 'Nicht gesetzt'}</p>
-                      <p className="text-xs text-gray-500 mt-1">Channels gefunden: {channels.length}</p>
-                    </div>
-                    <Button
-                      onClick={() => guildId && loadChannels(guildId)}
-                      disabled={!guildId}
-                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Channels laden
-                    </Button>
-                        </div>
-                        
-                  {!guildId && (
-                    <div className="flex gap-2">
-                          <Input
-                        placeholder="Guild ID eingeben (z.B. 1234567890)"
-                        value={tempGuildId}
-                        onChange={(e) => setTempGuildId(e.target.value)}
-                        className="flex-1 bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
-                      />
-                      <Button
-                        onClick={() => {
-                          if (tempGuildId.trim()) {
-                            setGuildId(tempGuildId.trim());
-                            localStorage.setItem('selectedGuildId', tempGuildId.trim());
-                            loadChannels(tempGuildId.trim());
-                            setTempGuildId('');
-                          }
-                        }}
-                        disabled={!tempGuildId.trim()}
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Setzen
-                      </Button>
-                    </div>
-                  )}
-                        </div>
-                      </div>
-                      
+            <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">
-                  📢 Ankündigungs-Channel
-                </label>
-                <Select
+                <label className="text-sm font-medium text-dark-text mb-2 block">📢 Ankündigungs-Channel</label>
+                <Input
                   value={settings.announcements.channelId}
-                  onChange={(value) => setSettings(prev => ({ 
-                                ...prev, 
-                    announcements: { ...prev.announcements, channelId: value }
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
+                  onChange={(e) => setSettings(prev => ({
+                    ...prev,
+                    announcements: { ...prev.announcements, channelId: e.target.value }
                   }))}
-                >
-                  <option value="">Kein Channel ausgewählt</option>
-                  {channels.filter(c => c.type === 'text').map(channel => (
-                    <option key={channel.id} value={channel.id}>#{channel.name}</option>
-                  ))}
-                </Select>
+                  placeholder="music-announcements"
+                />
                 <p className="text-xs text-gray-500 mt-1">
                   Channel für Now-Playing Nachrichten und Musik-Updates
                 </p>
-                    </div>
+              </div>
 
-                    <div>
-                <label className="block text-sm font-medium text-purple-200 mb-2">
-                  🎛️ Interactive Panel Channel
-                      </label>
-                <Select
+              <div>
+                <label className="text-sm font-medium text-dark-text mb-2 block">🎛️ Interactive Panel Channel</label>
+                <Input
                   value={settings.interactivePanel.channelId}
-                  onChange={(value) => setSettings(prev => ({ 
-                          ...prev, 
-                    interactivePanel: { ...prev.interactivePanel, channelId: value }
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
+                  onChange={(e) => setSettings(prev => ({
+                    ...prev,
+                    interactivePanel: { ...prev.interactivePanel, channelId: e.target.value }
                   }))}
-                >
-                  <option value="">Kein Channel ausgewählt</option>
-                  {channels.filter(c => c.type === 'text').map(channel => (
-                    <option key={channel.id} value={channel.id}>#{channel.name}</option>
-                  ))}
-                </Select>
+                  placeholder="music-control"
+                />
                 <p className="text-xs text-gray-500 mt-1">
                   Channel für das interaktive Musik-Control Panel
-                      </p>
-                    </div>
+                </p>
+              </div>
             </CardContent>
           </Card>
 
