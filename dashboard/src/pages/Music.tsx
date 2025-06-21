@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle } from 'lucide-react';
+import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -207,6 +207,209 @@ const DragDropSong: React.FC<{
   </div>
 );
 
+// Station Bearbeitungs-Komponente
+const EditableStation: React.FC<{
+  station: Station;
+  availableSongs: Song[];
+  isEditing: boolean;
+  onEdit: () => void;
+  onSave: (updates: Partial<Station>) => void;
+  onCancel: () => void;
+  onDelete: () => void;
+  onAddSong: (song: Song) => void;
+  onRemoveSong: (index: number) => void;
+  onDragStart: (e: React.DragEvent, index: number) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, index: number) => void;
+  draggedIndex: number | null;
+  onPlay: () => void;
+  isPlaying: boolean;
+}> = ({ 
+  station, 
+  availableSongs, 
+  isEditing, 
+  onEdit, 
+  onSave, 
+  onCancel, 
+  onDelete, 
+  onAddSong, 
+  onRemoveSong,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  draggedIndex,
+  onPlay,
+  isPlaying
+}) => {
+  const [editData, setEditData] = useState({
+    name: station.name,
+    genre: station.genre,
+    description: station.description
+  });
+
+  const [showSongSelector, setShowSongSelector] = useState(false);
+
+  const handleSave = () => {
+    onSave(editData);
+    onCancel();
+  };
+
+  return (
+    <Card className="hover:border-purple-primary/50 transition-all duration-300">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            {isEditing ? (
+              <div className="space-y-3">
+                <Input
+                  value={editData.name}
+                  onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Station Name"
+                  className="text-lg font-semibold"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <Select
+                    value={editData.genre}
+                    onChange={(value) => setEditData(prev => ({ ...prev, genre: value }))}
+                  >
+                    <option value="Hip-Hop">Hip-Hop</option>
+                    <option value="Rap">Rap</option>
+                    <option value="Trap">Trap</option>
+                    <option value="Lofi">Lofi</option>
+                    <option value="Chill">Chill</option>
+                    <option value="Electronic">Electronic</option>
+                    <option value="House">House</option>
+                    <option value="Techno">Techno</option>
+                    <option value="Rock">Rock</option>
+                    <option value="Pop">Pop</option>
+                  </Select>
+                  <Input
+                    value={editData.description}
+                    onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Beschreibung"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="text-2xl">🎵</span>
+                  {station.name}
+                  <Badge variant="secondary">{station.genre}</Badge>
+                </CardTitle>
+                <CardDescription>
+                  {station.description} • {station.playlist.length} Songs
+                </CardDescription>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <Button onClick={handleSave} className="px-3 py-1 text-sm">
+                  <Save className="w-4 h-4" />
+                </Button>
+                                 <Button onClick={onCancel} variant="outline" className="px-3 py-1 text-sm">
+                   ❌
+                 </Button>
+              </>
+            ) : (
+              <>
+                <Button onClick={onPlay} disabled={isPlaying} className="px-3 py-1 text-sm">
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                </Button>
+                <Button onClick={onEdit} variant="outline" className="px-3 py-1 text-sm">
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button onClick={() => setShowSongSelector(!showSongSelector)} variant="secondary" className="px-3 py-1 text-sm">
+                  <Plus className="w-4 h-4" />
+                </Button>
+                <Button onClick={onDelete} variant="destructive" className="px-3 py-1 text-sm">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Song Selector */}
+        {showSongSelector && (
+          <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-primary/30">
+            <h5 className="text-sm font-medium text-purple-200 mb-3">🎵 Song hinzufügen</h5>
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {availableSongs
+                .filter(song => !station.playlist.find(s => s.id === song.id))
+                .map((song) => (
+                  <div
+                    key={song.id}
+                    className="flex items-center gap-2 p-2 bg-dark-bg/50 rounded hover:bg-purple-primary/20 cursor-pointer transition-colors"
+                    onClick={() => {
+                      onAddSong(song);
+                      setShowSongSelector(false);
+                    }}
+                  >
+                    <Plus className="w-3 h-3 text-green-400" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-white truncate">{song.title}</p>
+                      <p className="text-xs text-gray-400 truncate">{song.artist}</p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Station Playlist */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h5 className="text-sm font-medium text-gray-300">📻 Playlist</h5>
+            <span className="text-xs text-gray-500">{station.playlist.length} Songs</span>
+          </div>
+          
+          {station.playlist.length > 0 ? (
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {station.playlist.map((song, index) => (
+                <div
+                  key={`${station.id}-${song.id}-${index}`}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, index)}
+                  onDragOver={onDragOver}
+                  onDrop={(e) => onDrop(e, index)}
+                  className={`flex items-center gap-3 p-2 bg-dark-surface/30 rounded-lg border transition-all duration-300 hover:border-purple-primary/50 ${
+                    draggedIndex === index ? 'opacity-50 scale-95' : 'hover:scale-[1.01]'
+                  }`}
+                >
+                  <GripVertical className="w-3 h-3 text-gray-400 cursor-grab active:cursor-grabbing" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white truncate">{song.title}</p>
+                    <p className="text-xs text-gray-400 truncate">{song.artist}</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => onRemoveSong(index)}
+                    className="px-1 py-1 text-xs h-6 w-6"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-400">
+              <MusicIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Keine Songs in der Station</p>
+              <p className="text-xs">Klicke auf + um Songs hinzuzufügen</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // Interfaces
 interface Song {
   id: string;
@@ -334,6 +537,8 @@ const Music: React.FC = () => {
 
   // Drag & Drop State
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedStationId, setDraggedStationId] = useState<string | null>(null);
+  const [editingStation, setEditingStation] = useState<string | null>(null);
 
   // Volume State
   const [currentVolume, setCurrentVolume] = useState(50);
@@ -859,7 +1064,69 @@ const Music: React.FC = () => {
     showSuccess('Station', 'Station gelöscht!');
   };
 
-  // Drag & Drop Handlers
+  // Station Bearbeitungs-Funktionen
+  const updateStationDetails = async (stationId: string, updates: Partial<Station>) => {
+    const updatedStations = settings.localMusic.stations.map(station =>
+      station.id === stationId ? { ...station, ...updates } : station
+    );
+    
+    setSettings(prev => ({
+      ...prev,
+      localMusic: {
+        ...prev.localMusic,
+        stations: updatedStations
+      }
+    }));
+
+    await saveSettings();
+    showSuccess('Station', 'Station aktualisiert!');
+  };
+
+  const addSongToExistingStation = async (stationId: string, song: Song) => {
+    const station = settings.localMusic.stations.find(s => s.id === stationId);
+    if (!station) return;
+
+    if (station.playlist.find(s => s.id === song.id)) {
+      showError('Playlist', 'Song ist bereits in der Station');
+      return;
+    }
+
+    const updatedStations = settings.localMusic.stations.map(s =>
+      s.id === stationId ? { ...s, playlist: [...s.playlist, song] } : s
+    );
+    
+    setSettings(prev => ({
+      ...prev,
+      localMusic: {
+        ...prev.localMusic,
+        stations: updatedStations
+      }
+    }));
+
+    await saveSettings();
+    showSuccess('Station', `Song zu "${station.name}" hinzugefügt!`);
+  };
+
+  const removeSongFromStation = async (stationId: string, songIndex: number) => {
+    const updatedStations = settings.localMusic.stations.map(station =>
+      station.id === stationId 
+        ? { ...station, playlist: station.playlist.filter((_, i) => i !== songIndex) }
+        : station
+    );
+    
+    setSettings(prev => ({
+      ...prev,
+      localMusic: {
+        ...prev.localMusic,
+        stations: updatedStations
+      }
+    }));
+
+    await saveSettings();
+    showSuccess('Station', 'Song aus Station entfernt!');
+  };
+
+  // Drag & Drop Handlers für neue Station
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
@@ -881,6 +1148,52 @@ const Music: React.FC = () => {
     
     setNewStation(prev => ({ ...prev, playlist: newPlaylist }));
     setDraggedIndex(null);
+  };
+
+  // Drag & Drop Handlers für bestehende Stationen
+  const handleStationDragStart = (e: React.DragEvent, stationId: string, songIndex: number) => {
+    setDraggedStationId(stationId);
+    setDraggedIndex(songIndex);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleStationDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleStationDrop = async (e: React.DragEvent, stationId: string, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedStationId !== stationId || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDraggedStationId(null);
+      return;
+    }
+
+    // Finde die Station und reorder die Songs
+    const updatedStations = settings.localMusic.stations.map(station => {
+      if (station.id === stationId) {
+        const newPlaylist = [...station.playlist];
+        const [draggedSong] = newPlaylist.splice(draggedIndex, 1);
+        newPlaylist.splice(dropIndex, 0, draggedSong);
+        return { ...station, playlist: newPlaylist };
+      }
+      return station;
+    });
+
+    setSettings(prev => ({
+      ...prev,
+      localMusic: {
+        ...prev.localMusic,
+        stations: updatedStations
+      }
+    }));
+
+    await saveSettings();
+    setDraggedIndex(null);
+    setDraggedStationId(null);
+    showSuccess('Station', 'Song-Reihenfolge aktualisiert!');
   };
 
   const addSongToPlaylist = (song: Song) => {
@@ -1738,49 +2051,28 @@ const Music: React.FC = () => {
             )}
 
             {/* Stations List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {settings.localMusic.stations.map((station) => (
-                <div
+                <EditableStation
                   key={station.id}
-                  className="p-4 bg-dark-bg/50 rounded-lg border border-gray-600/30 hover:border-purple-primary/50 transition-all duration-300"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h4 className="font-bold text-white flex items-center gap-2">
-                        {station.name}
-                        <Badge variant="outline" className="text-xs">
-                          {station.genre}
-                        </Badge>
-                      </h4>
-                      <p className="text-sm text-gray-400">{station.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {station.playlist.length} Songs
-                      </p>
-                        </div>
-                    <div className="flex gap-1">
-                      <Button
-                        onClick={() => playStation(station.id)}
-                        disabled={musicStatus.currentStation?.id === station.id}
-                        className="px-2 py-1 text-xs"
-                      >
-                        {musicStatus.currentStation?.id === station.id ? (
-                          <Pause className="w-3 h-3" />
-                        ) : (
-                          <Play className="w-3 h-3" />
-                        )}
-                      </Button>
-                      <Button
-                        onClick={() => deleteStation(station.id)}
-                        variant="destructive"
-                        className="px-2 py-1 text-xs"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                        </div>
-                      </div>
-                  ))}
-                </div>
+                  station={station}
+                  availableSongs={availableSongs}
+                  isEditing={editingStation === station.id}
+                  onEdit={() => setEditingStation(station.id)}
+                  onSave={(updates) => updateStationDetails(station.id, updates)}
+                  onCancel={() => setEditingStation(null)}
+                  onDelete={() => deleteStation(station.id)}
+                  onAddSong={(song) => addSongToExistingStation(station.id, song)}
+                  onRemoveSong={(index) => removeSongFromStation(station.id, index)}
+                  onDragStart={(e, index) => handleStationDragStart(e, station.id, index)}
+                  onDragOver={handleStationDragOver}
+                  onDrop={(e, index) => handleStationDrop(e, station.id, index)}
+                  draggedIndex={draggedStationId === station.id ? draggedIndex : null}
+                  onPlay={() => playStation(station.id)}
+                  isPlaying={musicStatus.currentStation?.id === station.id}
+                />
+              ))}
+            </div>
 
             {settings.localMusic.stations.length === 0 && !isCreatingStation && (
               <div className="text-center py-8">
