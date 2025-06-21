@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, Activity } from 'lucide-react';
+import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
-import AudioVisualizer from '../components/AudioVisualizer';
 
 // Matrix Blocks Komponente
 const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
@@ -288,7 +287,7 @@ const Music: React.FC = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'radio' | 'local' | 'visualizer' | 'settings'>('settings');
+  const [activeTab, setActiveTab] = useState<'radio' | 'local' | 'settings'>('settings');
   const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
   
   // State
@@ -355,19 +354,6 @@ const Music: React.FC = () => {
   // Volume State
   const [currentVolume, setCurrentVolume] = useState(50);
   const [volumeLoading, setVolumeLoading] = useState(false);
-
-  // Audio Visualizer State
-  const [visualizerEnabled, setVisualizerEnabled] = useState(false);
-  const [audioData, setAudioData] = useState({
-    frequencies: new Array(128).fill(0),
-    waveform: new Array(512).fill(0),
-    volume: 0,
-    peak: 0,
-    bassLevel: 0,
-    midLevel: 0,
-    trebleLevel: 0
-  });
-  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
 
   // Guild & Channel State
   const [guildInfo, setGuildInfo] = useState<{
@@ -473,8 +459,6 @@ const Music: React.FC = () => {
         await loadMusicStatus(currentGuildId);
         await loadRadioStatus(currentGuildId);
         await loadVolumeStatus(currentGuildId);
-        await loadVisualizerStatus(currentGuildId);
-        initializeWebSocket();
       }
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
@@ -765,90 +749,6 @@ const Music: React.FC = () => {
     }
   };
 
-  // Audio Visualizer Functions
-  const loadVisualizerStatus = async (guildId: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/visualizer/${guildId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setVisualizerEnabled(data.isAnalyzing || false);
-        if (data.audioData) {
-          setAudioData(data.audioData);
-        }
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden des Visualizer-Status:', error);
-    }
-  };
-
-  const toggleVisualizer = async () => {
-    if (!guildId) return;
-    
-    try {
-      const newState = !visualizerEnabled;
-      const response = await fetch(`${apiUrl}/api/music/visualizer/${guildId}/toggle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ enable: newState })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setVisualizerEnabled(newState);
-        showSuccess('Audio Visualizer', data.message);
-      } else {
-        showError('Visualizer Fehler', 'Fehler beim Umschalten des Visualizers');
-      }
-    } catch (error) {
-      showError('Visualizer Fehler', 'Verbindungsfehler beim Umschalten');
-    }
-  };
-
-  const initializeWebSocket = () => {
-    try {
-      // WebSocket-Verbindung für Live-Updates
-      const ws = new WebSocket('ws://localhost:8080');
-      
-      ws.onopen = () => {
-        console.log('🌊 Audio Visualizer WebSocket verbunden');
-        setWsConnection(ws);
-        
-        // Request initial data
-        ws.send(JSON.stringify({ type: 'requestVisualization' }));
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === 'audioVisualization') {
-            setAudioData(message.data);
-          }
-        } catch (error) {
-          console.error('WebSocket Message Error:', error);
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket Error:', error);
-      };
-
-      ws.onclose = () => {
-        console.log('📡 WebSocket Verbindung geschlossen');
-        setWsConnection(null);
-        
-        // Reconnect nach 5 Sekunden
-        setTimeout(initializeWebSocket, 5000);
-      };
-
-      return ws;
-    } catch (error) {
-      console.error('WebSocket Initialisierung fehlgeschlagen:', error);
-      return null;
-    }
-  };
-
   // Station Management
   const createStation = async () => {
     if (!newStation.name.trim()) {
@@ -1064,16 +964,6 @@ const Music: React.FC = () => {
     loadData();
   }, []);
 
-  // Cleanup WebSocket on unmount
-  useEffect(() => {
-    return () => {
-      if (wsConnection) {
-        wsConnection.close();
-        setWsConnection(null);
-      }
-    };
-  }, [wsConnection]);
-
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -1123,14 +1013,6 @@ const Music: React.FC = () => {
           >
             <MusicIcon className="w-4 h-4" />
             Lokale MP3s
-          </Button>
-          <Button
-            onClick={() => setActiveTab('visualizer')}
-            variant={activeTab === 'visualizer' ? 'default' : 'ghost'}
-            className="flex items-center gap-2"
-          >
-            <Activity className="w-4 h-4" />
-            Audio Visualizer
           </Button>
           <Button
             onClick={() => setActiveTab('settings')}
@@ -1986,200 +1868,7 @@ const Music: React.FC = () => {
                       )}
             </CardContent>
           </Card>
-        </div>
-      ) : activeTab === 'visualizer' ? (
-        /* Audio Visualizer Tab Content */
-        <div className="space-y-6">
-          {/* Visualizer Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-blue-400" />
-                Audio Visualizer
-              </CardTitle>
-              <CardDescription>
-                Live-Visualisierung der Audio-Daten mit Frequenz-Analyse
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Status & Toggle */}
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-blue-500/30">
-                <div>
-                  <h4 className="font-medium text-white flex items-center gap-2">
-                    🌊 Live Audio Analyse
-                    <div className={`w-2 h-2 rounded-full ${visualizerEnabled ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                  </h4>
-                  <p className="text-sm text-gray-400">
-                    {visualizerEnabled 
-                      ? 'Analysiert Audio-Stream in Echtzeit' 
-                      : 'Visualizer ist deaktiviert'
-                    }
-                  </p>
                 </div>
-                <Button
-                  onClick={toggleVisualizer}
-                  variant={visualizerEnabled ? 'destructive' : 'default'}
-                  className="flex items-center gap-2"
-                >
-                  {visualizerEnabled ? (
-                    <>
-                      <StopCircle className="w-4 h-4" />
-                      Stoppen
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" />
-                      Starten
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Connection Status */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-3 bg-dark-surface/50 rounded-lg border border-gray-600/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${wsConnection && wsConnection.readyState === WebSocket.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-sm font-medium text-white">WebSocket</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {wsConnection && wsConnection.readyState === WebSocket.OPEN ? 'Verbunden' : 'Getrennt'}
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-dark-surface/50 rounded-lg border border-gray-600/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${visualizerEnabled ? 'bg-blue-500 animate-pulse' : 'bg-gray-500'}`} />
-                    <span className="text-sm font-medium text-white">Analyse</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {visualizerEnabled ? 'Aktiv' : 'Inaktiv'}
-                  </p>
-                </div>
-                
-                <div className="p-3 bg-dark-surface/50 rounded-lg border border-gray-600/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${audioData.volume > 0 ? 'bg-green-500' : 'bg-gray-500'}`} />
-                    <span className="text-sm font-medium text-white">Audio</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {audioData.volume > 0 ? `${audioData.volume.toFixed(0)}%` : 'Stille'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Live Visualizer */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Waves className="w-5 h-5 text-green-400" />
-                Live Audio Visualisierung
-              </CardTitle>
-              <CardDescription>
-                Echtzeit-Darstellung von Frequenzen, Waveform und Audio-Leveln
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AudioVisualizer 
-                audioData={audioData}
-                isAnalyzing={visualizerEnabled}
-                className="w-full"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Audio Data Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-purple-400" />
-                Audio Statistiken
-              </CardTitle>
-              <CardDescription>
-                Detaillierte Audio-Daten in Echtzeit
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-lg border border-red-500/30">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-300 mb-1">
-                      {audioData.volume.toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-red-200">Volume</div>
-                    <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-gradient-to-r from-green-500 to-red-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(audioData.volume, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-lg border border-blue-500/30">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-300 mb-1">
-                      {audioData.bassLevel.toFixed(1)}
-                    </div>
-                    <div className="text-sm text-blue-200">Bass</div>
-                    <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(audioData.bassLevel * 2, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg border border-yellow-500/30">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-300 mb-1">
-                      {audioData.midLevel.toFixed(1)}
-                    </div>
-                    <div className="text-sm text-yellow-200">Mid</div>
-                    <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(audioData.midLevel * 2, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-300 mb-1">
-                      {audioData.trebleLevel.toFixed(1)}
-                    </div>
-                    <div className="text-sm text-purple-200">Treble</div>
-                    <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-purple-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(audioData.trebleLevel * 2, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Peak Level Display */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg border border-green-500/30">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-white">Peak Level</span>
-                  <span className="text-sm text-green-300">{audioData.peak.toFixed(1)}%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-3">
-                  <div 
-                    className="bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 h-3 rounded-full transition-all duration-100"
-                    style={{ width: `${Math.min(audioData.peak, 100)}%` }}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       )}
 
       {/* Music Controls */}
