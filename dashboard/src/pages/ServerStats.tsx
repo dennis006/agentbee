@@ -144,7 +144,7 @@ const ServerStats: React.FC = () => {
       
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
-              showErrorMsg('Fehler beim Laden der Daten');
+      showErrorMsg('Fehler beim Laden der Daten');
     } finally {
       setLoading(false);
     }
@@ -164,10 +164,10 @@ const ServerStats: React.FC = () => {
         await loadData();
       } else {
         const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Fehler beim Speichern der Einstellungen'}`);
+        showErrorMsg(`${errorData.error || 'Fehler beim Speichern der Einstellungen'}`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler beim Speichern');
+      showErrorMsg('Netzwerkfehler beim Speichern');
     }
   };
 
@@ -182,10 +182,10 @@ const ServerStats: React.FC = () => {
         await loadData();
       } else {
         const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Fehler beim Erstellen der Channels'}`);
+        showErrorMsg(`${errorData.error || 'Fehler beim Erstellen der Channels'}`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler beim Erstellen der Channels');
+      showErrorMsg('Netzwerkfehler beim Erstellen der Channels');
     }
   };
 
@@ -204,10 +204,10 @@ const ServerStats: React.FC = () => {
         await loadData();
       } else {
         const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Fehler beim Löschen der Channels'}`);
+        showErrorMsg(`${errorData.error || 'Fehler beim Löschen der Channels'}`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler beim Löschen der Channels');
+      showErrorMsg('Netzwerkfehler beim Löschen der Channels');
     }
   };
 
@@ -223,10 +223,10 @@ const ServerStats: React.FC = () => {
         // Zusätzliche Timer-Synchronisation nach manuellem Update
         setTimeout(() => loadTimerStatus(), 1000);
       } else {
-        showError('❌ Fehler beim Aktualisieren der Stats');
+        showErrorMsg('Fehler beim Aktualisieren der Stats');
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler beim Aktualisieren');
+      showErrorMsg('Netzwerkfehler beim Aktualisieren');
     }
   };
 
@@ -241,10 +241,10 @@ const ServerStats: React.FC = () => {
         await loadData();
       } else {
         const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Fehler bei der Channel-Validierung'}`);
+        showErrorMsg(`${errorData.error || 'Fehler bei der Channel-Validierung'}`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler bei der Channel-Validierung');
+      showErrorMsg('Netzwerkfehler bei der Channel-Validierung');
     }
   };
 
@@ -264,10 +264,10 @@ const ServerStats: React.FC = () => {
         await loadData();
       } else {
         const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Fehler bei der Bereinigung'}`);
+        showErrorMsg(`${errorData.error || 'Fehler bei der Bereinigung'}`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler bei der Bereinigung');
+      showErrorMsg('Netzwerkfehler bei der Bereinigung');
     }
   };
 
@@ -291,10 +291,10 @@ const ServerStats: React.FC = () => {
         await loadData();
       } else {
         const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Fehler beim kompletten Reset'}`);
+        showErrorMsg(`${errorData.error || 'Fehler beim kompletten Reset'}`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler beim kompletten Reset');
+      showErrorMsg('Netzwerkfehler beim kompletten Reset');
     }
   };
 
@@ -308,10 +308,10 @@ const ServerStats: React.FC = () => {
         const data = await response.json();
         success(`✅ ${statType} Channel getestet! Wert: ${data.value}`);
       } else {
-        showError(`❌ Fehler beim Testen des ${statType} Channels`);
+        showErrorMsg(`Fehler beim Testen des ${statType} Channels`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler beim Testen');
+      showErrorMsg('Netzwerkfehler beim Testen');
     }
   };
 
