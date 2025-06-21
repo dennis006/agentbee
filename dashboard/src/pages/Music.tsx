@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon } from 'lucide-react';
+import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -227,8 +227,26 @@ interface Station {
   logo: string;
 }
 
+interface RadioStation {
+  id: string;
+  name: string;
+  url: string;
+  genre: string;
+  country: string;
+  description: string;
+  logo: string;
+}
+
 interface MusicSettings {
   enabled: boolean;
+  radio: {
+    enabled: boolean;
+    stations: RadioStation[];
+    defaultStation: string;
+    autoStop: boolean;
+    showNowPlaying: boolean;
+    embedColor: string;
+  };
   localMusic: {
     enabled: boolean;
     musicDirectory: string;
@@ -269,11 +287,19 @@ const Music: React.FC = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('songs');
+  const [activeTab, setActiveTab] = useState<'radio' | 'local'>('radio');
   
   // State
   const [settings, setSettings] = useState<MusicSettings>({
     enabled: true,
+    radio: {
+      enabled: true,
+      stations: [],
+      defaultStation: 'lofi',
+      autoStop: false,
+      showNowPlaying: true,
+      embedColor: '#FF6B6B'
+    },
     localMusic: {
       enabled: true,
       musicDirectory: './music',
@@ -296,10 +322,15 @@ const Music: React.FC = () => {
   });
 
   const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
+  const [radioStations, setRadioStations] = useState<RadioStation[]>([]);
   const [musicStatus, setMusicStatus] = useState<MusicStatus>({
     isPlaying: false,
     currentSong: null,
     currentStation: null
+  });
+  const [radioStatus, setRadioStatus] = useState({
+    isPlaying: false,
+    currentStation: null as RadioStation | null
   });
   const [channels, setChannels] = useState<Channel[]>([]);
   const [guildId, setGuildId] = useState<string | null>(null);
@@ -315,6 +346,8 @@ const Music: React.FC = () => {
 
   // Drag & Drop State
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  
+
 
   // Load Data
   const loadData = async () => {
@@ -335,13 +368,15 @@ const Music: React.FC = () => {
         setSettings(data.settings);
       }
 
-      // Verfügbare Songs laden
+      // Verfügbare Songs und Radio-Stationen laden
       await loadAvailableSongs();
+      await loadRadioStations();
 
       // Channels laden
       if (urlGuildId) {
         await loadChannels(urlGuildId);
         await loadMusicStatus(urlGuildId);
+        await loadRadioStatus(urlGuildId);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
@@ -360,6 +395,18 @@ const Music: React.FC = () => {
       }
     } catch (error) {
       console.error('Fehler beim Laden der Songs:', error);
+    }
+  };
+
+  const loadRadioStations = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/music/radio/stations`);
+      if (response.ok) {
+        const data = await response.json();
+        setRadioStations(data.stations || []);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Radio-Stationen:', error);
     }
   };
 
@@ -388,6 +435,21 @@ const Music: React.FC = () => {
       }
     } catch (error) {
       console.error('Fehler beim Laden des Music Status:', error);
+    }
+  };
+
+  const loadRadioStatus = async (guildId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setRadioStatus({
+          isPlaying: data.isPlaying || false,
+          currentStation: data.currentStation || null
+        });
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Radio Status:', error);
     }
   };
 
@@ -477,6 +539,50 @@ const Music: React.FC = () => {
       }
     } catch (error) {
       showError('Musik Fehler', 'Verbindungsfehler beim Stoppen');
+    }
+  };
+
+  // Radio Controls
+  const playRadioStation = async (stationId: string) => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stationId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Radio', data.message);
+        await loadRadioStatus(guildId);
+      } else {
+        const data = await response.json();
+        showError('Radio Fehler', data.error || 'Fehler beim Abspielen');
+      }
+    } catch (error) {
+      showError('Radio Fehler', 'Verbindungsfehler beim Abspielen');
+    }
+  };
+
+  const stopRadio = async () => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/stop`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Radio', data.message);
+        await loadRadioStatus(guildId);
+      } else {
+        showError('Radio Fehler', 'Fehler beim Stoppen des Radios');
+      }
+    } catch (error) {
+      showError('Radio Fehler', 'Verbindungsfehler beim Stoppen');
     }
   };
 
@@ -614,16 +720,38 @@ const Music: React.FC = () => {
       {/* Page Header */}
       <div className="text-center py-8">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <MusicIcon className="w-12 h-12 text-purple-400 animate-pulse" />
+          <Radio className="w-12 h-12 text-purple-400 animate-pulse" />
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
-            Lokales Musik System
+            Musik System
           </h1>
         </div>
         <div className="text-dark-text text-lg max-w-2xl mx-auto">
-          Verwalte deine MP3-Sammlung und erstelle eigene Radio-Stationen! 
+          Radio-Streams & lokale MP3-Sammlung in einem System! 
           <span className="ml-2 inline-block relative">
-            🎵
+            🎵📻
           </span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex justify-center mb-8">
+        <div className="bg-dark-surface/50 rounded-lg p-1 flex gap-1">
+          <Button
+            onClick={() => setActiveTab('radio')}
+            variant={activeTab === 'radio' ? 'default' : 'ghost'}
+            className="flex items-center gap-2"
+          >
+            <Radio className="w-4 h-4" />
+            Radio Streams
+          </Button>
+          <Button
+            onClick={() => setActiveTab('local')}
+            variant={activeTab === 'local' ? 'default' : 'ghost'}
+            className="flex items-center gap-2"
+          >
+            <MusicIcon className="w-4 h-4" />
+            Lokale MP3s
+          </Button>
         </div>
       </div>
 
@@ -658,7 +786,107 @@ const Music: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {activeTab === 'radio' ? (
+        /* Radio Tab Content */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Radio Stations */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Radio className="w-5 h-5 text-blue-400" />
+                Radio Streams
+              </CardTitle>
+              <CardDescription>
+                {radioStations.length} Radio-Stationen verfügbar
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {radioStations.map((station) => (
+                  <div
+                    key={station.id}
+                    className="flex items-center gap-3 p-3 bg-dark-bg/50 rounded-lg border border-gray-600/30 hover:border-blue-primary/50 transition-all duration-300"
+                  >
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      {station.logo ? (
+                        <img src={station.logo} alt={station.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Radio className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{station.name}</p>
+                      <p className="text-xs text-blue-400 truncate">{station.genre}</p>
+                      <p className="text-xs text-gray-400 truncate">{station.description}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => playRadioStation(station.id)}
+                        disabled={radioStatus.currentStation?.id === station.id}
+                        className="px-3 py-1 text-xs"
+                      >
+                        {radioStatus.currentStation?.id === station.id ? (
+                          <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+                        ) : (
+                          <Play className="w-3 h-3" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {radioStations.length === 0 && (
+                <div className="text-center py-8">
+                  <Radio className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-400">Keine Radio-Stationen verfügbar</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Radio Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Waves className="w-5 h-5 text-green-400" />
+                Radio Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {radioStatus.isPlaying ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                    <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-300">📻 Läuft gerade</p>
+                      <p className="text-sm text-white">{radioStatus.currentStation?.name}</p>
+                      <p className="text-xs text-gray-400">{radioStatus.currentStation?.description}</p>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={stopRadio}
+                    variant="destructive" 
+                    className="w-full flex items-center gap-2"
+                  >
+                    <StopCircle className="w-4 h-4" />
+                    Radio stoppen
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Radio className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-400 mb-4">Kein Radio aktiv</p>
+                  <p className="text-xs text-gray-500">Wähle eine Station zum Abspielen</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        /* Local Music Tab Content */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Songs Library */}
         <Card className="lg:col-span-1">
           <CardHeader>
