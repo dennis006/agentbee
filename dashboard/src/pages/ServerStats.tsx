@@ -84,7 +84,12 @@ interface CurrentStats {
 }
 
 const ServerStats: React.FC = () => {
-  const { toasts, success, error: showError, removeToast } = useToast();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
+  
+  // Wrapper functions for easier usage
+  const success = (message: string) => showSuccess('Erfolg', message);
+  const showErrorMsg = (message: string) => showError('Fehler', message);
+  
   const [loading, setLoading] = useState(true);
   const [currentStats, setCurrentStats] = useState<CurrentStats | null>(null);
   const [serverInfo, setServerInfo] = useState<{ name: string; icon: string | null } | null>(null);
@@ -139,7 +144,7 @@ const ServerStats: React.FC = () => {
       
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
-      showError('❌ Fehler beim Laden der Daten');
+              showErrorMsg('Fehler beim Laden der Daten');
     } finally {
       setLoading(false);
     }
@@ -154,7 +159,7 @@ const ServerStats: React.FC = () => {
       });
 
       if (response.ok) {
-        success('💾 Server-Stats Einstellungen gespeichert!');
+        showSuccess('Gespeichert', 'Server-Stats Einstellungen gespeichert!');
         // Lade die Daten neu, um sicherzustellen, dass sie korrekt gespeichert wurden
         await loadData();
       } else {
