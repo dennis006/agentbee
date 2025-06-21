@@ -1360,7 +1360,69 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Interactive Panel Management
+    // Interactive Panel Management (neue Route ohne Guild ID)
+    app.post('/api/music/interactive-panel/post', async (req, res) => {
+        try {
+            const { channelName, embedColor } = req.body;
+            
+            if (!channelName) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Channel-Name ist erforderlich'
+                });
+            }
+            
+            // Update settings
+            musicSettings.interactivePanel.channelId = channelName;
+            if (embedColor) {
+                musicSettings.interactivePanel.embedColor = embedColor;
+            }
+            saveMusicSettings();
+            
+            // Finde Guild durch Channel-Name
+            let targetGuild = null;
+            if (global.client && global.client.guilds) {
+                for (const guild of global.client.guilds.cache.values()) {
+                    const channel = guild.channels.cache.find(ch => ch.name === channelName && ch.type === 0);
+                    if (channel) {
+                        targetGuild = guild;
+                        break;
+                    }
+                }
+            }
+            
+            if (!targetGuild) {
+                return res.status(404).json({
+                    success: false,
+                    error: `Channel "${channelName}" nicht gefunden`
+                });
+            }
+            
+            const success = await postInteractiveRadioPanel(targetGuild.id);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Interactive Panel erfolgreich gepostet!',
+                    channelId: musicSettings.interactivePanel.channelId,
+                    messageId: musicSettings.interactivePanel.messageId
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Posten des Interactive Panels'
+                });
+            }
+        } catch (error) {
+            console.error('❌ Fehler beim Interactive Panel Post:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Interactive Panel Management (alte Route mit Guild ID)
     app.post('/api/music/interactive-panel/:guildId/post', async (req, res) => {
         try {
             const { guildId } = req.params;

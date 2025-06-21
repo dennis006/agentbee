@@ -284,6 +284,7 @@ const Music: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'radio' | 'local' | 'settings'>('settings');
+  const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
   
   // State
   const [settings, setSettings] = useState<MusicSettings>({
@@ -694,16 +695,26 @@ const Music: React.FC = () => {
 
   // Interactive Panel Functions
   const postInteractivePanel = async () => {
-    if (!guildId) return;
+    if (!settings.interactivePanel.channelId.trim()) {
+      showError('Panel Fehler', 'Bitte zuerst einen Channel für das Interactive Panel konfigurieren!');
+      return;
+    }
     
     try {
-      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
+      // Zuerst Einstellungen speichern
+      await saveSettings();
+      
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/post`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelName: settings.interactivePanel.channelId,
+          embedColor: settings.interactivePanel.embedColor
+        })
       });
 
       if (response.ok) {
-      const data = await response.json();
+        const data = await response.json();
         showSuccess('Interactive Panel', '🎛️ Interactive Panel erfolgreich erstellt!');
         
         // Update settings with new message ID
@@ -714,6 +725,9 @@ const Music: React.FC = () => {
             messageId: data.messageId
           }
         }));
+        
+        // Einstellungen erneut speichern mit Message ID
+        setTimeout(() => saveSettings(), 500);
       } else {
         const data = await response.json();
         showError('Panel Fehler', data.error || 'Fehler beim Erstellen des Interactive Panels');
@@ -742,6 +756,23 @@ const Music: React.FC = () => {
       showError('Panel Fehler', 'Verbindungsfehler beim Aktualisieren des Interactive Panels');
     }
   };
+
+  // Auto-Save Effect
+  useEffect(() => {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+    }
+    
+    const timer = setTimeout(() => {
+      saveSettings();
+    }, 2000); // Auto-save nach 2 Sekunden
+    
+    setAutoSaveTimer(timer);
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [settings]);
 
   useEffect(() => {
     loadData();
@@ -818,6 +849,13 @@ const Music: React.FC = () => {
           <Save className="h-5 w-5" />
           <span>{saving ? 'Speichere...' : 'Einstellungen speichern'}</span>
         </Button>
+        
+        {autoSaveTimer && (
+          <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/30 rounded-lg px-3 py-2">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-sm text-green-300">Auto-Save aktiv</span>
+          </div>
+        )}
       </div>
 
       {/* System Status */}
