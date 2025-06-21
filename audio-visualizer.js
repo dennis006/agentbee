@@ -1,7 +1,22 @@
-const { createCanvas } = require('canvas');
-const fs = require('fs');
-const path = require('path');
 const { Transform } = require('stream');
+const WebSocket = require('ws');
+
+// Optional Canvas für Visualisierung
+let Canvas, createCanvas;
+try {
+  Canvas = require('canvas');
+  createCanvas = Canvas.createCanvas;
+} catch (error) {
+  console.log('⚠️ Canvas nicht verfügbar - Audio Visualizer läuft ohne Grafik-Rendering');
+}
+
+// Optional ffmpeg für erweiterte Audio-Verarbeitung
+let ffmpeg;
+try {
+  ffmpeg = require('fluent-ffmpeg');
+} catch (error) {
+  console.log('⚠️ FFmpeg nicht verfügbar - Audio Visualizer läuft mit eingeschränkter Funktionalität');
+}
 
 // Audio Visualizer System
 class AudioVisualizer {
@@ -17,293 +32,95 @@ class AudioVisualizer {
             trebleLevel: 0,
             bpm: 0
         };
-        this.canvas = createCanvas(800, 400);
-        this.ctx = this.canvas.getContext('2d');
-        this.animationFrame = 0;
-        this.lastUpdate = Date.now();
         
-        // WebSocket-Clients für Live-Updates
-        this.wsClients = new Set();
+        // WebSocket Server für Live-Updates
+        this.wsServer = null;
+        this.clients = new Set();
+        
+        // Canvas für Visualisierung (falls verfügbar)
+        this.canvas = null;
+        this.ctx = null;
+        
+        // Audio Buffer für Analyse
+        this.audioBuffer = [];
+        this.sampleRate = 48000; // Discord Audio Sample Rate
+        
+        this.initializeWebSocketServer();
+        this.initializeCanvas();
         
         console.log('🌊 Audio Visualizer initialisiert');
     }
 
-    // Audio-Stream Analyse
-    createAudioAnalyzer() {
-        return new Transform({
-            transform(chunk, encoding, callback) {
-                try {
-                    // Audio-Daten analysieren
-                    const samples = this.bytesToSamples(chunk);
-                    const audioData = this.analyzeAudio(samples);
-                    
-                    // Live-Update an Dashboard senden
-                    this.broadcastAudioData(audioData);
-                    
-                    // Canvas-Visualisierung aktualisieren
-                    this.updateVisualization(audioData);
-                    
-                } catch (error) {
-                    console.error('❌ Audio-Analyse Fehler:', error);
-                }
-                
-                // Audio-Stream durchleiten
-                this.push(chunk);
-                callback();
-            }.bind(this)
-        });
-    }
-
-    // Bytes zu Audio-Samples konvertieren
-    bytesToSamples(buffer) {
-        const samples = [];
-        for (let i = 0; i < buffer.length; i += 2) {
-            // 16-bit PCM zu Float
-            const sample = buffer.readInt16LE(i) / 32768.0;
-            samples.push(sample);
-        }
-        return samples;
-    }
-
-    // Audio-Analyse durchführen
-    analyzeAudio(samples) {
-        if (samples.length === 0) return this.audioData;
-
+    initializeWebSocketServer() {
         try {
-            // Volume berechnen (RMS)
-            const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
-            this.audioData.volume = Math.min(100, rms * 100);
-
-            // Peak-Level
-            const peak = Math.max(...samples.map(s => Math.abs(s)));
-            this.audioData.peak = Math.min(100, peak * 100);
-
-            // Waveform für Visualisierung
-            const step = Math.max(1, Math.floor(samples.length / 512));
-            for (let i = 0; i < 512; i++) {
-                const sampleIndex = i * step;
-                if (sampleIndex < samples.length) {
-                    this.audioData.waveform[i] = samples[sampleIndex] * 50; // Skalierung
-                }
-            }
-
-            // Einfache Frequenz-Analyse (Mock FFT)
-            this.performSimpleFFT(samples);
-
-            // Bass/Mid/Treble Levels
-            this.calculateFrequencyBands();
-
-            return this.audioData;
-
+            this.wsServer = new WebSocket.Server({ port: 8080 });
+            
+            this.wsServer.on('connection', (ws) => {
+                console.log('🌊 Neuer Audio Visualizer Client verbunden');
+                this.clients.add(ws);
+                
+                // Sende aktuelle Audio-Daten
+                ws.send(JSON.stringify({
+                    type: 'audioVisualization',
+                    data: this.audioData
+                }));
+                
+                ws.on('close', () => {
+                    this.clients.delete(ws);
+                    console.log('📡 Audio Visualizer Client getrennt');
+                });
+                
+                ws.on('message', (message) => {
+                    try {
+                        const data = JSON.parse(message);
+                        if (data.type === 'requestVisualization') {
+                            ws.send(JSON.stringify({
+                                type: 'audioVisualization',
+                                data: this.audioData
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('WebSocket Message Error:', error);
+                    }
+                });
+            });
+            
+            console.log('🌊 Audio Visualizer WebSocket Server gestartet auf Port 8080');
         } catch (error) {
-            console.error('❌ Audio-Analyse Fehler:', error);
-            return this.audioData;
+            console.error('❌ Fehler beim Starten des WebSocket Servers:', error);
         }
     }
 
-    // Vereinfachte FFT-Simulation
-    performSimpleFFT(samples) {
-        const fftSize = Math.min(128, samples.length);
+    initializeCanvas() {
+        if (!createCanvas) {
+            console.log('⚠️ Canvas-Rendering nicht verfügbar - Audio-Daten werden nur als JSON gesendet');
+            return;
+        }
         
-        for (let i = 0; i < fftSize; i++) {
-            // Simuliere Frequenz-Bins
-            const frequency = (i / fftSize) * 22050; // Bis 22kHz
-            let magnitude = 0;
-            
-            // Einfache Frequenz-Detektion
-            for (let j = 0; j < Math.min(samples.length - 1, 100); j++) {
-                const phase = (frequency * j * Math.PI * 2) / 44100;
-                magnitude += samples[j] * Math.cos(phase);
-            }
-            
-            this.audioData.frequencies[i] = Math.abs(magnitude) * 10;
+        try {
+            this.canvas = createCanvas(800, 400);
+            this.ctx = this.canvas.getContext('2d');
+            console.log('🎨 Canvas für Audio Visualisierung initialisiert (800x400)');
+        } catch (error) {
+            console.error('❌ Fehler beim Initialisieren des Canvas:', error);
         }
     }
 
-    // Frequenz-Bänder berechnen
-    calculateFrequencyBands() {
-        const freqs = this.audioData.frequencies;
-        
-        // Bass (20Hz - 250Hz) - Bins 0-5
-        this.audioData.bassLevel = freqs.slice(0, 6).reduce((sum, val) => sum + val, 0) / 6;
-        
-        // Mid (250Hz - 4kHz) - Bins 6-25
-        this.audioData.midLevel = freqs.slice(6, 26).reduce((sum, val) => sum + val, 0) / 20;
-        
-        // Treble (4kHz - 20kHz) - Bins 26-127
-        this.audioData.trebleLevel = freqs.slice(26, 128).reduce((sum, val) => sum + val, 0) / 102;
-    }
-
-    // Canvas-Visualisierung erstellen
-    updateVisualization(audioData) {
-        const ctx = this.ctx;
-        const canvas = this.canvas;
-        
-        // Canvas leeren
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Gradient-Hintergrund
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, '#1a1a2e');
-        gradient.addColorStop(0.5, '#16213e');
-        gradient.addColorStop(1, '#0f0f1a');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Frequenz-Balken zeichnen
-        this.drawFrequencyBars(ctx, audioData);
-        
-        // Waveform zeichnen
-        this.drawWaveform(ctx, audioData);
-        
-        // Audio-Info Text
-        this.drawAudioInfo(ctx, audioData);
-        
-        this.animationFrame++;
-    }
-
-    // Frequenz-Balken zeichnen
-    drawFrequencyBars(ctx, audioData) {
-        const barWidth = this.canvas.width / audioData.frequencies.length;
-        const maxHeight = this.canvas.height * 0.6;
-        
-        for (let i = 0; i < audioData.frequencies.length; i++) {
-            const barHeight = (audioData.frequencies[i] / 100) * maxHeight;
-            const x = i * barWidth;
-            const y = this.canvas.height - barHeight - 50;
-            
-            // Farbe basierend auf Frequenz
-            const hue = (i / audioData.frequencies.length) * 360;
-            const saturation = 70 + (audioData.frequencies[i] / 100) * 30;
-            const lightness = 50 + (audioData.frequencies[i] / 100) * 30;
-            
-            ctx.fillStyle = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-            ctx.fillRect(x, y, barWidth - 1, barHeight);
-            
-            // Glow-Effekt
-            ctx.shadowColor = ctx.fillStyle;
-            ctx.shadowBlur = 10;
-            ctx.fillRect(x, y, barWidth - 1, Math.min(barHeight, 5));
-            ctx.shadowBlur = 0;
-        }
-    }
-
-    // Waveform zeichnen
-    drawWaveform(ctx, audioData) {
-        const waveHeight = 80;
-        const waveY = this.canvas.height - 40;
-        const stepX = this.canvas.width / audioData.waveform.length;
-        
-        ctx.strokeStyle = '#00ff88';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        
-        for (let i = 0; i < audioData.waveform.length; i++) {
-            const x = i * stepX;
-            const y = waveY + audioData.waveform[i];
-            
-            if (i === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        }
-        
-        ctx.stroke();
-        
-        // Waveform-Glow
-        ctx.strokeStyle = '#00ff8844';
-        ctx.lineWidth = 6;
-        ctx.stroke();
-    }
-
-    // Audio-Info anzeigen
-    drawAudioInfo(ctx, audioData) {
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '16px Arial';
-        
-        const info = [
-            `🔊 Volume: ${audioData.volume.toFixed(1)}%`,
-            `📈 Peak: ${audioData.peak.toFixed(1)}%`,
-            `🎵 Bass: ${audioData.bassLevel.toFixed(1)}`,
-            `🎶 Mid: ${audioData.midLevel.toFixed(1)}`,
-            `🎵 Treble: ${audioData.trebleLevel.toFixed(1)}`
-        ];
-        
-        info.forEach((text, index) => {
-            ctx.fillText(text, 20, 30 + index * 25);
-        });
-        
-        // Live-Indikator
-        const time = Date.now();
-        const pulse = Math.sin(time / 200) * 0.5 + 0.5;
-        ctx.fillStyle = `rgba(255, 0, 0, ${pulse})`;
-        ctx.beginPath();
-        ctx.arc(this.canvas.width - 30, 30, 8, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '12px Arial';
-        ctx.fillText('LIVE', this.canvas.width - 60, 36);
-    }
-
-    // Visualisierung als Buffer speichern
-    getVisualizationBuffer() {
-        return this.canvas.toBuffer('image/png');
-    }
-
-    // Live-Audio-Daten an Dashboard senden
-    broadcastAudioData(audioData) {
-        if (this.wsClients.size === 0) return;
-        
-        const message = JSON.stringify({
-            type: 'audioVisualization',
-            data: {
-                ...audioData,
-                timestamp: Date.now()
-            }
-        });
-        
-        this.wsClients.forEach(client => {
-            if (client.readyState === 1) { // WebSocket.OPEN
-                try {
-                    client.send(message);
-                } catch (error) {
-                    console.error('❌ WebSocket Send Error:', error);
-                    this.wsClients.delete(client);
-                }
-            }
-        });
-    }
-
-    // WebSocket-Client hinzufügen
-    addWebSocketClient(ws) {
-        this.wsClients.add(ws);
-        console.log(`🌊 Audio Visualizer Client verbunden (${this.wsClients.size} aktiv)`);
-        
-        ws.on('close', () => {
-            this.wsClients.delete(ws);
-            console.log(`📡 Client getrennt (${this.wsClients.size} aktiv)`);
-        });
-    }
-
-    // Visualizer starten
-    startAnalysis(guildId) {
+    startAnalyzing() {
         if (this.isAnalyzing) return;
         
         this.isAnalyzing = true;
-        console.log(`🌊 Audio Visualizer gestartet für Guild: ${guildId}`);
+        console.log('🌊 Audio Visualizer gestartet');
         
-        // Kontinuierliche Canvas-Updates
-        this.startRenderLoop();
+        // Starte Render-Loop (auch ohne Canvas für Audio-Daten)
+        this.renderLoop();
     }
 
-    // Visualizer stoppen
-    stopAnalysis(guildId) {
+    stopAnalyzing() {
         this.isAnalyzing = false;
+        console.log('📡 Audio Visualizer gestoppt');
         
-        // Reset audio data
+        // Reset Audio-Daten
         this.audioData = {
             frequencies: new Array(128).fill(0),
             waveform: new Array(512).fill(0),
@@ -315,24 +132,310 @@ class AudioVisualizer {
             bpm: 0
         };
         
-        console.log(`⏹️ Audio Visualizer gestoppt für Guild: ${guildId}`);
+        this.broadcastData();
     }
 
-    // Render-Loop für kontinuierliche Updates
-    startRenderLoop() {
-        const renderInterval = setInterval(() => {
-            if (!this.isAnalyzing) {
-                clearInterval(renderInterval);
-                return;
+    // Audio Stream Transformer für Echtzeit-Analyse
+    createAudioTransform() {
+        return new Transform({
+            transform(chunk, encoding, callback) {
+                if (this.isAnalyzing) {
+                    this.processAudioChunk(chunk);
+                }
+                callback(null, chunk); // Pass-through
+            }.bind(this)
+        });
+    }
+
+    processAudioChunk(chunk) {
+        try {
+            // Convert 16-bit PCM zu Float-Array
+            const samples = this.pcmToFloat32Array(chunk);
+            
+            // Update Audio Buffer
+            this.audioBuffer = this.audioBuffer.concat(samples);
+            
+            // Keep buffer size manageable
+            if (this.audioBuffer.length > 4096) {
+                this.audioBuffer = this.audioBuffer.slice(-4096);
             }
             
-            // Update Visualisierung auch ohne neue Audio-Daten (für Animationen)
-            this.updateVisualization(this.audioData);
+            // Analyse nur wenn genug Daten vorhanden
+            if (this.audioBuffer.length >= 1024) {
+                this.analyzeAudio(this.audioBuffer);
+            }
+        } catch (error) {
+            console.error('❌ Fehler bei Audio-Chunk Verarbeitung:', error);
+        }
+    }
+
+    pcmToFloat32Array(buffer) {
+        const samples = [];
+        for (let i = 0; i < buffer.length; i += 2) {
+            const sample = buffer.readInt16LE(i) / 32768;
+            samples.push(sample);
+        }
+        return samples;
+    }
+
+    analyzeAudio(samples) {
+        // Volume berechnen (RMS)
+        let sum = 0;
+        let peak = 0;
+        
+        for (let i = 0; i < samples.length; i++) {
+            const abs = Math.abs(samples[i]);
+            sum += abs * abs;
+            peak = Math.max(peak, abs);
+        }
+        
+        const rms = Math.sqrt(sum / samples.length);
+        this.audioData.volume = Math.min(rms * 100, 100);
+        this.audioData.peak = Math.min(peak * 100, 100);
+        
+        // Simplified Frequency Analysis (ohne echte FFT)
+        this.simulateFrequencyAnalysis(samples);
+        
+        // Waveform Update
+        this.updateWaveform(samples.slice(-512));
+        
+        // Frequency Bands
+        this.calculateFrequencyBands();
+    }
+
+    simulateFrequencyAnalysis(samples) {
+        // Vereinfachte Frequenz-Analyse ohne echte FFT
+        const freqBins = 128;
+        const frequencies = new Array(freqBins).fill(0);
+        
+        // Simuliere Frequenz-Verteilung basierend auf Audio-Eigenschaften
+        for (let i = 0; i < freqBins; i++) {
+            const freq = (i / freqBins) * (this.sampleRate / 2); // 0 bis 24kHz
             
-            // Broadcast aktualisierte Daten
-            this.broadcastAudioData(this.audioData);
+            // Einfache Frequenz-Simulation basierend auf Sample-Daten
+            let magnitude = 0;
+            const startIdx = Math.floor((i / freqBins) * samples.length);
+            const endIdx = Math.floor(((i + 1) / freqBins) * samples.length);
             
-        }, 50); // 20 FPS
+            for (let j = startIdx; j < endIdx && j < samples.length; j++) {
+                magnitude += Math.abs(samples[j]);
+            }
+            
+            frequencies[i] = magnitude / (endIdx - startIdx) * 100;
+        }
+        
+        this.audioData.frequencies = frequencies;
+    }
+
+    updateWaveform(samples) {
+        // Waveform auf 512 Punkte normalisieren
+        const waveform = new Array(512);
+        
+        for (let i = 0; i < 512; i++) {
+            if (i < samples.length) {
+                waveform[i] = samples[i] * 100; // Normalisiert zu ±100
+            } else {
+                waveform[i] = 0;
+            }
+        }
+        
+        this.audioData.waveform = waveform;
+    }
+
+    calculateFrequencyBands() {
+        const frequencies = this.audioData.frequencies;
+        const bassEnd = Math.floor(frequencies.length * 0.1); // ~2.4kHz
+        const midEnd = Math.floor(frequencies.length * 0.4);  // ~9.6kHz
+        
+        // Bass (20Hz - 250Hz)
+        let bassSum = 0;
+        for (let i = 0; i < bassEnd; i++) {
+            bassSum += frequencies[i];
+        }
+        this.audioData.bassLevel = bassSum / bassEnd;
+        
+        // Mid (250Hz - 4kHz)
+        let midSum = 0;
+        for (let i = bassEnd; i < midEnd; i++) {
+            midSum += frequencies[i];
+        }
+        this.audioData.midLevel = midSum / (midEnd - bassEnd);
+        
+        // Treble (4kHz - 20kHz)
+        let trebleSum = 0;
+        for (let i = midEnd; i < frequencies.length; i++) {
+            trebleSum += frequencies[i];
+        }
+        this.audioData.trebleLevel = trebleSum / (frequencies.length - midEnd);
+    }
+
+    renderVisualization() {
+        if (!this.ctx) return null;
+        
+        try {
+            const { width, height } = this.canvas;
+            
+            // Clear canvas
+            this.ctx.fillStyle = '#0a0a0a';
+            this.ctx.fillRect(0, 0, width, height);
+            
+            // Gradient background
+            const gradient = this.ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, 'rgba(147, 51, 234, 0.1)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.1)');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, width, height);
+            
+            // Frequency Bars
+            this.drawFrequencyBars();
+            
+            // Waveform
+            this.drawWaveform();
+            
+            // Audio Info
+            this.drawAudioInfo();
+            
+            return this.canvas.toBuffer('image/png');
+        } catch (error) {
+            console.error('❌ Render Error:', error);
+            return null;
+        }
+    }
+
+    drawFrequencyBars() {
+        if (!this.ctx) return;
+        
+        const { width, height } = this.canvas;
+        const barWidth = width / this.audioData.frequencies.length;
+        const maxHeight = height * 0.4;
+        
+        for (let i = 0; i < this.audioData.frequencies.length; i++) {
+            const barHeight = (this.audioData.frequencies[i] / 100) * maxHeight;
+            const x = i * barWidth;
+            const y = height - barHeight - 80;
+            
+            // Rainbow-Farben basierend auf Frequenz
+            const hue = (i / this.audioData.frequencies.length) * 360;
+            const intensity = Math.min(this.audioData.frequencies[i] / 50, 1);
+            
+            this.ctx.fillStyle = `hsla(${hue}, 70%, 60%, ${intensity})`;
+            
+            // Glow-Effekt für hohe Amplitude
+            if (this.audioData.frequencies[i] > 30) {
+                this.ctx.shadowColor = `hsl(${hue}, 70%, 60%)`;
+                this.ctx.shadowBlur = 10;
+            } else {
+                this.ctx.shadowBlur = 0;
+            }
+            
+            this.ctx.fillRect(x, y, barWidth - 1, barHeight);
+        }
+        
+        this.ctx.shadowBlur = 0;
+    }
+
+    drawWaveform() {
+        if (!this.ctx) return;
+        
+        const { width, height } = this.canvas;
+        const waveformY = height - 40;
+        const waveformHeight = 30;
+        
+        this.ctx.strokeStyle = '#10b981';
+        this.ctx.lineWidth = 2;
+        this.ctx.shadowColor = '#10b981';
+        this.ctx.shadowBlur = 5;
+        
+        this.ctx.beginPath();
+        
+        for (let i = 0; i < this.audioData.waveform.length; i++) {
+            const x = (i / this.audioData.waveform.length) * width;
+            const y = waveformY + (this.audioData.waveform[i] / 100) * waveformHeight;
+            
+            if (i === 0) {
+                this.ctx.moveTo(x, y);
+            } else {
+                this.ctx.lineTo(x, y);
+            }
+        }
+        
+        this.ctx.stroke();
+        this.ctx.shadowBlur = 0;
+    }
+
+    drawAudioInfo() {
+        if (!this.ctx) return;
+        
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '14px Arial';
+        this.ctx.textAlign = 'left';
+        
+        // Live Indicator
+        const time = Date.now() / 1000;
+        const pulse = (Math.sin(time * 3) + 1) / 2;
+        this.ctx.fillStyle = `rgba(239, 68, 68, ${0.5 + pulse * 0.5})`;
+        this.ctx.fillRect(10, 10, 8, 8);
+        
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillText('LIVE', 25, 20);
+        
+        // Audio Stats
+        this.ctx.fillText(`Volume: ${this.audioData.volume.toFixed(1)}%`, 10, 40);
+        this.ctx.fillText(`Peak: ${this.audioData.peak.toFixed(1)}%`, 10, 60);
+        this.ctx.fillText(`Bass: ${this.audioData.bassLevel.toFixed(1)}`, 150, 40);
+        this.ctx.fillText(`Mid: ${this.audioData.midLevel.toFixed(1)}`, 150, 60);
+        this.ctx.fillText(`Treble: ${this.audioData.trebleLevel.toFixed(1)}`, 250, 40);
+    }
+
+    renderLoop() {
+        if (!this.isAnalyzing) return;
+        
+        // Broadcast Audio-Daten an WebSocket-Clients
+        this.broadcastData();
+        
+        // Nächster Frame
+        setTimeout(() => this.renderLoop(), 50); // 20 FPS
+    }
+
+    broadcastData() {
+        if (this.clients.size === 0) return;
+        
+        const message = JSON.stringify({
+            type: 'audioVisualization',
+            data: this.audioData,
+            timestamp: Date.now()
+        });
+        
+        this.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                try {
+                    client.send(message);
+                } catch (error) {
+                    console.error('❌ WebSocket Send Error:', error);
+                }
+            }
+        });
+    }
+
+    getVisualizationImage() {
+        return this.renderVisualization();
+    }
+
+    getCurrentData() {
+        return {
+            ...this.audioData,
+            isAnalyzing: this.isAnalyzing,
+            timestamp: Date.now()
+        };
+    }
+
+    cleanup() {
+        this.stopAnalyzing();
+        
+        if (this.wsServer) {
+            this.wsServer.close();
+            console.log('🔌 Audio Visualizer WebSocket Server geschlossen');
+        }
     }
 }
 
