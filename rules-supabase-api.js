@@ -249,24 +249,17 @@ function setupRulesSupabaseRoutes(app) {
 
     // GET /api/rules/supabase - Lade Rules
     app.get('/api/rules/supabase', async (req, res) => {
-        const action = req.query.action;
         const serverId = getServerId(req);
 
         try {
-            if (action === 'load') {
-                let rules = await loadRulesFromSupabase(serverId);
-                
-                if (!rules) {
-                    // Wenn keine Rules gefunden, erstelle Standard-Rules
-                    rules = await createDefaultRulesInSupabase(serverId);
-                }
-
-                res.json(rules);
-            } else {
-                res.status(400).json({ 
-                    error: 'Ungültige Action. Verwende ?action=load' 
-                });
+            let rules = await loadRulesFromSupabase(serverId);
+            
+            if (!rules) {
+                // Wenn keine Rules gefunden, erstelle Standard-Rules
+                rules = await createDefaultRulesInSupabase(serverId);
             }
+
+            res.json(rules);
         } catch (error) {
             console.error('❌ Fehler in GET /api/rules/supabase:', error);
             
@@ -294,55 +287,46 @@ function setupRulesSupabaseRoutes(app) {
 
     // POST /api/rules/supabase - Speichere Rules
     app.post('/api/rules/supabase', async (req, res) => {
-        const { action, rules } = req.body;
         const serverId = getServerId(req);
+        
+        // Unterstütze sowohl { action: 'save', rules: ... } als auch direkte Rules
+        let rules;
+        if (req.body.action === 'save' && req.body.rules) {
+            rules = req.body.rules;
+        } else if (req.body.title && req.body.rules) {
+            // Direktes Rules-Objekt vom Frontend
+            rules = req.body;
+        } else {
+            return res.status(400).json({ 
+                error: 'Rules-Daten fehlen oder ungültiges Format' 
+            });
+        }
 
         try {
-            if (action === 'save') {
-                if (!rules) {
-                    return res.status(400).json({ 
-                        error: 'Rules-Daten fehlen' 
-                    });
-                }
-
-                const result = await saveRulesToSupabase(serverId, rules);
+            const result = await saveRulesToSupabase(serverId, rules);
                 
-                // Backup in JSON-Datei (optional)
-                const fs = require('fs');
-                try {
-                    fs.writeFileSync('./rules.json', JSON.stringify(rules, null, 2));
-                    console.log('📄 Backup in rules.json erstellt');
-                } catch (backupError) {
-                    console.warn('⚠️ JSON-Backup fehlgeschlagen:', backupError.message);
-                }
-
-                res.json({
-                    success: true,
-                    message: 'Rules erfolgreich in Supabase gespeichert',
-                    configId: result.configId,
-                    serverId: serverId,
-                    rulesCount: rules.rules.length
-                });
-
-            } else if (action === 'create_default') {
-                const defaultRules = await createDefaultRulesInSupabase(serverId);
-                res.json({
-                    success: true,
-                    message: 'Standard-Rules erstellt',
-                    rules: defaultRules
-                });
-
-            } else {
-                res.status(400).json({ 
-                    error: 'Ungültige Action. Verwende "save" oder "create_default"' 
-                });
+            // Backup in JSON-Datei (optional)
+            const fs = require('fs');
+            try {
+                fs.writeFileSync('./rules.json', JSON.stringify(rules, null, 2));
+                console.log('📄 Backup in rules.json erstellt');
+            } catch (backupError) {
+                console.warn('⚠️ JSON-Backup fehlgeschlagen:', backupError.message);
             }
+
+            res.json({
+                success: true,
+                message: 'Rules erfolgreich in Supabase gespeichert',
+                configId: result.configId,
+                serverId: serverId,
+                rulesCount: rules.rules.length
+            });
 
         } catch (error) {
             console.error('❌ Fehler in POST /api/rules/supabase:', error);
             
             // Fallback: Versuche in JSON-Datei zu speichern
-            if (action === 'save' && rules) {
+            if (rules) {
                 const fs = require('fs');
                 try {
                     fs.writeFileSync('./rules.json', JSON.stringify(rules, null, 2));
