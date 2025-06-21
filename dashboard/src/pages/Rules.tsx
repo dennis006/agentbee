@@ -6,7 +6,6 @@ import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
 import { useToast, ToastContainer } from '../components/ui/toast'
 import EmojiPicker from '../components/ui/emoji-picker'
-// Matrix Blocks Komponente direkt hier
 
 // Matrix Blocks Komponente
 const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
@@ -47,7 +46,6 @@ const Rules = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast()
   const [emojiPickerOpen, setEmojiPickerOpen] = useState<string | null>(null)
   const [currentRuleIndex, setCurrentRuleIndex] = useState<number | null>(null)
-  const [loading, setLoading] = useState(false)
   
   // API Base URL
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -79,9 +77,7 @@ const Rules = () => {
   const [rulesJson, setRulesJson] = useState('');
   const [editMode, setEditMode] = useState<'visual' | 'json'>('visual');
 
-  // Supabase API Funktionen
   const saveRules = async () => {
-    setLoading(true);
     try {
       let updatedRules;
       if (editMode === 'json') {
@@ -90,20 +86,15 @@ const Rules = () => {
         updatedRules = rules;
       }
 
-      // Speichere in Supabase über die API
-      const response = await fetch(`${apiUrl}/api/rules/supabase`, {
+      const response = await fetch(`${apiUrl}/api/rules`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'save',
-          rules: updatedRules
-        }),
+        body: JSON.stringify(updatedRules),
       });
 
       if (response.ok) {
-        const result = await response.json();
         setRules(updatedRules);
         setRulesJson(JSON.stringify(updatedRules, null, 2));
         
@@ -113,81 +104,19 @@ const Rules = () => {
         });
         
         if (repostResponse.ok) {
-          const repostResult = await repostResponse.json();
-          showSuccess('✅ Regeln in Supabase gespeichert!', `Automatisch in ${repostResult.repostedCount} Server(n) neu gepostet!`);
+          const result = await repostResponse.json();
+          showSuccess('Regeln gespeichert!', `Automatisch in ${result.repostedCount} Server(n) neu gepostet!`);
         } else {
-          showSuccess('✅ Regeln in Supabase gespeichert!', 'Neu-Posten fehlgeschlagen - Bot eventuell offline');
+          showSuccess('✅ Regeln gespeichert!', 'Neu-Posten fehlgeschlagen - Bot eventuell offline');
         }
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
-        showError('❌ Speichern fehlgeschlagen', `Supabase Fehler: ${errorData.error || 'Unbekannter Fehler'}`);
+        showError('Speichern fehlgeschlagen', 'Fehler beim Speichern der Regeln');
       }
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.error('Fehler beim Speichern in Supabase:', error);
+        console.error('Fehler beim Speichern:', error);
       }
-      showError('❌ Speichern fehlgeschlagen', 'Ungültiges JSON oder Netzwerkfehler');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Lade Regeln aus Supabase
-  const loadRules = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${apiUrl}/api/rules/supabase?action=load`);
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Prüfe ob Daten existieren, sonst verwende Defaults
-        if (data && data.title) {
-          setRules(data);
-          setRulesJson(JSON.stringify(data, null, 2));
-        } else {
-          // Wenn keine Daten vorhanden, erstelle Standardkonfiguration
-          await createDefaultRules();
-        }
-      } else {
-        // Bei Fehler: verwende Defaults und erstelle neue Konfiguration
-        await createDefaultRules();
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Fehler beim Laden aus Supabase:', error);
-      }
-      // Fallback: verwende Default-Regeln
-      setRulesJson(JSON.stringify(rules, null, 2));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Erstelle Standard-Regeln in Supabase
-  const createDefaultRules = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/rules/supabase`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'create_default',
-          rules: rules
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setRulesJson(JSON.stringify(rules, null, 2));
-        if (import.meta.env.DEV) {
-          console.log('Standard-Regeln in Supabase erstellt:', result);
-        }
-      }
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Fehler beim Erstellen der Standard-Regeln:', error);
-      }
+      showError('Speichern fehlgeschlagen', 'Ungültiges JSON oder Netzwerkfehler');
     }
   };
 
@@ -216,7 +145,23 @@ const Rules = () => {
     setRules(newRules);
   };
 
-  // Exportiere/Importiere Regeln (neue Funktionen)
+  const loadRules = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/rules`);
+      if (response.ok) {
+        const data = await response.json();
+        setRules(data);
+        setRulesJson(JSON.stringify(data, null, 2));
+      }
+    } catch (error) {
+      // Silent error handling in production
+      if (import.meta.env.DEV) {
+        console.error('Fehler beim Laden der Regeln:', error);
+      }
+    }
+  };
+
+  // Exportiere/Importiere Regeln
   const exportRules = async () => {
     try {
       const dataStr = JSON.stringify(rules, null, 2);
@@ -280,18 +225,6 @@ const Rules = () => {
       {/* Matrix Background Effects */}
       <MatrixBlocks density={20} />
       
-      {/* Loading Overlay */}
-      {loading && (
-        <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-dark-surface border border-purple-primary/30 rounded-xl p-8 shadow-purple-glow">
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 border-4 border-purple-primary border-t-neon-purple rounded-full animate-spin"></div>
-              <span className="text-dark-text text-lg">Lade Regeln aus Supabase...</span>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* Page Header */}
       <div className="text-center py-8">
         <div className="flex items-center justify-center gap-3 mb-4">
@@ -301,7 +234,7 @@ const Rules = () => {
           </h1>
         </div>
         <div className="text-dark-text text-lg max-w-2xl mx-auto">
-          Editiere und verwalte deine Serverregeln wie ein Boss mit <span className="text-neon-purple font-bold">Supabase</span>! 
+          Editiere und verwalte deine Serverregeln wie ein Boss! 
           <span className="ml-2 inline-block relative">
             <svg 
               className="w-6 h-6 animate-pulse hover:animate-bounce text-purple-400 hover:text-purple-300 transition-all duration-300 hover:scale-110 drop-shadow-lg" 
@@ -346,12 +279,9 @@ const Rules = () => {
           <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
             <Settings className="w-5 h-5 text-purple-accent" />
             Rules Header Configuration
-            <span className="ml-2 px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">
-              Supabase
-            </span>
           </CardTitle>
           <CardDescription className="text-dark-muted">
-            Konfiguriere den Header deiner Serverregeln - gespeichert in Supabase Database
+            Konfiguriere den Header deiner Serverregeln
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -644,19 +574,9 @@ const Rules = () => {
           <div className="flex justify-center mt-8">
             <Button 
               onClick={saveRules}
-              disabled={loading}
-              className="bg-gradient-to-r from-neon-purple to-purple-accent hover:from-purple-accent hover:to-neon-purple text-white font-bold py-4 px-8 rounded-xl shadow-neon-strong transition-all duration-300 hover:scale-105 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-neon-purple to-purple-accent hover:from-purple-accent hover:to-neon-purple text-white font-bold py-4 px-8 rounded-xl shadow-neon-strong transition-all duration-300 hover:scale-105 text-lg"
             >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Speichere in Supabase...
-                </>
-              ) : (
-                <>
-                  💾 In Supabase speichern & automatisch neu posten
-                </>
-              )}
+              💾 Regeln speichern & automatisch neu posten
             </Button>
           </div>
         </CardContent>
