@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2 } from 'lucide-react';
+import { Radio, Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -17,6 +17,14 @@ const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
   ));
   return <div className="matrix-blocks">{blocks}</div>;
 };
+
+// Genre-Liste
+const musicGenres = [
+  'Hip-Hop', 'Rap', 'Trap', 'Lofi', 'Chill', 'Electronic', 'House', 'Techno',
+  'Dubstep', 'Bass', 'Jazz', 'Blues', 'Rock', 'Pop', 'Classical', 'Ambient',
+  'Gaming', 'Synthwave', 'Retrowave', 'R&B', 'Soul', 'Funk', 'Reggae',
+  'Country', 'Folk', 'Metal', 'Punk', 'Indie', 'Alternative', 'Experimental'
+];
 
 // Badge component
 const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?: string }> = ({ children, className = '', variant = 'default' }) => (
@@ -83,8 +91,8 @@ const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = 
   </div>
 );
 
-const CardTitle: React.FC<{ children: React.ReactNode; className?: string; animated?: boolean }> = ({ children, className = '', animated = true }) => (
-  <h3 className={`text-xl font-bold text-dark-text ${animated ? 'animate-pulse-slow' : ''} ${className}`}>
+const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <h3 className={`text-xl font-bold text-dark-text ${className}`}>
     {children}
   </h3>
 );
@@ -107,27 +115,21 @@ const Button: React.FC<{
   onClick?: () => void; 
   className?: string; 
   disabled?: boolean;
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-  animated?: boolean;
-}> = ({ children, onClick, className = '', disabled = false, variant = 'default', animated = true }) => {
-  const baseClasses = "inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
-  
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost';
+}> = ({ children, onClick, className = '', disabled = false, variant = 'default' }) => {
   const variantClasses = {
     default: "bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white shadow-neon hover:scale-105",
     destructive: "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-neon hover:scale-105",
     outline: "border border-purple-primary/30 bg-transparent hover:bg-purple-primary/20 text-dark-text",
     secondary: "bg-dark-surface/50 hover:bg-dark-surface text-dark-text",
-    ghost: "hover:bg-purple-primary/20 text-dark-text",
-    link: "text-purple-primary underline-offset-4 hover:underline"
+    ghost: "hover:bg-purple-primary/20 text-dark-text"
   };
-
-  const animatedClasses = animated ? 'transform transition-all duration-300 hover:scale-105 hover:rotate-1 active:scale-95' : '';
 
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${baseClasses} ${variantClasses[variant]} ${animatedClasses} px-4 py-2 ${className}`}
+      className={`inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 px-4 py-2 ${variantClasses[variant]} hover:scale-105 active:scale-95 ${className}`}
     >
       {children}
     </button>
@@ -138,27 +140,99 @@ const Button: React.FC<{
 const Input: React.FC<{ 
   type?: string; 
   placeholder?: string; 
-  value?: string | number; 
+  value?: string; 
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   className?: string;
-  id?: string;
-}> = ({ type = 'text', placeholder, value, onChange, className = '', ...props }) => (
+  onKeyPress?: (e: React.KeyboardEvent) => void;
+}> = ({ type = 'text', placeholder, value, onChange, className = '', onKeyPress, ...props }) => (
   <input
     type={type}
     placeholder={placeholder}
     value={value}
     onChange={onChange}
+    onKeyPress={onKeyPress}
     className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-all duration-300 focus:scale-105 hover:shadow-neon ${className}`}
     {...props}
   />
 );
 
-// Interfaces - Vereinfachtes Radio-System
+// Select component
+const Select: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ value, onChange, children, className = '' }) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    className={`bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg px-3 py-2 w-full transition-all duration-300 focus:scale-105 hover:shadow-neon ${className}`}
+  >
+    {children}
+  </select>
+);
+
+// Drag & Drop Component
+const DragDropSong: React.FC<{
+  song: Song;
+  index: number;
+  onRemove: (index: number) => void;
+  isDragging?: boolean;
+  onDragStart?: (e: React.DragEvent, index: number) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent, index: number) => void;
+}> = ({ song, index, onRemove, isDragging, onDragStart, onDragOver, onDrop }) => (
+  <div
+    draggable
+    onDragStart={(e) => onDragStart?.(e, index)}
+    onDragOver={onDragOver}
+    onDrop={(e) => onDrop?.(e, index)}
+    className={`flex items-center gap-3 p-3 bg-dark-surface/50 rounded-lg border transition-all duration-300 hover:border-purple-primary/50 ${isDragging ? 'opacity-50 scale-95' : 'hover:scale-[1.02]'}`}
+  >
+    <GripVertical className="w-4 h-4 text-gray-400 cursor-grab active:cursor-grabbing" />
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-medium text-white truncate">{song.title}</p>
+      <p className="text-xs text-gray-400 truncate">{song.artist}</p>
+    </div>
+    <div className="text-xs text-gray-500">
+      {Math.round(song.size / 1024 / 1024)}MB
+    </div>
+    <Button
+      variant="destructive"
+      onClick={() => onRemove(index)}
+      className="px-2 py-1 text-xs"
+    >
+      <Trash2 className="w-3 h-3" />
+    </Button>
+  </div>
+);
+
+// Interfaces
+interface Song {
+  id: string;
+  filename: string;
+  title: string;
+  artist: string;
+  duration: number;
+  size: number;
+  path: string;
+}
+
+interface Station {
+  id: string;
+  name: string;
+  genre: string;
+  description: string;
+  playlist: Song[];
+  logo: string;
+}
+
 interface MusicSettings {
   enabled: boolean;
-  radio: {
+  localMusic: {
     enabled: boolean;
-    stations: RadioStation[];
+    musicDirectory: string;
+    stations: Station[];
     defaultStation: string;
     autoStop: boolean;
     showNowPlaying: boolean;
@@ -176,19 +250,10 @@ interface MusicSettings {
   };
 }
 
-interface RadioStation {
-  id: string;
-  name: string;
-  url: string;
-  genre: string;
-  country: string;
-  description: string;
-  logo: string;
-}
-
-interface RadioStatus {
+interface MusicStatus {
   isPlaying: boolean;
-  currentStation: RadioStation | null;
+  currentSong: Song | null;
+  currentStation: Station | null;
 }
 
 interface Channel {
@@ -204,101 +269,132 @@ const Music: React.FC = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('radio');
+  const [activeTab, setActiveTab] = useState('songs');
   
-  // Settings State
+  // State
   const [settings, setSettings] = useState<MusicSettings>({
     enabled: true,
-    radio: {
+    localMusic: {
       enabled: true,
+      musicDirectory: './music',
       stations: [],
-      defaultStation: "lofi",
+      defaultStation: 'custom1',
       autoStop: false,
       showNowPlaying: true,
-      embedColor: "#FF6B6B"
+      embedColor: '#FF6B6B'
     },
     announcements: {
-      channelId: ""
+      channelId: ''
     },
     interactivePanel: {
       enabled: true,
-      channelId: "",
-      messageId: "",
+      channelId: '',
+      messageId: '',
       autoUpdate: true,
-      embedColor: "#FF6B6B"
+      embedColor: '#FF6B6B'
     }
   });
 
-  // Radio State
-  const [radioStations, setRadioStations] = useState<RadioStation[]>([]);
-  const [radioStatus, setRadioStatus] = useState<RadioStatus>({
+  const [availableSongs, setAvailableSongs] = useState<Song[]>([]);
+  const [musicStatus, setMusicStatus] = useState<MusicStatus>({
     isPlaying: false,
+    currentSong: null,
     currentStation: null
   });
-  const [radioLoading, setRadioLoading] = useState(false);
-
-  // Channels
   const [channels, setChannels] = useState<Channel[]>([]);
-  
-  // Guild ID State
   const [guildId, setGuildId] = useState<string | null>(null);
 
-  // New Station State
+  // Station Creation State
+  const [isCreatingStation, setIsCreatingStation] = useState(false);
   const [newStation, setNewStation] = useState({
     name: '',
-    url: '',
-    genre: '',
-    country: '',
+    genre: 'Hip-Hop',
     description: '',
-    logo: ''
+    playlist: [] as Song[]
   });
 
+  // Drag & Drop State
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Load Data
   const loadData = async () => {
     try {
       setLoading(true);
       
-      // Guild-ID laden
-      const guildsRes = await fetch(`${apiUrl}/api/guilds`);
-      let currentGuildId = null;
-      
-      if (guildsRes.ok) {
-        const guildsData = await guildsRes.json();
-        currentGuildId = guildsData.primaryGuild;
-        setGuildId(currentGuildId);
+      // Guild ID aus URL oder localStorage
+      const params = new URLSearchParams(window.location.search);
+      const urlGuildId = params.get('guild');
+      if (urlGuildId) {
+        setGuildId(urlGuildId);
       }
 
-      if (!currentGuildId) {
-        showError('Guild Fehler', '❌ Keine Guild-ID gefunden. Bot möglicherweise offline.');
-        return;
-      }
-
-      // Load data
-      const [settingsRes, channelsRes] = await Promise.all([
-        fetch(`${apiUrl}/api/music/settings`),
-        fetch(`${apiUrl}/api/channels`)
-      ]);
-
-      if (settingsRes.ok) {
-        const data = await settingsRes.json();
+      // Settings laden
+      const response = await fetch(`${apiUrl}/api/music/settings`);
+      if (response.ok) {
+        const data = await response.json();
         setSettings(data.settings);
       }
 
-      if (channelsRes.ok) {
-        const data = await channelsRes.json();
-        setChannels(data.channels || []);
-      }
+      // Verfügbare Songs laden
+      await loadAvailableSongs();
 
-    } catch (err) {
-      console.error('Fehler beim Laden der Daten:', err);
+      // Channels laden
+      if (urlGuildId) {
+        await loadChannels(urlGuildId);
+        await loadMusicStatus(urlGuildId);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Daten:', error);
       showError('Lade Fehler', 'Fehler beim Laden der Daten');
     } finally {
       setLoading(false);
     }
   };
 
-  const saveSettings = async () => {
-    setSaving(true);
+  const loadAvailableSongs = async () => {
     try {
+      const response = await fetch(`${apiUrl}/api/music/songs`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableSongs(data.songs || []);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Songs:', error);
+    }
+  };
+
+  const loadChannels = async (guildId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/api/channels/${guildId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setChannels(data.channels || []);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Channels:', error);
+    }
+  };
+
+  const loadMusicStatus = async (guildId: string) => {
+    try {
+      const response = await fetch(`${apiUrl}/api/music/status/${guildId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMusicStatus({
+          isPlaying: data.isPlaying || false,
+          currentSong: data.currentSong || null,
+          currentStation: data.currentStation || null
+        });
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Music Status:', error);
+    }
+  };
+
+  // Save Settings
+  const saveSettings = async () => {
+    try {
+      setSaving(true);
       const response = await fetch(`${apiUrl}/api/music/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -306,304 +402,205 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        showSuccess('Radio', '🎵 Einstellungen erfolgreich gespeichert!');
+        showSuccess('Musik', '🎵 Einstellungen erfolgreich gespeichert!');
       } else {
         showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
       }
-    } catch (err) {
-      console.error('Speicherfehler:', err);
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler beim Speichern');
+    } catch (error) {
+      showError('Speicher Fehler', 'Verbindungsfehler beim Speichern');
     } finally {
       setSaving(false);
     }
   };
 
-  const joinVoiceChannel = async (channelId: string) => {
-    if (!guildId) {
-      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        showSuccess('Voice Channel', data.message);
-      } else {
-        showError('Voice Fehler', '❌ Fehler beim Beitreten des Voice-Channels');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
-    }
-  };
-
-  const leaveVoiceChannel = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/music/voice/${guildId}/leave`, {
-        method: 'POST'
-      });
-
-      if (response.ok) {
-        showSuccess('Voice Channel', '👋 Voice-Channel verlassen');
-      }
-    } catch (err) {
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
-    }
-  };
-
-  // Radio Functions
-  const loadRadioStations = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/radio/stations`);
-      if (response.ok) {
-        const data = await response.json();
-        setRadioStations(data.stations || []);
-      }
-    } catch (err) {
-      console.error('Fehler beim Laden der Radio-Sender:', err);
-      showError('Radio Stations', 'Fehler beim Laden der Radio-Sender');
-    }
-  };
-
-  const loadRadioStatus = async () => {
+  // Music Controls
+  const playSong = async (songId: string) => {
     if (!guildId) return;
     
     try {
-      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/status`);
-      if (response.ok) {
-        const data = await response.json();
-        setRadioStatus({
-          isPlaying: data.isPlaying,
-          currentStation: data.currentStation
-        });
-      }
-    } catch (err) {
-      console.error('Fehler beim Laden des Radio-Status:', err);
-    }
-  };
-
-  const playRadioStation = async (stationId: string) => {
-    if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      setRadioLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/play`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ stationId }),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        showSuccess('Radio', data.message);
-        await loadRadioStatus();
-        
-        // Update Discord Interactive Panel
-        try {
-          await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/update`, {
-            method: 'POST'
-          });
-        } catch (updateErr) {
-          console.log('Panel Update Fehler:', updateErr);
-        }
-      } else {
-        showError('Radio Fehler', data.error || 'Fehler beim Starten des Radio-Senders');
-      }
-    } catch (err) {
-      console.error('Fehler beim Starten des Radio-Senders:', err);
-      showError('Radio Fehler', 'Fehler beim Starten des Radio-Senders');
-    } finally {
-      setRadioLoading(false);
-    }
-  };
-
-  const stopRadio = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', 'Keine Guild-ID verfügbar');
-      return;
-    }
-
-    try {
-      setRadioLoading(true);
-      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/stop`, {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        showSuccess('Radio', data.message);
-        await loadRadioStatus();
-        
-        // Update Discord Interactive Panel
-        try {
-          await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/update`, {
-            method: 'POST'
-          });
-        } catch (updateErr) {
-          console.log('Panel Update Fehler:', updateErr);
-        }
-      } else {
-        showError('Radio Fehler', data.error || 'Fehler beim Stoppen des Radios');
-      }
-    } catch (err) {
-      console.error('Fehler beim Stoppen des Radios:', err);
-      showError('Radio Fehler', 'Fehler beim Stoppen des Radios');
-    } finally {
-      setRadioLoading(false);
-    }
-  };
-
-  const postInteractivePanel = async () => {
-    if (!guildId) {
-      showError('Guild Fehler', '❌ Keine Guild-ID verfügbar');
-      return;
-    }
-
-    if (!settings.interactivePanel.channelId) {
-      showError('Channel Fehler', '❌ Kein Channel für Interactive Panel ausgewählt');
-      return;
-    }
-
-    try {
-      // Save settings first
-      const saveResponse = await fetch(`${apiUrl}/api/music/settings`, {
+      const response = await fetch(`${apiUrl}/api/music/play/${guildId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        body: JSON.stringify({ songId })
       });
 
-      if (!saveResponse.ok) {
-        showError('Settings Fehler', '❌ Fehler beim Speichern der Settings');
-        return;
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Musik', data.message);
+        await loadMusicStatus(guildId);
+      } else {
+        const data = await response.json();
+        showError('Musik Fehler', data.error || 'Fehler beim Abspielen');
       }
+    } catch (error) {
+      showError('Musik Fehler', 'Verbindungsfehler beim Abspielen');
+    }
+  };
 
-      // Post panel
-      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/post`, {
+  const playStation = async (stationId: string) => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/station/${guildId}/play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stationId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Musik', data.message);
+        await loadMusicStatus(guildId);
+      } else {
+        const data = await response.json();
+        showError('Musik Fehler', data.error || 'Fehler beim Abspielen der Station');
+      }
+    } catch (error) {
+      showError('Musik Fehler', 'Verbindungsfehler beim Abspielen der Station');
+    }
+  };
+
+  const stopMusic = async () => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/stop/${guildId}`, {
         method: 'POST'
       });
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('Radio Panel', `🎵 ${data.message}`);
-        loadData(); // Reload to get message ID
+        showSuccess('Musik', data.message);
+        await loadMusicStatus(guildId);
       } else {
-        const errorData = await response.json();
-        showError('Panel Fehler', errorData.error || '❌ Fehler beim Posten des Panels');
+        showError('Musik Fehler', 'Fehler beim Stoppen der Musik');
       }
-    } catch (err) {
-      console.error('Panel Post Error:', err);
-      showError('Netzwerk Fehler', '❌ Netzwerkfehler');
+    } catch (error) {
+      showError('Musik Fehler', 'Verbindungsfehler beim Stoppen');
     }
   };
 
-  const removeRadioStation = async (stationId: string) => {
-    try {
-      const response = await fetch(`${apiUrl}/api/music/radio/stations/${stationId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        showSuccess('Radio Station', 'Station erfolgreich entfernt');
-        await loadRadioStations();
-      } else {
-        showError('Radio Fehler', 'Fehler beim Entfernen der Station');
-      }
-    } catch (err) {
-      showError('Radio Fehler', 'Fehler beim Entfernen der Station');
-    }
-  };
-
-  const addCustomRadioStation = async () => {
-    if (!newStation.name || !newStation.url) {
-      showError('Radio Station', 'Name und URL sind erforderlich');
+  // Station Management
+  const createStation = async () => {
+    if (!newStation.name.trim()) {
+      showError('Station Fehler', 'Station-Name ist erforderlich');
       return;
     }
 
-    // Standard Radio Logo setzen falls kein Logo vorhanden
-    let processedStation = { ...newStation };
-    if (!processedStation.logo) {
-      processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-    }
-
-    // Generate unique ID und erweitere das Object
     const stationWithId = {
-      ...processedStation,
-      id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      ...newStation,
+      id: `station_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      logo: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+🎵</text></svg>'
     };
 
-    try {
-      setRadioLoading(true);
-      
-      const response = await fetch(`${apiUrl}/api/music/radio/stations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stationWithId)
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        showSuccess('Radio', `Radio-Station "${stationWithId.name}" erfolgreich hinzugefügt!`);
-        
-        // Reset form mit Animation
-        setNewStation({
-          name: '',
-          url: '',
-          genre: '',
-          country: '',
-          description: '',
-          logo: ''
-        });
-        
-        await loadRadioStations();
-      } else {
-        showError('Radio Fehler', data.error || 'Fehler beim Hinzufügen der Station');
+    const updatedStations = [...settings.localMusic.stations, stationWithId];
+    
+    setSettings(prev => ({
+      ...prev,
+      localMusic: {
+        ...prev.localMusic,
+        stations: updatedStations
       }
-    } catch (err) {
-      console.error('Fehler beim Hinzufügen der Station:', err);
-      showError('Radio Fehler', 'Verbindungsfehler beim Hinzufügen der Station');
-    } finally {
-      setRadioLoading(false);
+    }));
+
+    await saveSettings();
+    
+    // Reset form
+    setNewStation({
+      name: '',
+      genre: 'Hip-Hop',
+      description: '',
+      playlist: []
+    });
+    setIsCreatingStation(false);
+    
+    showSuccess('Station', `Station "${stationWithId.name}" erfolgreich erstellt!`);
+  };
+
+  const updateStationName = async (stationId: string, newName: string) => {
+    const updatedStations = settings.localMusic.stations.map(station =>
+      station.id === stationId ? { ...station, name: newName } : station
+    );
+    
+    setSettings(prev => ({
+      ...prev,
+      localMusic: {
+        ...prev.localMusic,
+        stations: updatedStations
+      }
+    }));
+
+    await saveSettings();
+    showSuccess('Station', 'Station-Name aktualisiert!');
+  };
+
+  const deleteStation = async (stationId: string) => {
+    const updatedStations = settings.localMusic.stations.filter(s => s.id !== stationId);
+    
+    setSettings(prev => ({
+      ...prev,
+      localMusic: {
+        ...prev.localMusic,
+        stations: updatedStations
+      }
+    }));
+
+    await saveSettings();
+    showSuccess('Station', 'Station gelöscht!');
+  };
+
+  // Drag & Drop Handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    const newPlaylist = [...newStation.playlist];
+    const [draggedSong] = newPlaylist.splice(draggedIndex, 1);
+    newPlaylist.splice(dropIndex, 0, draggedSong);
+    
+    setNewStation(prev => ({ ...prev, playlist: newPlaylist }));
+    setDraggedIndex(null);
+  };
+
+  const addSongToPlaylist = (song: Song) => {
+    if (newStation.playlist.find(s => s.id === song.id)) {
+      showError('Playlist', 'Song ist bereits in der Playlist');
+      return;
     }
+    
+    setNewStation(prev => ({
+      ...prev,
+      playlist: [...prev.playlist, song]
+    }));
+  };
+
+  const removeSongFromPlaylist = (index: number) => {
+    setNewStation(prev => ({
+      ...prev,
+      playlist: prev.playlist.filter((_, i) => i !== index)
+    }));
   };
 
   useEffect(() => {
     loadData();
-    loadRadioStations();
   }, []);
-
-  useEffect(() => {
-    if (guildId) {
-      loadRadioStatus();
-      
-      // Auto-update radio status
-      const interval = setInterval(loadRadioStatus, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [guildId]);
 
   if (loading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Lade Radio System...</div>
+          <div className="text-lg">Lade Musik System...</div>
         </div>
       </div>
     );
@@ -617,33 +614,17 @@ const Music: React.FC = () => {
       {/* Page Header */}
       <div className="text-center py-8">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <Radio className="w-12 h-12 text-red-400 animate-pulse" />
+          <MusicIcon className="w-12 h-12 text-purple-400 animate-pulse" />
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
-            Radio Bot
+            Lokales Musik System
           </h1>
         </div>
         <div className="text-dark-text text-lg max-w-2xl mx-auto">
-          Einfaches Radio System für Discord! 
+          Verwalte deine MP3-Sammlung und erstelle eigene Radio-Stationen! 
           <span className="ml-2 inline-block relative">
-            <svg 
-              className="w-6 h-6 animate-pulse hover:animate-bounce text-purple-400 hover:text-purple-300 transition-all duration-300 hover:scale-110 drop-shadow-lg" 
-              fill="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-            <div className="absolute inset-0 animate-ping">
-              <svg 
-                className="w-6 h-6 text-purple-500 opacity-30" 
-                fill="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-              </svg>
-            </div>
+            🎵
           </span>
         </div>
-        <div className="w-32 h-1 bg-gradient-neon mx-auto mt-4 rounded-full animate-glow"></div>
       </div>
 
       {/* Quick Actions */}
@@ -651,755 +632,289 @@ const Music: React.FC = () => {
         <Button 
           onClick={saveSettings} 
           disabled={saving} 
-          className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+          className="flex items-center space-x-2"
         >
           <Save className="h-5 w-5" />
           <span>{saving ? 'Speichere...' : 'Einstellungen speichern'}</span>
         </Button>
       </div>
 
-      {/* System Status Badge */}
+      {/* System Status */}
       <div className="flex justify-center gap-4 items-center">
         <Badge variant={settings.enabled ? "default" : "outline"} className="text-lg py-2 px-4">
-          {settings.enabled ? '✅ Radio Aktiviert' : '❌ Radio Deaktiviert'}
+          {settings.enabled ? '✅ Musik System Aktiviert' : '❌ Musik System Deaktiviert'}
         </Badge>
         
-        {/* Radio Status Indikator */}
-        <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-red-primary/30 rounded-lg px-3 py-2">
-          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${radioStatus.isPlaying ? 'bg-red-400 animate-pulse' : 'bg-gray-500'}`}></div>
+        {/* Music Status */}
+        <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg px-3 py-2">
+          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${musicStatus.isPlaying ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
           <span className="text-sm text-dark-muted">
-            {radioStatus.isPlaying ? `Live: ${radioStatus.currentStation?.name}` : 'Kein Radio aktiv'}
+            {musicStatus.isPlaying 
+              ? `🎵 ${musicStatus.currentSong?.title || 'Unbekannt'}` 
+              : 'Keine Musik aktiv'
+            }
           </span>
-          <div className="text-xs text-red-accent">
-            📻 Radio
-          </div>
         </div>
       </div>
 
-      {/* Main Tabs */}
-      <Tabs defaultValue="radio" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30">
-          <TabsTrigger 
-            value="radio" 
-            className={`flex items-center space-x-2 ${activeTab === 'radio' ? 'bg-red-500 text-white' : 'hover:bg-red-500/20 text-dark-text'}`}
-            onClick={() => setActiveTab('radio')}
-          >
-            <Radio className="h-4 w-4" />
-            <span>📻 Radio</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="settings" 
-            className={`flex items-center space-x-2 ${activeTab === 'settings' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <Settings className="h-4 w-4" />
-            <span>⚙️ Einstellungen</span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Radio Tab */}
-        <TabsContent value="radio" className="space-y-6" activeTab={activeTab}>
-          {/* Radio Status mit Animation */}
-          <Card animate={true} className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-purple-500/5 animate-gradient-x"></div>
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3 animated={true}">
-                <div className={`p-2 rounded-full ${radioStatus.isPlaying ? 'bg-red-500/20 animate-pulse' : 'bg-gray-500/20'} transition-all duration-500`}>
-                  <Radio className={`w-5 h-5 ${radioStatus.isPlaying ? 'text-red-400' : 'text-gray-400'} transition-colors duration-500`} />
-                </div>
-                <span className="bg-gradient-to-r from-red-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
-                  📻 Radio Status
-                </span>
-                {radioStatus.isPlaying && (
-                  <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white animate-bounce shadow-neon">
-                    <span className="animate-pulse">🎵 LIVE</span>
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription className="text-gray-300">
-                Aktueller Radio-Status und Steuerung
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              {radioStatus.currentStation ? (
-                <div className="bg-gradient-to-r from-red-500/20 to-purple-500/20 rounded-xl p-6 border border-red-400/40 shadow-2xl backdrop-blur-sm animate-fade-in-up">
-                  <div className="flex items-center gap-6">
-                    <div className="relative">
-                    <img 
-                      src={radioStatus.currentStation.logo} 
-                      alt={radioStatus.currentStation.name}
-                        className="w-20 h-20 rounded-xl object-cover border-2 border-red-400/50 shadow-lg animate-float"
-                      onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjY2NjYiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn5O7PC90ZXh0Pgo8L3N2Zz4K';
-                      }}
-                    />
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-ping"></div>
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-400 rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-white animate-pulse-slow bg-gradient-to-r from-white to-red-200 bg-clip-text text-transparent">
-                        🎵 {radioStatus.currentStation.name}
-                      </h3>
-                      <p className="text-red-300 text-lg mt-1 animate-fade-in">{radioStatus.currentStation.description}</p>
-                      <div className="flex gap-3 mt-3">
-                        <Badge variant="outline" className="text-red-400 border-red-400/60 bg-red-500/10 animate-bounce-slow">
-                          🎵 {radioStatus.currentStation.genre}
-                        </Badge>
-                        <Badge variant="outline" className="text-purple-400 border-purple-400/60 bg-purple-500/10 animate-bounce-slow delay-100">
-                          🌍 {radioStatus.currentStation.country}
-                        </Badge>
-                      </div>
-                    </div>
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Songs Library */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5 text-green-400" />
+              MP3 Bibliothek
+            </CardTitle>
+            <CardDescription>
+              {availableSongs.length} Songs verfügbar
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {availableSongs.map((song) => (
+                <div
+                  key={song.id}
+                  className="flex items-center gap-2 p-2 bg-dark-bg/50 rounded-lg border border-gray-600/30 hover:border-purple-primary/50 transition-all duration-300"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{song.title}</p>
+                    <p className="text-xs text-gray-400 truncate">{song.artist}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
                     <Button
-                      onClick={stopRadio}
-                      disabled={radioLoading}
-                      variant="destructive"
-                      className="flex items-center gap-2 shadow-xl hover:shadow-red-500/25 animate-pulse-subtle"
-                      animated={true}
+                      onClick={() => playSong(song.id)}
+                      disabled={musicStatus.currentSong?.id === song.id}
+                      className="px-2 py-1 text-xs"
                     >
-                      <Pause className="w-5 h-5 animate-pulse" />
-                      {radioLoading ? 'Stoppe...' : 'Radio stoppen'}
+                      {musicStatus.currentSong?.id === song.id ? (
+                        <Pause className="w-3 h-3" />
+                      ) : (
+                        <Play className="w-3 h-3" />
+                      )}
                     </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-dark-muted animate-fade-in">
-                  <div className="relative inline-block">
-                    <Radio className="w-16 h-16 mx-auto mb-6 text-gray-500 animate-bounce-slow" />
-                    <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-gray-500/30 rounded-full animate-ping"></div>
-                  </div>
-                  <p className="text-lg font-medium">Kein Radio-Sender aktiv</p>
-                  <p className="text-sm mt-2 animate-pulse">Wähle einen Sender aus der Liste unten</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Radio Stations - Kategorisiert */}
-          <div className="space-y-6">
-            {/* Radio-Sender Kategorie */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Radio className="w-5 h-5 text-purple-accent" />
-                  🎵 Radio-Sender
-                </CardTitle>
-                <CardDescription>
-                  Traditionelle Radio-Streams aus Deutschland und international
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {radioStations
-                    // Zeige alle Radio-Stationen
-                    .map((station) => (
-                    <div
-                      key={station.id}
-                      className={`bg-dark-surface/50 rounded-lg p-4 border transition-all duration-300 hover:scale-105 ${
-                        radioStatus.currentStation?.id === station.id
-                          ? 'border-red-400 bg-red-500/10'
-                          : 'border-purple-primary/30 hover:border-purple-primary'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <img 
-                          src={station.logo} 
-                          alt={station.name}
-                          className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-                          }}
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-bold text-white">{station.name}</h4>
-                          <p className="text-sm text-dark-muted">{station.genre}</p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-dark-text mb-3">{station.description}</p>
-                      
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs">
-                          🌍 {station.country}
-                        </Badge>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => playRadioStation(station.id)}
-                            disabled={radioLoading || radioStatus.currentStation?.id === station.id}
-                            className="flex items-center gap-2 px-3 py-1 text-sm"
-                          >
-                            {radioStatus.currentStation?.id === station.id ? (
-                              <>
-                                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                                Live
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3 h-3" />
-                                {radioLoading ? 'Starte...' : 'Abspielen'}
-                              </>
-                            )}
-                          </Button>
-                          
-                          {/* Lösch-Button nur für custom Sender anzeigen (nicht für vordefinierte) */}
-                          {!['1live', 'swr3', 'antenne', 'bigfm', 'ndr2', 'ffn', 'energy', 'sunshine', 'deutschrap1', 'rapstation', 'hiphopradio', 'urbanradio', 'gtaradio', 'oldschool', 'synthwave', 'phonkradio'].includes(station.id) && (
-                            <Button
-                              onClick={() => removeRadioStation(station.id)}
-                              disabled={radioLoading}
-                              variant="destructive"
-                              className="px-2 py-1 text-xs"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-
-          </div>
-
-          {/* Add Custom Radio Station */}
-          <Card animate={true} className="relative overflow-hidden border-green-500/30">
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-blue-500/5 animate-gradient-x"></div>
-            <CardHeader className="relative z-10">
-              <CardTitle className="flex items-center gap-3" animated={true}>
-                <div className="p-2 rounded-full bg-green-500/20 animate-pulse">
-                  <Plus className="w-5 h-5 text-green-400 animate-bounce-slow" />
-                </div>
-                <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-                  🎵 Radio-Sender hinzufügen
-                </span>
-              </CardTitle>
-              <CardDescription className="text-gray-300">
-                Füge eigene Radio-Streams hinzu
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-xl p-6 border border-green-400/30 mb-6 animate-fade-in-up">
-                <h4 className="text-lg font-semibold text-green-400 mb-3 flex items-center gap-2">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                  </svg>
-                  Radio-Stream Unterstützung
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>Normale Radio-Streams (.mp3, .m3u8)</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>HTTP Live Streaming (HLS)</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>Custom Logo-Upload unterstützt</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>24/7 Streaming Unterstützung</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="animate-fade-in-right delay-100">
-                    <label className="block text-sm font-medium text-green-400 mb-2 flex items-center gap-2">
-                      🎵 Sender-Name *
-                  </label>
-                  <Input
-                      placeholder="z.B. Mein Lofi Radio"
-                    value={newStation.name}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
-                      className="border-green-500/30 focus:border-green-400"
-                  />
-                </div>
-                
-                  <div className="animate-fade-in-right delay-200">
-                    <label className="block text-sm font-medium text-blue-400 mb-2 flex items-center gap-2">
-                      🌐 Stream-URL *
-                  </label>
-                  <Input
-                      placeholder="https://stream.radio.com/stream.mp3"
-                    value={newStation.url}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, url: e.target.value }))}
-                      className="border-blue-500/30 focus:border-blue-400"
-                  />
-                </div>
-                
-                  <div className="animate-fade-in-right delay-300">
-                    <label className="block text-sm font-medium text-purple-400 mb-2 flex items-center gap-2">
-                      🎭 Genre
-                  </label>
-                  <Input
-                      placeholder="z.B. Lofi Hip Hop, Electronic, Rock"
-                    value={newStation.genre}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, genre: e.target.value }))}
-                      className="border-purple-500/30 focus:border-purple-400"
-                  />
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="animate-fade-in-left delay-100">
-                    <label className="block text-sm font-medium text-orange-400 mb-2 flex items-center gap-2">
-                      🌍 Land/Region
-                  </label>
-                  <Input
-                      placeholder="z.B. Deutschland, International, USA"
-                    value={newStation.country}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, country: e.target.value }))}
-                      className="border-orange-500/30 focus:border-orange-400"
-                  />
-                </div>
-                
-                  <div className="animate-fade-in-left delay-200">
-                    <label className="block text-sm font-medium text-cyan-400 mb-2 flex items-center gap-2">
-                      📝 Beschreibung
-                  </label>
-                  <Input
-                    placeholder="Kurze Beschreibung des Senders"
-                    value={newStation.description}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, description: e.target.value }))}
-                      className="border-cyan-500/30 focus:border-cyan-400"
-                  />
-                </div>
-                
-                  <div className="animate-fade-in-left delay-300">
-                    <label className="block text-sm font-medium text-pink-400 mb-2 flex items-center gap-2">
-                      🖼️ Logo-URL (optional)
-                  </label>
-                  <Input
-                    placeholder="https://example.com/logo.png"
-                    value={newStation.logo}
-                    onChange={(e) => setNewStation(prev => ({ ...prev, logo: e.target.value }))}
-                      className="border-pink-500/30 focus:border-pink-400"
-                    />
-                    {newStation.logo && (
-                      <div className="mt-2">
-                        <img 
-                          src={newStation.logo} 
-                          alt="Logo Preview" 
-                          className="w-12 h-12 rounded-lg object-cover border border-pink-400/50 animate-fade-in"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
+                    {isCreatingStation && (
+                      <Button
+                        onClick={() => addSongToPlaylist(song)}
+                        variant="outline"
+                        className="px-2 py-1 text-xs"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
                     )}
                   </div>
                 </div>
+              ))}
+            </div>
+            
+            {availableSongs.length === 0 && (
+              <div className="text-center py-8">
+                <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-400">Keine MP3-Dateien gefunden</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Lade MP3-Dateien in den /music Ordner hoch
+                </p>
               </div>
-              
-              <div className="flex justify-center mt-8 animate-fade-in-up delay-500">
-                <Button
-                  onClick={addCustomRadioStation}
-                  disabled={radioLoading || !newStation.name || !newStation.url}
-                  className="flex items-center gap-3 px-8 py-3 text-lg bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 shadow-xl hover:shadow-green-500/25"
-                  animated={true}
-                >
-                  <Plus className="w-5 h-5 animate-spin-slow" />
-                  {radioLoading ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Füge hinzu...
-                    </span>
-                  ) : (
-                                            'Radio hinzufügen'
-                  )}
-                </Button>
-              </div>
+            )}
+          </CardContent>
+        </Card>
 
-              {/* Hilfe-Sektion */}
-              <div className="mt-6 p-4 bg-dark-surface/50 rounded-lg border border-gray-600/30 animate-fade-in delay-700">
-                                        <h5 className="text-sm font-medium text-gray-300 mb-2">💡 Tipps für Radio-Streams:</h5>
-                        <ul className="text-xs text-gray-400 space-y-1">
-                          <li>• Verwende direkte MP3/AAC Stream URLs</li>
-                          <li>• HLS (.m3u8) Streams werden unterstützt</li>
-                  <li>• Der Bot extrahiert automatisch Audio vom Video</li>
-                  <li>• Für beste Qualität verwende offizielle Radio-Streams</li>
-                </ul>
+        {/* Stations */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Radio className="w-5 h-5 text-purple-400" />
+                  Meine Stationen
+                </CardTitle>
+                <CardDescription>
+                  {settings.localMusic.stations.length} Stationen erstellt
+                </CardDescription>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-6" activeTab={activeTab}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-purple-accent" />
-                Radio Einstellungen
-              </CardTitle>
-              <CardDescription>
-                Konfiguriere dein einfaches Radio-System
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Radio aktivieren/deaktivieren */}
-                <div className="flex items-center justify-between p-4 bg-red-500/10 rounded-lg">
+              <Button
+                onClick={() => setIsCreatingStation(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Neue Station
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Station Creation Modal */}
+            {isCreatingStation && (
+              <div className="mb-6 p-4 bg-purple-500/10 rounded-lg border border-purple-primary/30">
+                <h4 className="text-lg font-semibold text-white mb-4">✨ Neue Station erstellen</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="text-white font-medium">📻 Radio aktivieren</label>
-                    <p className="text-red-300 text-sm">Hauptschalter für das gesamte Radio-System</p>
+                    <label className="block text-sm font-medium text-purple-200 mb-2">
+                      🎵 Station Name *
+                    </label>
+                    <Input
+                      placeholder="z.B. Meine Chill Playlist"
+                      value={newStation.name}
+                      onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
+                    />
                   </div>
-                  <Switch
-                    checked={settings.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enabled: checked }))}
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-purple-200 mb-2">
+                      🎭 Genre
+                    </label>
+                    <Select
+                      value={newStation.genre}
+                      onChange={(value) => setNewStation(prev => ({ ...prev, genre: value }))}
+                    >
+                      {musicGenres.map(genre => (
+                        <option key={genre} value={genre}>{genre}</option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    📝 Beschreibung
+                  </label>
+                  <Input
+                    placeholder="Beschreibung der Station..."
+                    value={newStation.description}
+                    onChange={(e) => setNewStation(prev => ({ ...prev, description: e.target.value }))}
                   />
                 </div>
 
-                {/* Radio-spezifische Einstellungen */}
-                {settings.enabled && (
-                  <>
-                    <div className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg">
-                      <div>
-                        <label className="text-white font-medium">🔊 Now Playing anzeigen</label>
-                        <p className="text-purple-300 text-sm">Zeigt aktuell gespielten Radio-Stream im Chat</p>
-                      </div>
-                      <Switch
-                        checked={settings.radio.showNowPlaying}
-                        onCheckedChange={(checked) => setSettings(prev => ({ 
-                          ...prev, 
-                          radio: { ...prev.radio, showNowPlaying: checked }
-                        }))}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-orange-500/10 rounded-lg">
-                      <div>
-                        <label className="text-white font-medium">⏹️ Auto-Stop bei Disconnect</label>
-                        <p className="text-orange-300 text-sm">Stoppt Radio automatisch wenn alle User den Voice-Channel verlassen</p>
-                      </div>
-                      <Switch
-                        checked={settings.radio.autoStop}
-                        onCheckedChange={(checked) => setSettings(prev => ({ 
-                          ...prev, 
-                          radio: { ...prev.radio, autoStop: checked }
-                        }))}
-                      />
-                    </div>
-
-                    {/* Embed Farbe - Schönes Design wie XP.tsx */}
-                    <div>
-                      <label className="block text-dark-text text-sm font-medium mb-2">
-                        🎨 Radio Embed Farbe
-                      </label>
-                      <div className="flex gap-3 items-center">
-                        {/* Color Picker */}
-                        <div className="relative">
-                          <input
-                            type="color"
-                            value={settings.radio.embedColor?.startsWith?.('#') ? settings.radio.embedColor : '#FF6B6B'}
-                            onChange={(e) => {
-                              const hexColor = e.target.value;
-                              setSettings(prev => ({ 
-                                ...prev, 
-                                radio: { ...prev.radio, embedColor: hexColor }
-                              }));
-                            }}
-                            className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-neon-purple transition-all duration-300 hover:scale-105"
-                            style={{
-                              filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                            }}
-                          />
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-neon rounded-full animate-ping opacity-60"></div>
-                        </div>
-                        
-                        {/* Hex Input */}
-                        <div className="flex-1">
-                          <Input
-                            type="text"
-                            value={settings.radio.embedColor || '#FF6B6B'}
-                            onChange={(e) => setSettings(prev => ({ 
-                              ...prev, 
-                              radio: { ...prev.radio, embedColor: e.target.value }
-                            }))}
-                            className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
-                            placeholder="#FF6B6B"
-                          />
-                        </div>
-
-                        {/* Color Preview */}
-                        <div 
-                          className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
-                          style={{
-                            backgroundColor: settings.radio.embedColor?.startsWith?.('#') ? settings.radio.embedColor : '#FF6B6B',
-                            filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                          }}
-                        >
-                          📻
-                        </div>
-                      </div>
-                      
-                      {/* Preset Colors */}
-                      <div className="mt-3">
-                        <p className="text-xs text-dark-muted mb-2">Beliebte Radio Farben:</p>
-                        <div className="flex gap-2 flex-wrap">
-                          {[
-                            { name: 'Radio Rot', color: '#FF6B6B' },
-                            { name: 'Radio Rot', color: '#FF0000' },
-                            { name: 'Orange', color: '#FF8C00' },
-                            { name: 'Lila', color: '#9B59B6' },
-                            { name: 'Blau', color: '#3498DB' },
-                            { name: 'Grün', color: '#2ECC71' },
-                            { name: 'Pink', color: '#E91E63' },
-                            { name: 'Cyan', color: '#1ABC9C' },
-                          ].map((preset) => (
-                            <button
-                              key={preset.name}
-                              onClick={() => setSettings(prev => ({ 
-                                ...prev, 
-                                radio: { ...prev.radio, embedColor: preset.color }
-                              }))}
-                              className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
-                              style={{
-                                backgroundColor: preset.color,
-                                filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
-                              }}
-                              title={preset.name}
-                            >
-                              <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ankündigungs-Channel */}
-                    <div>
-                      <label className="block text-dark-text text-sm font-medium mb-2">
-                        📢 Ankündigungs-Channel (optional)
-                      </label>
-                      <select
-                        value={settings.announcements.channelId}
-                        onChange={(e) => setSettings(prev => ({ 
-                          ...prev, 
-                          announcements: { ...prev.announcements, channelId: e.target.value }
-                        }))}
-                        className="bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-4 py-2 w-full focus:border-neon-purple focus:outline-none"
-                      >
-                        <option value="">Kein Ankündigungs-Channel</option>
-                        {channels.filter(ch => ch.type === 'text').map(channel => (
-                          <option key={channel.id} value={channel.id}>
-                            #{channel.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-dark-muted text-xs mt-1">
-                        Channel für Radio-Start/Stop Ankündigungen
-                      </p>
-                    </div>
-                    
-                    {/* Interactive Panel */}
-                    <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-primary/20">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-white font-medium">🎛️ Interactive Radio Panel</h4>
-                          <p className="text-purple-300 text-sm">Discord Panel mit Radio-Auswahl Buttons</p>
-                        </div>
-                        <Switch
-                          checked={settings.interactivePanel.enabled}
-                          onCheckedChange={(checked) => setSettings(prev => ({
-                            ...prev,
-                            interactivePanel: { ...prev.interactivePanel, enabled: checked }
-                          }))}
+                {/* Playlist Builder mit Drag & Drop */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-purple-200 mb-2">
+                    🎶 Playlist ({newStation.playlist.length} Songs)
+                  </label>
+                  
+                  {newStation.playlist.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto bg-dark-bg/30 rounded-lg p-3">
+                      {newStation.playlist.map((song, index) => (
+                        <DragDropSong
+                          key={`${song.id}-${index}`}
+                          song={song}
+                          index={index}
+                          onRemove={removeSongFromPlaylist}
+                          isDragging={draggedIndex === index}
+                          onDragStart={handleDragStart}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
                         />
-                      </div>
-
-                      {settings.interactivePanel.enabled && (
-                        <div className="space-y-4 pt-4 border-t border-purple-primary/20">
-                          <div>
-                            <label className="block text-purple-200 text-sm font-medium mb-2">
-                              📺 Panel-Channel
-                            </label>
-                            <select
-                              value={settings.interactivePanel.channelId}
-                              onChange={(e) => setSettings(prev => ({
-                                ...prev,
-                                interactivePanel: { ...prev.interactivePanel, channelId: e.target.value }
-                              }))}
-                              className="bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white w-full focus:border-purple-primary focus:outline-none"
-                            >
-                              <option value="">Channel auswählen...</option>
-                              {channels.filter(ch => ch.type === 'text').map(channel => (
-                                <option key={channel.id} value={channel.id}>
-                                  #{channel.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-purple-200 text-sm">🔄 Auto-Update</span>
-                            <Switch
-                              checked={settings.interactivePanel.autoUpdate}
-                              onCheckedChange={(checked) => setSettings(prev => ({
-                                ...prev,
-                                interactivePanel: { ...prev.interactivePanel, autoUpdate: checked }
-                              }))}
-                            />
-                          </div>
-
-                          {/* Interactive Panel Embed Farbe */}
-                          <div>
-                            <label className="block text-purple-200 text-sm font-medium mb-2">
-                              🎨 Panel Embed Farbe
-                            </label>
-                            <div className="flex gap-3 items-center">
-                              {/* Color Picker */}
-                              <div className="relative">
-                                <input
-                                  type="color"
-                                  value={settings.interactivePanel.embedColor?.startsWith?.('#') ? settings.interactivePanel.embedColor : '#FF6B6B'}
-                                  onChange={(e) => {
-                                    const hexColor = e.target.value;
-                                    setSettings(prev => ({ 
-                                      ...prev, 
-                                      interactivePanel: { ...prev.interactivePanel, embedColor: hexColor }
-                                    }));
-                                  }}
-                                  className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 bg-dark-bg cursor-pointer hover:border-neon-purple transition-all duration-300 hover:scale-105"
-                                  style={{
-                                    filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                                  }}
-                                />
-                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-neon rounded-full animate-ping opacity-60"></div>
-                              </div>
-                              
-                              {/* Hex Input */}
-                              <div className="flex-1">
-                                <Input
-                                  type="text"
-                                  value={settings.interactivePanel.embedColor || '#FF6B6B'}
-                                  onChange={(e) => setSettings(prev => ({ 
-                                    ...prev, 
-                                    interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
-                                  }))}
-                                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
-                                  placeholder="#FF6B6B"
-                                />
-                              </div>
-
-                              {/* Color Preview */}
-                              <div 
-                                className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
-                                style={{
-                                  backgroundColor: settings.interactivePanel.embedColor?.startsWith?.('#') ? settings.interactivePanel.embedColor : '#FF6B6B',
-                                  filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
-                                }}
-                              >
-                                🎛️
-                              </div>
-                            </div>
-                            
-                            {/* Preset Colors */}
-                            <div className="mt-3">
-                              <p className="text-xs text-purple-300 mb-2">Beliebte Panel Farben:</p>
-                              <div className="flex gap-2 flex-wrap">
-                                {[
-                                  { name: 'Panel Rot', color: '#FF6B6B' },
-                                  { name: 'Discord Blau', color: '#5865F2' },
-                                  { name: 'Lila', color: '#9B59B6' },
-                                  { name: 'Grün', color: '#2ECC71' },
-                                  { name: 'Orange', color: '#FF8C00' },
-                                  { name: 'Pink', color: '#E91E63' },
-                                  { name: 'Cyan', color: '#1ABC9C' },
-                                  { name: 'Gold', color: '#F1C40F' },
-                                ].map((preset) => (
-                                  <button
-                                    key={preset.name}
-                                    onClick={() => setSettings(prev => ({ 
-                                      ...prev, 
-                                      interactivePanel: { ...prev.interactivePanel, embedColor: preset.color }
-                                    }))}
-                                    className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
-                                    style={{
-                                      backgroundColor: preset.color,
-                                      filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
-                                    }}
-                                    title={preset.name}
-                                  >
-                                    <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="pt-4 border-t border-purple-primary/20">
-                            <Button
-                              onClick={postInteractivePanel}
-                              disabled={!settings.interactivePanel.channelId}
-                              className="w-full"
-                            >
-                              📻 Radio Panel posten
-                            </Button>
-                            {settings.interactivePanel.messageId && (
-                              <p className="text-xs text-purple-300 mt-2 text-center">
-                                Panel bereits gepostet (ID: {settings.interactivePanel.messageId.slice(0, 8)}...)
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Voice Channel Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mic className="w-5 h-5 text-purple-accent" />
-                Voice Channel Einstellungen
-              </CardTitle>
-              <CardDescription>
-                Konfiguriere Voice-Channel Verhalten
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Voice Channels */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {channels.filter(c => c.type === 'voice').map(channel => (
-                    <Button
-                      key={channel.id}
-                      onClick={() => joinVoiceChannel(channel.id)}
-                      variant="outline"
-                      className="justify-between"
-                    >
-                      <span>🔊 {channel.name}</span>
-                      <Users className="w-4 h-4" />
-                    </Button>
-                  ))}
+                  ) : (
+                    <div className="text-center py-4 border-2 border-dashed border-gray-600 rounded-lg">
+                      <p className="text-gray-400">Keine Songs in der Playlist</p>
+                      <p className="text-xs text-gray-500">Klicke auf + neben einem Song</p>
+                    </div>
+                  )}
                 </div>
 
-                <Button
-                  onClick={leaveVoiceChannel}
-                  variant="destructive"
-                  className="w-full"
-                >
-                  👋 Voice Channel verlassen
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={createStation} disabled={!newStation.name.trim()}>
+                    ✨ Station Erstellen
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setIsCreatingStation(false);
+                      setNewStation({ name: '', genre: 'Hip-Hop', description: '', playlist: [] });
+                    }}
+                  >
+                    Abbrechen
+                  </Button>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            )}
 
-      {/* Toast-Container für Benachrichtigungen */}
+            {/* Stations List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {settings.localMusic.stations.map((station) => (
+                <div
+                  key={station.id}
+                  className="p-4 bg-dark-bg/50 rounded-lg border border-gray-600/30 hover:border-purple-primary/50 transition-all duration-300"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-white flex items-center gap-2">
+                        {station.name}
+                        <Badge variant="outline" className="text-xs">
+                          {station.genre}
+                        </Badge>
+                      </h4>
+                      <p className="text-sm text-gray-400">{station.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {station.playlist.length} Songs
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        onClick={() => playStation(station.id)}
+                        disabled={musicStatus.currentStation?.id === station.id}
+                        className="px-2 py-1 text-xs"
+                      >
+                        {musicStatus.currentStation?.id === station.id ? (
+                          <Pause className="w-3 h-3" />
+                        ) : (
+                          <Play className="w-3 h-3" />
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => deleteStation(station.id)}
+                        variant="destructive"
+                        className="px-2 py-1 text-xs"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {settings.localMusic.stations.length === 0 && !isCreatingStation && (
+              <div className="text-center py-8">
+                <Radio className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-400">Keine Stationen erstellt</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Erstelle deine erste Station mit eigenen Playlists
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Music Controls */}
+      {musicStatus.isPlaying && (
+        <Card className="fixed bottom-6 right-6 max-w-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">
+                  {musicStatus.currentSong?.title || 'Unbekannt'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {musicStatus.currentStation?.name || 'Einzelner Song'}
+                </p>
+              </div>
+              <Button
+                onClick={stopMusic}
+                variant="destructive"
+                className="px-3 py-2"
+              >
+                <Pause className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Toast Container */}
       <ToastContainer 
         toasts={toasts} 
         removeToast={removeToast} 
