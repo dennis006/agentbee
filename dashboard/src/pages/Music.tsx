@@ -903,7 +903,7 @@ const Music: React.FC = () => {
       
       console.log(`🏠 Verwende Guild ID: ${targetGuildId}`);
       
-      const response = await fetch(`${apiUrl}/api/music/interactive-panel/post`, {
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/post/${targetGuildId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
