@@ -21,6 +21,33 @@ let musicSettings = {
         enabled: true,
         stations: [
             {
+                id: "1live",
+                name: "1LIVE",
+                url: "https://wdr-1live-live.icecast.wdr.de/wdr/1live/live/mp3/128/stream.mp3",
+                genre: "Pop/Rock",
+                country: "Deutschland",
+                description: "Der junge Radiosender von WDR",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MUxJVkU8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "swr3",
+                name: "SWR3",
+                url: "https://liveradio.swr.de/sw282p3/swr3/play.mp3",
+                genre: "Pop/Rock",
+                country: "Deutschland", 
+                description: "Popmusik und Comedy",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDc3QkUiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+U1dSMzwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "bigfm",
+                name: "bigFM",
+                url: "https://streams.bigfm.de/bigfm-deutschland-128-mp3",
+                genre: "Hip-Hop/R&B",
+                country: "Deutschland",
+                description: "Deutschlands biggste Beats",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5iaWdGTTwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
                 id: "lofi",
                 name: "Lofi Hip Hop Radio",
                 url: "http://streams.ilovemusic.de/iloveradio-lounge.mp3",
@@ -93,7 +120,7 @@ let musicSettings = {
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QkFTUzwvdGV4dD4KPC9zdmc+Cg=="
             }
         ],
-        defaultStation: "lofi",
+        defaultStation: "swr3",
         autoStop: false,
         showNowPlaying: true,
         embedColor: "#FF6B6B"
@@ -586,6 +613,23 @@ async function playRadioStation(guildId, stationId) {
                 
                 ffmpeg.on('error', (error) => {
                     console.error('❌ FFmpeg Stream Error:', error);
+                    // Bei FFmpeg Fehlern stoppe den Player und Radio
+                    if (error.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+                        console.log('🔴 FFmpeg Stream vorzeitig beendet, stoppe Radio');
+                        setTimeout(() => {
+                            if (player) {
+                                player.stop();
+                            }
+                            stopRadio(guildId);
+                        }, 1000);
+                    }
+                });
+                
+                // Stream error handling
+                ffmpeg.on('close', (code) => {
+                    if (code !== 0) {
+                        console.log(`❌ FFmpeg exited with code ${code}`);
+                    }
                 });
                 
             } catch (ffmpegError) {
@@ -615,18 +659,37 @@ async function playRadioStation(guildId, stationId) {
         player.on(AudioPlayerStatus.Idle, (oldState) => {
             console.log(`⏸️ Radio idle: ${station.name} (von ${oldState.status})`);
             
-            // Wenn der Stream unexpectedly idle wird, versuche neu zu starten
+            // Verhindere automatische Neustarts bei FFmpeg Fehlern
             if (oldState.status === AudioPlayerStatus.Playing || oldState.status === AudioPlayerStatus.Buffering) {
-                console.log('🔄 Stream unterbrochen, versuche Neustart...');
-                setTimeout(async () => {
-                    if (currentRadioStations.has(guildId)) {
-                        try {
-                            await playRadioStation(guildId, stationId);
-                        } catch (error) {
-                            console.error('❌ Neustart fehlgeschlagen:', error);
+                const retryKey = `radio_retry_${guildId}`;
+                const retryCount = (global[retryKey] || 0) + 1;
+                
+                // Maximal 3 Versuche innerhalb von 30 Sekunden
+                if (retryCount <= 3) {
+                    console.log(`🔄 Stream unterbrochen, versuche Neustart... (Versuch ${retryCount}/3)`);
+                    global[retryKey] = retryCount;
+                    
+                    setTimeout(async () => {
+                        if (currentRadioStations.has(guildId)) {
+                            try {
+                                await playRadioStation(guildId, stationId);
+                            } catch (error) {
+                                console.error('❌ Neustart fehlgeschlagen:', error);
+                                // Nach Fehlschlag stoppe Radio komplett
+                                stopRadio(guildId);
+                            }
                         }
-                    }
-                }, 3000);
+                    }, 5000 * retryCount); // Exponentiell steigende Wartezeit
+                    
+                    // Reset retry counter nach 30 Sekunden
+                    setTimeout(() => {
+                        delete global[retryKey];
+                    }, 30000);
+                } else {
+                    console.log('❌ Maximale Anzahl Neustartversuche erreicht, stoppe Radio');
+                    stopRadio(guildId);
+                    delete global[retryKey];
+                }
             }
         });
 
@@ -634,17 +697,43 @@ async function playRadioStation(guildId, stationId) {
             console.error(`❌ Radio Player Fehler:`, error);
             console.error(`❌ Error Stack:`, error.stack);
             
-            // Versuche neu zu starten
-            setTimeout(async () => {
-                if (currentRadioStations.has(guildId)) {
-                    console.log('🔄 Versuche Radio nach Fehler neu zu starten...');
-                    try {
-                        await playRadioStation(guildId, stationId);
-                    } catch (retryError) {
-                        console.error('❌ Neustart nach Fehler fehlgeschlagen:', retryError);
+            // Bei Stream-Fehlern stoppe das Radio komplett
+            if (error.code === 'ERR_STREAM_PREMATURE_CLOSE' || 
+                error.message.includes('premature close') ||
+                error.message.includes('FFMPEG_ERROR')) {
+                console.log('🔴 Stream-Fehler erkannt, stoppe Radio vollständig');
+                stopRadio(guildId);
+                return;
+            }
+            
+            // Nur bei anderen Fehlern versuche neu zu starten (mit Limit)
+            const retryKey = `player_retry_${guildId}`;
+            const retryCount = (global[retryKey] || 0) + 1;
+            
+            if (retryCount <= 2) {
+                console.log(`🔄 Versuche Radio nach Fehler neu zu starten... (Versuch ${retryCount}/2)`);
+                global[retryKey] = retryCount;
+                
+                setTimeout(async () => {
+                    if (currentRadioStations.has(guildId)) {
+                        try {
+                            await playRadioStation(guildId, stationId);
+                        } catch (retryError) {
+                            console.error('❌ Neustart nach Fehler fehlgeschlagen:', retryError);
+                            stopRadio(guildId);
+                        }
                     }
-                }
-            }, 5000);
+                }, 5000 * retryCount);
+                
+                // Reset nach 60 Sekunden
+                setTimeout(() => {
+                    delete global[retryKey];
+                }, 60000);
+            } else {
+                console.log('❌ Maximale Player-Neustartversuche erreicht, stoppe Radio');
+                stopRadio(guildId);
+                delete global[retryKey];
+            }
         });
 
         // Resource Error Handling
