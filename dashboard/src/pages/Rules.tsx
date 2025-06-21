@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FileText, Settings, Plus, Trash2, Code, Eye, Smile, Hash } from 'lucide-react'
+import { FileText, Settings, Plus, Trash2, Code, Eye, Smile, Hash, Database } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Textarea } from '../components/ui/textarea'
@@ -86,7 +86,7 @@ const Rules = () => {
         updatedRules = rules;
       }
 
-      const response = await fetch(`${apiUrl}/api/rules`, {
+      const response = await fetch(`${apiUrl}/api/rules/supabase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ const Rules = () => {
 
   const loadRules = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/rules`);
+      const response = await fetch(`${apiUrl}/api/rules/supabase`);
       if (response.ok) {
         const data = await response.json();
         setRules(data);
@@ -279,6 +279,12 @@ const Rules = () => {
           <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
             <Settings className="w-5 h-5 text-purple-accent" />
             Rules Header Configuration
+            <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">
+                <Database className="w-4 h-4" />
+                <span className="text-xs font-medium">Supabase</span>
+              </div>
+            </div>
           </CardTitle>
           <CardDescription className="text-dark-muted">
             Konfiguriere den Header deiner Serverregeln

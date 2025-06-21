@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star, Bot, Sparkles, Zap, Copy } from 'lucide-react';
+import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star, Bot, Sparkles, Zap, Copy, Database } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -1571,6 +1571,12 @@ const Music: React.FC = () => {
                 <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-purple-400" />
                 System Einstellungen
+                <div className="ml-auto flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/30">
+                    <Database className="w-4 h-4" />
+                    <span className="text-xs font-medium">Supabase</span>
+                  </div>
+                </div>
                 </CardTitle>
                 <CardDescription>
                 Grundlegende Musik-System Konfiguration
