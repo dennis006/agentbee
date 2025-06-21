@@ -798,31 +798,24 @@ const Music: React.FC = () => {
       
       const response = await fetch(`${apiUrl}/api/music/interactive-panel/${targetGuildId}/post`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          channelName: settings.interactivePanel.channelId,
-          embedColor: settings.interactivePanel.embedColor
-        })
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
-        const data = await response.json();
-        showSuccess('Interactive Panel', '🎛️ Interactive Panel erfolgreich erstellt!');
+        const data = await response.json().catch(() => ({}));
+        const actionText = settings.interactivePanel.messageId ? 'aktualisiert' : 'erstellt';
+        showSuccess('Interactive Panel', `🎛️ Interactive Panel erfolgreich ${actionText}!`);
         
-        // Update settings with new message ID
-        setSettings(prev => ({
-          ...prev,
-          interactivePanel: {
-            ...prev.interactivePanel,
-            messageId: data.messageId
-          }
-        }));
-        
-        // Einstellungen erneut speichern mit Message ID
-        setTimeout(() => saveSettings(), 500);
+        // Lade Settings neu um eventuelle neue message ID zu bekommen
+        await loadData();
       } else {
-        const data = await response.json();
-        showError('Panel Fehler', data.error || 'Fehler beim Erstellen des Interactive Panels');
+        const data = await response.json().catch(() => ({ error: 'Unbekannter Server-Fehler' }));
+        showError('Panel Fehler', data.error || 'Fehler beim Verwalten des Interactive Panels');
+        console.error('Panel API Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: data
+        });
       }
     } catch (error) {
       console.error('Panel Fehler:', error);
@@ -1222,7 +1215,10 @@ const Music: React.FC = () => {
                   className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Users className="w-4 h-4" />
-                  Interactive Panel erstellen/aktualisieren
+                  {settings.interactivePanel.messageId 
+                    ? 'Interactive Panel aktualisieren' 
+                    : 'Interactive Panel erstellen'
+                  }
                 </Button>
                 
                 {settings.interactivePanel.messageId && (
