@@ -2518,6 +2518,39 @@ function registerMusicAPI(app) {
         }
     });
 
+    // Audio Visualizer WebSocket Port Info
+    app.get('/api/music/visualizer/:guildId/port', async (req, res) => {
+      try {
+        const { guildId } = req.params;
+        
+        if (!audioVisualizers.has(guildId)) {
+          return res.json({ 
+            success: false, 
+            message: 'Audio Visualizer nicht aktiv',
+            port: null
+          });
+        }
+        
+        const visualizer = audioVisualizers.get(guildId);
+        const currentData = visualizer.getCurrentData();
+        
+        res.json({
+          success: true,
+          port: currentData.wsPort || 8080,
+          isAnalyzing: currentData.isAnalyzing,
+          message: `WebSocket läuft auf Port ${currentData.wsPort || 8080}`
+        });
+        
+      } catch (error) {
+        console.error('❌ Fehler beim Abrufen des WebSocket Ports:', error);
+        res.status(500).json({ 
+          success: false, 
+          message: 'Fehler beim Abrufen der Port-Information',
+          error: error.message 
+        });
+      }
+    });
+
     console.log('✅ Musik API registriert!');
     console.log('🌊 Audio Visualizer WebSocket Server läuft auf Port 8080');
 }
