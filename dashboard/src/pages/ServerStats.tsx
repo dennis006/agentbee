@@ -680,16 +680,16 @@ const ServerStats: React.FC = () => {
                 <p className="text-sm text-dark-muted mt-1">Automatische Aktualisierung der Stats</p>
               </div>
               <Switch
-                checked={settings.enabled}
-                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enabled: checked }))}
+                checked={settings?.enabled || false}
+                onCheckedChange={(checked) => setSettings(prev => prev ? ({ ...prev, enabled: checked }) : null)}
               />
             </div>
 
             <div className="space-y-2">
               <Label>Update-Intervall</Label>
               <Select 
-                value={settings.updateInterval.toString()} 
-                onValueChange={(value) => setSettings(prev => ({ ...prev, updateInterval: parseInt(value) }))}
+                value={settings?.updateInterval?.toString() || '300000'} 
+                onValueChange={(value) => setSettings(prev => prev ? ({ ...prev, updateInterval: parseInt(value) }) : null)}
               >
                 <SelectTrigger className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple">
                   <SelectValue />
@@ -702,14 +702,14 @@ const ServerStats: React.FC = () => {
                   <SelectItem value="3600000" className="text-dark-text hover:bg-purple-primary/20">1 Stunde</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-dark-muted">Aktuell: {formatDuration(settings.updateInterval)}</p>
+              <p className="text-xs text-dark-muted">Aktuell: {settings?.updateInterval ? formatDuration(settings.updateInterval) : '5 Minuten'}</p>
             </div>
 
             <div className="space-y-2">
               <Label>Kategorie-Name</Label>
               <Input
-                value={settings.categoryName}
-                onChange={(e) => setSettings(prev => ({ ...prev, categoryName: e.target.value }))}
+                value={settings?.categoryName || ''}
+                onChange={(e) => setSettings(prev => prev ? ({ ...prev, categoryName: e.target.value }) : null)}
                 className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
                 placeholder="📊 Server Statistiken"
               />
@@ -732,7 +732,7 @@ const ServerStats: React.FC = () => {
         <CardContent className="space-y-4">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Object.entries(settings.channels).map(([channelType, channelConfig]) => (
+            {settings?.channels ? Object.entries(settings.channels).map(([channelType, channelConfig]) => (
               <div key={channelType} className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -788,7 +788,11 @@ const ServerStats: React.FC = () => {
                   </div>
                 )}
               </div>
-            ))}
+            )) : (
+              <div className="text-center text-dark-muted py-8">
+                <p>Lade Konfiguration...</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
