@@ -1471,6 +1471,12 @@ async function handleMusicPlaylistStationSelect(interaction) {
     }
 }
 
+// Kompatibilitätsfunktion für alte Radio-Select Buttons
+async function handleRadioSelectButton(interaction) {
+    // Leite an die neue Musik-Radio-Select Funktion weiter
+    return await handleMusicRadioSelectButton(interaction);
+}
+
 // API Endpoints
 function registerMusicAPI(app) {
     console.log('🎵 Registriere Musik API...');
@@ -2279,7 +2285,7 @@ module.exports = {
     scanMusicDirectory,
     // Settings
     musicSettings,
-    // Interactive Panel Functions (Radio)
+    // Interactive Panel Functions (Radio - Kompatibilität)
     postInteractiveRadioPanel,
     updateInteractiveRadioPanel,
     handleRadioSelectButton,
