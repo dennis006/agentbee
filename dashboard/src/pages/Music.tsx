@@ -153,7 +153,7 @@ const Input: React.FC<{
   />
 );
 
-// Interfaces - Vereinfacht für YouTube Radio-System
+// Interfaces - Vereinfachtes Radio-System
 interface MusicSettings {
   enabled: boolean;
   radio: {
@@ -306,7 +306,7 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        showSuccess('YouTube Radio', '🎵 Einstellungen erfolgreich gespeichert!');
+        showSuccess('Radio', '🎵 Einstellungen erfolgreich gespeichert!');
       } else {
         showError('Speicher Fehler', '❌ Fehler beim Speichern der Einstellungen');
       }
@@ -411,7 +411,7 @@ const Music: React.FC = () => {
       const data = await response.json();
       
       if (response.ok) {
-        showSuccess('YouTube Radio', data.message);
+        showSuccess('Radio', data.message);
         await loadRadioStatus();
         
         // Update Discord Interactive Panel
@@ -501,7 +501,7 @@ const Music: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('YouTube Radio Panel', `🎵 ${data.message}`);
+        showSuccess('Radio Panel', `🎵 ${data.message}`);
         loadData(); // Reload to get message ID
       } else {
         const errorData = await response.json();
@@ -536,31 +536,10 @@ const Music: React.FC = () => {
       return;
     }
 
-    // YouTube URL Validierung und Verbesserung
+    // Standard Radio Logo setzen falls kein Logo vorhanden
     let processedStation = { ...newStation };
-    
-    if (newStation.url.includes('youtube.com') || newStation.url.includes('youtu.be')) {
-      // YouTube URL erkannt
-      if (!processedStation.logo) {
-        // Standard YouTube Logo setzen falls kein Custom Logo vorhanden
-        processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0ZGMDAwMCIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllUPC90ZXh0Pgo8L3N2Zz4K';
-      }
-      
-      // Automatische Metadaten für YouTube
-      if (!processedStation.genre) {
-        processedStation.genre = 'YouTube Stream';
-      }
-      if (!processedStation.country) {
-        processedStation.country = 'International';
-      }
-      if (!processedStation.description) {
-        processedStation.description = 'YouTube Live-Stream';
-      }
-    } else {
-      // Normale Radio-URL
-      if (!processedStation.logo) {
-        processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
-      }
+    if (!processedStation.logo) {
+      processedStation.logo = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPvCfk7s8L3RleHQ+Cjwvc3ZnPgo=';
     }
 
     // Generate unique ID und erweitere das Object
@@ -581,7 +560,7 @@ const Music: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        showSuccess('YouTube Radio', `${stationWithId.url.includes('youtube.com') ? 'YouTube-Stream' : 'Radio-Station'} "${stationWithId.name}" erfolgreich hinzugefügt!`);
+        showSuccess('Radio', `Radio-Station "${stationWithId.name}" erfolgreich hinzugefügt!`);
         
         // Reset form mit Animation
         setNewStation({
@@ -624,7 +603,7 @@ const Music: React.FC = () => {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Lade YouTube Radio System...</div>
+          <div className="text-lg">Lade Radio System...</div>
         </div>
       </div>
     );
@@ -640,11 +619,11 @@ const Music: React.FC = () => {
         <div className="flex items-center justify-center gap-3 mb-4">
           <Radio className="w-12 h-12 text-red-400 animate-pulse" />
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
-            YouTube Radio Bot
+            Radio Bot
           </h1>
         </div>
         <div className="text-dark-text text-lg max-w-2xl mx-auto">
-          Einfaches YouTube Radio System für Discord! 
+          Einfaches Radio System für Discord! 
           <span className="ml-2 inline-block relative">
             <svg 
               className="w-6 h-6 animate-pulse hover:animate-bounce text-purple-400 hover:text-purple-300 transition-all duration-300 hover:scale-110 drop-shadow-lg" 
@@ -682,7 +661,7 @@ const Music: React.FC = () => {
       {/* System Status Badge */}
       <div className="flex justify-center gap-4 items-center">
         <Badge variant={settings.enabled ? "default" : "outline"} className="text-lg py-2 px-4">
-          {settings.enabled ? '✅ YouTube Radio Aktiviert' : '❌ YouTube Radio Deaktiviert'}
+          {settings.enabled ? '✅ Radio Aktiviert' : '❌ Radio Deaktiviert'}
         </Badge>
         
         {/* Radio Status Indikator */}
@@ -692,7 +671,7 @@ const Music: React.FC = () => {
             {radioStatus.isPlaying ? `Live: ${radioStatus.currentStation?.name}` : 'Kein Radio aktiv'}
           </span>
           <div className="text-xs text-red-accent">
-            📻 YouTube Radio
+            📻 Radio
           </div>
         </div>
       </div>
@@ -812,7 +791,7 @@ const Music: React.FC = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {radioStations
-                    .filter(station => !station.url.includes('youtube.com'))
+                    // Zeige alle Radio-Stationen
                     .map((station) => (
                     <div
                       key={station.id}
@@ -882,97 +861,10 @@ const Music: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* YouTube Live-Streams Kategorie */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                  </svg>
-                  🎵 YouTube Live-Streams
-                </CardTitle>
-                <CardDescription>
-                  24/7 YouTube Live-Streams für verschiedene Musikrichtungen
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {radioStations
-                    .filter(station => station.url.includes('youtube.com'))
-                    .map((station) => (
-                    <div
-                      key={station.id}
-                      className={`bg-dark-surface/50 rounded-lg p-4 border transition-all duration-300 hover:scale-105 ${
-                        radioStatus.currentStation?.id === station.id
-                          ? 'border-red-400 bg-red-500/10'
-                          : 'border-purple-primary/30 hover:border-purple-primary'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        <img 
-                          src={station.logo} 
-                          alt={station.name}
-                          className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iOCIgZmlsbD0iI0ZGMDAwMCIvPgo8dGV4dCB4PSIyNCIgeT0iMjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPllUPC90ZXh0Pgo8L3N2Zz4K';
-                          }}
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-bold text-white flex items-center gap-2">
-                            {station.name}
-                            <span className="text-red-500 text-xs">🎵 LIVE</span>
-                          </h4>
-                          <p className="text-sm text-dark-muted">{station.genre}</p>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-dark-text mb-3">{station.description}</p>
-                      
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs bg-red-500/10 border-red-500/30 text-red-400">
-                          🌍 {station.country}
-                        </Badge>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => playRadioStation(station.id)}
-                            disabled={radioLoading || radioStatus.currentStation?.id === station.id}
-                            className="flex items-center gap-2 px-3 py-1 text-sm"
-                          >
-                            {radioStatus.currentStation?.id === station.id ? (
-                              <>
-                                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                                Live
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-3 h-3" />
-                                {radioLoading ? 'Starte...' : 'Abspielen'}
-                              </>
-                            )}
-                          </Button>
-                          
-                          {/* Lösch-Button nur für custom Sender anzeigen (nicht für vordefinierte) */}
-                          {!['lofi', 'chillhop', 'deephouse', 'trapmusic', 'gaming', 'jazzhop', 'retrowave', 'bassmusic'].includes(station.id) && (
-                            <Button
-                              onClick={() => removeRadioStation(station.id)}
-                              disabled={radioLoading}
-                              variant="destructive"
-                              className="px-2 py-1 text-xs"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+
           </div>
 
-          {/* Add Custom Radio Station mit verbesserter YouTube-Unterstützung */}
+          {/* Add Custom Radio Station */}
           <Card animate={true} className="relative overflow-hidden border-green-500/30">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-blue-500/5 animate-gradient-x"></div>
             <CardHeader className="relative z-10">
@@ -981,37 +873,37 @@ const Music: React.FC = () => {
                   <Plus className="w-5 h-5 text-green-400 animate-bounce-slow" />
                 </div>
                 <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-                  🎵 YouTube Radio-Sender hinzufügen
+                  🎵 Radio-Sender hinzufügen
                 </span>
               </CardTitle>
               <CardDescription className="text-gray-300">
-                Füge eigene YouTube Live-Streams oder Radio-Streams hinzu
+                Füge eigene Radio-Streams hinzu
               </CardDescription>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-xl p-6 border border-green-400/30 mb-6 animate-fade-in-up">
                 <h4 className="text-lg font-semibold text-green-400 mb-3 flex items-center gap-2">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                   </svg>
-                  YouTube-Unterstützung
+                  Radio-Stream Unterstützung
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
-                  <div className="flex items-start gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span>YouTube Live-Streams (z.B. 24/7 Lofi Radio)</span>
-                  </div>
                   <div className="flex items-start gap-2">
                     <span className="text-green-400">✓</span>
                     <span>Normale Radio-Streams (.mp3, .m3u8)</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-green-400">✓</span>
-                    <span>Automatische YouTube-Metadaten</span>
+                    <span>HTTP Live Streaming (HLS)</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="text-green-400">✓</span>
                     <span>Custom Logo-Upload unterstützt</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-400">✓</span>
+                    <span>24/7 Streaming Unterstützung</span>
                   </div>
                 </div>
               </div>
@@ -1032,18 +924,14 @@ const Music: React.FC = () => {
                 
                   <div className="animate-fade-in-right delay-200">
                     <label className="block text-sm font-medium text-blue-400 mb-2 flex items-center gap-2">
-                      🌐 Stream-URL * 
-                      <span className="text-xs text-gray-400">(YouTube oder direkte URL)</span>
+                      🌐 Stream-URL *
                   </label>
                   <Input
-                      placeholder="https://youtube.com/watch?v=... oder https://stream.radio.com/..."
+                      placeholder="https://stream.radio.com/stream.mp3"
                     value={newStation.url}
                     onChange={(e) => setNewStation(prev => ({ ...prev, url: e.target.value }))}
                       className="border-blue-500/30 focus:border-blue-400"
                   />
-                    {newStation.url.includes('youtube.com') && (
-                      <p className="text-xs text-green-400 mt-1 animate-pulse">✓ YouTube-Link erkannt</p>
-                    )}
                 </div>
                 
                   <div className="animate-fade-in-right delay-300">
@@ -1124,17 +1012,17 @@ const Music: React.FC = () => {
                       Füge hinzu...
                     </span>
                   ) : (
-                    'YouTube Radio hinzufügen'
+                                            'Radio hinzufügen'
                   )}
                 </Button>
               </div>
 
               {/* Hilfe-Sektion */}
               <div className="mt-6 p-4 bg-dark-surface/50 rounded-lg border border-gray-600/30 animate-fade-in delay-700">
-                <h5 className="text-sm font-medium text-gray-300 mb-2">💡 Tipps für YouTube-Links:</h5>
-                <ul className="text-xs text-gray-400 space-y-1">
-                  <li>• Verwende YouTube Live-Stream URLs für 24/7 Radio</li>
-                  <li>• Normale YouTube-Videos funktionieren auch</li>
+                                        <h5 className="text-sm font-medium text-gray-300 mb-2">💡 Tipps für Radio-Streams:</h5>
+                        <ul className="text-xs text-gray-400 space-y-1">
+                          <li>• Verwende direkte MP3/AAC Stream URLs</li>
+                          <li>• HLS (.m3u8) Streams werden unterstützt</li>
                   <li>• Der Bot extrahiert automatisch Audio vom Video</li>
                   <li>• Für beste Qualität verwende offizielle Radio-Streams</li>
                 </ul>
@@ -1149,10 +1037,10 @@ const Music: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-purple-accent" />
-                YouTube Radio Einstellungen
+                Radio Einstellungen
               </CardTitle>
               <CardDescription>
-                Konfiguriere dein einfaches YouTube Radio-System
+                Konfiguriere dein einfaches Radio-System
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1160,7 +1048,7 @@ const Music: React.FC = () => {
                 {/* Radio aktivieren/deaktivieren */}
                 <div className="flex items-center justify-between p-4 bg-red-500/10 rounded-lg">
                   <div>
-                    <label className="text-white font-medium">📻 YouTube Radio aktivieren</label>
+                    <label className="text-white font-medium">📻 Radio aktivieren</label>
                     <p className="text-red-300 text-sm">Hauptschalter für das gesamte Radio-System</p>
                   </div>
                   <Switch
@@ -1258,7 +1146,7 @@ const Music: React.FC = () => {
                         <div className="flex gap-2 flex-wrap">
                           {[
                             { name: 'Radio Rot', color: '#FF6B6B' },
-                            { name: 'YouTube Rot', color: '#FF0000' },
+                            { name: 'Radio Rot', color: '#FF0000' },
                             { name: 'Orange', color: '#FF8C00' },
                             { name: 'Lila', color: '#9B59B6' },
                             { name: 'Blau', color: '#3498DB' },

@@ -11,7 +11,7 @@ const {
 
 const fs = require('fs');
 
-// Vereinfachte Music Settings - nur Radio
+// Vereinfachte Music Settings - nur lokale Radio-Streams (ohne YouTube)
 let musicSettings = {
     enabled: true,
     radio: {
@@ -20,73 +20,73 @@ let musicSettings = {
             {
                 id: "lofi",
                 name: "Lofi Hip Hop Radio",
-                url: "https://www.youtube.com/watch?v=jfKfPfyJRdk",
-                genre: "Lofi/Chill",
+                url: "http://streams.ilovemusic.de/iloveradio-lounge.mp3",
+                genre: "Lofi/Chill", 
                 country: "International",
-                description: "24/7 Lofi Hip Hop Beats",
+                description: "Chill Lofi Hip Hop Beats",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TG9GaTwvdGV4dD4KPC9zdmc+Cg=="
             },
             {
                 id: "chillhop",
                 name: "ChillHop Radio",
-                url: "https://www.youtube.com/watch?v=5yx6BWlEVcY",
+                url: "http://stream.laut.fm/chillhop",
                 genre: "Chillhop/Jazz",
-                country: "International",
+                country: "International", 
                 description: "Chill beats to relax/study to",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM0NEFBODgiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q2hpbGxIb3A8L3RleHQ+Cjwvc3ZnPgo="
             },
             {
                 id: "deephouse",
                 name: "Deep House Radio",
-                url: "https://www.youtube.com/watch?v=36YnV9STBqc",
+                url: "http://stream.laut.fm/deephouse",
                 genre: "Deep House/Electronic",
                 country: "International",
-                description: "24/7 Deep House Live Stream",
+                description: "24/7 Deep House Radio Stream",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDMzNjYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMEZGRkYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRFRVA8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDBGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1VTRTI8L3RleHQ+Cjwvc3ZnPgo="
             },
             {
                 id: "trapmusic",
-                name: "Trap Music 24/7",
-                url: "https://www.youtube.com/watch?v=5qap5aO4i9A",
+                name: "Trap Music Radio",
+                url: "http://stream.laut.fm/trap",
                 genre: "Trap/Hip-Hop",
                 country: "USA",
-                description: "24/7 Trap Music Live Stream",
+                description: "24/7 Trap Music Radio Stream",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwNzciLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFJBUDwvdGV4dD4KPC9zdmc+Cg=="
             },
             {
                 id: "gaming",
                 name: "Gaming Music Radio",
-                url: "https://www.youtube.com/watch?v=4xDzrJKXOOY",
+                url: "http://stream.laut.fm/gaming",
                 genre: "Gaming/Electronic",
                 country: "International",
-                description: "24/7 Gaming Music Live Stream",
+                description: "24/7 Gaming Music Radio Stream",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMEZGMDAiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkdBTUlORzwvdGV4dD4KPHRleHQgeD0iMzIiIHk9IjQ0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk1VU0lDPC90ZXh0Pgo8L3N2Zz4K"
             },
             {
                 id: "jazzhop",
                 name: "Jazz Hop Cafe",
-                url: "https://www.youtube.com/watch?v=Dx5qFachd3A",
+                url: "http://stream.laut.fm/jazzhop",
                 genre: "Jazz Hop/Chill",
                 country: "International",
-                description: "24/7 Jazz Hop Cafe Live Stream",
+                description: "24/7 Jazz Hop Cafe Radio Stream",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM4QjQ1MTMiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNGRkQ3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkpBWlo8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZENzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1A8L3RleHQ+Cjwvc3ZnPgo="
             },
             {
                 id: "retrowave",
-                name: "Retrowave 24/7",
-                url: "https://www.youtube.com/watch?v=MV_3Dpw-BRY",
+                name: "Retrowave Radio",
+                url: "http://stream.laut.fm/retrowave",
                 genre: "Retrowave/80s",
                 country: "International",
-                description: "24/7 Retrowave Live Stream",
+                description: "24/7 Retrowave Radio Stream",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwRkYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SRVRST1dBVkU8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjQvNzwvdGV4dD4KPC9zdmc+Cg=="
             },
             {
                 id: "bassmusic",
-                name: "Bass Music 24/7",
-                url: "https://www.youtube.com/watch?v=6p0DAz_30qQ",
+                name: "Bass Music Radio",
+                url: "http://stream.laut.fm/bass",
                 genre: "Bass/Dubstep",
                 country: "International",
-                description: "24/7 Bass Music Live Stream",
+                description: "24/7 Bass Music Radio Stream",
                 logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QkFTUzwvdGV4dD4KPC9zdmc+Cg=="
             }
         ],
@@ -263,11 +263,9 @@ async function playRadioStation(guildId, stationId) {
         // Erstelle Player
         const player = createPlayerForGuild(guildId);
 
-        // Verwende play-dl für YouTube Live Stream
-        const { stream, type } = await createYouTubeStream(station.url);
-        
-        const resource = createAudioResource(stream, {
-            inputType: type,
+        // Erstelle direkte Radio-Stream Ressource
+        const resource = createAudioResource(station.url, {
+            inputType: StreamType.Arbitrary,
             inlineVolume: true
         });
 
@@ -300,35 +298,7 @@ async function playRadioStation(guildId, stationId) {
     }
 }
 
-async function createYouTubeStream(url) {
-    try {
-        const playdl = require('play-dl');
-        
-        // Prüfe ob es ein YouTube Live Stream ist
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            const stream = await playdl.stream(url, {
-                quality: 2 // Beste Audio-Qualität
-            });
-            
-            return {
-                stream: stream.stream,
-                type: stream.type
-            };
-        } else {
-            // Direkter Stream (MP3/etc.)
-            const fetch = require('node-fetch');
-            const response = await fetch(url);
-            
-            return {
-                stream: response.body,
-                type: StreamType.Arbitrary
-            };
-        }
-    } catch (error) {
-        console.error('❌ Fehler beim Erstellen des YouTube Streams:', error);
-        throw error;
-    }
-}
+
 
 function stopRadio(guildId) {
     try {
@@ -475,19 +445,19 @@ async function createInteractiveRadioPanel(guildId) {
 
         const embed = {
             color: embedColor,
-            title: '📻 YouTube Radio Panel',
-            description: '**Wähle einen YouTube Radio-Stream!**\n\n' +
+            title: '📻 Radio Panel',
+            description: '**Wähle einen Radio-Stream!**\n\n' +
                         '🎯 **Wie funktioniert es?**\n' +
                         '• Klicke auf "📻 Radio auswählen"\n' +
                         '• Wähle einen der verfügbaren Streams\n' +
                         '• Der Bot joint automatisch deinen Voice-Channel!\n\n' +
                         '🎧 **Verfügbare Streams:**\n' +
-                        '• 24/7 YouTube Live-Streams\n' +
+                        '• 24/7 Radio-Streams\n' +
                         '• Lofi, ChillHop, Gaming Music & mehr\n' +
                         '• Einfach und zuverlässig',
             fields: [],
             footer: {
-                text: '📻 Einfaches YouTube Radio System'
+                text: '📻 Einfaches Radio System'
             },
             timestamp: new Date().toISOString()
         };
@@ -679,8 +649,8 @@ async function handleRadioSelectButton(interaction) {
 
         // Zeige Info wenn mehr als 25 Sender verfügbar sind
         const contentText = stations.length > 25 
-            ? `📻 **Wähle deinen YouTube Radio-Stream:** (${limitedStations.length} von ${stations.length} Sendern)`
-            : '📻 **Wähle deinen YouTube Radio-Stream:**';
+            ? `📻 **Wähle deinen Radio-Stream:** (${limitedStations.length} von ${stations.length} Sendern)`
+            : '📻 **Wähle deinen Radio-Stream:**';
 
         await interaction.reply({
             content: contentText,
@@ -761,7 +731,7 @@ async function handleRadioStopButton(interaction) {
 
 // API Endpoints
 function registerMusicAPI(app) {
-    console.log('📻 Registriere YouTube Radio API...');
+    console.log('📻 Registriere Radio API...');
 
     // Get music settings
     app.get('/api/music/settings', (req, res) => {
@@ -778,7 +748,7 @@ function registerMusicAPI(app) {
             saveMusicSettings();
             res.json({
                 success: true,
-                message: 'YouTube Radio-Einstellungen gespeichert'
+                message: 'Radio-Einstellungen gespeichert'
             });
         } catch (error) {
             res.status(500).json({
@@ -914,7 +884,7 @@ function registerMusicAPI(app) {
             if (success) {
                 res.json({
                     success: true,
-                    message: 'YouTube Radio Panel erfolgreich gepostet!',
+                    message: 'Radio Panel erfolgreich gepostet!',
                     channelId: musicSettings.interactivePanel.channelId,
                     messageId: musicSettings.interactivePanel.messageId
                 });
@@ -1030,7 +1000,7 @@ function registerMusicAPI(app) {
         }
     });
 
-    console.log('✅ YouTube Radio API registriert!');
+    console.log('✅ Radio API registriert!');
 }
 
 module.exports = {
