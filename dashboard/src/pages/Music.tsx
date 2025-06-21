@@ -462,7 +462,7 @@ const Music: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
       });
-
+      
       if (response.ok) {
         showSuccess('Musik', '🎵 Einstellungen erfolgreich gespeichert!');
       } else {
@@ -485,7 +485,7 @@ const Music: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ songId })
       });
-
+      
       if (response.ok) {
         const data = await response.json();
         showSuccess('Musik', data.message);
@@ -578,7 +578,7 @@ const Music: React.FC = () => {
         const data = await response.json();
         showSuccess('Radio', data.message);
         await loadRadioStatus(guildId);
-      } else {
+    } else {
         showError('Radio Fehler', 'Fehler beim Stoppen des Radios');
       }
     } catch (error) {
@@ -612,10 +612,10 @@ const Music: React.FC = () => {
     await saveSettings();
     
     // Reset form
-    setNewStation({
-      name: '',
+        setNewStation({
+          name: '',
       genre: 'Hip-Hop',
-      description: '',
+          description: '',
       playlist: []
     });
     setIsCreatingStation(false);
@@ -752,7 +752,7 @@ const Music: React.FC = () => {
             <MusicIcon className="w-4 h-4" />
             Lokale MP3s
           </Button>
-        </div>
+            </div>
       </div>
 
       {/* Quick Actions */}
@@ -818,9 +818,9 @@ const Music: React.FC = () => {
                       <p className="text-sm font-medium text-white truncate">{station.name}</p>
                       <p className="text-xs text-blue-400 truncate">{station.genre}</p>
                       <p className="text-xs text-gray-400 truncate">{station.description}</p>
-                    </div>
+                      </div>
                     <div className="flex items-center gap-2">
-                      <Button
+                    <Button
                         onClick={() => playRadioStation(station.id)}
                         disabled={radioStatus.currentStation?.id === station.id}
                         className="px-3 py-1 text-xs"
@@ -830,11 +830,11 @@ const Music: React.FC = () => {
                         ) : (
                           <Play className="w-3 h-3" />
                         )}
-                      </Button>
-                    </div>
+                    </Button>
                   </div>
+                </div>
                 ))}
-              </div>
+                  </div>
               
               {radioStations.length === 0 && (
                 <div className="text-center py-8">
@@ -846,59 +846,59 @@ const Music: React.FC = () => {
           </Card>
 
           {/* Radio Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                 <Waves className="w-5 h-5 text-green-400" />
                 Radio Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
               {radioStatus.isPlaying ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30">
                     <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
-                    <div className="flex-1">
+                        <div className="flex-1">
                       <p className="font-semibold text-blue-300">📻 Läuft gerade</p>
                       <p className="text-sm text-white">{radioStatus.currentStation?.name}</p>
                       <p className="text-xs text-gray-400">{radioStatus.currentStation?.description}</p>
-                    </div>
-                  </div>
-                  
-                  <Button 
+                        </div>
+                      </div>
+                      
+                          <Button
                     onClick={stopRadio}
-                    variant="destructive" 
+                              variant="destructive"
                     className="w-full flex items-center gap-2"
-                  >
+                            >
                     <StopCircle className="w-4 h-4" />
                     Radio stoppen
-                  </Button>
-                </div>
+                            </Button>
+                        </div>
               ) : (
                 <div className="text-center py-8">
                   <Radio className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-400 mb-4">Kein Radio aktiv</p>
                   <p className="text-xs text-gray-500">Wähle eine Station zum Abspielen</p>
-                </div>
+                      </div>
               )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
         </div>
       ) : (
         /* Local Music Tab Content */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Songs Library */}
         <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
               <Upload className="w-5 h-5 text-green-400" />
               MP3 Bibliothek
-            </CardTitle>
-            <CardDescription>
+                </CardTitle>
+                <CardDescription>
               {availableSongs.length} Songs verfügbar
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {availableSongs.map((song) => (
                 <div
@@ -908,9 +908,9 @@ const Music: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{song.title}</p>
                     <p className="text-xs text-gray-400 truncate">{song.artist}</p>
-                  </div>
+                        </div>
                   <div className="flex items-center gap-1">
-                    <Button
+                          <Button
                       onClick={() => playSong(song.id)}
                       disabled={musicStatus.currentSong?.id === song.id}
                       className="px-2 py-1 text-xs"
@@ -918,22 +918,22 @@ const Music: React.FC = () => {
                       {musicStatus.currentSong?.id === song.id ? (
                         <Pause className="w-3 h-3" />
                       ) : (
-                        <Play className="w-3 h-3" />
-                      )}
-                    </Button>
+                                <Play className="w-3 h-3" />
+                            )}
+                          </Button>
                     {isCreatingStation && (
-                      <Button
+                            <Button
                         onClick={() => addSongToPlaylist(song)}
                         variant="outline"
-                        className="px-2 py-1 text-xs"
-                      >
+                              className="px-2 py-1 text-xs"
+                            >
                         <Plus className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
+                            </Button>
+                          )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
             
             {availableSongs.length === 0 && (
               <div className="text-center py-8">
@@ -944,8 +944,8 @@ const Music: React.FC = () => {
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
         {/* Stations */}
         <Card className="lg:col-span-2">
@@ -955,11 +955,11 @@ const Music: React.FC = () => {
                 <CardTitle className="flex items-center gap-2">
                   <Radio className="w-5 h-5 text-purple-400" />
                   Meine Stationen
-                </CardTitle>
+              </CardTitle>
                 <CardDescription>
                   {settings.localMusic.stations.length} Stationen erstellt
-                </CardDescription>
-              </div>
+              </CardDescription>
+                  </div>
               <Button
                 onClick={() => setIsCreatingStation(true)}
                 className="flex items-center gap-2"
@@ -967,7 +967,7 @@ const Music: React.FC = () => {
                 <Plus className="w-4 h-4" />
                 Neue Station
               </Button>
-            </div>
+                  </div>
           </CardHeader>
           <CardContent>
             {/* Station Creation Modal */}
@@ -979,20 +979,20 @@ const Music: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-purple-200 mb-2">
                       🎵 Station Name *
-                    </label>
-                    <Input
+                  </label>
+                  <Input
                       placeholder="z.B. Meine Chill Playlist"
-                      value={newStation.name}
-                      onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
-                    />
-                  </div>
-                  
+                    value={newStation.name}
+                    onChange={(e) => setNewStation(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                
                   <div>
                     <label className="block text-sm font-medium text-purple-200 mb-2">
                       🎭 Genre
-                    </label>
+                  </label>
                     <Select
-                      value={newStation.genre}
+                    value={newStation.genre}
                       onChange={(value) => setNewStation(prev => ({ ...prev, genre: value }))}
                     >
                       {musicGenres.map(genre => (
@@ -1001,10 +1001,10 @@ const Music: React.FC = () => {
                     </Select>
                   </div>
                 </div>
-
+                
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-purple-200 mb-2">
-                    📝 Beschreibung
+                      📝 Beschreibung
                   </label>
                   <Input
                     placeholder="Beschreibung der Station..."
@@ -1012,7 +1012,7 @@ const Music: React.FC = () => {
                     onChange={(e) => setNewStation(prev => ({ ...prev, description: e.target.value }))}
                   />
                 </div>
-
+                
                 {/* Playlist Builder mit Drag & Drop */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-purple-200 mb-2">
@@ -1038,15 +1038,15 @@ const Music: React.FC = () => {
                     <div className="text-center py-4 border-2 border-dashed border-gray-600 rounded-lg">
                       <p className="text-gray-400">Keine Songs in der Playlist</p>
                       <p className="text-xs text-gray-500">Klicke auf + neben einem Song</p>
-                    </div>
-                  )}
-                </div>
-
+                      </div>
+                    )}
+              </div>
+              
                 <div className="flex gap-2">
                   <Button onClick={createStation} disabled={!newStation.name.trim()}>
                     ✨ Station Erstellen
                   </Button>
-                  <Button 
+                <Button
                     variant="outline"
                     onClick={() => {
                       setIsCreatingStation(false);
@@ -1054,8 +1054,8 @@ const Music: React.FC = () => {
                     }}
                   >
                     Abbrechen
-                  </Button>
-                </div>
+                </Button>
+              </div>
               </div>
             )}
 
@@ -1078,7 +1078,7 @@ const Music: React.FC = () => {
                       <p className="text-xs text-gray-500 mt-1">
                         {station.playlist.length} Songs
                       </p>
-                    </div>
+                        </div>
                     <div className="flex gap-1">
                       <Button
                         onClick={() => playStation(station.id)}
@@ -1099,10 +1099,10 @@ const Music: React.FC = () => {
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
-                  </div>
-                </div>
+                        </div>
+                      </div>
               ))}
-            </div>
+                          </div>
 
             {settings.localMusic.stations.length === 0 && !isCreatingStation && (
               <div className="text-center py-8">
@@ -1111,11 +1111,12 @@ const Music: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">
                   Erstelle deine erste Station mit eigenen Playlists
                 </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                        </div>
+                      )}
+            </CardContent>
+          </Card>
+                </div>
+      )}
 
       {/* Music Controls */}
       {musicStatus.isPlaying && (
@@ -1130,16 +1131,16 @@ const Music: React.FC = () => {
                   {musicStatus.currentStation?.name || 'Einzelner Song'}
                 </p>
               </div>
-              <Button
+                <Button
                 onClick={stopMusic}
-                variant="destructive"
+                  variant="destructive"
                 className="px-3 py-2"
-              >
+                >
                 <Pause className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
       )}
 
       {/* Toast Container */}
