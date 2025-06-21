@@ -482,11 +482,8 @@ const Music: React.FC = () => {
 
   const loadRadioStations = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/music/radio/stations`);
-      if (response.ok) {
-        const data = await response.json();
-        setRadioStations(data.stations || []);
-      }
+      // Radio-Funktionen deaktiviert - keine API-Calls mehr
+      setRadioStations([]);
     } catch (error) {
       console.error('Fehler beim Laden der Radio-Stationen:', error);
     }
@@ -512,14 +509,11 @@ const Music: React.FC = () => {
 
   const loadRadioStatus = async (guildId: string) => {
     try {
-      const response = await fetch(`${apiUrl}/api/music/radio/${guildId}/status`);
-      if (response.ok) {
-        const data = await response.json();
-        setRadioStatus({
-          isPlaying: data.isPlaying || false,
-          currentStation: data.currentStation || null
-        });
-      }
+      // Radio-Funktionen deaktiviert - setze leeren Status
+      setRadioStatus({
+        isPlaying: false,
+        currentStation: null
+      });
     } catch (error) {
       console.error('Fehler beim Laden des Radio Status:', error);
     }
