@@ -34,6 +34,34 @@ const { setupRulesSupabaseRoutes } = require('./rules-supabase-api');
 const { setupModerationSupabaseRoutes } = require('./moderation-supabase-api');
 require('dotenv').config();
 
+// ================== SUPABASE INITIALIZATION ==================
+let supabase = null;
+
+// Initialisiere Supabase wenn Credentials vorhanden
+function initializeSupabase() {
+    try {
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        
+        if (supabaseUrl && supabaseKey) {
+            const { createClient } = require('@supabase/supabase-js');
+            supabase = createClient(supabaseUrl, supabaseKey);
+            console.log('✅ Supabase erfolgreich initialisiert');
+            return true;
+        } else {
+            console.log('⚠️ Supabase Credentials nicht gefunden - verwende JSON-Fallback');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Fehler bei Supabase-Initialisierung:', error.message);
+        console.log('📄 Verwende JSON-Dateien als Fallback');
+        return false;
+    }
+}
+
+// Supabase beim Start initialisieren
+initializeSupabase();
+
 // ================== API KEYS MANAGEMENT ==================
 // Zentrale API-Key-Verwaltung - alle Keys hier konfigurieren
 let apiKeys = {
