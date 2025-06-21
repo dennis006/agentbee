@@ -843,59 +843,225 @@ function getTimerStatus() {
 const express = require('express');
 const router = express.Router();
 
-// GET /api/server-stats - Lade Konfiguration
+// GET /api/server-stats - Lade Konfiguration für alle Server
 router.get('/api/server-stats', async (req, res) => {
   try {
-    if (!settingsLoaded) {
-      await loadServerStatsSettings();
+    if (!client || !client.guilds) {
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
-    res.json(serverStatsSettings);
+
+    const allServerStats = [];
+    
+    for (const guild of client.guilds.cache.values()) {
+      let guildSettings = null;
+      
+      // Versuche Settings aus Supabase zu laden
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('server_stats_config')
+          .select('*')
+          .eq('guild_id', guild.id)
+          .single();
+          
+        if (data && !error) {
+          guildSettings = data.config;
+        }
+      }
+      
+      // Fallback: Standard-Settings
+      if (!guildSettings) {
+        guildSettings = {
+          enabled: false,
+          updateInterval: 300000,
+          channels: {
+            memberCount: { enabled: false, channelId: '', name: '👥 Mitglieder: {count}', position: 0 },
+            onlineCount: { enabled: false, channelId: '', name: '🟢 Online: {count}', position: 1 },
+            boostCount: { enabled: false, channelId: '', name: '🚀 Boosts: {count}', position: 2 },
+            channelCount: { enabled: false, channelId: '', name: '📺 Kanäle: {count}', position: 3 },
+            roleCount: { enabled: false, channelId: '', name: '🎭 Rollen: {count}', position: 4 },
+            serverLevel: { enabled: false, channelId: '', name: '⭐ Level: {count}', position: 5 },
+            createdDate: { enabled: false, channelId: '', name: '📅 Erstellt: {date}', position: 6 },
+            botCount: { enabled: false, channelId: '', name: '🤖 Bots: {count}', position: 7 }
+          },
+          categoryId: '',
+          categoryName: '📊 Server Statistiken',
+          permissions: { viewChannel: true, connect: false, speak: false, useVAD: false },
+          design: { emoji: '📊', color: '0x00FF7F', separator: ' • ', format: 'modern' }
+        };
+      }
+      
+      allServerStats.push({
+        guildId: guild.id,
+        guildName: guild.name,
+        guildIcon: guild.iconURL({ dynamic: true }),
+        memberCount: guild.memberCount,
+        settings: guildSettings
+      });
+    }
+    
+    res.json({
+      success: true,
+      servers: allServerStats,
+      totalServers: allServerStats.length
+    });
+  } catch (error) {
+    console.error('🤔 Fehler beim Laden der Server-Stats:', error);
+    res.status(500).json({ error: 'Serverfehler beim Laden der Konfiguration' });
+  }
+});
+
+// GET /api/server-stats/:guildId - Lade Konfiguration für einen spezifischen Server
+router.get('/api/server-stats/:guildId', async (req, res) => {
+  try {
+    const { guildId } = req.params;
+    
+    if (!client || !client.guilds) {
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
+    }
+    
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({ error: 'Server nicht gefunden' });
+    }
+    
+    let guildSettings = null;
+    
+    // Versuche Settings aus Supabase zu laden
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('server_stats_config')
+        .select('*')
+        .eq('guild_id', guildId)
+        .single();
+        
+      if (data && !error) {
+        guildSettings = data.config;
+      }
+    }
+    
+    // Fallback: Standard-Settings
+    if (!guildSettings) {
+      guildSettings = {
+        enabled: false,
+        updateInterval: 300000,
+        channels: {
+          memberCount: { enabled: false, channelId: '', name: '👥 Mitglieder: {count}', position: 0 },
+          onlineCount: { enabled: false, channelId: '', name: '🟢 Online: {count}', position: 1 },
+          boostCount: { enabled: false, channelId: '', name: '🚀 Boosts: {count}', position: 2 },
+          channelCount: { enabled: false, channelId: '', name: '📺 Kanäle: {count}', position: 3 },
+          roleCount: { enabled: false, channelId: '', name: '🎭 Rollen: {count}', position: 4 },
+          serverLevel: { enabled: false, channelId: '', name: '⭐ Level: {count}', position: 5 },
+          createdDate: { enabled: false, channelId: '', name: '📅 Erstellt: {date}', position: 6 },
+          botCount: { enabled: false, channelId: '', name: '🤖 Bots: {count}', position: 7 }
+        },
+        categoryId: '',
+        categoryName: '📊 Server Statistiken',
+        permissions: { viewChannel: true, connect: false, speak: false, useVAD: false },
+        design: { emoji: '📊', color: '0x00FF7F', separator: ' • ', format: 'modern' }
+      };
+    }
+    
+    res.json({
+      success: true,
+      guildId: guild.id,
+      guildName: guild.name,
+      guildIcon: guild.iconURL({ dynamic: true }),
+      memberCount: guild.memberCount,
+      settings: guildSettings
+    });
   } catch (error) {
     console.error('🤔 Fehler beim Laden der Konfiguration:', error);
     res.status(500).json({ error: 'Serverfehler beim Laden der Konfiguration' });
   }
 });
 
-// POST /api/server-stats - Speichere Konfiguration
-router.post('/api/server-stats', async (req, res) => {
+// POST /api/server-stats/:guildId - Speichere Konfiguration für einen spezifischen Server
+router.post('/api/server-stats/:guildId', async (req, res) => {
   try {
-    serverStatsSettings = req.body;
-    const success = await saveServerStatsSettings();
+    const { guildId } = req.params;
+    const newSettings = req.body;
+    
+    if (!client || !client.guilds) {
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
+    }
+    
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({ error: 'Server nicht gefunden' });
+    }
+    
+    // Speichere in Supabase
+    let success = false;
+    if (supabase) {
+      const { error } = await supabase
+        .from('server_stats_config')
+        .upsert({
+          guild_id: guildId,
+          config: newSettings,
+          updated_at: new Date().toISOString()
+        });
+        
+      if (!error) {
+        success = true;
+        console.log(`✅ Server-Stats für ${guild.name} in Supabase gespeichert`);
+      }
+    }
+    
+    // Fallback auf JSON (nur für Haupt-Guild)
+    if (!success && guildId === (process.env.GUILD_ID || '1203994020779532348')) {
+      fs.writeFileSync(STATS_SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+      success = true;
+      console.log(`✅ Server-Stats für ${guild.name} in JSON gespeichert`);
+    }
     
     if (!success) {
       return res.status(500).json({ error: 'Fehler beim Speichern der Konfiguration' });
     }
     
-    // Neustart des Updaters mit neuen Einstellungen
-    if (serverStatsSettings.enabled) {
-      startStatsUpdater();
-    } else {
-      stopStatsUpdater();
+    // Wenn das die Haupt-Guild ist, aktualisiere auch die globalen Settings
+    if (guildId === (process.env.GUILD_ID || '1203994020779532348')) {
+      serverStatsSettings = newSettings;
+      
+      // Neustart des Updaters mit neuen Einstellungen
+      if (newSettings.enabled) {
+        startStatsUpdater();
+      } else {
+        stopStatsUpdater();
+      }
     }
     
-    res.json({ success: true, message: 'Konfiguration erfolgreich gespeichert' });
+    res.json({ 
+      success: true, 
+      message: `Konfiguration für ${guild.name} erfolgreich gespeichert`,
+      guildId: guildId,
+      guildName: guild.name
+    });
   } catch (error) {
     console.error('🤔 Fehler beim Speichern der Konfiguration:', error);
     res.status(500).json({ error: 'Serverfehler beim Speichern der Konfiguration' });
   }
 });
 
-// GET /api/server-stats/current - Lade aktuelle Stats
-router.get('/api/server-stats/current', async (req, res) => {
+// GET /api/server-stats/current/:guildId - Lade aktuelle Stats für einen spezifischen Server
+router.get('/api/server-stats/current/:guildId', async (req, res) => {
   try {
+    const { guildId } = req.params;
+    
     if (!client || !client.guilds) {
       return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
     
-    const guild = client.guilds.cache.first();
+    const guild = client.guilds.cache.get(guildId);
     if (!guild) {
-      return res.status(500).json({ error: 'Kein Server gefunden' });
+      return res.status(404).json({ error: 'Server nicht gefunden' });
     }
     
     const stats = calculateServerStats(guild);
     
     res.json({
       success: true,
+      guildId: guild.id,
+      guildName: guild.name,
       stats: {
         memberCount: stats.memberCount || 0,
         onlineCount: stats.onlineCount || 0,
@@ -906,8 +1072,49 @@ router.get('/api/server-stats/current', async (req, res) => {
         createdDate: stats.createdDate || new Date().toLocaleDateString('de-DE'),
         botCount: stats.botCount || 0
       },
-      serverName: stats.serverName || guild.name,
-      serverIcon: stats.serverIcon || guild.iconURL({ dynamic: true }),
+      serverIcon: guild.iconURL({ dynamic: true }),
+      lastUpdated: new Date().toISOString(),
+      _source: supabase ? 'supabase-hybrid' : 'json-file'
+    });
+  } catch (error) {
+    console.error('🤔 Fehler beim Laden der aktuellen Stats:', error);
+    res.status(500).json({ error: 'Fehler beim Laden der Stats' });
+  }
+});
+
+// GET /api/server-stats/current - Lade aktuelle Stats für alle Server
+router.get('/api/server-stats/current', async (req, res) => {
+  try {
+    if (!client || !client.guilds) {
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
+    }
+    
+    const allServerStats = [];
+    
+    for (const guild of client.guilds.cache.values()) {
+      const stats = calculateServerStats(guild);
+      
+      allServerStats.push({
+        guildId: guild.id,
+        guildName: guild.name,
+        guildIcon: guild.iconURL({ dynamic: true }),
+        stats: {
+          memberCount: stats.memberCount || 0,
+          onlineCount: stats.onlineCount || 0,
+          boostCount: stats.boostCount || 0,
+          channelCount: stats.channelCount || 0,
+          roleCount: stats.roleCount || 0,
+          serverLevel: stats.serverLevel || 0,
+          createdDate: stats.createdDate || new Date().toLocaleDateString('de-DE'),
+          botCount: stats.botCount || 0
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      servers: allServerStats,
+      totalServers: allServerStats.length,
       lastUpdated: new Date().toISOString(),
       _source: supabase ? 'supabase-hybrid' : 'json-file'
     });
