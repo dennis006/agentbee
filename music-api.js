@@ -12,9 +12,90 @@ const {
 const fs = require('fs');
 const path = require('path');
 
-// Lokale MP3 Music Settings
+// Music Settings mit Radio UND lokalen MP3s
 let musicSettings = {
     enabled: true,
+    radio: {
+        enabled: true,
+        stations: [
+            {
+                id: "lofi",
+                name: "Lofi Hip Hop Radio",
+                url: "http://streams.ilovemusic.de/iloveradio-lounge.mp3",
+                genre: "Lofi/Chill", 
+                country: "International",
+                description: "Chill Lofi Hip Hop Beats",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TG9GaTwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "chillhop",
+                name: "ChillHop Radio",
+                url: "http://stream.laut.fm/chillhop",
+                genre: "Chillhop/Jazz",
+                country: "International", 
+                description: "Chill beats to relax/study to",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM0NEFBODgiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q2hpbGxIb3A8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "deephouse",
+                name: "Deep House Radio",
+                url: "http://stream.laut.fm/deephouse",
+                genre: "Deep House/Electronic",
+                country: "International",
+                description: "24/7 Deep House Radio Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDMzNjYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMEZGRkYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRFRVA8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDBGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1VTRTI8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "trapmusic",
+                name: "Trap Music Radio",
+                url: "http://stream.laut.fm/trap",
+                genre: "Trap/Hip-Hop",
+                country: "USA",
+                description: "24/7 Trap Music Radio Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwNzciLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFJBUDwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "gaming",
+                name: "Gaming Music Radio",
+                url: "http://stream.laut.fm/gaming",
+                genre: "Gaming/Electronic",
+                country: "International",
+                description: "24/7 Gaming Music Radio Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMEZGMDAiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkdBTUlORzwvdGV4dD4KPHRleHQgeD0iMzIiIHk9IjQ0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk1VU0lDPC90ZXh0Pgo8L3N2Zz4K"
+            },
+            {
+                id: "jazzhop",
+                name: "Jazz Hop Cafe",
+                url: "http://stream.laut.fm/jazzhop",
+                genre: "Jazz Hop/Chill",
+                country: "International",
+                description: "24/7 Jazz Hop Cafe Radio Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM4QjQ1MTMiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNGRkQ3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkpBWlo8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZENzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1A8L3RleHQ+Cjwvc3ZnPgo="
+            },
+            {
+                id: "retrowave",
+                name: "Retrowave Radio",
+                url: "http://stream.laut.fm/retrowave",
+                genre: "Retrowave/80s",
+                country: "International",
+                description: "24/7 Retrowave Radio Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwRkYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SRVRST1dBVkU8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjQvNzwvdGV4dD4KPC9zdmc+Cg=="
+            },
+            {
+                id: "bassmusic",
+                name: "Bass Music Radio",
+                url: "http://stream.laut.fm/bass",
+                genre: "Bass/Dubstep",
+                country: "International",
+                description: "24/7 Bass Music Radio Stream",
+                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QkFTUzwvdGV4dD4KPC9zdmc+Cg=="
+            }
+        ],
+        defaultStation: "lofi",
+        autoStop: false,
+        showNowPlaying: true,
+        embedColor: "#FF6B6B"
+    },
     localMusic: {
         enabled: true,
         musicDirectory: './music',
@@ -41,6 +122,7 @@ const voiceConnections = new Map(); // guild -> connection
 const audioPlayers = new Map(); // guild -> player
 const currentStations = new Map(); // guildId -> current station
 const currentSongs = new Map(); // guildId -> current song info
+const currentRadioStations = new Map(); // guildId -> current radio station
 
 // Genre-Liste für Dropdown
 const musicGenres = [
@@ -224,6 +306,16 @@ function getMusicStation(stationId) {
     return stations.find(station => station.id === stationId);
 }
 
+// Radio System Functions 
+function getRadioStations() {
+    return musicSettings.radio?.stations || [];
+}
+
+function getRadioStation(stationId) {
+    const stations = getRadioStations();
+    return stations.find(station => station.id === stationId);
+}
+
 // Lokale MP3 abspielen
 async function playLocalSong(guildId, songId) {
     try {
@@ -318,6 +410,65 @@ async function playMusicStation(guildId, stationId) {
     }
 }
 
+// Radio Station abspielen
+async function playRadioStation(guildId, stationId) {
+    try {
+        const station = getRadioStation(stationId);
+        if (!station) {
+            throw new Error(`Radio-Station "${stationId}" nicht gefunden`);
+        }
+
+        console.log(`📻 Starte Radio-Station: ${station.name} für Guild ${guildId}`);
+
+        // Auto-Join falls nicht im Voice-Channel
+        let connection = voiceConnections.get(guildId);
+        if (!connection) {
+            console.log('📻 Auto-Join für Radio-Wiedergabe');
+            const autoJoinSuccess = await autoJoinForRadio(guildId);
+            if (!autoJoinSuccess) {
+                throw new Error('Bot konnte keinem Voice-Channel beitreten');
+            }
+            connection = voiceConnections.get(guildId);
+        }
+
+        // Erstelle Player
+        const player = createPlayerForGuild(guildId);
+
+        // Erstelle direkte Radio-Stream Ressource
+        const resource = createAudioResource(station.url, {
+            inputType: StreamType.Arbitrary,
+            inlineVolume: true
+        });
+
+        if (resource.volume) {
+            resource.volume.setVolume(0.5); // 50% Volume
+        }
+
+        // Spiele ab
+        player.play(resource);
+        connection.subscribe(player);
+
+        // Setze als aktueller Radio-Sender
+        currentRadioStations.set(guildId, station);
+
+        console.log(`✅ Radio-Station ${station.name} gestartet`);
+        
+        // Update Interactive Panel
+        updateInteractiveRadioPanel(guildId, true);
+        
+        // Sende Now-Playing Nachricht
+        if (musicSettings.radio?.showNowPlaying && musicSettings.announcements?.channelId) {
+            await sendRadioNowPlayingMessage(guildId, station);
+        }
+
+        return true;
+
+    } catch (error) {
+        console.error(`❌ Fehler beim Starten der Radio-Station:`, error);
+        throw error;
+    }
+}
+
 
 
 function stopMusic(guildId) {
@@ -360,10 +511,43 @@ function isPlayingMusic(guildId) {
     return currentSongs.has(guildId) || currentStations.has(guildId);
 }
 
+function stopRadio(guildId) {
+    try {
+        console.log(`📻 Stoppe Radio für Guild ${guildId}`);
+        
+        // Entferne aktuellen Radio-Sender
+        currentRadioStations.delete(guildId);
+        
+        // Stoppe Player
+        const player = audioPlayers.get(guildId);
+        if (player) {
+            player.stop();
+        }
+
+        // Update Interactive Panel
+        updateInteractiveRadioPanel(guildId, true);
+
+        console.log(`✅ Radio gestoppt`);
+        return true;
+
+    } catch (error) {
+        console.error(`❌ Fehler beim Stoppen des Radios:`, error);
+        return false;
+    }
+}
+
+function getCurrentRadioStation(guildId) {
+    return currentRadioStations.get(guildId) || null;
+}
+
+function isPlayingRadio(guildId) {
+    return currentRadioStations.has(guildId);
+}
+
 // Auto-Join für Musik
 async function autoJoinForMusic(guildId) {
     try {
-        console.log(`🤖 Auto-Join für Radio gestartet: ${guildId}`);
+        console.log(`🤖 Auto-Join für Musik gestartet: ${guildId}`);
         
         if (!global.client) {
             console.log('❌ global.client nicht verfügbar');
@@ -870,7 +1054,24 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Get Musik-Stationen
+    // Get Radio-Stationen
+    app.get('/api/music/radio/stations', (req, res) => {
+        try {
+            const stations = getRadioStations();
+            res.json({
+                success: true,
+                stations: stations,
+                enabled: musicSettings.radio?.enabled || false
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Get Musik-Stationen (lokale MP3s)
     app.get('/api/music/stations', (req, res) => {
         try {
             const stations = getMusicStations();
@@ -878,6 +1079,26 @@ function registerMusicAPI(app) {
                 success: true,
                 stations: stations,
                 enabled: musicSettings.localMusic?.enabled || false
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Get current radio status
+    app.get('/api/music/radio/:guildId/status', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const currentStation = getCurrentRadioStation(guildId);
+            const isPlaying = isPlayingRadio(guildId);
+            
+            res.json({
+                success: true,
+                isPlaying: isPlaying,
+                currentStation: currentStation
             });
         } catch (error) {
             res.status(500).json({
@@ -947,7 +1168,52 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Play Station
+    // Play Radio Station
+    app.post('/api/music/radio/:guildId/play', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { stationId } = req.body;
+
+            if (!stationId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Station-ID erforderlich'
+                });
+            }
+
+            const station = getRadioStation(stationId);
+            if (!station) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Radio-Sender "${stationId}" nicht gefunden`
+                });
+            }
+
+            const success = await playRadioStation(guildId, stationId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: `📻 Radio-Sender "${station.name}" gestartet`,
+                    station: station
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Starten des Radio-Senders'
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Radio Start Fehler:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Play Local Music Station
     app.post('/api/music/station/:guildId/play', async (req, res) => {
         try {
             const { guildId } = req.params;
@@ -985,6 +1251,33 @@ function registerMusicAPI(app) {
 
         } catch (error) {
             console.error('❌ Station Start Fehler:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Stop radio
+    app.post('/api/music/radio/:guildId/stop', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            const success = stopRadio(guildId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: '📻 Radio gestoppt'
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Stoppen des Radios'
+                });
+            }
+
+        } catch (error) {
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -1155,12 +1448,73 @@ function registerMusicAPI(app) {
     console.log('✅ Musik API registriert!');
 }
 
+// Auto-Join für Radio (identisch aber separiert)
+async function autoJoinForRadio(guildId) {
+    try {
+        console.log(`🤖 Auto-Join für Radio gestartet: ${guildId}`);
+        
+        if (!global.client) {
+            console.log('❌ global.client nicht verfügbar');
+            return false;
+        }
+        
+        const guild = global.client.guilds.cache.get(guildId);
+        if (!guild) {
+            console.log(`❌ Guild ${guildId} nicht gefunden`);
+            return false;
+        }
+        
+        // Finde Voice-Channels mit Usern
+        const voiceChannelsWithUsers = guild.channels.cache.filter(channel => 
+            channel.isVoiceBased() && 
+            channel.members.size > 0 &&
+            !channel.members.every(member => member.user.bot)
+        );
+        
+        const allVoiceChannels = guild.channels.cache.filter(channel => 
+            channel.isVoiceBased() && 
+            channel.joinable
+        );
+        
+        let targetChannel;
+        
+        if (voiceChannelsWithUsers.size > 0) {
+            targetChannel = voiceChannelsWithUsers.sort((a, b) => b.members.size - a.members.size).first();
+        } else if (allVoiceChannels.size > 0) {
+            targetChannel = allVoiceChannels.first();
+        }
+        
+        if (!targetChannel) {
+            console.log('❌ Keine beitretbaren Voice-Channels gefunden');
+            return false;
+        }
+        
+        console.log(`🎯 Auto-Join Target: ${targetChannel.name} (${targetChannel.members.size} Members)`);
+        
+        const connection = await joinVoiceChannelSafe(targetChannel);
+        return !!connection;
+        
+    } catch (error) {
+        console.error('❌ Auto-Join für Radio fehlgeschlagen:', error);
+        return false;
+    }
+}
+
 module.exports = {
     loadMusicSettings,
     saveMusicSettings,
     registerMusicAPI,
     joinVoiceChannelSafe,
     leaveVoiceChannel,
+    // Radio Functions
+    getRadioStations,
+    getRadioStation,
+    playRadioStation,
+    stopRadio,
+    getCurrentRadioStation,
+    isPlayingRadio,
+    autoJoinForRadio,
+    // Local Music Functions
     getAvailableSongs,
     getMusicStations,
     getMusicStation,
@@ -1172,8 +1526,15 @@ module.exports = {
     isPlayingMusic,
     sendNowPlayingMessage,
     updateInteractiveMusicPanel,
-    musicSettings,
     autoJoinForMusic,
     musicGenres,
-    scanMusicDirectory
+    scanMusicDirectory,
+    // Settings
+    musicSettings,
+    // Interactive Panel Functions (Radio)
+    postInteractiveRadioPanel,
+    updateInteractiveRadioPanel,
+    handleRadioSelectButton,
+    handleRadioStationSelect,
+    handleRadioStopButton
 }; 
