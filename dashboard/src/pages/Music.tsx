@@ -1064,6 +1064,16 @@ const Music: React.FC = () => {
     loadData();
   }, []);
 
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      if (wsConnection) {
+        wsConnection.close();
+        setWsConnection(null);
+      }
+    };
+  }, [wsConnection]);
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -1976,7 +1986,7 @@ const Music: React.FC = () => {
                       )}
             </CardContent>
           </Card>
-                </div>
+        </div>
       ) : activeTab === 'visualizer' ? (
         /* Audio Visualizer Tab Content */
         <div className="space-y-6">
@@ -2029,11 +2039,11 @@ const Music: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-3 bg-dark-surface/50 rounded-lg border border-gray-600/30">
                   <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${wsConnection ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <div className={`w-2 h-2 rounded-full ${wsConnection && wsConnection.readyState === WebSocket.OPEN ? 'bg-green-500' : 'bg-red-500'}`} />
                     <span className="text-sm font-medium text-white">WebSocket</span>
                   </div>
                   <p className="text-xs text-gray-400">
-                    {wsConnection ? 'Verbunden' : 'Getrennt'}
+                    {wsConnection && wsConnection.readyState === WebSocket.OPEN ? 'Verbunden' : 'Getrennt'}
                   </p>
                 </div>
                 
