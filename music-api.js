@@ -3,7 +3,7 @@ const {
     createAudioPlayer, 
     createAudioResource, 
     StreamType, 
-    AudioPlayerStatus, 
+    AudioPlayerStatus,
     VoiceConnectionStatus, 
     joinVoiceChannel, 
     AudioResource 
@@ -107,9 +107,9 @@ function loadMusicSettings() {
             
             // Migriere Channel-Namen zu Channel-IDs bei Bot-Start (nur einmal)
             if (!musicSettings.migrationCompleted) {
-                setTimeout(() => {
-                    migrateChannelNamesToIds();
-                }, 3000); // Warte 3 Sekunden bis Discord Client bereit ist
+            setTimeout(() => {
+                migrateChannelNamesToIds();
+            }, 3000); // Warte 3 Sekunden bis Discord Client bereit ist
             } else {
                 console.log('✅ Channel-Migration bereits abgeschlossen - überspringe');
             }
@@ -524,7 +524,7 @@ async function createInteractiveMusicPanel(guildId) {
         // Aktueller Status prüfen
         const currentSong = getCurrentSong(guildId);
         const currentMusicStation = getCurrentStation(guildId);
-        
+
         // Musik-Infos sammeln
         const availableSongs = getAvailableSongs();
         const musicStations = getMusicStations();
@@ -545,7 +545,7 @@ async function createInteractiveMusicPanel(guildId) {
             },
             timestamp: new Date().toISOString()
         };
-        
+
         // Zeige aktuellen Status
         if (currentSong) {
             embed.fields.push({
@@ -566,7 +566,7 @@ async function createInteractiveMusicPanel(guildId) {
                 inline: true
             });
         }
-        
+
         const guildVolume = getVolumeForGuild(guildId);
         embed.fields.push({
             name: '🔊 Lautstärke',
@@ -579,7 +579,7 @@ async function createInteractiveMusicPanel(guildId) {
             value: `🎵 **${availableSongs.length}** MP3-Dateien\n🎼 **${musicStations.length}** Playlists`,
             inline: true
         });
-        
+
         // Erstelle Buttons
         const { ButtonBuilder, ActionRowBuilder } = require('discord.js');
         
@@ -600,7 +600,7 @@ async function createInteractiveMusicPanel(guildId) {
                     .setStyle(ButtonStyle.Danger)
                     .setDisabled(!currentSong && !currentMusicStation)
             );
-        
+
         // Zweite Reihe: Voice-Chat Funktionen
         const voiceButtons = new ActionRowBuilder()
             .addComponents(
@@ -617,7 +617,7 @@ async function createInteractiveMusicPanel(guildId) {
                     .setLabel('🔄 Refresh')
                     .setStyle(ButtonStyle.Secondary)
             );
-        
+
         // Dritte Reihe: Lautstärke-Kontrolle
         const volumeButtons = new ActionRowBuilder()
             .addComponents(
@@ -634,12 +634,12 @@ async function createInteractiveMusicPanel(guildId) {
                     .setLabel('🔊 +10%')
                     .setStyle(ButtonStyle.Secondary)
             );
-        
+
         return {
             embeds: [embed],
             components: [mainButtons, voiceButtons, volumeButtons]
         };
-        
+
     } catch (error) {
         console.error('❌ Fehler beim Erstellen des Musik-Panels:', error);
         throw error;
@@ -661,7 +661,7 @@ async function postInteractiveMusicPanel(guildId) {
             console.log(`❌ Guild ${guildId} nicht gefunden`);
             return false;
         }
-        
+
         const channelId = musicSettings.interactivePanel?.channelId;
         if (!channelId) {
             console.log('❌ Kein Interactive Panel Channel konfiguriert');
@@ -673,7 +673,7 @@ async function postInteractiveMusicPanel(guildId) {
             console.log(`❌ Channel ${channelId} nicht gefunden`);
             return false;
         }
-        
+
         // Checke ob Panel bereits existiert
         const existingMessageId = musicSettings.interactivePanel?.messageId;
         if (existingMessageId) {
@@ -687,26 +687,26 @@ async function postInteractiveMusicPanel(guildId) {
                 console.log('⚠️ Existierende Panel-Message nicht gefunden, erstelle neue...');
             }
         }
-        
+
         console.log(`🎵 Erstelle neues Interactive Musik Panel in #${channel.name}`);
-        
+
         const panelData = await createInteractiveMusicPanel(guildId);
         
         try {
-            const message = await channel.send(panelData);
-            
+        const message = await channel.send(panelData);
+        
             // Speichere Message ID in Settings
-            musicSettings.interactivePanel.messageId = message.id;
-            saveMusicSettings();
-            
+        musicSettings.interactivePanel.messageId = message.id;
+        saveMusicSettings();
+
             console.log(`✅ Musik Panel erfolgreich erstellt: ${message.id} in #${channel.name}`);
-            return true;
+        return true;
             
         } catch (sendError) {
             console.error('❌ Fehler beim Senden des Panels:', sendError);
             return false;
         }
-        
+
     } catch (error) {
         console.error('❌ Fehler beim Posten des Interactive Musik Panels:', error);
         return false;
@@ -717,10 +717,10 @@ async function postInteractiveMusicPanel(guildId) {
 async function updateInteractiveMusicPanel(guildId, forceUpdate = false) {
     try {
         if (!global.client?.guilds) return false;
-        
+
         const guild = global.client.guilds.cache.get(guildId);
         if (!guild) return false;
-        
+
         const channelId = musicSettings.interactivePanel?.channelId;
         const messageId = musicSettings.interactivePanel?.messageId;
         
@@ -728,7 +728,7 @@ async function updateInteractiveMusicPanel(guildId, forceUpdate = false) {
             console.log('⚠️ Keine Panel-Konfiguration gefunden');
             return false;
         }
-        
+
         const channel = guild.channels.cache.get(channelId);
         if (!channel) return false;
         
@@ -749,7 +749,7 @@ async function updateInteractiveMusicPanel(guildId, forceUpdate = false) {
             saveMusicSettings();
             return await postInteractiveMusicPanel(guildId);
         }
-        
+
     } catch (error) {
         console.error('❌ Unerwarteter Fehler beim Aktualisieren des Musik Panels:', error);
         return false;
@@ -876,7 +876,7 @@ async function handleMusicVoiceJoinButton(interaction) {
         await interaction.deferReply({ ephemeral: true });
 
         const success = await autoJoinForMusic(guildId);
-
+        
         if (success) {
             await interaction.editReply({
                 content: '🎙️ **Voice-Channel beigetreten!**',
@@ -1143,10 +1143,10 @@ function registerMusicAPI(app) {
     // Get Music Settings
     app.get('/api/music/settings', (req, res) => {
         try {
-            res.json({
-                success: true,
-                settings: musicSettings
-            });
+        res.json({
+            success: true,
+            settings: musicSettings
+        });
         } catch (error) {
             res.status(500).json({
                 success: false,

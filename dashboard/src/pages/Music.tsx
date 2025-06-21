@@ -1111,10 +1111,9 @@ const Music: React.FC = () => {
                   <p className="text-sm text-gray-400">Stoppt Musik automatisch wenn alle User den Channel verlassen</p>
                       </div>
                       <Switch
-                  checked={settings.radio.autoStop}
+                  checked={settings.localMusic.autoStop}
                         onCheckedChange={(checked) => setSettings(prev => ({ 
                           ...prev, 
-                    radio: { ...prev.radio, autoStop: checked },
                     localMusic: { ...prev.localMusic, autoStop: checked }
                         }))}
                       />
@@ -1126,10 +1125,9 @@ const Music: React.FC = () => {
                   <p className="text-sm text-gray-400">Zeigt aktuelle Songs in einem Text-Channel an</p>
                       </div>
                       <Switch
-                  checked={settings.radio.showNowPlaying}
+                  checked={settings.localMusic.showNowPlaying}
                         onCheckedChange={(checked) => setSettings(prev => ({ 
                           ...prev, 
-                    radio: { ...prev.radio, showNowPlaying: checked },
                     localMusic: { ...prev.localMusic, showNowPlaying: checked }
                         }))}
                       />
