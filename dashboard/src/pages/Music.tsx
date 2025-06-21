@@ -334,6 +334,7 @@ const Music: React.FC = () => {
   });
   const [channels, setChannels] = useState<Channel[]>([]);
   const [guildId, setGuildId] = useState<string | null>(null);
+  const [tempGuildId, setTempGuildId] = useState<string>('');
 
   // Station Creation State
   const [isCreatingStation, setIsCreatingStation] = useState(false);
@@ -356,9 +357,19 @@ const Music: React.FC = () => {
       
       // Guild ID aus URL oder localStorage
       const params = new URLSearchParams(window.location.search);
-      const urlGuildId = params.get('guild');
-      if (urlGuildId) {
-        setGuildId(urlGuildId);
+      const urlGuildId = params.get('guild') || params.get('guildId');
+      
+      // Auch aus localStorage versuchen
+      const storedGuildId = localStorage.getItem('selectedGuildId');
+      
+      const finalGuildId = urlGuildId || storedGuildId;
+      
+      if (finalGuildId) {
+        setGuildId(finalGuildId);
+        localStorage.setItem('selectedGuildId', finalGuildId);
+        console.log(`🏠 Guild ID gesetzt: ${finalGuildId}`);
+      } else {
+        console.log('⚠️ Keine Guild ID gefunden');
       }
 
       // Settings laden
@@ -373,10 +384,10 @@ const Music: React.FC = () => {
       await loadRadioStations();
 
       // Channels laden
-      if (urlGuildId) {
-        await loadChannels(urlGuildId);
-        await loadMusicStatus(urlGuildId);
-        await loadRadioStatus(urlGuildId);
+      if (finalGuildId) {
+        await loadChannels(finalGuildId);
+        await loadMusicStatus(finalGuildId);
+        await loadRadioStatus(finalGuildId);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
@@ -412,13 +423,22 @@ const Music: React.FC = () => {
 
   const loadChannels = async (guildId: string) => {
     try {
+      console.log(`🔍 Lade Channels für Guild: ${guildId}`);
       const response = await fetch(`${apiUrl}/api/music/channels/${guildId}`);
+      console.log(`📡 Response Status: ${response.status}`);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log(`📺 Geladene Channels:`, data);
         setChannels(data || []);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Channel Load Error:', errorData);
+        showError('Channel Fehler', errorData.error || 'Fehler beim Laden der Channels');
       }
     } catch (error) {
       console.error('Fehler beim Laden der Channels:', error);
+      showError('Channel Fehler', 'Verbindungsfehler beim Laden der Channels');
     }
   };
 
@@ -943,6 +963,53 @@ const Music: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Guild Info & Channel Reload */}
+              <div className="bg-dark-surface/50 rounded-lg p-4 border border-purple-primary/20">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-purple-200">🏠 Server (Guild ID)</p>
+                      <p className="text-xs text-gray-400 font-mono">{guildId || 'Nicht gesetzt'}</p>
+                      <p className="text-xs text-gray-500 mt-1">Channels gefunden: {channels.length}</p>
+                    </div>
+                    <Button
+                      onClick={() => guildId && loadChannels(guildId)}
+                      disabled={!guildId}
+                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Channels laden
+                    </Button>
+                  </div>
+                  
+                  {!guildId && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Guild ID eingeben (z.B. 1234567890)"
+                        value={tempGuildId}
+                        onChange={(e) => setTempGuildId(e.target.value)}
+                        className="flex-1 bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
+                      />
+                      <Button
+                        onClick={() => {
+                          if (tempGuildId.trim()) {
+                            setGuildId(tempGuildId.trim());
+                            localStorage.setItem('selectedGuildId', tempGuildId.trim());
+                            loadChannels(tempGuildId.trim());
+                            setTempGuildId('');
+                          }
+                        }}
+                        disabled={!tempGuildId.trim()}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Setzen
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-purple-200 mb-2">
                   📢 Ankündigungs-Channel

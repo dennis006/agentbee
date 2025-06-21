@@ -1026,15 +1026,21 @@ function registerMusicAPI(app) {
     app.get('/api/music/channels/:guildId', async (req, res) => {
         try {
             const { guildId } = req.params;
+            console.log(`🔍 Channels Request für Guild: ${guildId}`);
             
             if (!client || !client.guilds) {
+                console.log('❌ Bot nicht verfügbar');
                 return res.status(500).json({ error: 'Bot nicht verfügbar' });
             }
 
             const guild = client.guilds.cache.get(guildId);
             if (!guild) {
+                console.log(`❌ Guild ${guildId} nicht gefunden`);
+                console.log(`📋 Verfügbare Guilds: ${client.guilds.cache.map(g => `${g.name} (${g.id})`).join(', ')}`);
                 return res.status(404).json({ error: 'Guild nicht gefunden' });
             }
+
+            console.log(`✅ Guild gefunden: ${guild.name}`);
 
             // Text-Channels sammeln
             const textChannels = guild.channels.cache
@@ -1054,7 +1060,10 @@ function registerMusicAPI(app) {
                     type: 'voice'
                 }));
 
-            res.json([...textChannels, ...voiceChannels]);
+            const allChannels = [...textChannels, ...voiceChannels];
+            console.log(`📺 Gefundene Channels: ${allChannels.length} (${textChannels.length} Text, ${voiceChannels.length} Voice)`);
+            
+            res.json(allChannels);
         } catch (error) {
             console.error('❌ Fehler beim Abrufen der Channels:', error);
             res.status(500).json({ error: 'Fehler beim Abrufen der Channels' });
