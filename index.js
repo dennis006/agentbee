@@ -2010,12 +2010,16 @@ app.post('/api/rules/repost', async (req, res) => {
     try {
         console.log('🔄 Starte automatisches Neu-Posten der Regeln...');
         
+        // Lade aktuelle Regeln aus Supabase
+        await loadCurrentRules();
+        const currentRules = getCurrentRules();
+        
         let repostedCount = 0;
         
         // Durchlaufe alle Server
         for (const guild of client.guilds.cache.values()) {
             // Verwende den konfigurierten Channel-Namen aus den Regeln
-            const channelName = rulesData.channelName || rulesData.channel || 'rules';
+            const channelName = currentRules.channelName || currentRules.channel || 'rules';
             const rulesChannel = guild.channels.cache.find(ch => 
                 ch.name.toLowerCase().includes(channelName.toLowerCase()) ||
                 ch.name.includes('rules') || ch.name.includes('regeln') || ch.name.includes('regel')
@@ -2032,11 +2036,11 @@ app.post('/api/rules/repost', async (req, res) => {
                     }
 
                     // Poste neue Regeln
-                    const rulesEmbed = createRulesEmbed(guild.name);
+                    const rulesEmbed = await createRulesEmbed(guild.name);
                     const rulesMessage = await rulesChannel.send({ embeds: [rulesEmbed] });
                     
-                                    // Füge Reaktion hinzu
-                await rulesMessage.react(rules.reaction.emoji);
+                    // Füge Reaktion hinzu
+                    await rulesMessage.react(currentRules.reaction.emoji);
                     
                     // Speichere Nachrichten-ID
                     rulesMessages.set(rulesMessage.id, {
