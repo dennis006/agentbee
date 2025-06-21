@@ -100,21 +100,81 @@ let lastUpdateTime = null;
 // Flag um sicherzustellen, dass Settings nur einmal geladen werden
 let settingsLoaded = false;
 
-// Lade Einstellungen (Supabase JSONB oder JSON Fallback)
+// Lade Einstellungen (Supabase - erkennt beide Strukturen)
 async function loadServerStatsSettings() {
   try {
-    // Versuche zuerst Supabase (JSONB-Struktur)
+    // Versuche zuerst Supabase
     if (supabase) {
-      const { data, error } = await supabase
+      // Versuche neue JSONB-Struktur (ohne guild_id)
+      const { data: jsonbData, error: jsonbError } = await supabase
         .from('server_stats_config')
         .select('*')
+        .limit(1)
         .single();
 
-      if (data && !error) {
-        serverStatsSettings = data.config;
+      if (jsonbData && !jsonbError && jsonbData.config) {
+        // Neue JSONB-Struktur gefunden
+        serverStatsSettings = jsonbData.config;
         settingsLoaded = true;
         const enabledChannels = Object.entries(serverStatsSettings.channels).filter(([_, config]) => config.enabled).length;
-        console.log(`📊 Server-Stats aus Supabase geladen: ${enabledChannels} Channels aktiv`);
+        console.log(`📊 Server-Stats aus Supabase JSONB geladen: ${enabledChannels} Channels aktiv`);
+        return serverStatsSettings;
+      }
+
+      // Fallback: Versuche alte normalisierte Struktur (mit guild_id)
+      const guildId = process.env.GUILD_ID || '1203994020779532348';
+      
+      // Lade Basis-Konfiguration
+      const { data: configData, error: configError } = await supabase
+        .from('server_stats_config')
+        .select('*')
+        .eq('guild_id', guildId)
+        .single();
+
+      // Lade Channels
+      const { data: channelsData, error: channelsError } = await supabase
+        .from('server_stats_channels')
+        .select('*')
+        .eq('guild_id', guildId)
+        .order('position');
+
+      if (configData && !configError) {
+        // Rekonstruiere aus alter normalisierter Struktur
+        serverStatsSettings = {
+          enabled: configData.enabled || false,
+          updateInterval: configData.update_interval || 300000,
+          categoryId: configData.category_id || '',
+          categoryName: configData.category_name || '📊 Server Statistiken',
+          permissions: {
+            viewChannel: configData.permission_view_channel ?? true,
+            connect: configData.permission_connect ?? false,
+            speak: configData.permission_speak ?? false,
+            useVAD: configData.permission_use_vad ?? false
+          },
+          design: {
+            emoji: configData.design_emoji || '📊',
+            color: configData.design_color || '0x00FF7F',
+            separator: configData.design_separator || ' • ',
+            format: configData.design_format || 'modern'
+          },
+          channels: {}
+        };
+
+        // Füge Channels hinzu
+        if (channelsData && !channelsError) {
+          for (const channel of channelsData) {
+            serverStatsSettings.channels[channel.channel_type] = {
+              enabled: channel.enabled,
+              channelId: channel.channel_id,
+              name: channel.channel_name,
+              position: channel.position
+            };
+          }
+        }
+
+        settingsLoaded = true;
+        const enabledChannels = Object.entries(serverStatsSettings.channels).filter(([_, config]) => config.enabled).length;
+        console.log(`📊 Server-Stats aus Supabase normalisiert geladen: ${enabledChannels} Channels aktiv`);
         return serverStatsSettings;
       }
     }
@@ -134,6 +194,7 @@ async function loadServerStatsSettings() {
       
     } else {
       settingsLoaded = true;
+      console.log(`📊 Server-Stats: Verwende Standard-Einstellungen`);
       return serverStatsSettings;
     }
   } catch (error) {
@@ -143,21 +204,102 @@ async function loadServerStatsSettings() {
   }
 }
 
-// Speichere Einstellungen (Supabase JSONB oder JSON Fallback)
+// Speichere Einstellungen (Supabase - erkennt beide Strukturen)
 async function saveServerStatsSettings() {
   try {
-    // Versuche zuerst Supabase (JSONB-Struktur)
+    // Versuche zuerst Supabase
     if (supabase) {
-      const { error } = await supabase
+      // Prüfe welche Struktur existiert
+      const { data: existingData } = await supabase
         .from('server_stats_config')
-        .upsert({
-          config: serverStatsSettings,
-          updated_at: new Date().toISOString()
-        });
+        .select('*')
+        .limit(1)
+        .single();
 
-      if (!error) {
-        console.log('✅ Server-Stats in Supabase gespeichert');
-        return true;
+      if (existingData && existingData.config) {
+        // Neue JSONB-Struktur - update
+        const { error } = await supabase
+          .from('server_stats_config')
+          .update({
+            config: serverStatsSettings,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData.id);
+
+        if (!error) {
+          console.log('✅ Server-Stats in Supabase JSONB gespeichert');
+          return true;
+        }
+      } else {
+        // Alte normalisierte Struktur oder neue JSONB erstellen
+        const guildId = process.env.GUILD_ID || '1203994020779532348';
+        
+        // Versuche alte Struktur zu updaten
+        const { data: oldConfig } = await supabase
+          .from('server_stats_config')
+          .select('*')
+          .eq('guild_id', guildId)
+          .single();
+
+        if (oldConfig) {
+          // Update alte normalisierte Struktur
+          await supabase
+            .from('server_stats_config')
+            .update({
+              enabled: serverStatsSettings.enabled,
+              update_interval: serverStatsSettings.updateInterval,
+              category_id: serverStatsSettings.categoryId || '',
+              category_name: serverStatsSettings.categoryName || '📊 Server Statistiken',
+              permission_view_channel: serverStatsSettings.permissions?.viewChannel ?? true,
+              permission_connect: serverStatsSettings.permissions?.connect ?? false,
+              permission_speak: serverStatsSettings.permissions?.speak ?? false,
+              permission_use_vad: serverStatsSettings.permissions?.useVAD ?? false,
+              design_emoji: serverStatsSettings.design?.emoji || '📊',
+              design_color: serverStatsSettings.design?.color || '0x00FF7F',
+              design_separator: serverStatsSettings.design?.separator || ' • ',
+              design_format: serverStatsSettings.design?.format || 'modern',
+              updated_at: new Date().toISOString()
+            })
+            .eq('guild_id', guildId);
+
+          // Update Channels
+          await supabase
+            .from('server_stats_channels')
+            .delete()
+            .eq('guild_id', guildId);
+
+          if (serverStatsSettings.channels) {
+            const channelsToInsert = Object.entries(serverStatsSettings.channels).map(([channelType, config]) => ({
+              guild_id: guildId,
+              channel_type: channelType,
+              channel_id: config.channelId || '',
+              channel_name: config.name,
+              enabled: config.enabled,
+              position: config.position || 0
+            }));
+
+            await supabase
+              .from('server_stats_channels')
+              .insert(channelsToInsert);
+          }
+
+          console.log('✅ Server-Stats in Supabase normalisiert gespeichert');
+          return true;
+        } else {
+          // Erstelle neue JSONB-Struktur
+          const { error } = await supabase
+            .from('server_stats_config')
+            .insert({
+              config: serverStatsSettings,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+
+          if (!error) {
+            console.log('✅ Server-Stats in Supabase JSONB erstellt');
+            return true;
+          }
+        }
       }
     }
 
