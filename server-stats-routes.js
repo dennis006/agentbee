@@ -1,33 +1,37 @@
 const express = require('express');
 const router = express.Router();
-const ServerStats = require('./server-stats-api');
+const ServerStatsSupabase = require('./supabase-server-stats');
 
-// GET - Lade Server-Stats Einstellungen
-router.get('/api/server-stats', (req, res) => {
+// GET - Lade Server-Stats Einstellungen aus Supabase
+router.get('/api/server-stats', async (req, res) => {
   try {
-    console.log('📋 Lade Server-Stats Einstellungen für Dashboard...');
+    console.log('📋 Lade Server-Stats Einstellungen aus Supabase...');
     
-    // Stelle sicher dass das Server-Stats-System initialisiert ist
-    if (!ServerStats.serverStatsSettings) {
-      console.log('⚠️ Server-Stats Einstellungen nicht geladen, versuche neu zu laden...');
-      ServerStats.loadServerStatsSettings();
+    const guildId = req.query.guild_id || process.env.GUILD_ID;
+    const settings = await ServerStatsSupabase.loadServerStatsSettings(guildId);
+    
+    if (!settings) {
+      console.log('⚠️ Server-Stats Einstellungen nicht gefunden, initialisiere Standards...');
+      await ServerStatsSupabase.initializeDefaultServerStats(guildId);
+      const defaultSettings = await ServerStatsSupabase.loadServerStatsSettings(guildId);
+      return res.json(defaultSettings);
     }
     
-    const settings = ServerStats.serverStatsSettings;
     const enabledChannels = Object.entries(settings?.channels || {}).filter(([_, config]) => config.enabled).length;
-    console.log(`✅ Server-Stats Einstellungen geladen: ${enabledChannels} Channels aktiv`);
+    console.log(`✅ Server-Stats Einstellungen aus Supabase geladen: ${enabledChannels} Channels aktiv`);
     
     res.json({
       ...settings,
-      _loadTimestamp: new Date().toISOString()
+      _loadTimestamp: new Date().toISOString(),
+      _source: 'supabase'
     });
   } catch (error) {
-    console.error('❌ Fehler beim Laden der Server-Stats Einstellungen:', error);
+    console.error('❌ Fehler beim Laden der Server-Stats Einstellungen aus Supabase:', error);
     res.status(500).json({ error: 'Fehler beim Laden der Einstellungen: ' + error.message });
   }
 });
 
-// POST - Speichere Server-Stats Einstellungen
+// POST - Speichere Server-Stats Einstellungen in Supabase
 router.post('/api/server-stats', async (req, res) => {
   try {
     const newSettings = req.body;
@@ -37,48 +41,47 @@ router.post('/api/server-stats', async (req, res) => {
       return res.status(400).json({ error: 'Ungültige Einstellungen' });
     }
     
-    console.log('📝 Empfange Server-Stats Update...');
-    console.log(`💾 Speichere ${Object.keys(newSettings).length} Einstellungen...`);
+    console.log('📝 Empfange Server-Stats Update für Supabase...');
+    console.log(`💾 Speichere ${Object.keys(newSettings).length} Einstellungen in Supabase...`);
     
-    // KOMPLETT ERSETZEN - keine Defaults verwenden!
-    ServerStats.serverStatsSettings = newSettings;
+    const guildId = newSettings.guild_id || req.body.guild_id || process.env.GUILD_ID;
     
-    const enabledChannels = Object.entries(ServerStats.serverStatsSettings.channels || {}).filter(([_, config]) => config.enabled).length;
-    console.log(`✅ Server-Stats aktualisiert: ${enabledChannels} Channels aktiv`);
-    
-    // Explizit speichern und Erfolg prüfen
-    const saveSuccess = ServerStats.saveServerStatsSettings();
+    // Speichere in Supabase
+    const saveSuccess = await ServerStatsSupabase.saveServerStatsSettings(newSettings, guildId);
     
     if (!saveSuccess) {
-      console.error('❌ Fehler beim Speichern der Server-Stats auf Disk');
-      return res.status(500).json({ error: 'Fehler beim Speichern auf Disk' });
+      console.error('❌ Fehler beim Speichern der Server-Stats in Supabase');
+      return res.status(500).json({ error: 'Fehler beim Speichern in Supabase' });
     }
     
     // Restart Stats Updater wenn enabled geändert wurde
     if (newSettings.hasOwnProperty('enabled')) {
       if (newSettings.enabled) {
-        ServerStats.startStatsUpdater();
-        console.log('🔄 Stats-Updater gestartet');
+        ServerStatsSupabase.startStatsUpdater(newSettings);
+        console.log('🔄 Stats-Updater mit Supabase gestartet');
       } else {
-        ServerStats.stopStatsUpdater();
+        ServerStatsSupabase.stopStatsUpdater();
         console.log('⏸️ Stats-Updater gestoppt');
       }
     }
     
-    console.log('✅ Server-Stats Einstellungen erfolgreich gespeichert');
+    const enabledChannels = Object.entries(newSettings.channels || {}).filter(([_, config]) => config.enabled).length;
+    console.log(`✅ Server-Stats erfolgreich in Supabase gespeichert: ${enabledChannels} Channels aktiv`);
+    
     res.json({ 
       success: true, 
-      message: 'Server-Stats Einstellungen erfolgreich gespeichert!',
-      settings: ServerStats.serverStatsSettings,
-      timestamp: new Date().toISOString()
+      message: 'Server-Stats Einstellungen erfolgreich in Supabase gespeichert!',
+      settings: newSettings,
+      timestamp: new Date().toISOString(),
+      _source: 'supabase'
     });
   } catch (error) {
-    console.error('❌ Fehler beim Speichern der Server-Stats Einstellungen:', error);
+    console.error('❌ Fehler beim Speichern der Server-Stats Einstellungen in Supabase:', error);
     res.status(500).json({ error: 'Fehler beim Speichern der Einstellungen: ' + error.message });
   }
 });
 
-// POST - Validiere und repariere Stats-Channels
+// POST - Validiere und repariere Stats-Channels (weiterhin unterstützt)
 router.post('/api/server-stats/validate-channels', async (req, res) => {
   try {
     const client = req.app.get('discordClient');
@@ -91,12 +94,28 @@ router.post('/api/server-stats/validate-channels', async (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    // Verwende die neue Validierungsfunktion
-    await ServerStats.validateAndRepairStatsChannels();
+    // Log Activity in Supabase
+    await ServerStatsSupabase.logServerStatsActivity(
+      guild.id,
+      'validate',
+      '',
+      '',
+      '',
+      '',
+      true,
+      '',
+      0,
+      'dashboard'
+    );
+    
+    // Hinweis: Diese Funktion existiert noch nicht in der neuen API
+    // Müsste implementiert werden oder durch andere Methoden ersetzt werden
+    console.log('⚠️ Channel-Validierung noch nicht in Supabase API implementiert');
     
     res.json({ 
       success: true, 
-      message: 'Stats-Channels validiert und repariert!' 
+      message: 'Channel-Validierung mit Supabase - noch in Entwicklung',
+      note: 'Diese Funktion wird in der nächsten Version implementiert'
     });
   } catch (error) {
     console.error('❌ Fehler bei der Channel-Validierung:', error);
@@ -104,9 +123,12 @@ router.post('/api/server-stats/validate-channels', async (req, res) => {
   }
 });
 
-// GET - Liste alle Stats-Channels auf
-router.get('/api/server-stats/list-channels', (req, res) => {
+// GET - Liste alle Stats-Channels aus Supabase auf
+router.get('/api/server-stats/list-channels', async (req, res) => {
   try {
+    const guildId = req.query.guild_id || process.env.GUILD_ID;
+    const activeChannels = await ServerStatsSupabase.getActiveChannels(guildId);
+    
     const client = req.app.get('discordClient');
     if (!client || !client.guilds) {
       return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
@@ -117,51 +139,32 @@ router.get('/api/server-stats/list-channels', (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    // Finde alle Stats-Kategorien
-    const statsCategories = guild.channels.cache.filter(ch => 
-      ch.type === 4 && // GuildCategory
-      (ch.name.includes('Server Statistiken') || 
-       ch.name.includes('📊') ||
-       ch.name.toLowerCase().includes('statistik') ||
-       ch.name.toLowerCase().includes('stats'))
-    );
-    
-    // Finde alle Stats-Channels
-    const statsChannelPatterns = ['👥 Mitglieder:', '🟢 Online:', '🚀 Boosts:', '📺 Kanäle:', '🎭 Rollen:', '⭐ Level:', '📅 Erstellt:', '🤖 Bots:'];
-    const statsChannels = guild.channels.cache.filter(ch => 
-      ch.type === 2 && // GuildVoice
-      statsChannelPatterns.some(pattern => ch.name.includes(pattern))
-    );
-    
-    const result = {
-      categories: statsCategories.map(cat => ({
-        id: cat.id,
-        name: cat.name,
-        createdAt: cat.createdAt.toISOString(),
-        channelsInside: guild.channels.cache.filter(ch => ch.parentId === cat.id).size
-      })),
-      channels: statsChannels.map(ch => ({
-        id: ch.id,
-        name: ch.name,
-        createdAt: ch.createdAt.toISOString(),
-        categoryId: ch.parentId,
-        categoryName: ch.parent?.name || 'Keine Kategorie'
-      }))
-    };
+    // Erweitere mit Discord-Daten
+    const channelsWithDiscordData = activeChannels.map(ch => {
+      const discordChannel = guild.channels.cache.get(ch.channel_id);
+      return {
+        ...ch,
+        exists: !!discordChannel,
+        discordName: discordChannel?.name || 'Channel nicht gefunden',
+        createdAt: discordChannel?.createdAt?.toISOString() || null,
+        categoryName: discordChannel?.parent?.name || 'Keine Kategorie'
+      };
+    });
     
     res.json({
       success: true,
-      ...result,
-      totalCategories: result.categories.length,
-      totalChannels: result.channels.length
+      channels: channelsWithDiscordData,
+      totalChannels: channelsWithDiscordData.length,
+      activeChannels: channelsWithDiscordData.filter(ch => ch.enabled).length,
+      _source: 'supabase'
     });
   } catch (error) {
-    console.error('❌ Fehler beim Auflisten der Stats-Channels:', error);
+    console.error('❌ Fehler beim Auflisten der Stats-Channels aus Supabase:', error);
     res.status(500).json({ error: 'Fehler beim Auflisten der Channels' });
   }
 });
 
-// POST - Bereinige doppelte Stats-Channels
+// POST - Bereinige doppelte Stats-Channels (Legacy-Support)
 router.post('/api/server-stats/cleanup-duplicates', async (req, res) => {
   try {
     const client = req.app.get('discordClient');
@@ -174,12 +177,28 @@ router.post('/api/server-stats/cleanup-duplicates', async (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    const duplicatesRemoved = await ServerStats.cleanupDuplicateStatsChannels(guild);
+    // Log Activity in Supabase
+    await ServerStatsSupabase.logServerStatsActivity(
+      guild.id,
+      'cleanup',
+      '',
+      '',
+      '',
+      '',
+      true,
+      '',
+      0,
+      'dashboard'
+    );
+    
+    // Diese Funktionen müssten in der neuen API implementiert werden
+    console.log('⚠️ Cleanup-Funktionen noch nicht in neuer Supabase API implementiert');
     
     res.json({ 
       success: true, 
-      message: `🧹 ${duplicatesRemoved} doppelte Channels/Kategorien entfernt!`,
-      duplicatesRemoved: duplicatesRemoved
+      message: '🧹 Cleanup-Funktion mit Supabase - noch in Entwicklung',
+      duplicatesRemoved: 0,
+      note: 'Diese Funktion wird in der nächsten Version implementiert'
     });
   } catch (error) {
     console.error('❌ Fehler bei der Bereinigung doppelter Channels:', error);
@@ -187,7 +206,7 @@ router.post('/api/server-stats/cleanup-duplicates', async (req, res) => {
   }
 });
 
-// POST - Kompletter Reset aller Stats-Channels
+// POST - Kompletter Reset aller Stats-Channels (Legacy-Support)
 router.post('/api/server-stats/complete-reset', async (req, res) => {
   try {
     const client = req.app.get('discordClient');
@@ -200,12 +219,27 @@ router.post('/api/server-stats/complete-reset', async (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    const deletedCount = await ServerStats.completeStatsChannelReset(guild);
+    // Log Activity in Supabase
+    await ServerStatsSupabase.logServerStatsActivity(
+      guild.id,
+      'reset',
+      '',
+      '',
+      '',
+      '',
+      true,
+      '',
+      0,
+      'dashboard'
+    );
+    
+    console.log('⚠️ Reset-Funktionen noch nicht in neuer Supabase API implementiert');
     
     res.json({ 
       success: true, 
-      message: `🔄 Kompletter Reset durchgeführt! ${deletedCount} Channels/Kategorien gelöscht und neu erstellt!`,
-      deletedCount: deletedCount
+      message: '🔄 Reset-Funktion mit Supabase - noch in Entwicklung',
+      deletedCount: 0,
+      note: 'Diese Funktion wird in der nächsten Version implementiert'
     });
   } catch (error) {
     console.error('❌ Fehler beim kompletten Reset:', error);
@@ -213,7 +247,7 @@ router.post('/api/server-stats/complete-reset', async (req, res) => {
   }
 });
 
-// POST - Erstelle alle Stats-Channels
+// POST - Erstelle alle Stats-Channels (Legacy-Support)
 router.post('/api/server-stats/create-channels', async (req, res) => {
   try {
     const client = req.app.get('discordClient');
@@ -226,11 +260,26 @@ router.post('/api/server-stats/create-channels', async (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    await ServerStats.createAllStatsChannels(guild);
+    // Log Activity in Supabase
+    await ServerStatsSupabase.logServerStatsActivity(
+      guild.id,
+      'create',
+      '',
+      '',
+      '',
+      '',
+      true,
+      '',
+      0,
+      'dashboard'
+    );
+    
+    console.log('⚠️ Channel-Erstellung noch nicht in neuer Supabase API implementiert');
     
     res.json({ 
       success: true, 
-      message: 'Alle Stats-Channels erfolgreich erstellt!' 
+      message: 'Channel-Erstellung mit Supabase - noch in Entwicklung',
+      note: 'Diese Funktion wird in der nächsten Version implementiert'
     });
   } catch (error) {
     console.error('❌ Fehler beim Erstellen der Stats-Channels:', error);
@@ -238,7 +287,7 @@ router.post('/api/server-stats/create-channels', async (req, res) => {
   }
 });
 
-// DELETE - Lösche alle Stats-Channels
+// DELETE - Lösche alle Stats-Channels (Legacy-Support)
 router.delete('/api/server-stats/delete-channels', async (req, res) => {
   try {
     const client = req.app.get('discordClient');
@@ -251,11 +300,26 @@ router.delete('/api/server-stats/delete-channels', async (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    await ServerStats.deleteAllStatsChannels(guild);
+    // Log Activity in Supabase
+    await ServerStatsSupabase.logServerStatsActivity(
+      guild.id,
+      'delete',
+      '',
+      '',
+      '',
+      '',
+      true,
+      '',
+      0,
+      'dashboard'
+    );
+    
+    console.log('⚠️ Channel-Löschung noch nicht in neuer Supabase API implementiert');
     
     res.json({ 
       success: true, 
-      message: 'Alle Stats-Channels erfolgreich gelöscht!' 
+      message: 'Channel-Löschung mit Supabase - noch in Entwicklung',
+      note: 'Diese Funktion wird in der nächsten Version implementiert'
     });
   } catch (error) {
     console.error('❌ Fehler beim Löschen der Stats-Channels:', error);
@@ -266,20 +330,23 @@ router.delete('/api/server-stats/delete-channels', async (req, res) => {
 // POST - Update Stats sofort
 router.post('/api/server-stats/update-now', async (req, res) => {
   try {
-    await ServerStats.updateAllServerStats();
+    console.log('🔄 Starte manuelles Server-Stats Update über Supabase...');
+    await ServerStatsSupabase.updateAllServerStats();
     
     res.json({ 
       success: true, 
-      message: 'Server-Stats erfolgreich aktualisiert!' 
+      message: 'Server-Stats erfolgreich über Supabase aktualisiert!',
+      timestamp: new Date().toISOString(),
+      _source: 'supabase'
     });
   } catch (error) {
-    console.error('❌ Fehler beim Aktualisieren der Stats:', error);
+    console.error('❌ Fehler beim Aktualisieren der Stats über Supabase:', error);
     res.status(500).json({ error: 'Fehler beim Aktualisieren der Stats' });
   }
 });
 
-// GET - Aktuelle Server-Statistiken
-router.get('/api/server-stats/current', (req, res) => {
+// GET - Aktuelle Server-Statistiken aus Supabase
+router.get('/api/server-stats/current', async (req, res) => {
   try {
     const client = req.app.get('discordClient');
     if (!client || !client.guilds) {
@@ -291,32 +358,54 @@ router.get('/api/server-stats/current', (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    const stats = ServerStats.calculateServerStats(guild);
+    const guildId = req.query.guild_id || guild.id;
+    
+    // Lade aus Supabase oder berechne neu
+    let stats = await ServerStatsSupabase.getCurrentStats(guildId);
+    
+    if (!stats) {
+      // Berechne Stats und speichere in Supabase
+      const calculatedStats = ServerStatsSupabase.calculateServerStats(guild);
+      await ServerStatsSupabase.updateCurrentStats(calculatedStats, guildId);
+      stats = await ServerStatsSupabase.getCurrentStats(guildId);
+    }
     
     res.json({
       success: true,
-      stats: stats,
-      serverName: guild.name,
-      serverIcon: guild.iconURL({ dynamic: true }),
-      lastUpdated: new Date().toISOString()
+      stats: {
+        memberCount: stats.member_count,
+        onlineCount: stats.online_count,
+        boostCount: stats.boost_count,
+        channelCount: stats.channel_count,
+        roleCount: stats.role_count,
+        serverLevel: stats.server_level,
+        createdDate: stats.created_date,
+        botCount: stats.bot_count
+      },
+      serverName: stats.server_name || guild.name,
+      serverIcon: stats.server_icon || guild.iconURL({ dynamic: true }),
+      lastUpdated: stats.updated_at || new Date().toISOString(),
+      _source: 'supabase'
     });
   } catch (error) {
-    console.error('❌ Fehler beim Laden der aktuellen Stats:', error);
+    console.error('❌ Fehler beim Laden der aktuellen Stats aus Supabase:', error);
     res.status(500).json({ error: 'Fehler beim Laden der Stats' });
   }
 });
 
-// GET - Timer-Status
-router.get('/api/server-stats/timer-status', (req, res) => {
+// GET - Timer-Status aus Supabase
+router.get('/api/server-stats/timer-status', async (req, res) => {
   try {
-    const timerStatus = ServerStats.getTimerStatus();
+    const guildId = req.query.guild_id || process.env.GUILD_ID;
+    const timerStatus = await ServerStatsSupabase.getTimerStatus(guildId);
     
     res.json({
       success: true,
-      ...timerStatus
+      ...timerStatus,
+      _source: 'supabase'
     });
   } catch (error) {
-    console.error('❌ Fehler beim Laden des Timer-Status:', error);
+    console.error('❌ Fehler beim Laden des Timer-Status aus Supabase:', error);
     res.status(500).json({ error: 'Fehler beim Laden des Timer-Status' });
   }
 });
@@ -336,23 +425,44 @@ router.post('/api/server-stats/test-channel/:statType', async (req, res) => {
       return res.status(500).json({ error: 'Kein Server gefunden' });
     }
     
-    if (!ServerStats.serverStatsSettings.channels[statType]) {
-      return res.status(400).json({ error: 'Ungültiger Stats-Typ' });
+    const guildId = guild.id;
+    
+    // Lade Channel-Konfiguration aus Supabase
+    const activeChannels = await ServerStatsSupabase.getActiveChannels(guildId);
+    const channelConfig = activeChannels.find(ch => ch.stat_type === statType);
+    
+    if (!channelConfig) {
+      return res.status(400).json({ error: 'Stats-Channel nicht in Supabase gefunden' });
     }
     
-    const stats = ServerStats.calculateServerStats(guild);
+    const stats = ServerStatsSupabase.calculateServerStats(guild);
     const statValue = stats[statType];
     
     // Teste Channel-Update
-    await ServerStats.updateStatsChannel(guild, statType, statValue);
+    await ServerStatsSupabase.updateStatsChannel(guild, statType, statValue, channelConfig);
+    
+    // Log Activity in Supabase
+    await ServerStatsSupabase.logServerStatsActivity(
+      guildId,
+      'test',
+      statType,
+      channelConfig.channel_id,
+      '',
+      statValue.toString(),
+      true,
+      '',
+      0,
+      'dashboard'
+    );
     
     res.json({ 
       success: true, 
-      message: `${statType} Channel erfolgreich getestet!`,
-      value: statValue
+      message: `${statType} Channel erfolgreich über Supabase getestet!`,
+      value: statValue,
+      _source: 'supabase'
     });
   } catch (error) {
-    console.error(`❌ Fehler beim Testen des ${req.params.statType} Channels:`, error);
+    console.error(`❌ Fehler beim Testen des ${req.params.statType} Channels über Supabase:`, error);
     res.status(500).json({ error: 'Fehler beim Testen des Channels' });
   }
 });
