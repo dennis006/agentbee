@@ -706,7 +706,7 @@ async function handleRadioSelectButton(interaction) {
     try {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
 
-        const stations = getRadioStations();
+        const stations = getMusicStations();
         
         // Discord erlaubt nur maximal 25 Optionen - beschränke auf die ersten 25
         const limitedStations = stations.slice(0, 25);
@@ -1152,7 +1152,7 @@ function registerMusicAPI(app) {
         }
     });
 
-    console.log('✅ Radio API registriert!');
+    console.log('✅ Musik API registriert!');
 }
 
 module.exports = {
@@ -1161,17 +1161,19 @@ module.exports = {
     registerMusicAPI,
     joinVoiceChannelSafe,
     leaveVoiceChannel,
-    getRadioStations,
-    getRadioStation,
-    playRadioStation,
-    stopRadio,
-    getCurrentRadioStation,
-    isPlayingRadio,
-    postInteractiveRadioPanel,
-    updateInteractiveRadioPanel,
-    handleRadioSelectButton,
-    handleRadioStationSelect,
-    handleRadioStopButton,
+    getAvailableSongs,
+    getMusicStations,
+    getMusicStation,
+    playLocalSong,
+    playMusicStation,
+    stopMusic,
+    getCurrentSong,
+    getCurrentStation,
+    isPlayingMusic,
+    sendNowPlayingMessage,
+    updateInteractiveMusicPanel,
     musicSettings,
-    autoJoinForRadio
+    autoJoinForMusic,
+    musicGenres,
+    scanMusicDirectory
 }; 

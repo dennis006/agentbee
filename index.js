@@ -4212,81 +4212,96 @@ client.on(Events.MessageCreate, async message => {
             
             if (command === 'list' || command === 'stations') {
                 try {
-                    const { getRadioStations } = require('./music-api.js');
-                    const stations = getRadioStations();
-                    
-                    if (stations.length === 0) {
-                        message.reply('📻 Keine Radio-Sender verfügbar.');
-                        return;
-                    }
+                    const { getMusicStations, getAvailableSongs } = require('./music-api.js');
+                    const stations = getMusicStations();
+                    const songs = getAvailableSongs();
                     
                     const embed = new EmbedBuilder()
-                        .setTitle('📻 Verfügbare Radio-Sender')
+                        .setTitle('🎵 Lokales Musik-System')
                         .setColor(0xFF6B6B)
-                        .setDescription('Verwende `!radio play <station-id>` zum Abspielen')
+                        .setDescription('Nutze das Dashboard für die Musik-Verwaltung!')
                         .setTimestamp();
                     
-                    stations.forEach(station => {
-                        embed.addFields({
-                            name: `📻 ${station.name}`,
-                            value: `**ID:** \`${station.id}\`\n**Genre:** ${station.genre}\n**Land:** ${station.country}\n**Beschreibung:** ${station.description}`,
-                            inline: true
-                        });
+                    embed.addFields({
+                        name: '📁 Verfügbare Songs',
+                        value: songs.length > 0 ? `${songs.length} MP3-Dateien gefunden` : 'Keine MP3-Dateien im /music Ordner',
+                        inline: true
+                    });
+
+                    embed.addFields({
+                        name: '📻 Erstellte Stationen',
+                        value: stations.length > 0 ? `${stations.length} Stationen verfügbar` : 'Keine Stationen erstellt',
+                        inline: true
+                    });
+
+                    embed.addFields({
+                        name: '🌐 Dashboard',
+                        value: 'Nutze das Web-Dashboard um Stationen zu erstellen und Musik zu verwalten!',
+                        inline: false
                     });
                     
                     message.reply({ embeds: [embed] });
                 } catch (error) {
-                    console.error('❌ Radio List Fehler:', error);
-                    message.reply('❌ Fehler beim Laden der Radio-Sender.');
+                    console.error('❌ Musik List Fehler:', error);
+                    message.reply('❌ Fehler beim Laden der Musik-Daten.');
                 }
                 return;
             }
             
             if (command === 'status') {
                 try {
-                    const { getCurrentRadioStation, isPlayingRadio } = require('./music-api.js');
-                    const currentStation = getCurrentRadioStation(message.guild.id);
-                    const isPlaying = isPlayingRadio(message.guild.id);
+                    const { getCurrentSong, getCurrentStation, isPlayingMusic } = require('./music-api.js');
+                    const currentSong = getCurrentSong(message.guild.id);
+                    const currentStation = getCurrentStation(message.guild.id);
+                    const isPlaying = isPlayingMusic(message.guild.id);
                     
-                    if (!isPlaying || !currentStation) {
-                        message.reply('📻 Kein Radio-Sender aktiv.');
+                    if (!isPlaying) {
+                        message.reply('🎵 Keine Musik aktiv.');
                         return;
                     }
                     
                     const embed = new EmbedBuilder()
-                        .setTitle('📻 Radio Status')
+                        .setTitle('🎵 Musik Status')
                         .setColor(0xFF6B6B)
-                        .addFields(
-                            { name: '🎵 Aktueller Sender', value: currentStation.name, inline: true },
-                            { name: '🎭 Genre', value: currentStation.genre, inline: true },
-                            { name: '🌍 Land', value: currentStation.country, inline: true },
-                            { name: '📝 Beschreibung', value: currentStation.description, inline: false }
-                        )
-                        .setThumbnail(currentStation.logo)
                         .setTimestamp();
+
+                    if (currentSong) {
+                        embed.addFields(
+                            { name: '🎵 Aktueller Song', value: currentSong.title, inline: true },
+                            { name: '🎤 Künstler', value: currentSong.artist, inline: true },
+                            { name: '📁 Datei', value: currentSong.filename, inline: true }
+                        );
+                    }
+
+                    if (currentStation) {
+                        embed.addFields(
+                            { name: '📻 Station', value: currentStation.name, inline: true },
+                            { name: '🎭 Genre', value: currentStation.genre, inline: true },
+                            { name: '📝 Beschreibung', value: currentStation.description, inline: false }
+                        );
+                    }
                     
                     message.reply({ embeds: [embed] });
                 } catch (error) {
-                    console.error('❌ Radio Status Fehler:', error);
-                    message.reply('❌ Fehler beim Laden des Radio-Status.');
+                    console.error('❌ Musik Status Fehler:', error);
+                    message.reply('❌ Fehler beim Laden des Musik-Status.');
                 }
                 return;
             }
             
-            // Radio Help
-            const radioHelpEmbed = new EmbedBuilder()
-                .setTitle('📻 Radio-Befehle')
+            // Musik Help
+            const musicHelpEmbed = new EmbedBuilder()
+                .setTitle('🎵 Musik-Befehle')
                 .setColor(0xFF6B6B)
-                .setDescription('Verfügbare Radio-Befehle:')
+                .setDescription('Verfügbare Musik-Befehle:')
                 .addFields(
-                    { name: '!radio list', value: 'Zeigt alle verfügbaren Radio-Sender', inline: true },
-                    { name: '!radio play <id>', value: 'Startet einen Radio-Sender', inline: true },
-                    { name: '!radio stop', value: 'Stoppt das Radio', inline: true },
-                    { name: '!radio status', value: 'Zeigt aktuellen Radio-Status', inline: true }
+                    { name: '!radio list', value: 'Zeigt verfügbare Songs und Stationen', inline: true },
+                    { name: '!radio status', value: 'Zeigt aktuellen Musik-Status', inline: true },
+                    { name: '🌐 Dashboard', value: 'Nutze das Web-Dashboard für erweiterte Funktionen!', inline: false }
                 )
-                .setFooter({ text: 'Radio-System 📻' });
+                .setFooter({ text: 'Lokales Musik-System 🎵' });
             
-            message.reply({ embeds: [radioHelpEmbed] });
+            message.reply({ embeds: [musicHelpEmbed] });
             return;
         }
     }
@@ -4306,9 +4321,8 @@ client.on(Events.MessageCreate, async message => {
                 { name: '!play <song>', value: '🎵 Fügt einen Song zur Musik-Queue hinzu', inline: true },
                 { name: '!request <song>', value: '🎵 Alternative für Song-Requests', inline: true },
                 { name: '!song <song>', value: '🎵 Weitere Alternative für Song-Requests', inline: true },
-                { name: '!radio list', value: '📻 Zeigt verfügbare Radio-Sender', inline: true },
-                { name: '!radio play <id>', value: '📻 Startet einen Radio-Sender', inline: true },
-                { name: '!radio stop', value: '📻 Stoppt das Radio', inline: true },
+                { name: '!radio list', value: '🎵 Zeigt verfügbare Songs und Stationen', inline: true },
+                { name: '!radio status', value: '🎵 Zeigt aktuellen Musik-Status', inline: true },
                 { name: '!hilfe', value: 'Zeigt diese Hilfenachricht', inline: true }
             )
             .setFooter({ text: 'Auto-Rules Bot mit Musik-System! 🎵' });
