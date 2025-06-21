@@ -100,61 +100,18 @@ let lastUpdateTime = null;
 // Flag um sicherzustellen, dass Settings nur einmal geladen werden
 let settingsLoaded = false;
 
-// Lade Einstellungen (Supabase normalisiert oder JSON Fallback)
-async function loadServerStatsSettings(guildId = null) {
+// Lade Einstellungen (Supabase JSONB oder JSON Fallback)
+async function loadServerStatsSettings() {
   try {
-    const targetGuildId = guildId || process.env.GUILD_ID || '1203994020779532348';
-    
-    // Versuche zuerst Supabase (normalisierte Struktur)
+    // Versuche zuerst Supabase (JSONB-Struktur)
     if (supabase) {
-      // Lade Basis-Konfiguration
-      const { data: configData, error: configError } = await supabase
+      const { data, error } = await supabase
         .from('server_stats_config')
         .select('*')
-        .eq('guild_id', targetGuildId)
         .single();
 
-      // Lade Channels
-      const { data: channelsData, error: channelsError } = await supabase
-        .from('server_stats_channels')
-        .select('*')
-        .eq('guild_id', targetGuildId)
-        .order('position');
-
-      if (configData && !configError) {
-        // Rekonstruiere serverStatsSettings aus normalisierter Struktur
-        serverStatsSettings = {
-          enabled: configData.enabled,
-          updateInterval: configData.update_interval,
-          categoryId: configData.category_id,
-          categoryName: configData.category_name,
-          permissions: {
-            viewChannel: configData.permission_view_channel,
-            connect: configData.permission_connect,
-            speak: configData.permission_speak,
-            useVAD: configData.permission_use_vad
-          },
-          design: {
-            emoji: configData.design_emoji,
-            color: configData.design_color,
-            separator: configData.design_separator,
-            format: configData.design_format
-          },
-          channels: {}
-        };
-
-        // Füge Channels hinzu
-        if (channelsData && !channelsError) {
-          for (const channel of channelsData) {
-            serverStatsSettings.channels[channel.channel_type] = {
-              enabled: channel.enabled,
-              channelId: channel.channel_id,
-              name: channel.channel_name,
-              position: channel.position
-            };
-          }
-        }
-
+      if (data && !error) {
+        serverStatsSettings = data.config;
         settingsLoaded = true;
         const enabledChannels = Object.entries(serverStatsSettings.channels).filter(([_, config]) => config.enabled).length;
         console.log(`📊 Server-Stats aus Supabase geladen: ${enabledChannels} Channels aktiv`);
@@ -162,8 +119,8 @@ async function loadServerStatsSettings(guildId = null) {
       }
     }
 
-    // Fallback auf JSON (nur für Haupt-Guild)
-    if (!guildId && fs.existsSync(STATS_SETTINGS_FILE)) {
+    // Fallback auf JSON
+    if (fs.existsSync(STATS_SETTINGS_FILE)) {
       const data = fs.readFileSync(STATS_SETTINGS_FILE, 'utf8');
       const savedSettings = JSON.parse(data);
       
@@ -186,82 +143,28 @@ async function loadServerStatsSettings(guildId = null) {
   }
 }
 
-// Speichere Einstellungen (Supabase normalisiert oder JSON Fallback)
-async function saveServerStatsSettings(guildId = null, settings = null) {
+// Speichere Einstellungen (Supabase JSONB oder JSON Fallback)
+async function saveServerStatsSettings() {
   try {
-    const targetGuildId = guildId || process.env.GUILD_ID || '1203994020779532348';
-    const settingsToSave = settings || serverStatsSettings;
-    
-    // Versuche zuerst Supabase (normalisierte Struktur)
+    // Versuche zuerst Supabase (JSONB-Struktur)
     if (supabase) {
-      // Speichere Basis-Konfiguration
-      const { error: configError } = await supabase
+      const { error } = await supabase
         .from('server_stats_config')
         .upsert({
-          guild_id: targetGuildId,
-          enabled: settingsToSave.enabled,
-          update_interval: settingsToSave.updateInterval,
-          category_id: settingsToSave.categoryId || '',
-          category_name: settingsToSave.categoryName || '📊 Server Statistiken',
-          permission_view_channel: settingsToSave.permissions?.viewChannel ?? true,
-          permission_connect: settingsToSave.permissions?.connect ?? false,
-          permission_speak: settingsToSave.permissions?.speak ?? false,
-          permission_use_vad: settingsToSave.permissions?.useVAD ?? false,
-          design_emoji: settingsToSave.design?.emoji || '📊',
-          design_color: settingsToSave.design?.color || '0x00FF7F',
-          design_separator: settingsToSave.design?.separator || ' • ',
-          design_format: settingsToSave.design?.format || 'modern',
+          config: serverStatsSettings,
           updated_at: new Date().toISOString()
         });
 
-      if (configError) {
-        console.error('🤔 Fehler beim Speichern der Basis-Konfiguration:', configError);
-      }
-
-      // Speichere Channels (lösche alte und erstelle neue)
-      const { error: deleteError } = await supabase
-        .from('server_stats_channels')
-        .delete()
-        .eq('guild_id', targetGuildId);
-
-      if (deleteError) {
-        console.error('🤔 Fehler beim Löschen alter Channels:', deleteError);
-      }
-
-      // Erstelle neue Channels
-      if (settingsToSave.channels) {
-        const channelsToInsert = Object.entries(settingsToSave.channels).map(([channelType, config]) => ({
-          guild_id: targetGuildId,
-          channel_type: channelType,
-          channel_id: config.channelId || '',
-          channel_name: config.name,
-          enabled: config.enabled,
-          position: config.position || 0
-        }));
-
-        const { error: channelsError } = await supabase
-          .from('server_stats_channels')
-          .insert(channelsToInsert);
-
-        if (channelsError) {
-          console.error('🤔 Fehler beim Speichern der Channels:', channelsError);
-        }
-      }
-
-      if (!configError) {
+      if (!error) {
         console.log('✅ Server-Stats in Supabase gespeichert');
         return true;
       }
     }
 
-    // Fallback auf JSON (nur für Haupt-Guild)
-    if (!guildId) {
-      fs.writeFileSync(STATS_SETTINGS_FILE, JSON.stringify(settingsToSave, null, 2));
-      console.log('✅ Server-Stats in JSON gespeichert');
-      return true;
-    }
-
-    return false;
+    // Fallback auf JSON
+    fs.writeFileSync(STATS_SETTINGS_FILE, JSON.stringify(serverStatsSettings, null, 2));
+    console.log('✅ Server-Stats in JSON gespeichert');
+    return true;
   } catch (error) {
     console.error('🤔 Fehler beim Speichern der Server-Stats Einstellungen:', error);
     return false;
@@ -939,32 +842,15 @@ function getTimerStatus() {
 const express = require('express');
 const router = express.Router();
 
-// GET /api/server-stats - Lade Konfiguration für alle Server
+// GET /api/server-stats - Lade Konfiguration (Single-Server)
 router.get('/api/server-stats', async (req, res) => {
   try {
-    if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
-    }
-
-    const allServerStats = [];
-    
-    for (const guild of client.guilds.cache.values()) {
-      // Verwende die neue loadServerStatsSettings Funktion
-      const guildSettings = await loadServerStatsSettings(guild.id);
-      
-      allServerStats.push({
-        guildId: guild.id,
-        guildName: guild.name,
-        guildIcon: guild.iconURL({ dynamic: true }),
-        memberCount: guild.memberCount,
-        settings: guildSettings
-      });
-    }
+    await loadServerStatsSettings();
     
     res.json({
       success: true,
-      servers: allServerStats,
-      totalServers: allServerStats.length
+      settings: serverStatsSettings,
+      _source: supabase ? 'supabase-hybrid' : 'json-file'
     });
   } catch (error) {
     console.error('🤔 Fehler beim Laden der Server-Stats:', error);
@@ -972,76 +858,33 @@ router.get('/api/server-stats', async (req, res) => {
   }
 });
 
-// GET /api/server-stats/:guildId - Lade Konfiguration für einen spezifischen Server
-router.get('/api/server-stats/:guildId', async (req, res) => {
+// POST /api/server-stats - Speichere Konfiguration (Single-Server)
+router.post('/api/server-stats', async (req, res) => {
   try {
-    const { guildId } = req.params;
-    
-    if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
-    }
-    
-    const guild = client.guilds.cache.get(guildId);
-    if (!guild) {
-      return res.status(404).json({ error: 'Server nicht gefunden' });
-    }
-    
-    // Verwende die neue loadServerStatsSettings Funktion
-    const guildSettings = await loadServerStatsSettings(guildId);
-    
-    res.json({
-      success: true,
-      guildId: guild.id,
-      guildName: guild.name,
-      guildIcon: guild.iconURL({ dynamic: true }),
-      memberCount: guild.memberCount,
-      settings: guildSettings
-    });
-  } catch (error) {
-    console.error('🤔 Fehler beim Laden der Konfiguration:', error);
-    res.status(500).json({ error: 'Serverfehler beim Laden der Konfiguration' });
-  }
-});
-
-// POST /api/server-stats/:guildId - Speichere Konfiguration für einen spezifischen Server
-router.post('/api/server-stats/:guildId', async (req, res) => {
-  try {
-    const { guildId } = req.params;
     const newSettings = req.body;
     
-    if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
-    }
+    // Aktualisiere globale Settings
+    serverStatsSettings = newSettings;
     
-    const guild = client.guilds.cache.get(guildId);
-    if (!guild) {
-      return res.status(404).json({ error: 'Server nicht gefunden' });
-    }
-    
-    // Verwende die neue saveServerStatsSettings Funktion
-    const success = await saveServerStatsSettings(guildId, newSettings);
+    // Speichere in Supabase/JSON
+    const success = await saveServerStatsSettings();
     
     if (!success) {
       return res.status(500).json({ error: 'Fehler beim Speichern der Konfiguration' });
     }
     
-    // Wenn das die Haupt-Guild ist, aktualisiere auch die globalen Settings
-    if (guildId === (process.env.GUILD_ID || '1203994020779532348')) {
-      serverStatsSettings = newSettings;
-      
-      // Neustart des Updaters mit neuen Einstellungen
-      if (newSettings.enabled) {
-        startStatsUpdater();
-      } else {
-        stopStatsUpdater();
-      }
+    // Neustart des Updaters mit neuen Einstellungen
+    if (newSettings.enabled) {
+      startStatsUpdater();
+    } else {
+      stopStatsUpdater();
     }
     
     res.json({ 
       success: true, 
-      message: `Konfiguration für ${guild.name} erfolgreich gespeichert`,
-      guildId: guildId,
-      guildName: guild.name
+      message: 'Konfiguration erfolgreich gespeichert',
+      settings: serverStatsSettings,
+      _source: supabase ? 'supabase-hybrid' : 'json-file'
     });
   } catch (error) {
     console.error('🤔 Fehler beim Speichern der Konfiguration:', error);
@@ -1049,18 +892,31 @@ router.post('/api/server-stats/:guildId', async (req, res) => {
   }
 });
 
-// GET /api/server-stats/current/:guildId - Lade aktuelle Stats für einen spezifischen Server
-router.get('/api/server-stats/current/:guildId', async (req, res) => {
+// GET /api/server-stats/current - Lade aktuelle Stats (Single-Server)
+router.get('/api/server-stats/current', async (req, res) => {
   try {
-    const { guildId } = req.params;
-    
     if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
+      return res.json({
+        success: true,
+        stats: {
+          memberCount: 0,
+          onlineCount: 0,
+          boostCount: 0,
+          channelCount: 0,
+          roleCount: 0,
+          serverLevel: 0,
+          createdDate: new Date().toLocaleDateString('de-DE'),
+          botCount: 0
+        },
+        lastUpdated: new Date().toISOString(),
+        _source: supabase ? 'supabase-hybrid' : 'json-file',
+        _note: 'Discord Client nicht verfügbar'
+      });
     }
     
-    const guild = client.guilds.cache.get(guildId);
+    const guild = client.guilds.cache.first();
     if (!guild) {
-      return res.status(404).json({ error: 'Server nicht gefunden' });
+      return res.status(404).json({ error: 'Kein Server gefunden' });
     }
     
     const stats = calculateServerStats(guild);
@@ -1080,48 +936,6 @@ router.get('/api/server-stats/current/:guildId', async (req, res) => {
         botCount: stats.botCount || 0
       },
       serverIcon: guild.iconURL({ dynamic: true }),
-      lastUpdated: new Date().toISOString(),
-      _source: supabase ? 'supabase-hybrid' : 'json-file'
-    });
-  } catch (error) {
-    console.error('🤔 Fehler beim Laden der aktuellen Stats:', error);
-    res.status(500).json({ error: 'Fehler beim Laden der Stats' });
-  }
-});
-
-// GET /api/server-stats/current - Lade aktuelle Stats für alle Server
-router.get('/api/server-stats/current', async (req, res) => {
-  try {
-    if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
-    }
-    
-    const allServerStats = [];
-    
-    for (const guild of client.guilds.cache.values()) {
-      const stats = calculateServerStats(guild);
-      
-      allServerStats.push({
-        guildId: guild.id,
-        guildName: guild.name,
-        guildIcon: guild.iconURL({ dynamic: true }),
-        stats: {
-          memberCount: stats.memberCount || 0,
-          onlineCount: stats.onlineCount || 0,
-          boostCount: stats.boostCount || 0,
-          channelCount: stats.channelCount || 0,
-          roleCount: stats.roleCount || 0,
-          serverLevel: stats.serverLevel || 0,
-          createdDate: stats.createdDate || new Date().toLocaleDateString('de-DE'),
-          botCount: stats.botCount || 0
-        }
-      });
-    }
-    
-    res.json({
-      success: true,
-      servers: allServerStats,
-      totalServers: allServerStats.length,
       lastUpdated: new Date().toISOString(),
       _source: supabase ? 'supabase-hybrid' : 'json-file'
     });
