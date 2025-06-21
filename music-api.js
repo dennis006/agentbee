@@ -1,103 +1,22 @@
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, EmbedBuilder, StringSelectMenuBuilder, ButtonStyle, ComponentType, ActivityType } = require('discord.js');
 const { 
-    joinVoiceChannel, 
     createAudioPlayer, 
     createAudioResource, 
+    StreamType, 
+    AudioPlayerStatus, 
     VoiceConnectionStatus, 
-    AudioPlayerStatus,
-    entersState,
-    getVoiceConnection,
-    StreamType
+    joinVoiceChannel, 
+    AudioResource 
 } = require('@discordjs/voice');
 
 const fs = require('fs');
 const path = require('path');
-const play = require('play-dl');
-const prism = require('prism-media');
+const { PassThrough } = require('stream');
+const axios = require('axios');
 
-// Music Settings mit Radio UND lokalen MP3s
+// Nur noch lokale MP3-Settings
 let musicSettings = {
     enabled: true,
-    radio: {
-        enabled: true,
-        stations: [
-            {
-                id: "lofi",
-                name: "Lofi Hip Hop Radio",
-                url: "http://streams.ilovemusic.de/iloveradio-lounge.mp3",
-                genre: "Lofi/Chill", 
-                country: "International",
-                description: "Chill Lofi Hip Hop Beats",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjMzOTkiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TG9GaTwvdGV4dD4KPC9zdmc+Cg=="
-            },
-            {
-                id: "chillhop",
-                name: "ChillHop Radio",
-                url: "http://stream.laut.fm/chillhop",
-                genre: "Chillhop/Jazz",
-                country: "International", 
-                description: "Chill beats to relax/study to",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM0NEFBODgiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q2hpbGxIb3A8L3RleHQ+Cjwvc3ZnPgo="
-            },
-            {
-                id: "deephouse",
-                name: "Deep House Radio",
-                url: "http://stream.laut.fm/deephouse",
-                genre: "Deep House/Electronic",
-                country: "International",
-                description: "24/7 Deep House Radio Stream",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMDMzNjYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMEZGRkYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkRFRVA8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMDBGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1VTRTI8L3RleHQ+Cjwvc3ZnPgo="
-            },
-            {
-                id: "trapmusic",
-                name: "Trap Music Radio",
-                url: "http://stream.laut.fm/trap",
-                genre: "Trap/Hip-Hop",
-                country: "USA",
-                description: "24/7 Trap Music Radio Stream",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwNzciLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFJBUDwvdGV4dD4KPC9zdmc+Cg=="
-            },
-            {
-                id: "gaming",
-                name: "Gaming Music Radio",
-                url: "http://stream.laut.fm/gaming",
-                genre: "Gaming/Electronic",
-                country: "International",
-                description: "24/7 Gaming Music Radio Stream",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwMEZGMDAiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkdBTUlORzwvdGV4dD4KPHRleHQgeD0iMzIiIHk9IjQ0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMwMDAwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPk1VU0lDPC90ZXh0Pgo8L3N2Zz4K"
-            },
-            {
-                id: "jazzhop",
-                name: "Jazz Hop Cafe",
-                url: "http://stream.laut.fm/jazzhop",
-                genre: "Jazz Hop/Chill",
-                country: "International",
-                description: "24/7 Jazz Hop Cafe Radio Stream",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM4QjQ1MTMiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNGRkQ3MDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkpBWlo8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZENzAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IT1A8L3RleHQ+Cjwvc3ZnPgo="
-            },
-            {
-                id: "retrowave",
-                name: "Retrowave Radio",
-                url: "http://stream.laut.fm/retrowave",
-                genre: "Retrowave/80s",
-                country: "International",
-                description: "24/7 Retrowave Radio Stream",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwRkYiLz4KPHRleHQgeD0iMzIiIHk9IjI4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SRVRST1dBVkU8L3RleHQ+Cjx0ZXh0IHg9IjMyIiB5PSI0NCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MjQvNzwvdGV4dD4KPC9zdmc+Cg=="
-            },
-            {
-                id: "bassmusic",
-                name: "Bass Music Radio",
-                url: "http://stream.laut.fm/bass",
-                genre: "Bass/Dubstep",
-                country: "International",
-                description: "24/7 Bass Music Radio Stream",
-                logo: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRjAwMDAiLz4KPHRleHQgeD0iMzIiIHk9IjM4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QkFTUzwvdGV4dD4KPC9zdmc+Cg=="
-            }
-        ],
-        defaultStation: "lofi",
-        autoStop: false,
-        showNowPlaying: true,
-        embedColor: "#FF6B6B"
-    },
     localMusic: {
         enabled: true,
         musicDirectory: './music',
@@ -128,10 +47,7 @@ const voiceConnections = new Map(); // guild -> connection
 const audioPlayers = new Map(); // guild -> player
 const currentStations = new Map(); // guildId -> current station
 const currentSongs = new Map(); // guildId -> current song info
-const currentRadioStations = new Map(); // guildId -> current radio station
-const currentVolume = new Map(); // Neue Map für Guild-Volume Tracking
-
-// Entfernt - Stream Restart Control Maps nicht mehr benötigt bei vereinfachtem Radio-System
+const currentVolume = new Map(); // Guild-Volume Tracking
 
 // Genre-Liste für Dropdown
 const musicGenres = [
@@ -424,16 +340,6 @@ function getMusicStation(stationId) {
     return stations.find(station => station.id === stationId);
 }
 
-// Radio System Functions 
-function getRadioStations() {
-    return musicSettings.radio?.stations || [];
-}
-
-function getRadioStation(stationId) {
-    const stations = getRadioStations();
-    return stations.find(station => station.id === stationId);
-}
-
 // Lokale MP3 abspielen
 async function playLocalSong(guildId, songId) {
     try {
@@ -529,107 +435,6 @@ async function playMusicStation(guildId, stationId) {
     }
 }
 
-// Radio Station abspielen - VEREINFACHT wie MP3-System
-async function playRadioStation(guildId, stationId) {
-    try {
-        const station = getRadioStation(stationId);
-        if (!station) {
-            throw new Error(`Radio-Station "${stationId}" nicht gefunden`);
-        }
-
-        console.log(`📻 Starte Radio-Station: ${station.name} für Guild ${guildId}`);
-        console.log(`📻 Station URL: ${station.url}`);
-
-        // Auto-Join falls nicht im Voice-Channel (genau wie MP3)
-        let connection = voiceConnections.get(guildId);
-        if (!connection) {
-            console.log('📻 Auto-Join für Radio-Wiedergabe');
-            const autoJoinSuccess = await autoJoinForMusic(guildId); // Verwende gleiche Funktion wie MP3
-            if (!autoJoinSuccess) {
-                throw new Error('Bot konnte keinem Voice-Channel beitreten');
-            }
-            connection = voiceConnections.get(guildId);
-        }
-
-        // Erstelle Player (genau wie MP3)
-        const player = createPlayerForGuild(guildId);
-
-        // Erstelle Audio Resource - SUPER VEREINFACHT
-        let resource;
-        
-        if (station.url.includes('youtube.com') || station.url.includes('youtu.be')) {
-            console.log('📻 YouTube-Stream erkannt, verwende play-dl...');
-            try {
-                const stream = await play.stream(station.url, {
-                    quality: 1
-                });
-                
-                resource = createAudioResource(stream.stream, {
-                    inputType: stream.type,
-                    inlineVolume: true
-                });
-            } catch (playError) {
-                console.error('❌ play-dl Fehler:', playError);
-                throw playError; // Nicht weiter versuchen
-            }
-        } else {
-            // HTTP-Stream - EINFACH wie MP3 ohne FFmpeg Komplexität!
-            console.log('📻 Direkter HTTP-Stream (einfach wie MP3)...');
-            resource = createAudioResource(station.url, {
-                inputType: StreamType.Arbitrary, // Genau wie MP3
-                inlineVolume: true
-            });
-        }
-
-        // Volume setzen (genau wie MP3)
-        if (resource.volume) {
-            const volume = getVolumeForGuild(guildId) / 100;
-            resource.volume.setVolume(volume);
-        }
-
-        // Einfache Event-Listener (wie MP3, OHNE komplexe Restart-Logik)
-        player.on(AudioPlayerStatus.Playing, () => {
-            console.log(`✅ Radio spielt: ${station.name}`);
-        });
-
-        player.on(AudioPlayerStatus.Idle, () => {
-            console.log(`⏸️ Radio beendet: ${station.name}`);
-            // Einfach stoppen, kein Auto-Restart
-            stopRadio(guildId);
-        });
-
-        player.on('error', (error) => {
-            console.error(`❌ Radio Player Fehler:`, error);
-            stopRadio(guildId);
-        });
-
-        // Spiele ab (genau wie MP3)
-        player.play(resource);
-        connection.subscribe(player);
-
-        // Setze als aktueller Radio-Sender
-        currentRadioStations.set(guildId, station);
-
-        console.log(`✅ Radio-Station ${station.name} gestartet`);
-        
-        // Update Interactive Panel
-        updateInteractiveRadioPanel(guildId, true);
-        
-        // Sende Now-Playing Nachricht
-        if (musicSettings.radio?.showNowPlaying && musicSettings.announcements?.channelId) {
-            await sendRadioNowPlayingMessage(guildId, station);
-        }
-
-        return true;
-
-    } catch (error) {
-        console.error(`❌ Fehler beim Starten der Radio-Station:`, error);
-        throw error;
-    }
-}
-
-
-
 function stopMusic(guildId) {
     try {
         console.log(`📻 Stoppe Musik für Guild ${guildId}`);
@@ -668,90 +473,6 @@ function getCurrentStation(guildId) {
 
 function isPlayingMusic(guildId) {
     return currentSongs.has(guildId) || currentStations.has(guildId);
-}
-
-function stopRadio(guildId) {
-    try {
-        console.log(`📻 Stoppe Radio für Guild ${guildId}`);
-        
-        // Entferne aktuellen Radio-Sender
-        currentRadioStations.delete(guildId);
-        
-        // Stoppe Player (genau wie MP3)
-        const player = audioPlayers.get(guildId);
-        if (player) {
-            player.stop();
-        }
-
-        // Update Interactive Panel
-        updateInteractiveRadioPanel(guildId, true);
-
-        console.log(`✅ Radio gestoppt`);
-        return true;
-
-    } catch (error) {
-        console.error(`❌ Fehler beim Stoppen des Radios:`, error);
-        return false;
-    }
-}
-
-function getCurrentRadioStation(guildId) {
-    return currentRadioStations.get(guildId) || null;
-}
-
-function isPlayingRadio(guildId) {
-    return currentRadioStations.has(guildId);
-}
-
-// Auto-Join für Musik
-async function autoJoinForMusic(guildId) {
-    try {
-        console.log(`🤖 Auto-Join für Musik gestartet: ${guildId}`);
-        
-        if (!global.client) {
-            console.log('❌ global.client nicht verfügbar');
-            return false;
-        }
-        
-        const guild = global.client.guilds.cache.get(guildId);
-        if (!guild) {
-            console.log(`❌ Guild ${guildId} nicht gefunden`);
-            return false;
-        }
-        
-        // Finde Voice-Channels mit Usern
-        const voiceChannelsWithUsers = guild.channels.cache.filter(channel => 
-            channel.isVoiceBased() && 
-            channel.members.size > 0 &&
-            !channel.members.every(member => member.user.bot)
-        );
-        
-        const allVoiceChannels = guild.channels.cache.filter(channel => 
-            channel.isVoiceBased() && 
-            channel.joinable
-        );
-        
-        let targetChannel;
-        
-        if (voiceChannelsWithUsers.size > 0) {
-            targetChannel = voiceChannelsWithUsers.sort((a, b) => b.members.size - a.members.size).first();
-        } else if (allVoiceChannels.size > 0) {
-            targetChannel = allVoiceChannels.first();
-        }
-        
-        if (!targetChannel) {
-            console.log('❌ Keine beitretbaren Voice-Channels gefunden');
-            return false;
-        }
-        
-        console.log(`🎵 Auto-Join: Trete ${targetChannel.name} bei`);
-        const joinResult = await joinVoiceChannelSafe(targetChannel);
-        
-        return !!joinResult;
-    } catch (error) {
-        console.error('❌ Fehler beim Auto-Join:', error);
-        return false;
-    }
 }
 
 // Now Playing Message für lokale Songs
@@ -795,160 +516,79 @@ async function sendNowPlayingMessage(guildId, song) {
     }
 }
 
-async function sendRadioNowPlayingMessage(guildId, station) {
+// Interactive Panel für MP3-Musik-System
+async function createInteractiveMusicPanel(guildId) {
     try {
-        if (!musicSettings.announcements?.channelId) return;
-
-        const guild = global.client?.guilds.cache.get(guildId);
-        if (!guild) return;
-
-        const channel = guild.channels.cache.get(musicSettings.announcements.channelId);
-        if (!channel) return;
-        
-        const embed = {
-            color: parseInt(musicSettings.radio?.embedColor?.replace('#', '') || 'FF6B6B', 16),
-            title: '📻 Radio läuft jetzt',
-            description: `**${station.name}** wird abgespielt`,
-            fields: [
-                {
-                    name: '🎵 Genre',
-                    value: station.genre,
-                    inline: true
-                },
-                {
-                    name: '🌍 Land',
-                    value: station.country,
-                    inline: true
-                },
-                {
-                    name: '📝 Beschreibung',
-                    value: station.description,
-                    inline: false
-                }
-            ],
-            thumbnail: {
-                url: station.logo
-            },
-            timestamp: new Date().toISOString(),
-            footer: {
-                text: '📻 YouTube Radio-Modus • Einfaches Discord Radio System'
-            }
-        };
-
-        await channel.send({ embeds: [embed] });
-
-    } catch (error) {
-        console.error('❌ Fehler beim Senden der Radio Now-Playing Nachricht:', error);
-    }
-}
-
-// Interactive Panel für Musik-System
-async function updateInteractiveMusicPanel(guildId, forceUpdate = false) {
-    try {
-        // Placeholder - könnte in Zukunft ein Interactive Panel für Musik-Steuerung haben
-        console.log(`🎵 Music Panel Update für Guild: ${guildId} (${forceUpdate ? 'forced' : 'auto'})`);
-        return true;
-    } catch (error) {
-        console.error('❌ Fehler beim Music Panel Update:', error);
-        return false;
-    }
-}
-
-// Interactive Panel für vollständiges Musik-System (Radio + MP3)
-async function createInteractiveRadioPanel(guildId) {
-    try {
-        const guild = global.client?.guilds.cache.get(guildId);
-        if (!guild) {
-            console.log('❌ Guild nicht gefunden für Interactive Panel');
-            return null;
-        }
-
-        const embedColor = parseInt(musicSettings.interactivePanel?.embedColor?.replace('#', '') || 'FF6B6B', 16);
+        console.log(`🎵 Erstelle Interactive Musik Panel für Guild: ${guildId}`);
         
         // Aktueller Status prüfen
-        const currentRadioStation = getCurrentRadioStation(guildId);
         const currentSong = getCurrentSong(guildId);
         const currentMusicStation = getCurrentStation(guildId);
-
+        
+        // Musik-Infos sammeln
+        const availableSongs = getAvailableSongs();
+        const musicStations = getMusicStations();
+        
+        // Embed erstellen
         const embed = {
-            color: embedColor,
-            title: '🎵 Musik Control Panel',
-            description: '**Vollständiges Musik-System!**\n\n' +
+            color: parseInt(musicSettings.localMusic?.embedColor?.replace('#', '') || 'FF6B6B', 16),
+            title: '🎵 Musik-System',
+            description: '**Lokale MP3-Bibliothek!**\n\n' +
                         '🎯 **Verfügbare Funktionen:**\n' +
-                        '• 📻 **Radio-Streams** - 24/7 Live-Streams\n' +
                         '• 🎵 **MP3-Bibliothek** - Lokale Musik-Dateien\n' +
                         '• 🎼 **Playlists** - Custom Musik-Sammlungen\n' +
-                        '• 🔊 **Voice-Control** - Automatisches Join/Leave\n\n' +
-                        '👆 **Wähle eine Option:**',
+                        '• 🎚️ **Lautstärke** - Volume-Kontrolle\n' +
+                        '• 🎙️ **Voice-Chat** - Auto-Join Funktionen',
             fields: [],
             footer: {
-                text: '🎵 Vollständiges Musik-System • Radio, MP3s & Playlists'
+                text: '🎵 Lokales Musik-System • MP3s & Playlists'
             },
             timestamp: new Date().toISOString()
         };
-
+        
         // Zeige aktuellen Status
-        if (currentRadioStation) {
-            embed.fields.push({
-                name: '📻 Radio läuft',
-                value: `**${currentRadioStation.name}**\n🎧 ${currentRadioStation.genre || currentRadioStation.description}`,
-                inline: true
-            });
-        } else if (currentSong) {
+        if (currentSong) {
             embed.fields.push({
                 name: '🎵 MP3 läuft',
-                value: `**${currentSong.title || currentSong.filename}**\n👤 ${currentSong.artist || 'Lokale Datei'}`,
+                value: `**${currentSong.title}**\n🎤 ${currentSong.artist || 'Unbekannt'}`,
                 inline: true
             });
         } else if (currentMusicStation) {
             embed.fields.push({
                 name: '🎼 Playlist läuft',
-                value: `**${currentMusicStation.name}**\n📀 ${currentMusicStation.playlist?.length || 0} Songs`,
+                value: `**${currentMusicStation.name}**\n🎧 ${currentMusicStation.description}`,
                 inline: true
             });
         } else {
             embed.fields.push({
-                name: '🔇 Musik Status',
-                value: 'Keine Musik aktiv\nWähle eine Option unten!',
+                name: '⏸️ Status',
+                value: 'Keine Musik läuft',
                 inline: true
             });
         }
-
-        // Statistiken über verfügbare Inhalte
-        const availableSongs = getAvailableSongs();
-        const musicStations = getMusicStations();
-        const radioStations = getRadioStations();
+        
+        const guildVolume = getVolumeForGuild(guildId);
+        embed.fields.push({
+            name: '🔊 Lautstärke',
+            value: `${guildVolume}%`,
+            inline: true
+        });
         
         embed.fields.push({
             name: '📊 Verfügbare Inhalte',
-            value: `📻 **${radioStations.length}** Radio-Streams\n🎵 **${availableSongs.length}** MP3-Dateien\n🎼 **${musicStations.length}** Playlists`,
+            value: `🎵 **${availableSongs.length}** MP3-Dateien\n🎼 **${musicStations.length}** Playlists`,
             inline: true
         });
-
-        // Voice-Channel Status
-        const { getVoiceConnection } = require('@discordjs/voice');
-        const voiceConnection = getVoiceConnection(guildId);
-        const voiceStatus = voiceConnection ? '🔊 Im Voice-Channel' : '🚪 Nicht verbunden';
         
-        embed.fields.push({
-            name: '🎤 Voice Status',
-            value: voiceStatus,
-            inline: true
-        });
-
         // Erstelle Buttons
-        const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+        const { ButtonBuilder, ActionRowBuilder } = require('discord.js');
         
         // Erste Reihe: Hauptfunktionen
         const mainButtons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId('music_radio_select')
-                    .setLabel('📻 Radio')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
                     .setCustomId('music_mp3_select')
-                    .setLabel('🎵 MP3 Bibliothek')
+                    .setLabel('🎵 MP3')
                     .setStyle(ButtonStyle.Primary),
                 new ButtonBuilder()
                     .setCustomId('music_playlist_select')
@@ -958,312 +598,165 @@ async function createInteractiveRadioPanel(guildId) {
                     .setCustomId('music_stop_all')
                     .setLabel('⏹️ Stop')
                     .setStyle(ButtonStyle.Danger)
-                    .setDisabled(!currentRadioStation && !currentSong && !currentMusicStation)
+                    .setDisabled(!currentSong && !currentMusicStation)
             );
-
-        // Zweite Reihe: Voice-Control
-        const controlButtons = new ActionRowBuilder()
+        
+        // Zweite Reihe: Voice-Chat Funktionen
+        const voiceButtons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('music_voice_join')
-                    .setLabel('🔊 Voice Join')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(!!voiceConnection),
+                    .setLabel('🎙️ Join')
+                    .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
                     .setCustomId('music_voice_leave')
-                    .setLabel('🚪 Voice Leave')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(!voiceConnection),
+                    .setLabel('🚪 Leave')
+                    .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId('music_refresh')
-                    .setLabel('🔄 Aktualisieren')
+                    .setLabel('🔄 Refresh')
                     .setStyle(ButtonStyle.Secondary)
             );
-
-        // Dritte Reihe: Volume-Control
-        const currentVolume = getVolumeForGuild(guildId);
+        
+        // Dritte Reihe: Lautstärke-Kontrolle
         const volumeButtons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('music_volume_down')
                     .setLabel('🔉 -10%')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(currentVolume <= 0),
+                    .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId('music_volume_show')
-                    .setLabel(`🔊 ${currentVolume}%`)
-                    .setStyle(ButtonStyle.Primary)
-                    .setDisabled(true),
+                    .setLabel('🔊 Volume')
+                    .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId('music_volume_up')
                     .setLabel('🔊 +10%')
                     .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(currentVolume >= 100)
             );
-
-        return { embeds: [embed], components: [mainButtons, controlButtons, volumeButtons] };
-
+        
+        return {
+            embeds: [embed],
+            components: [mainButtons, voiceButtons, volumeButtons]
+        };
+        
     } catch (error) {
-        console.error('❌ Fehler beim Erstellen des Musik Panels:', error);
-        return null;
+        console.error('❌ Fehler beim Erstellen des Musik-Panels:', error);
+        throw error;
     }
 }
 
-async function postInteractiveRadioPanel(guildId) {
+// Post Interactive Panel für Musik-System
+async function postInteractiveMusicPanel(guildId) {
     try {
-        console.log(`📻 Starte Interactive Radio Panel Management für Guild: ${guildId}`);
+        console.log(`🎵 Starte Interactive Musik Panel Management für Guild: ${guildId}`);
         
-        const guild = global.client?.guilds.cache.get(guildId);
+        if (!global.client?.guilds) {
+            console.log('❌ Discord Client nicht verfügbar');
+            return false;
+        }
+        
+        const guild = global.client.guilds.cache.get(guildId);
         if (!guild) {
             console.log(`❌ Guild ${guildId} nicht gefunden`);
             return false;
         }
-
-        const channelId = musicSettings.interactivePanel.channelId;
-        console.log(`🔍 Suche Channel: "${channelId}"`);
         
-        // Suche Channel nach ID (nicht Name!)
+        const channelId = musicSettings.interactivePanel?.channelId;
+        if (!channelId) {
+            console.log('❌ Kein Interactive Panel Channel konfiguriert');
+            return false;
+        }
+        
         const channel = guild.channels.cache.get(channelId);
         if (!channel) {
-            console.log(`❌ Channel "${channelId}" nicht gefunden in Guild ${guild.name}`);
-            console.log(`📋 Verfügbare Text-Channels:`, guild.channels.cache.filter(ch => ch.type === 0).map(ch => `${ch.name} (${ch.id})`).join(', '));
+            console.log(`❌ Channel ${channelId} nicht gefunden`);
             return false;
         }
-
-        console.log(`📻 Channel gefunden: #${channel.name} (ID: ${channel.id})`);
-
-        // Prüfe ob bereits ein Panel existiert und verhindere Doppel-Posting
-        const existingMessageId = musicSettings.interactivePanel.messageId;
+        
+        // Checke ob Panel bereits existiert
+        const existingMessageId = musicSettings.interactivePanel?.messageId;
         if (existingMessageId) {
-            console.log(`🔄 Existierende Panel-Message gefunden: ${existingMessageId}`);
-            
             try {
-                const existingMessage = await channel.messages.fetch(existingMessageId);
-                if (existingMessage && existingMessage.author.id === global.client.user.id) {
-                    console.log('✅ Panel existiert bereits und ist vom Bot - ÜBERSPRINGE neues Posting');
-                    console.log('🔄 Aktualisiere nur das bestehende Panel...');
-                    return await updateInteractiveRadioPanel(guildId, true);
+                const existingMessage = await channel.messages.fetch(existingMessageId).catch(() => null);
+                if (existingMessage) {
+                    console.log('📋 Panel bereits vorhanden, verwende Update...');
+                    return await updateInteractiveMusicPanel(guildId, true);
                 }
-            } catch (error) {
-                console.log('⚠️ Existierende Message nicht mehr gültig, erstelle neue');
-                // Message existiert nicht mehr, erstelle neue
-                musicSettings.interactivePanel.messageId = '';
-                saveMusicSettings();
+            } catch (err) {
+                console.log('⚠️ Existierende Panel-Message nicht gefunden, erstelle neue...');
             }
         }
-
-        // Erstelle neues Panel
-        console.log(`📻 Erstelle neues Interactive Radio Panel in #${channel.name}`);
-
-        const panelData = await createInteractiveRadioPanel(guildId);
-        if (!panelData) {
-            console.log('❌ Konnte Panel-Daten nicht erstellen');
+        
+        console.log(`🎵 Erstelle neues Interactive Musik Panel in #${channel.name}`);
+        
+        const panelData = await createInteractiveMusicPanel(guildId);
+        
+        try {
+            const message = await channel.send(panelData);
+            
+            // Speichere Message ID in Settings
+            musicSettings.interactivePanel.messageId = message.id;
+            saveMusicSettings();
+            
+            console.log(`✅ Musik Panel erfolgreich erstellt: ${message.id} in #${channel.name}`);
+            return true;
+            
+        } catch (sendError) {
+            console.error('❌ Fehler beim Senden des Panels:', sendError);
             return false;
         }
-
-        // Poste neue Message
-        const message = await channel.send(panelData);
         
-        // Speichere Message ID
-        musicSettings.interactivePanel.messageId = message.id;
-        saveMusicSettings();
-
-        console.log(`✅ Radio Panel erfolgreich erstellt: ${message.id} in #${channel.name}`);
-        return true;
-
     } catch (error) {
-        console.error('❌ Fehler beim Panel Management:', error);
-        console.error('❌ Error Stack:', error.stack);
+        console.error('❌ Fehler beim Posten des Interactive Musik Panels:', error);
         return false;
     }
 }
 
-async function updateInteractiveRadioPanel(guildId, forceUpdate = false) {
+// Update Interactive Panel für Musik-System  
+async function updateInteractiveMusicPanel(guildId, forceUpdate = false) {
     try {
-        // Prüfe Auto-Update Setting nur wenn nicht forced
-        if (!forceUpdate && !musicSettings.interactivePanel.autoUpdate) {
-            console.log('📻 Panel Update übersprungen - Auto-Update deaktiviert');
-            return true; // Kein Fehler, nur übersprungen
-        }
-
-        // Prüfe ob Client verfügbar ist
-        if (!global.client) {
-            console.log('⚠️ Discord Client nicht verfügbar');
-            return false;
-        }
-
-        const guild = global.client.guilds.cache.get(guildId);
-        if (!guild) {
-            console.log(`⚠️ Guild ${guildId} nicht gefunden`);
-            return false;
-        }
-
-        const channelId = musicSettings.interactivePanel.channelId;
-        const messageId = musicSettings.interactivePanel.messageId;
+        if (!global.client?.guilds) return false;
         
-        if (!channelId) {
-            console.log('⚠️ Kein Channel für Interactive Panel konfiguriert');
+        const guild = global.client.guilds.cache.get(guildId);
+        if (!guild) return false;
+        
+        const channelId = musicSettings.interactivePanel?.channelId;
+        const messageId = musicSettings.interactivePanel?.messageId;
+        
+        if (!channelId || !messageId) {
+            console.log('⚠️ Keine Panel-Konfiguration gefunden');
             return false;
         }
-
-        if (!messageId) {
-            console.log('⚠️ Keine Message-ID für Interactive Panel konfiguriert');
-            return false;
-        }
-
-        // Suche Channel nach ID
+        
         const channel = guild.channels.cache.get(channelId);
-        if (!channel) {
-            console.log(`⚠️ Channel "${channelId}" nicht gefunden`);
-            return false;
-        }
-
-        // Versuche Nachricht zu fetchen
-        let message;
+        if (!channel) return false;
+        
         try {
-            message = await channel.messages.fetch(messageId);
-        } catch (fetchError) {
-            console.log(`⚠️ Nachricht ${messageId} nicht gefunden:`, fetchError.message);
-            return false;
-        }
-
-        if (!message) {
-            console.log(`⚠️ Nachricht ${messageId} ist null`);
-            return false;
-        }
-
-        // Erstelle Panel-Daten
-        const panelData = await createInteractiveRadioPanel(guildId);
-        if (!panelData) {
-            console.log('⚠️ Konnte Panel-Daten nicht erstellen');
-            return false;
-        }
-
-        // Aktualisiere Nachricht
-        try {
+            const message = await channel.messages.fetch(messageId);
+            
+            const panelData = await createInteractiveMusicPanel(guildId);
+            
             await message.edit(panelData);
-            console.log('🔄 Radio Panel erfolgreich aktualisiert');
+            
+            console.log('🔄 Musik Panel erfolgreich aktualisiert');
             return true;
-        } catch (editError) {
-            console.log('⚠️ Fehler beim Bearbeiten der Panel-Nachricht:', editError.message);
-            return false;
+            
+        } catch (fetchError) {
+            console.log('❌ Panel-Message nicht gefunden, erstelle neue...');
+            // Entferne alte Message ID und erstelle neue
+            musicSettings.interactivePanel.messageId = "";
+            saveMusicSettings();
+            return await postInteractiveMusicPanel(guildId);
         }
-
+        
     } catch (error) {
-        console.error('❌ Unerwarteter Fehler beim Aktualisieren des Radio Panels:', error);
+        console.error('❌ Unerwarteter Fehler beim Aktualisieren des Musik Panels:', error);
         return false;
     }
 }
 
 // Button Interactions für vollständiges Musik-System
-async function handleMusicRadioSelectButton(interaction) {
-    try {
-        const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
-
-        const stations = getMusicStations();
-        
-        // Discord erlaubt nur maximal 25 Optionen - beschränke auf die ersten 25
-        const limitedStations = stations.slice(0, 25);
-        
-        const options = limitedStations.map(station => ({
-            label: station.name,
-            value: station.id,
-            description: `${station.genre} • ${station.description.substring(0, 50)}`,
-            emoji: station.genre.includes('Lofi') ? '🎵' : 
-                   station.genre.includes('Gaming') ? '🎮' : 
-                   station.genre.includes('Bass') ? '🔊' : '📻'
-        }));
-
-        const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId('radio_station_select')
-            .setPlaceholder('Wähle einen Radio-Stream...')
-            .addOptions(options);
-
-        const row = new ActionRowBuilder().addComponents(selectMenu);
-
-        // Zeige Info wenn mehr als 25 Sender verfügbar sind
-        const contentText = stations.length > 25 
-            ? `📻 **Wähle deinen Radio-Stream:** (${limitedStations.length} von ${stations.length} Sendern)`
-            : '📻 **Wähle deinen Radio-Stream:**';
-
-        await interaction.reply({
-            content: contentText,
-            components: [row],
-            ephemeral: true
-        });
-
-    } catch (error) {
-        console.error('❌ Fehler beim Radio Select Button:', error);
-        await interaction.reply({
-            content: '❌ Ein Fehler ist aufgetreten.',
-            ephemeral: true
-        });
-    }
-}
-
-async function handleRadioStationSelect(interaction) {
-    try {
-        const stationId = interaction.values[0];
-        const guildId = interaction.guild.id;
-
-        console.log(`📻 Radio-Station ausgewählt: ${stationId} von ${interaction.user.tag}`);
-
-        await interaction.deferReply({ ephemeral: true });
-
-        const success = await playRadioStation(guildId, stationId);
-        
-        if (success) {
-            const station = getRadioStation(stationId);
-            await interaction.editReply({
-                content: `✅ **${station.name}** wird jetzt abgespielt! 📻`
-            });
-            
-            // Update Panel
-            await updateInteractiveRadioPanel(guildId);
-        } else {
-            await interaction.editReply({
-                content: '❌ Fehler beim Starten des Radio-Streams.'
-            });
-        }
-
-    } catch (error) {
-        console.error('❌ Fehler beim Radio Station Select:', error);
-        await interaction.editReply({
-            content: '❌ Ein Fehler ist beim Starten des Radios aufgetreten.'
-        });
-    }
-}
-
-async function handleRadioStopButton(interaction) {
-    try {
-        const guildId = interaction.guild.id;
-
-        await interaction.deferReply({ ephemeral: true });
-
-        const success = stopRadio(guildId);
-        
-        if (success) {
-            await interaction.editReply({
-                content: '⏹️ Radio gestoppt!'
-            });
-            
-            // Update Panel
-            await updateInteractiveRadioPanel(guildId);
-        } else {
-            await interaction.editReply({
-                content: '❌ Fehler beim Stoppen des Radios.'
-            });
-        }
-
-    } catch (error) {
-        console.error('❌ Fehler beim Radio Stop Button:', error);
-        await interaction.editReply({
-            content: '❌ Ein Fehler ist aufgetreten.'
-        });
-    }
-}
-
-// Neue Button Handler für vollständiges Musik-System
 async function handleMusicMP3SelectButton(interaction) {
     try {
         const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
@@ -1352,27 +845,25 @@ async function handleMusicPlaylistSelectButton(interaction) {
 
 async function handleMusicStopAllButton(interaction) {
     try {
-        const guildId = interaction.guild?.id;
-        if (!guildId) return;
+        const guildId = interaction.guild.id;
+
+        await interaction.deferReply({ ephemeral: true });
 
         // Stoppe alles
-        stopRadio(guildId);
         stopMusic(guildId);
 
-        await interaction.reply({
-            content: '⏹️ **Musik gestoppt**\n\nAlle Radio-Streams und MP3s wurden beendet.',
+        await interaction.editReply({
+            content: '⏹️ **Musik gestoppt**\n\nAlle MP3s wurden beendet.',
             ephemeral: true
         });
 
         // Update Panel
-        setTimeout(() => {
-            updateInteractiveRadioPanel(guildId, true);
-        }, 1000);
+        updateInteractiveMusicPanel(guildId, true);
 
     } catch (error) {
-        console.error('❌ Fehler beim Stoppen der Musik:', error);
-        await interaction.reply({
-            content: '❌ Fehler beim Stoppen der Musik.',
+        console.error('❌ Fehler beim Music Stop All Button:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Stoppen der Musik!',
             ephemeral: true
         });
     }
@@ -1380,40 +871,31 @@ async function handleMusicStopAllButton(interaction) {
 
 async function handleMusicVoiceJoinButton(interaction) {
     try {
-        const guildId = interaction.guild?.id;
-        const member = interaction.member;
+        const guildId = interaction.guild.id;
 
-        if (!member?.voice?.channel) {
-            await interaction.reply({
-                content: '❌ **Du musst in einem Voice-Channel sein!**\n\nJoine einen Voice-Channel und versuche es erneut.',
+        await interaction.deferReply({ ephemeral: true });
+
+        const success = await autoJoinForMusic(guildId);
+
+        if (success) {
+            await interaction.editReply({
+                content: '🎙️ **Voice-Channel beigetreten!**',
                 ephemeral: true
             });
-            return;
-        }
-
-        const connection = await joinVoiceChannelSafe(member.voice.channel);
-        
-        if (connection) {
-            await interaction.reply({
-                content: `🔊 **Voice-Channel beigetreten!**\n\n✅ Verbunden mit: **${member.voice.channel.name}**`,
-                ephemeral: true
-            });
-
-            // Update Panel
-            setTimeout(() => {
-                updateInteractiveRadioPanel(guildId, true);
-            }, 1000);
         } else {
-            await interaction.reply({
-                content: '❌ Konnte dem Voice-Channel nicht beitreten.\n\nÜberprüfe die Bot-Berechtigungen.',
+            await interaction.editReply({
+                content: '❌ **Konnte keinem Voice-Channel beitreten**\n\nStelle sicher, dass du in einem Voice-Channel bist oder es verfügbare Channels gibt.',
                 ephemeral: true
             });
         }
+
+        // Update Panel
+        updateInteractiveMusicPanel(guildId, true);
 
     } catch (error) {
-        console.error('❌ Fehler beim Voice-Join:', error);
-        await interaction.reply({
-            content: '❌ Fehler beim Beitreten des Voice-Channels.',
+        console.error('❌ Fehler beim Music Voice Join Button:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Beitreten des Voice-Channels!',
             ephemeral: true
         });
     }
@@ -1421,28 +903,26 @@ async function handleMusicVoiceJoinButton(interaction) {
 
 async function handleMusicVoiceLeaveButton(interaction) {
     try {
-        const guildId = interaction.guild?.id;
-        if (!guildId) return;
+        const guildId = interaction.guild.id;
+
+        await interaction.deferReply({ ephemeral: true });
 
         // Stoppe Musik und verlasse Channel
-        stopRadio(guildId);
         stopMusic(guildId);
         leaveVoiceChannel(guildId);
 
-        await interaction.reply({
-            content: '🚪 **Voice-Channel verlassen**\n\n✅ Musik gestoppt und Channel verlassen.',
+        await interaction.editReply({
+            content: '🚪 **Voice-Channel verlassen**\n\nMusik gestoppt und Channel verlassen.',
             ephemeral: true
         });
 
         // Update Panel
-        setTimeout(() => {
-            updateInteractiveRadioPanel(guildId, true);
-        }, 1000);
+        updateInteractiveMusicPanel(guildId, true);
 
     } catch (error) {
-        console.error('❌ Fehler beim Voice-Leave:', error);
-        await interaction.reply({
-            content: '❌ Fehler beim Verlassen des Voice-Channels.',
+        console.error('❌ Fehler beim Music Voice Leave Button:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Verlassen des Voice-Channels!',
             ephemeral: true
         });
     }
@@ -1450,23 +930,25 @@ async function handleMusicVoiceLeaveButton(interaction) {
 
 async function handleMusicRefreshButton(interaction) {
     try {
-        const guildId = interaction.guild?.id;
-        if (!guildId) return;
+        const guildId = interaction.guild.id;
 
-        await interaction.reply({
-            content: '🔄 **Panel wird aktualisiert...**',
+        await interaction.deferReply({ ephemeral: true });
+
+        // Scanne Musik-Ordner neu
+        scanMusicDirectory();
+
+        await interaction.editReply({
+            content: '🔄 **Musik-Bibliothek aktualisiert!**\n\nAlle MP3-Dateien wurden neu gescannt.',
             ephemeral: true
         });
 
         // Update Panel
-        setTimeout(() => {
-            updateInteractiveRadioPanel(guildId, true);
-        }, 500);
+        updateInteractiveMusicPanel(guildId, true);
 
     } catch (error) {
-        console.error('❌ Fehler beim Aktualisieren:', error);
-        await interaction.reply({
-            content: '❌ Fehler beim Aktualisieren des Panels.',
+        console.error('❌ Fehler beim Music Refresh Button:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Aktualisieren der Musik-Bibliothek!',
             ephemeral: true
         });
     }
@@ -1490,7 +972,7 @@ async function handleMusicMP3SongSelect(interaction) {
 
         // Update Panel nach kurzer Verzögerung
         setTimeout(() => {
-            updateInteractiveRadioPanel(guildId, true);
+            updateInteractiveMusicPanel(guildId, true);
         }, 2000);
 
     } catch (error) {
@@ -1520,7 +1002,7 @@ async function handleMusicPlaylistStationSelect(interaction) {
 
         // Update Panel nach kurzer Verzögerung
         setTimeout(() => {
-            updateInteractiveRadioPanel(guildId, true);
+            updateInteractiveMusicPanel(guildId, true);
         }, 2000);
 
     } catch (error) {
@@ -1546,13 +1028,11 @@ async function handleMusicVolumeUpButton(interaction) {
             ephemeral: true
         });
 
-        // Update Panel nach Volume-Änderung
-        if (musicSettings.interactivePanel?.enabled) {
-            await updateInteractiveRadioPanel(guildId, true);
-        }
+        // Update Panel
+        await updateInteractiveMusicPanel(guildId, true);
 
     } catch (error) {
-        console.error('❌ Fehler bei Volume Up:', error);
+        console.error('❌ Fehler beim Volume Up Button:', error);
         await interaction.followUp({
             content: '❌ Fehler beim Erhöhen der Lautstärke!',
             ephemeral: true
@@ -1572,13 +1052,11 @@ async function handleMusicVolumeDownButton(interaction) {
             ephemeral: true
         });
 
-        // Update Panel nach Volume-Änderung
-        if (musicSettings.interactivePanel?.enabled) {
-            await updateInteractiveRadioPanel(guildId, true);
-        }
+        // Update Panel
+        await updateInteractiveMusicPanel(guildId, true);
 
     } catch (error) {
-        console.error('❌ Fehler bei Volume Down:', error);
+        console.error('❌ Fehler beim Volume Down Button:', error);
         await interaction.followUp({
             content: '❌ Fehler beim Verringern der Lautstärke!',
             ephemeral: true
@@ -1586,32 +1064,127 @@ async function handleMusicVolumeDownButton(interaction) {
     }
 }
 
-async function handleRadioSelectButton(interaction) {
-    // Leite an die neue Musik-Radio-Select Funktion weiter
-    return await handleMusicRadioSelectButton(interaction);
+async function handleMusicVolumeShowButton(interaction) {
+    try {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const guildId = interaction.guild.id;
+        const currentVolume = getVolumeForGuild(guildId);
+        
+        await interaction.editReply({
+            content: `🔊 **Lautstärke:**\n\`${currentVolume}%\` Volume`,
+            ephemeral: true
+        });
+
+    } catch (error) {
+        console.error('❌ Fehler beim Anzeigen der Lautstärke:', error);
+        await interaction.followUp({
+            content: '❌ Fehler beim Anzeigen der Lautstärke!',
+            ephemeral: true
+        });
+    }
+}
+
+// Auto-Join für Musik
+async function autoJoinForMusic(guildId) {
+    try {
+        console.log(`🤖 Auto-Join für Musik gestartet: ${guildId}`);
+        
+        if (!global.client) {
+            console.log('❌ global.client nicht verfügbar');
+            return false;
+        }
+        
+        const guild = global.client.guilds.cache.get(guildId);
+        if (!guild) {
+            console.log(`❌ Guild ${guildId} nicht gefunden`);
+            return false;
+        }
+        
+        // Finde Voice-Channels mit Usern
+        const voiceChannelsWithUsers = guild.channels.cache.filter(channel => 
+            channel.isVoiceBased() && 
+            channel.members.size > 0 &&
+            !channel.members.every(member => member.user.bot)
+        );
+        
+        const allVoiceChannels = guild.channels.cache.filter(channel => 
+            channel.isVoiceBased() && 
+            channel.joinable
+        );
+        
+        let targetChannel;
+        
+        if (voiceChannelsWithUsers.size > 0) {
+            targetChannel = voiceChannelsWithUsers.sort((a, b) => b.members.size - a.members.size).first();
+        } else if (allVoiceChannels.size > 0) {
+            targetChannel = allVoiceChannels.first();
+        }
+        
+        if (!targetChannel) {
+            console.log('❌ Keine beitretbaren Voice-Channels gefunden');
+            return false;
+        }
+        
+        console.log(`🎵 Auto-Join: Trete ${targetChannel.name} bei`);
+        const joinResult = await joinVoiceChannelSafe(targetChannel);
+        
+        return !!joinResult;
+    } catch (error) {
+        console.error('❌ Fehler beim Auto-Join:', error);
+        return false;
+    }
 }
 
 // API Endpoints
 function registerMusicAPI(app) {
     console.log('🎵 Registriere Musik API...');
 
-    // Get music settings
+    // Get Music Settings
     app.get('/api/music/settings', (req, res) => {
-        res.json({
-            success: true,
-            settings: musicSettings
-        });
-    });
-
-    // Save music settings
-    app.post('/api/music/settings', (req, res) => {
         try {
-            musicSettings = { ...musicSettings, ...req.body };
-            saveMusicSettings();
             res.json({
                 success: true,
-                message: 'Musik-Einstellungen gespeichert'
+                settings: musicSettings
             });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Update Music Settings
+    app.post('/api/music/settings', (req, res) => {
+        try {
+            const newSettings = req.body;
+            
+            // Validierung und sichere Aktualisierung
+            if (newSettings.localMusic) {
+                musicSettings.localMusic = { ...musicSettings.localMusic, ...newSettings.localMusic };
+            }
+            
+            if (newSettings.voiceChannel) {
+                musicSettings.voiceChannel = { ...musicSettings.voiceChannel, ...newSettings.voiceChannel };
+            }
+            
+            if (newSettings.announcements) {
+                musicSettings.announcements = { ...musicSettings.announcements, ...newSettings.announcements };
+            }
+            
+            if (newSettings.interactivePanel) {
+                musicSettings.interactivePanel = { ...musicSettings.interactivePanel, ...newSettings.interactivePanel };
+            }
+            
+            saveMusicSettings();
+            
+            res.json({
+                success: true,
+                message: 'Musik-Einstellungen erfolgreich aktualisiert',
+                settings: musicSettings
+            });
+            
         } catch (error) {
             res.status(500).json({
                 success: false,
@@ -1700,23 +1273,6 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Get Radio-Stationen
-    app.get('/api/music/radio/stations', (req, res) => {
-        try {
-            const stations = getRadioStations();
-            res.json({
-                success: true,
-                stations: stations,
-                enabled: musicSettings.radio?.enabled || false
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
     // Get Musik-Stationen (lokale MP3s)
     app.get('/api/music/stations', (req, res) => {
         try {
@@ -1725,26 +1281,6 @@ function registerMusicAPI(app) {
                 success: true,
                 stations: stations,
                 enabled: musicSettings.localMusic?.enabled || false
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Get current radio status
-    app.get('/api/music/radio/:guildId/status', (req, res) => {
-        try {
-            const { guildId } = req.params;
-            const currentStation = getCurrentRadioStation(guildId);
-            const isPlaying = isPlayingRadio(guildId);
-            
-            res.json({
-                success: true,
-                isPlaying: isPlaying,
-                currentStation: currentStation
             });
         } catch (error) {
             res.status(500).json({
@@ -1814,51 +1350,6 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Play Radio Station
-    app.post('/api/music/radio/:guildId/play', async (req, res) => {
-        try {
-            const { guildId } = req.params;
-            const { stationId } = req.body;
-
-            if (!stationId) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Station-ID erforderlich'
-                });
-            }
-
-            const station = getRadioStation(stationId);
-            if (!station) {
-                return res.status(400).json({
-                    success: false,
-                    error: `Radio-Sender "${stationId}" nicht gefunden`
-                });
-            }
-
-            const success = await playRadioStation(guildId, stationId);
-            
-            if (success) {
-                res.json({
-                    success: true,
-                    message: `📻 Radio-Sender "${station.name}" gestartet`,
-                    station: station
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    error: 'Fehler beim Starten des Radio-Senders'
-                });
-            }
-
-        } catch (error) {
-            console.error('❌ Radio Start Fehler:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
     // Play Local Music Station
     app.post('/api/music/station/:guildId/play', async (req, res) => {
         try {
@@ -1904,33 +1395,6 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Stop radio
-    app.post('/api/music/radio/:guildId/stop', (req, res) => {
-        try {
-            const { guildId } = req.params;
-            
-            const success = stopRadio(guildId);
-            
-            if (success) {
-                res.json({
-                    success: true,
-                    message: '📻 Radio gestoppt'
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    error: 'Fehler beim Stoppen des Radios'
-                });
-            }
-
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
     // Stop music
     app.post('/api/music/stop/:guildId', (req, res) => {
         try {
@@ -1958,107 +1422,28 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Interactive Panel Management (neue Route ohne Guild ID)
-    app.post('/api/music/interactive-panel/post', async (req, res) => {
-        try {
-            const { channelId, embedColor } = req.body;
-            
-            if (!channelId) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Channel-ID ist erforderlich'
-                });
-            }
-            
-            console.log(`📻 Interactive Panel Post angefragt für Channel-ID: ${channelId}`);
-            
-            // Finde Guild und Channel durch Channel-ID
-            let targetGuild = null;
-            let targetChannel = null;
-            
-            if (global.client && global.client.guilds) {
-                for (const guild of global.client.guilds.cache.values()) {
-                    const channel = guild.channels.cache.get(channelId);
-                    if (channel && channel.type === 0) { // Text-Channel
-                        targetGuild = guild;
-                        targetChannel = channel;
-                        break;
-                    }
-                }
-            }
-            
-            if (!targetGuild || !targetChannel) {
-                return res.status(404).json({
-                    success: false,
-                    error: `Channel mit ID "${channelId}" nicht gefunden`
-                });
-            }
-            
-            console.log(`✅ Channel gefunden: #${targetChannel.name} in Guild: ${targetGuild.name}`);
-            
-            // Update settings mit Channel-ID (nicht Name!)
-            musicSettings.interactivePanel.channelId = channelId;
-            if (embedColor) {
-                musicSettings.interactivePanel.embedColor = embedColor;
-            }
-            saveMusicSettings();
-            console.log(`💾 Einstellungen gespeichert - Channel-ID: ${channelId}`);
-            
-            const success = await postInteractiveRadioPanel(targetGuild.id);
-            
-            if (success) {
-                res.json({
-                    success: true,
-                    message: 'Interactive Panel erfolgreich gepostet!',
-                    channelId: musicSettings.interactivePanel.channelId,
-                    channelName: targetChannel.name,
-                    guildName: targetGuild.name,
-                    messageId: musicSettings.interactivePanel.messageId
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    error: 'Fehler beim Posten des Interactive Panels'
-                });
-            }
-        } catch (error) {
-            console.error('❌ Fehler beim Interactive Panel Post:', error);
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Interactive Panel Management (alte Route mit Guild ID)
-    app.post('/api/music/interactive-panel/:guildId/post', async (req, res) => {
+    // Post Interactive Panel
+    app.post('/api/music/interactive-panel/post/:guildId', async (req, res) => {
         try {
             const { guildId } = req.params;
             
-            if (!musicSettings.interactivePanel.channelId) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Kein Channel für Interactive Panel konfiguriert'
-                });
-            }
-            
-            const success = await postInteractiveRadioPanel(guildId);
+            const success = await postInteractiveMusicPanel(guildId);
             
             if (success) {
                 res.json({
                     success: true,
-                    message: 'Radio Panel erfolgreich gepostet!',
-                    channelId: musicSettings.interactivePanel.channelId,
-                    messageId: musicSettings.interactivePanel.messageId
+                    message: 'Musik Panel erfolgreich gepostet!',
+                    guildId: guildId
                 });
             } else {
                 res.status(500).json({
                     success: false,
-                    error: 'Fehler beim Posten des Radio Panels'
+                    error: 'Fehler beim Posten des Musik Panels'
                 });
             }
+
         } catch (error) {
-            console.error('❌ Fehler beim Radio Panel Post:', error);
+            console.error('❌ Fehler beim Musik Panel Post:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -2067,54 +1452,30 @@ function registerMusicAPI(app) {
     });
 
     // Update Interactive Panel
-    app.post('/api/music/interactive-panel/:guildId/update', async (req, res) => {
+    app.post('/api/music/interactive-panel/update/:guildId', async (req, res) => {
         try {
             const { guildId } = req.params;
             
-            console.log(`📻 Panel Update angefragt für Guild: ${guildId}`);
-            
-            // Prüfe Konfiguration
-            if (!musicSettings.interactivePanel.enabled) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Interactive Panel ist nicht aktiviert'
-                });
-            }
-
-            if (!musicSettings.interactivePanel.channelId) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Kein Channel für Interactive Panel konfiguriert'
-                });
-            }
-
-            if (!musicSettings.interactivePanel.messageId) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Keine Message-ID für Interactive Panel konfiguriert. Bitte poste zuerst ein Panel.'
-                });
-            }
-            
-            const success = await updateInteractiveRadioPanel(guildId, true); // Force update
+            const success = await updateInteractiveMusicPanel(guildId, true); // Force update
             
             if (success) {
-                console.log(`✅ Panel Update erfolgreich für Guild: ${guildId}`);
                 res.json({
                     success: true,
-                    message: 'Interactive Panel erfolgreich aktualisiert'
+                    message: 'Musik Panel erfolgreich aktualisiert!',
+                    guildId: guildId
                 });
             } else {
-                console.log(`❌ Panel Update fehlgeschlagen für Guild: ${guildId}`);
                 res.status(500).json({
                     success: false,
-                    error: 'Panel konnte nicht aktualisiert werden. Prüfe die Logs für Details.'
+                    error: 'Fehler beim Aktualisieren des Musik Panels'
                 });
             }
+
         } catch (error) {
-            console.error('❌ Unerwarteter Fehler beim Panel Update:', error);
+            console.error('❌ Fehler beim Musik Panel Update:', error);
             res.status(500).json({
                 success: false,
-                error: `Interner Fehler: ${error.message}`
+                error: error.message
             });
         }
     });
@@ -2156,100 +1517,6 @@ function registerMusicAPI(app) {
                 });
             }
         } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Test Radio Station
-    app.post('/api/music/radio/test', async (req, res) => {
-        try {
-            const { stationUrl } = req.body;
-            
-            if (!stationUrl) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Station URL ist erforderlich'
-                });
-            }
-
-            const testResult = await testRadioStation(stationUrl);
-            
-            res.json({
-                success: testResult.success,
-                result: testResult,
-                message: testResult.success ? 'Station erfolgreich getestet' : 'Station-Test fehlgeschlagen'
-            });
-        } catch (error) {
-            res.status(500).json({
-                success: false,
-                error: error.message
-            });
-        }
-    });
-
-    // Guild Channels abrufen
-    app.get('/api/music/guild/:guildId/channels', async (req, res) => {
-        try {
-            const { guildId } = req.params;
-            
-            if (!global.client) {
-                return res.status(503).json({
-                    success: false,
-                    error: 'Discord Client nicht verfügbar'
-                });
-            }
-
-            const guild = global.client.guilds.cache.get(guildId);
-            if (!guild) {
-                return res.status(404).json({
-                    success: false,
-                    error: 'Server nicht gefunden'
-                });
-            }
-
-            // Text-Channels sammeln
-            const textChannels = guild.channels.cache
-                .filter(channel => channel.type === 0) // Text-Channels
-                .map(channel => ({
-                    id: channel.id,
-                    name: channel.name,
-                    type: 'text',
-                    position: channel.position
-                }));
-
-            // Voice-Channels sammeln
-            const voiceChannels = guild.channels.cache
-                .filter(channel => channel.type === 2) // Voice-Channels
-                .map(channel => ({
-                    id: channel.id,
-                    name: channel.name,
-                    type: 'voice',
-                    position: channel.position,
-                    members: channel.members.size,
-                    joinable: channel.joinable
-                }));
-
-            // Nach Position sortieren
-            textChannels.sort((a, b) => a.position - b.position);
-            voiceChannels.sort((a, b) => a.position - b.position);
-
-            res.json({
-                success: true,
-                guild: {
-                    id: guild.id,
-                    name: guild.name,
-                    icon: guild.iconURL()
-                },
-                channels: {
-                    text: textChannels,
-                    voice: voiceChannels
-                }
-            });
-        } catch (error) {
-            console.error('❌ Fehler beim Laden der Guild-Channels:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -2353,172 +1620,44 @@ function registerMusicAPI(app) {
     console.log('✅ Musik API registriert!');
 }
 
-// Auto-Join für Radio (identisch aber separiert)
-async function autoJoinForRadio(guildId) {
-    try {
-        console.log(`🤖 Auto-Join für Radio gestartet: ${guildId}`);
-        
-        if (!global.client) {
-            console.log('❌ global.client nicht verfügbar');
-            return false;
-        }
-        
-        const guild = global.client.guilds.cache.get(guildId);
-        if (!guild) {
-            console.log(`❌ Guild ${guildId} nicht gefunden`);
-            return false;
-        }
-        
-        // Finde Voice-Channels mit Usern
-        const voiceChannelsWithUsers = guild.channels.cache.filter(channel => 
-            channel.isVoiceBased() && 
-            channel.members.size > 0 &&
-            !channel.members.every(member => member.user.bot)
-        );
-        
-        const allVoiceChannels = guild.channels.cache.filter(channel => 
-            channel.isVoiceBased() && 
-            channel.joinable
-        );
-        
-        let targetChannel;
-        
-        if (voiceChannelsWithUsers.size > 0) {
-            targetChannel = voiceChannelsWithUsers.sort((a, b) => b.members.size - a.members.size).first();
-        } else if (allVoiceChannels.size > 0) {
-            targetChannel = allVoiceChannels.first();
-        }
-        
-        if (!targetChannel) {
-            console.log('❌ Keine beitretbaren Voice-Channels gefunden');
-            return false;
-        }
-        
-        console.log(`🎯 Auto-Join Target: ${targetChannel.name} (${targetChannel.members.size} Members)`);
-        
-        const connection = await joinVoiceChannelSafe(targetChannel);
-        return !!connection;
-        
-    } catch (error) {
-        console.error('❌ Auto-Join für Radio fehlgeschlagen:', error);
-        return false;
-    }
-}
-
-// Test Audio Stream Verbindung
-async function testRadioStation(stationUrl) {
-    try {
-        console.log(`🧪 Teste Radio-Station URL: ${stationUrl}`);
-        
-        if (stationUrl.includes('youtube.com') || stationUrl.includes('youtu.be')) {
-            console.log('📻 YouTube-Stream Test...');
-            const stream = await play.stream(stationUrl, { quality: 1 });
-            console.log('✅ YouTube-Stream erfolgreich');
-            return { success: true, type: 'youtube', stream: stream };
-        } else {
-            console.log('📻 HTTP-Stream Test...');
-            
-            // Teste HTTP-Stream Verbindung
-            const https = require('https');
-            const http = require('http');
-            const requestModule = stationUrl.startsWith('https:') ? https : http;
-            
-            return new Promise((resolve) => {
-                const request = requestModule.get(stationUrl, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        'Accept': 'audio/*'
-                    },
-                    timeout: 10000
-                }, (response) => {
-                    console.log(`📻 Stream Status: ${response.statusCode}`);
-                    console.log(`📻 Stream Headers:`, response.headers);
-                    
-                    if (response.statusCode === 200) {
-                        resolve({ 
-                            success: true, 
-                            type: 'http',
-                            statusCode: response.statusCode,
-                            contentType: response.headers['content-type'],
-                            server: response.headers['server']
-                        });
-                    } else {
-                        resolve({ 
-                            success: false, 
-                            error: `HTTP ${response.statusCode}`,
-                            statusCode: response.statusCode
-                        });
-                    }
-                    
-                    request.abort();
-                });
-                
-                request.on('error', (error) => {
-                    console.error(`❌ Stream Connection Error:`, error);
-                    resolve({ success: false, error: error.message });
-                });
-                
-                request.on('timeout', () => {
-                    console.error(`❌ Stream Timeout`);
-                    request.abort();
-                    resolve({ success: false, error: 'Connection timeout' });
-                });
-            });
-        }
-    } catch (error) {
-        console.error(`❌ Radio-Station Test fehlgeschlagen:`, error);
-        return { success: false, error: error.message };
-    }
-}
-
-// Volume Management
+// Utility Functions (Hilfsfunktionen)
 function getVolumeForGuild(guildId) {
-    return currentVolume.get(guildId) || musicSettings.defaultVolume;
+    return currentVolume.get(guildId) || 50; // Default volume 50%
 }
 
 function setVolumeForGuild(guildId, volume) {
-    const normalizedVolume = Math.max(0, Math.min(100, volume)); // 0-100 Range
-    currentVolume.set(guildId, normalizedVolume);
+    currentVolume.set(guildId, Math.max(0, Math.min(100, volume)));
     
-    // Aktualisiere AudioPlayer Volume wenn aktiv
+    // Aktualisiere aktuelle Audio-Resource Volume
     const player = audioPlayers.get(guildId);
     if (player && player.state.status === AudioPlayerStatus.Playing) {
         const resource = player.state.resource;
         if (resource && resource.volume) {
-            const actualVolume = normalizedVolume / 100; // 0.0-1.0 für AudioResource
-            resource.volume.setVolume(actualVolume);
-            console.log(`🔊 Volume für Guild ${guildId} auf ${normalizedVolume}% gesetzt (${actualVolume})`);
+            resource.volume.setVolume(volume / 100);
         }
     }
-    
-    return normalizedVolume;
 }
 
 function increaseVolume(guildId, amount = 10) {
     const currentVol = getVolumeForGuild(guildId);
-    return setVolumeForGuild(guildId, currentVol + amount);
+    const newVolume = Math.min(100, currentVol + amount);
+    setVolumeForGuild(guildId, newVolume);
+    return newVolume;
 }
 
 function decreaseVolume(guildId, amount = 10) {
     const currentVol = getVolumeForGuild(guildId);
-    return setVolumeForGuild(guildId, currentVol - amount);
+    const newVolume = Math.max(0, currentVol - amount);
+    setVolumeForGuild(guildId, newVolume);
+    return newVolume;
 }
 
 module.exports = {
     loadMusicSettings,
     saveMusicSettings,
-    registerMusicAPI,
+    scanMusicDirectory,
     joinVoiceChannelSafe,
     leaveVoiceChannel,
-    // Radio Functions
-    getRadioStations,
-    getRadioStation,
-    playRadioStation,
-    stopRadio,
-    getCurrentRadioStation,
-    isPlayingRadio,
-    autoJoinForRadio,
-    // Local Music Functions
     getAvailableSongs,
     getMusicStations,
     getMusicStation,
@@ -2528,21 +1667,14 @@ module.exports = {
     getCurrentSong,
     getCurrentStation,
     isPlayingMusic,
-    sendNowPlayingMessage,
-    updateInteractiveMusicPanel,
     autoJoinForMusic,
-    musicGenres,
-    scanMusicDirectory,
-    // Settings
-    musicSettings,
-    // Interactive Panel Functions (Radio - Kompatibilität)
-    postInteractiveRadioPanel,
-    updateInteractiveRadioPanel,
-    handleRadioSelectButton,
-    handleRadioStationSelect,
-    handleRadioStopButton,
-    // Interactive Panel Functions (Vollständiges Musik-System)
-    handleMusicRadioSelectButton,
+    sendNowPlayingMessage,
+    getVolumeForGuild,
+    setVolumeForGuild,
+    increaseVolume,
+    decreaseVolume,
+    postInteractiveMusicPanel,
+    updateInteractiveMusicPanel,
     handleMusicMP3SelectButton,
     handleMusicPlaylistSelectButton,
     handleMusicStopAllButton,
@@ -2551,11 +1683,8 @@ module.exports = {
     handleMusicRefreshButton,
     handleMusicMP3SongSelect,
     handleMusicPlaylistStationSelect,
-    // Volume Management
-    getVolumeForGuild,
-    setVolumeForGuild,
-    increaseVolume,
-    decreaseVolume,
     handleMusicVolumeUpButton,
-    handleMusicVolumeDownButton
+    handleMusicVolumeDownButton,
+    handleMusicVolumeShowButton,
+    registerMusicAPI
 }; 
