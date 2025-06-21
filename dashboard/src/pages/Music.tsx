@@ -349,6 +349,7 @@ const Music: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Lade Musik-System Daten...');
       
       // Guild ID aus URL oder localStorage
       const params = new URLSearchParams(window.location.search);
@@ -359,12 +360,39 @@ const Music: React.FC = () => {
       
       const finalGuildId = urlGuildId || storedGuildId;
       
+      console.log('🔍 Guild ID Suche:', {
+        urlGuildId,
+        storedGuildId,
+        finalGuildId,
+        currentUrl: window.location.href
+      });
+      
       if (finalGuildId) {
         setGuildId(finalGuildId);
         localStorage.setItem('selectedGuildId', finalGuildId);
         console.log(`🏠 Guild ID gesetzt: ${finalGuildId}`);
       } else {
         console.log('⚠️ Keine Guild ID gefunden');
+        // Versuche eine Standard-Guild-ID vom Server zu holen
+        try {
+          const guildResponse = await fetch(`${apiUrl}/api/guilds`);
+          if (guildResponse.ok) {
+            const guildData = await guildResponse.json();
+            console.log('📡 Guild Antwort vom Server:', guildData);
+            if (guildData.primaryGuild) {
+              setGuildId(guildData.primaryGuild);
+              localStorage.setItem('selectedGuildId', guildData.primaryGuild);
+              console.log(`🏠 Primary Guild ID gesetzt: ${guildData.primaryGuild}`);
+            } else if (guildData.guilds && guildData.guilds.length > 0) {
+              const firstGuild = guildData.guilds[0];
+              setGuildId(firstGuild.id);
+              localStorage.setItem('selectedGuildId', firstGuild.id);
+              console.log(`🏠 Erste verfügbare Guild ID gesetzt: ${firstGuild.id} (${firstGuild.name})`);
+            }
+          }
+        } catch (error) {
+          console.warn('Konnte keine Guilds vom Server laden:', error);
+        }
       }
 
       // Settings laden
@@ -379,9 +407,10 @@ const Music: React.FC = () => {
       await loadRadioStations();
 
       // Status laden
-      if (finalGuildId) {
-        await loadMusicStatus(finalGuildId);
-        await loadRadioStatus(finalGuildId);
+      const currentGuildId = guildId || finalGuildId;
+      if (currentGuildId) {
+        await loadMusicStatus(currentGuildId);
+        await loadRadioStatus(currentGuildId);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Daten:', error);
@@ -704,7 +733,27 @@ const Music: React.FC = () => {
       // Zuerst Einstellungen speichern
       await saveSettings();
       
-      const response = await fetch(`${apiUrl}/api/music/interactive-panel/post`, {
+      // Guild ID ermitteln - fallback auf eine Standard-ID
+      let targetGuildId = guildId;
+      
+      if (!targetGuildId) {
+        // Versuche aus verschiedenen Quellen zu lesen
+        const params = new URLSearchParams(window.location.search);
+        targetGuildId = params.get('guild') || params.get('guildId') || localStorage.getItem('selectedGuildId');
+        
+        if (!targetGuildId) {
+          // Als letzter Ausweg: Versuche die erste verfügbare Guild vom Server zu holen
+          showError('Panel Fehler', 'Keine Guild ID gefunden. Bitte über das Server-Management Dashboard navigieren.');
+          return;
+        }
+        
+        setGuildId(targetGuildId);
+        localStorage.setItem('selectedGuildId', targetGuildId);
+      }
+      
+      console.log(`🏠 Verwende Guild ID: ${targetGuildId}`);
+      
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${targetGuildId}/post`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -733,6 +782,7 @@ const Music: React.FC = () => {
         showError('Panel Fehler', data.error || 'Fehler beim Erstellen des Interactive Panels');
       }
     } catch (error) {
+      console.error('Panel Fehler:', error);
       showError('Panel Fehler', 'Verbindungsfehler beim Erstellen des Interactive Panels');
     }
   };
@@ -859,10 +909,21 @@ const Music: React.FC = () => {
       </div>
 
       {/* System Status */}
-      <div className="flex justify-center gap-4 items-center">
+      <div className="flex justify-center gap-4 items-center flex-wrap">
         <Badge variant={settings.enabled ? "default" : "outline"} className="text-lg py-2 px-4">
           {settings.enabled ? '✅ Musik System Aktiviert' : '❌ Musik System Deaktiviert'}
         </Badge>
+        
+        {/* Guild ID Status */}
+        <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-blue-primary/30 rounded-lg px-3 py-2">
+          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${guildId ? 'bg-blue-400 animate-pulse' : 'bg-red-500'}`}></div>
+          <span className="text-sm text-dark-muted">
+            {guildId 
+              ? `🏠 Server: ${guildId.slice(0, 8)}...` 
+              : '❌ Keine Server ID'
+            }
+          </span>
+        </div>
         
         {/* Music Status */}
         <div className="flex items-center gap-2 bg-dark-surface/90 backdrop-blur-xl border border-purple-primary/30 rounded-lg px-3 py-2">
