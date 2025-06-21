@@ -131,6 +131,10 @@ const currentSongs = new Map(); // guildId -> current song info
 const currentRadioStations = new Map(); // guildId -> current radio station
 const currentVolume = new Map(); // Neue Map für Guild-Volume Tracking
 
+// Stream Restart Control Maps
+const streamRestartAttempts = new Map(); // Guild -> restart attempts count
+const streamRestartCooldown = new Map(); // Guild -> last restart timestamp
+
 // Genre-Liste für Dropdown
 const musicGenres = [
     'Hip-Hop', 'Rap', 'Trap', 'Lofi', 'Chill', 'Electronic', 'House', 'Techno',
@@ -567,7 +571,11 @@ async function playRadioStation(guildId, stationId) {
                 const ffmpegArgs = [
                     '-i', station.url,
                     '-analyzeduration', '0',
-                    '-loglevel', '0',
+                    '-probesize', '32',
+                    '-loglevel', 'error',
+                    '-reconnect', '1',
+                    '-reconnect_streamed', '1',
+                    '-reconnect_delay_max', '5',
                     '-f', 's16le',
                     '-ar', '48000',
                     '-ac', '2',
@@ -585,7 +593,16 @@ async function playRadioStation(guildId, stationId) {
                 });
                 
                 ffmpeg.on('error', (error) => {
-                    console.error('❌ FFmpeg Stream Error:', error);
+                    // Nur wichtige FFmpeg-Fehler loggen
+                    if (error.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
+                        console.error('❌ FFmpeg Stream Error:', error.message);
+                    }
+                });
+                
+                ffmpeg.on('close', (code) => {
+                    if (code && code !== 0) {
+                        console.log(`🔧 FFmpeg closed with code: ${code}`);
+                    }
                 });
                 
             } catch (ffmpegError) {
@@ -615,9 +632,31 @@ async function playRadioStation(guildId, stationId) {
         player.on(AudioPlayerStatus.Idle, (oldState) => {
             console.log(`⏸️ Radio idle: ${station.name} (von ${oldState.status})`);
             
-            // Wenn der Stream unexpectedly idle wird, versuche neu zu starten
+            // Nur bei unexpectedem Ende neu starten, mit Cooldown und Limits
             if (oldState.status === AudioPlayerStatus.Playing || oldState.status === AudioPlayerStatus.Buffering) {
-                console.log('🔄 Stream unterbrochen, versuche Neustart...');
+                const now = Date.now();
+                const lastRestart = streamRestartCooldown.get(guildId) || 0;
+                const attempts = streamRestartAttempts.get(guildId) || 0;
+                
+                // Cooldown: Mindestens 10 Sekunden zwischen Restarts
+                if (now - lastRestart < 10000) {
+                    console.log('🕐 Stream-Restart Cooldown aktiv, überspringe...');
+                    return;
+                }
+                
+                // Maximum 3 Restart-Versuche
+                if (attempts >= 3) {
+                    console.log('🚫 Maximum Restart-Versuche erreicht, stoppe Stream');
+                    stopRadio(guildId);
+                    streamRestartAttempts.delete(guildId);
+                    streamRestartCooldown.delete(guildId);
+                    return;
+                }
+                
+                console.log(`🔄 Stream unterbrochen, versuche Neustart (${attempts + 1}/3)...`);
+                streamRestartCooldown.set(guildId, now);
+                streamRestartAttempts.set(guildId, attempts + 1);
+                
                 setTimeout(async () => {
                     if (currentRadioStations.has(guildId)) {
                         try {
@@ -626,25 +665,39 @@ async function playRadioStation(guildId, stationId) {
                             console.error('❌ Neustart fehlgeschlagen:', error);
                         }
                     }
-                }, 3000);
+                }, 5000); // Längere Wartezeit
             }
         });
 
         player.on('error', (error) => {
             console.error(`❌ Radio Player Fehler:`, error);
+            
+            // Ignoriere FFmpeg Stream-Close Fehler
+            if (error.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+                console.log('🔧 FFmpeg Stream Close (normal bei Stream-Ende)');
+                return;
+            }
+            
             console.error(`❌ Error Stack:`, error.stack);
             
-            // Versuche neu zu starten
-            setTimeout(async () => {
-                if (currentRadioStations.has(guildId)) {
-                    console.log('🔄 Versuche Radio nach Fehler neu zu starten...');
-                    try {
-                        await playRadioStation(guildId, stationId);
-                    } catch (retryError) {
-                        console.error('❌ Neustart nach Fehler fehlgeschlagen:', retryError);
+            // Andere Fehler: Versuche einmalig neu zu starten
+            const attempts = streamRestartAttempts.get(guildId) || 0;
+            if (attempts < 1) {
+                streamRestartAttempts.set(guildId, attempts + 1);
+                setTimeout(async () => {
+                    if (currentRadioStations.has(guildId)) {
+                        console.log('🔄 Versuche Radio nach Fehler neu zu starten...');
+                        try {
+                            await playRadioStation(guildId, stationId);
+                        } catch (retryError) {
+                            console.error('❌ Neustart nach Fehler fehlgeschlagen:', retryError);
+                        }
                     }
-                }
-            }, 5000);
+                }, 8000);
+            } else {
+                console.log('🚫 Neustart-Limit erreicht, stoppe Radio');
+                stopRadio(guildId);
+            }
         });
 
         // Resource Error Handling
@@ -658,6 +711,10 @@ async function playRadioStation(guildId, stationId) {
 
         // Setze als aktueller Radio-Sender
         currentRadioStations.set(guildId, station);
+        
+        // Reset Stream-Restart-Counter bei erfolgreichem Start
+        streamRestartAttempts.delete(guildId);
+        streamRestartCooldown.delete(guildId);
 
         console.log(`✅ Radio-Station ${station.name} gestartet`);
         
@@ -731,6 +788,10 @@ function stopRadio(guildId) {
         
         // Entferne aktuellen Radio-Sender
         currentRadioStations.delete(guildId);
+        
+        // Reset Stream-Restart-Counter
+        streamRestartAttempts.delete(guildId);
+        streamRestartCooldown.delete(guildId);
         
         // Stoppe Player
         const player = audioPlayers.get(guildId);
