@@ -426,7 +426,7 @@ const Music: React.FC = () => {
       console.log(`🔍 Lade Channels für Guild: ${guildId}`);
       const response = await fetch(`${apiUrl}/api/music/channels/${guildId}`);
       console.log(`📡 Response Status: ${response.status}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log(`📺 Geladene Channels:`, data);
@@ -530,7 +530,7 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
         showSuccess('Musik', data.message);
         await loadMusicStatus(guildId);
       } else {
@@ -547,8 +547,8 @@ const Music: React.FC = () => {
     
     try {
       const response = await fetch(`${apiUrl}/api/music/stop/${guildId}`, {
-        method: 'POST'
-      });
+            method: 'POST'
+          });
 
       if (response.ok) {
         const data = await response.json();
@@ -598,7 +598,7 @@ const Music: React.FC = () => {
         const data = await response.json();
         showSuccess('Radio', data.message);
         await loadRadioStatus(guildId);
-    } else {
+      } else {
         showError('Radio Fehler', 'Fehler beim Stoppen des Radios');
       }
     } catch (error) {
@@ -729,7 +729,7 @@ const Music: React.FC = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
         showSuccess('Interactive Panel', '🎛️ Interactive Panel erfolgreich erstellt!');
         
         // Update settings with new message ID
@@ -867,87 +867,87 @@ const Music: React.FC = () => {
       {/* Main Content */}
       {activeTab === 'settings' ? (
         /* Settings Tab Content */
-        <div className="space-y-6">
+          <div className="space-y-6">
           {/* System Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-purple-400" />
                 System Einstellungen
-              </CardTitle>
-              <CardDescription>
+                </CardTitle>
+                <CardDescription>
                 Grundlegende Musik-System Konfiguration
-              </CardDescription>
-            </CardHeader>
+                </CardDescription>
+              </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium text-white">🎵 Musik System aktivieren</h4>
                   <p className="text-sm text-gray-400">Aktiviert das gesamte Musik-System für den Server</p>
-                </div>
+                        </div>
                 <Switch
                   checked={settings.enabled}
                   onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enabled: checked }))}
                 />
-              </div>
-
-              <div className="flex items-center justify-between">
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium text-white">📻 Radio System aktivieren</h4>
                   <p className="text-sm text-gray-400">Aktiviert die Radio-Stream Funktionen</p>
-                </div>
+                        </div>
                 <Switch
                   checked={settings.radio.enabled}
                   onCheckedChange={(checked) => setSettings(prev => ({ 
                     ...prev, 
                     radio: { ...prev.radio, enabled: checked }
                   }))}
-                />
-              </div>
-
+                  />
+                </div>
+                
               <div className="flex items-center justify-between">
-                <div>
+                  <div>
                   <h4 className="font-medium text-white">🎵 Lokale MP3s aktivieren</h4>
                   <p className="text-sm text-gray-400">Aktiviert das lokale MP3-System</p>
-                </div>
-                <Switch
+                  </div>
+                  <Switch
                   checked={settings.localMusic.enabled}
                   onCheckedChange={(checked) => setSettings(prev => ({ 
                     ...prev, 
                     localMusic: { ...prev.localMusic, enabled: checked }
                   }))}
-                />
-              </div>
+                  />
+                </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                      <div>
                   <h4 className="font-medium text-white">🔄 Auto-Stop aktivieren</h4>
                   <p className="text-sm text-gray-400">Stoppt Musik automatisch wenn alle User den Channel verlassen</p>
-                </div>
-                <Switch
+                      </div>
+                      <Switch
                   checked={settings.radio.autoStop}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
+                        onCheckedChange={(checked) => setSettings(prev => ({ 
+                          ...prev, 
                     radio: { ...prev.radio, autoStop: checked },
                     localMusic: { ...prev.localMusic, autoStop: checked }
-                  }))}
-                />
-              </div>
+                        }))}
+                      />
+                    </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                      <div>
                   <h4 className="font-medium text-white">📢 Now-Playing Nachrichten</h4>
                   <p className="text-sm text-gray-400">Zeigt aktuelle Songs in einem Text-Channel an</p>
-                </div>
-                <Switch
+                      </div>
+                      <Switch
                   checked={settings.radio.showNowPlaying}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
+                        onCheckedChange={(checked) => setSettings(prev => ({ 
+                          ...prev, 
                     radio: { ...prev.radio, showNowPlaying: checked },
                     localMusic: { ...prev.localMusic, showNowPlaying: checked }
-                  }))}
-                />
-              </div>
+                        }))}
+                      />
+                    </div>
             </CardContent>
           </Card>
 
@@ -980,11 +980,11 @@ const Music: React.FC = () => {
                       <Settings className="w-4 h-4" />
                       Channels laden
                     </Button>
-                  </div>
-                  
+                        </div>
+                        
                   {!guildId && (
                     <div className="flex gap-2">
-                      <Input
+                          <Input
                         placeholder="Guild ID eingeben (z.B. 1234567890)"
                         value={tempGuildId}
                         onChange={(e) => setTempGuildId(e.target.value)}
@@ -1007,9 +1007,9 @@ const Music: React.FC = () => {
                       </Button>
                     </div>
                   )}
-                </div>
-              </div>
-
+                        </div>
+                      </div>
+                      
               <div>
                 <label className="block text-sm font-medium text-purple-200 mb-2">
                   📢 Ankündigungs-Channel
@@ -1017,7 +1017,7 @@ const Music: React.FC = () => {
                 <Select
                   value={settings.announcements.channelId}
                   onChange={(value) => setSettings(prev => ({ 
-                    ...prev, 
+                                ...prev, 
                     announcements: { ...prev.announcements, channelId: value }
                   }))}
                 >
@@ -1029,16 +1029,16 @@ const Music: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">
                   Channel für Now-Playing Nachrichten und Musik-Updates
                 </p>
-              </div>
+                    </div>
 
-              <div>
+                    <div>
                 <label className="block text-sm font-medium text-purple-200 mb-2">
                   🎛️ Interactive Panel Channel
-                </label>
+                      </label>
                 <Select
                   value={settings.interactivePanel.channelId}
                   onChange={(value) => setSettings(prev => ({ 
-                    ...prev, 
+                          ...prev, 
                     interactivePanel: { ...prev.interactivePanel, channelId: value }
                   }))}
                 >
@@ -1049,8 +1049,8 @@ const Music: React.FC = () => {
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
                   Channel für das interaktive Musik-Control Panel
-                </p>
-              </div>
+                      </p>
+                    </div>
             </CardContent>
           </Card>
 
@@ -1067,32 +1067,32 @@ const Music: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
+                        <div>
                   <h4 className="font-medium text-white">🎛️ Interactive Panel aktivieren</h4>
                   <p className="text-sm text-gray-400">Erstellt ein interaktives Panel mit Buttons in Discord</p>
-                </div>
-                <Switch
-                  checked={settings.interactivePanel.enabled}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
-                    interactivePanel: { ...prev.interactivePanel, enabled: checked }
-                  }))}
-                />
-              </div>
+                        </div>
+                        <Switch
+                          checked={settings.interactivePanel.enabled}
+                          onCheckedChange={(checked) => setSettings(prev => ({
+                            ...prev,
+                            interactivePanel: { ...prev.interactivePanel, enabled: checked }
+                          }))}
+                        />
+                      </div>
 
               <div className="flex items-center justify-between">
-                <div>
+                          <div>
                   <h4 className="font-medium text-white">🔄 Auto-Update Panel</h4>
                   <p className="text-sm text-gray-400">Aktualisiert das Panel automatisch bei Änderungen</p>
-                </div>
-                <Switch
-                  checked={settings.interactivePanel.autoUpdate}
-                  onCheckedChange={(checked) => setSettings(prev => ({ 
-                    ...prev, 
-                    interactivePanel: { ...prev.interactivePanel, autoUpdate: checked }
-                  }))}
-                />
-              </div>
+                          </div>
+                            <Switch
+                              checked={settings.interactivePanel.autoUpdate}
+                              onCheckedChange={(checked) => setSettings(prev => ({
+                                ...prev,
+                                interactivePanel: { ...prev.interactivePanel, autoUpdate: checked }
+                              }))}
+                            />
+                          </div>
 
               {settings.interactivePanel.messageId && (
                 <div className="p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
@@ -1143,18 +1143,16 @@ const Music: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="text-sm font-medium text-purple-200">🎨 Embed Farbe</label>
-                </div>
+                <label className="text-sm font-medium text-dark-text mb-2 block">🎨 Embed Farbe</label>
                 <div className="flex gap-3 items-center">
                   {/* Color Picker */}
                   <div className="relative">
                     <input
                       type="color"
-                      value={settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B'}
+                      value={settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#00FF7F'}
                       onChange={(e) => {
                         const hexColor = e.target.value;
-                        const discordColor = hexColor.startsWith('#') ? hexColor : `#${hexColor}`;
+                        const discordColor = `0x${hexColor.slice(1).toUpperCase()}`;
                         setSettings(prev => ({
                           ...prev,
                           radio: { ...prev.radio, embedColor: discordColor },
@@ -1174,14 +1172,14 @@ const Music: React.FC = () => {
                   <div className="flex-1">
                     <Input
                       value={settings.radio.embedColor}
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
                       onChange={(e) => setSettings(prev => ({
                         ...prev,
                         radio: { ...prev.radio, embedColor: e.target.value },
                         localMusic: { ...prev.localMusic, embedColor: e.target.value },
                         interactivePanel: { ...prev.interactivePanel, embedColor: e.target.value }
                       }))}
-                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple font-mono"
-                      placeholder="#FF6B6B"
+                      placeholder="0x00FF7F"
                     />
                   </div>
 
@@ -1189,7 +1187,7 @@ const Music: React.FC = () => {
                   <div 
                     className="w-12 h-12 rounded-lg border-2 border-purple-primary/30 flex items-center justify-center text-white font-bold text-xs shadow-neon"
                     style={{
-                      backgroundColor: settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#FF6B6B',
+                      backgroundColor: settings.radio.embedColor.startsWith('0x') ? `#${settings.radio.embedColor.slice(2)}` : settings.radio.embedColor.startsWith('#') ? settings.radio.embedColor : '#00FF7F',
                       filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.3))'
                     }}
                   >
@@ -1202,14 +1200,14 @@ const Music: React.FC = () => {
                   <p className="text-xs text-dark-muted mb-2">Beliebte Discord Farben:</p>
                   <div className="flex gap-2 flex-wrap">
                     {[
-                      { name: 'Musik Rot', color: '#FF6B6B' },
-                      { name: 'Discord Blau', color: '#5865F2' },
-                      { name: 'Spotify Grün', color: '#1DB954' },
-                      { name: 'YouTube Rot', color: '#FF0000' },
-                      { name: 'SoundCloud Orange', color: '#FF5500' },
-                      { name: 'Twitch Lila', color: '#9146FF' },
-                      { name: 'Bass Violett', color: '#8B5CF6' },
-                      { name: 'Neon Pink', color: '#FF10F0' }
+                      { name: 'Blau', color: '0x3498DB' },
+                      { name: 'Grün', color: '0x2ECC71' },
+                      { name: 'Rot', color: '0xE74C3C' },
+                      { name: 'Lila', color: '0x9B59B6' },
+                      { name: 'Orange', color: '0xE67E22' },
+                      { name: 'Pink', color: '0xE91E63' },
+                      { name: 'Cyan', color: '0x1ABC9C' },
+                      { name: 'Gelb', color: '0xF1C40F' },
                     ].map((preset) => (
                       <button
                         key={preset.name}
@@ -1221,7 +1219,7 @@ const Music: React.FC = () => {
                         }))}
                         className="w-8 h-8 rounded-lg border border-purple-primary/30 hover:border-neon-purple transition-all duration-300 hover:scale-110 relative group"
                         style={{
-                          backgroundColor: preset.color,
+                          backgroundColor: `#${preset.color.slice(2)}`,
                           filter: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.2))'
                         }}
                         title={preset.name}
@@ -1231,9 +1229,6 @@ const Music: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Farbe für Discord-Embeds und Nachrichten
-                </p>
               </div>
             </CardContent>
           </Card>
@@ -1272,7 +1267,7 @@ const Music: React.FC = () => {
                       <p className="text-xs text-gray-400 truncate">{station.description}</p>
                       </div>
                     <div className="flex items-center gap-2">
-                    <Button
+                            <Button
                         onClick={() => playRadioStation(station.id)}
                         disabled={radioStatus.currentStation?.id === station.id}
                         className="px-3 py-1 text-xs"
@@ -1282,7 +1277,7 @@ const Music: React.FC = () => {
                         ) : (
                           <Play className="w-3 h-3" />
                         )}
-                    </Button>
+                            </Button>
                   </div>
                 </div>
                 ))}
@@ -1314,8 +1309,8 @@ const Music: React.FC = () => {
                       <p className="font-semibold text-blue-300">📻 Läuft gerade</p>
                       <p className="text-sm text-white">{radioStatus.currentStation?.name}</p>
                       <p className="text-xs text-gray-400">{radioStatus.currentStation?.description}</p>
+                          </div>
                         </div>
-                      </div>
                       
                           <Button
                     onClick={stopRadio}
@@ -1335,7 +1330,7 @@ const Music: React.FC = () => {
               )}
               </CardContent>
             </Card>
-        </div>
+                    </div>
       ) : (
         /* Local Music Tab Content */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1381,8 +1376,8 @@ const Music: React.FC = () => {
                             >
                         <Plus className="w-3 h-3" />
                             </Button>
-                          )}
-                      </div>
+                )}
+              </div>
                     </div>
                   ))}
                 </div>
@@ -1396,19 +1391,19 @@ const Music: React.FC = () => {
                 </p>
               </div>
             )}
-              </CardContent>
-            </Card>
+            </CardContent>
+          </Card>
 
         {/* Stations */}
         <Card className="lg:col-span-2">
-          <CardHeader>
+            <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2">
                   <Radio className="w-5 h-5 text-purple-400" />
                   Meine Stationen
               </CardTitle>
-                <CardDescription>
+              <CardDescription>
                   {settings.localMusic.stations.length} Stationen erstellt
               </CardDescription>
                   </div>
@@ -1420,8 +1415,8 @@ const Music: React.FC = () => {
                 Neue Station
               </Button>
                   </div>
-          </CardHeader>
-          <CardContent>
+            </CardHeader>
+            <CardContent>
             {/* Station Creation Modal */}
             {isCreatingStation && (
               <div className="mb-6 p-4 bg-purple-500/10 rounded-lg border border-purple-primary/30">
@@ -1498,15 +1493,15 @@ const Music: React.FC = () => {
                   <Button onClick={createStation} disabled={!newStation.name.trim()}>
                     ✨ Station Erstellen
                   </Button>
-                <Button
-                    variant="outline"
+                    <Button
+                      variant="outline"
                     onClick={() => {
                       setIsCreatingStation(false);
                       setNewStation({ name: '', genre: 'Hip-Hop', description: '', playlist: [] });
                     }}
-                  >
+                    >
                     Abbrechen
-                </Button>
+                    </Button>
               </div>
               </div>
             )}
@@ -1553,8 +1548,8 @@ const Music: React.FC = () => {
                     </div>
                         </div>
                       </div>
-              ))}
-                          </div>
+                  ))}
+                </div>
 
             {settings.localMusic.stations.length === 0 && !isCreatingStation && (
               <div className="text-center py-8">
