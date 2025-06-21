@@ -363,7 +363,7 @@ const ServerStats: React.FC = () => {
       serverLevel: 'Server Level',
       createdDate: 'Erstellt am',
       botCount: 'Bots',
-      valorantSeason: 'Valorant Season'
+      valorantSeason: 'Valorant Season Start'
     };
     return names[statType] || statType;
   };

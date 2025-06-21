@@ -78,7 +78,7 @@ let serverStatsSettings = {
     valorantSeason: {
       enabled: true,
       channelId: '',
-      name: '🎮 Valorant S25 Act 4: {countdown}',
+      name: '🎮 Valorant Season Start: {countdown}',
       position: 8
     }
   },
