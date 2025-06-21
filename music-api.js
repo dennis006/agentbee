@@ -468,12 +468,47 @@ async function playRadioStation(guildId, stationId) {
                 });
             }
         } else {
-            console.log('📻 Direkter Stream erkannt...');
-            // Für direkte HTTP-Streams
-            resource = createAudioResource(station.url, {
-                inputType: StreamType.Arbitrary,
-                inlineVolume: true
-            });
+            console.log('📻 Direkter HTTP-Stream erkannt...');
+            // Für direkte HTTP-Streams mit besserer Kompatibilität
+            try {
+                const https = require('https');
+                const http = require('http');
+                
+                // Erstelle Stream-Request mit besseren Headers
+                const requestModule = station.url.startsWith('https:') ? https : http;
+                const request = requestModule.get(station.url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'audio/mpeg, audio/x-mpeg, audio/mp3, audio/x-mp3, audio/mpeg3, audio/x-mpeg3, audio/mpg, audio/x-mpg, audio/x-mpegaudio, audio/*',
+                        'Connection': 'keep-alive',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                request.on('response', (response) => {
+                    console.log(`📻 Stream Response: ${response.statusCode} - ${response.headers['content-type']}`);
+                    if (response.statusCode !== 200) {
+                        console.warn(`⚠️ Unerwarteter Stream Status: ${response.statusCode}`);
+                    }
+                });
+                
+                request.on('error', (err) => {
+                    console.error('❌ Stream Request Error:', err);
+                });
+                
+                resource = createAudioResource(request, {
+                    inputType: StreamType.Arbitrary,
+                    inlineVolume: true
+                });
+            } catch (streamError) {
+                console.error('❌ Erweiterte Stream-Erstellung fehlgeschlagen:', streamError);
+                // Fallback zu einfachem Stream
+                resource = createAudioResource(station.url, {
+                    inputType: StreamType.Arbitrary,
+                    inlineVolume: true
+                });
+            }
         }
 
         if (resource.volume) {
@@ -489,19 +524,44 @@ async function playRadioStation(guildId, stationId) {
             console.log(`🔄 Radio buffert: ${station.name}`);
         });
 
-        player.on(AudioPlayerStatus.Idle, () => {
-            console.log(`⏸️ Radio idle: ${station.name}`);
+        player.on(AudioPlayerStatus.Idle, (oldState) => {
+            console.log(`⏸️ Radio idle: ${station.name} (von ${oldState.status})`);
+            
+            // Wenn der Stream unexpectedly idle wird, versuche neu zu starten
+            if (oldState.status === AudioPlayerStatus.Playing || oldState.status === AudioPlayerStatus.Buffering) {
+                console.log('🔄 Stream unterbrochen, versuche Neustart...');
+                setTimeout(async () => {
+                    if (currentRadioStations.has(guildId)) {
+                        try {
+                            await playRadioStation(guildId, stationId);
+                        } catch (error) {
+                            console.error('❌ Neustart fehlgeschlagen:', error);
+                        }
+                    }
+                }, 3000);
+            }
         });
 
         player.on('error', (error) => {
             console.error(`❌ Radio Player Fehler:`, error);
+            console.error(`❌ Error Stack:`, error.stack);
+            
             // Versuche neu zu starten
-            setTimeout(() => {
+            setTimeout(async () => {
                 if (currentRadioStations.has(guildId)) {
-                    console.log('🔄 Versuche Radio neu zu starten...');
-                    playRadioStation(guildId, stationId).catch(console.error);
+                    console.log('🔄 Versuche Radio nach Fehler neu zu starten...');
+                    try {
+                        await playRadioStation(guildId, stationId);
+                    } catch (retryError) {
+                        console.error('❌ Neustart nach Fehler fehlgeschlagen:', retryError);
+                    }
                 }
             }, 5000);
+        });
+
+        // Resource Error Handling
+        resource.playStream.on('error', (error) => {
+            console.error(`❌ Audio Resource Stream Fehler:`, error);
         });
 
         // Spiele ab
@@ -1798,8 +1858,53 @@ async function testRadioStation(stationUrl) {
             return { success: true, type: 'youtube', stream: stream };
         } else {
             console.log('📻 HTTP-Stream Test...');
-            // Einfacher Test für HTTP-Streams
-            return { success: true, type: 'http' };
+            
+            // Teste HTTP-Stream Verbindung
+            const https = require('https');
+            const http = require('http');
+            const requestModule = stationUrl.startsWith('https:') ? https : http;
+            
+            return new Promise((resolve) => {
+                const request = requestModule.get(stationUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'audio/*'
+                    },
+                    timeout: 10000
+                }, (response) => {
+                    console.log(`📻 Stream Status: ${response.statusCode}`);
+                    console.log(`📻 Stream Headers:`, response.headers);
+                    
+                    if (response.statusCode === 200) {
+                        resolve({ 
+                            success: true, 
+                            type: 'http',
+                            statusCode: response.statusCode,
+                            contentType: response.headers['content-type'],
+                            server: response.headers['server']
+                        });
+                    } else {
+                        resolve({ 
+                            success: false, 
+                            error: `HTTP ${response.statusCode}`,
+                            statusCode: response.statusCode
+                        });
+                    }
+                    
+                    request.abort();
+                });
+                
+                request.on('error', (error) => {
+                    console.error(`❌ Stream Connection Error:`, error);
+                    resolve({ success: false, error: error.message });
+                });
+                
+                request.on('timeout', () => {
+                    console.error(`❌ Stream Timeout`);
+                    request.abort();
+                    resolve({ success: false, error: 'Connection timeout' });
+                });
+            });
         }
     } catch (error) {
         console.error(`❌ Radio-Station Test fehlgeschlagen:`, error);

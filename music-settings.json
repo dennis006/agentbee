@@ -142,7 +142,7 @@
       {
         "id": "deutschrap1",
         "name": "Deutschrap One",
-        "url": "https://stream.laut.fm/deutschrap",
+        "url": "http://stream.laut.fm/deutschrap",
         "genre": "Deutschrap/Hip-Hop",
         "country": "Deutschland",
         "description": "24/7 Deutschrap und Hip-Hop",
@@ -151,7 +151,7 @@
       {
         "id": "hiphopradio",
         "name": "HipHop Radio",
-        "url": "https://stream.laut.fm/hiphop",
+        "url": "http://stream.laut.fm/hiphop",
         "genre": "Hip-Hop/Rap",
         "country": "Deutschland",
         "description": "Pure Hip-Hop Musik",
@@ -160,7 +160,7 @@
       {
         "id": "urbanradio",
         "name": "Urban Radio",
-        "url": "https://stream.laut.fm/urban",
+        "url": "http://stream.laut.fm/urban",
         "genre": "Urban/Rap",
         "country": "Deutschland",
         "description": "Urban Beats und Deutschrap",
@@ -169,7 +169,7 @@
       {
         "id": "gtaradio",
         "name": "GTA Radio",
-        "url": "https://stream.laut.fm/gta-radio",
+        "url": "http://stream.laut.fm/gta-radio",
         "genre": "GTA/Gaming",
         "country": "International",
         "description": "GTA-Style Radio mit Hip-Hop und Rap",
@@ -178,7 +178,7 @@
       {
         "id": "oldschool",
         "name": "Old School Hip-Hop",
-        "url": "https://stream.laut.fm/oldschool-hiphop",
+        "url": "http://stream.laut.fm/oldschool-hiphop",
         "genre": "Old School Hip-Hop",
         "country": "USA",
         "description": "80s & 90s Hip-Hop Klassiker",
@@ -187,7 +187,7 @@
       {
         "id": "synthwave",
         "name": "Synthwave Radio",
-        "url": "https://stream.laut.fm/synthwave",
+        "url": "http://stream.laut.fm/synthwave",
         "genre": "Synthwave/80s",
         "country": "International",
         "description": "80s Synthwave und Retrowave",
@@ -196,7 +196,7 @@
       {
         "id": "phonkradio",
         "name": "Phonk Radio",
-        "url": "https://stream.laut.fm/phonk",
+        "url": "http://stream.laut.fm/phonk",
         "genre": "Phonk/Memphis",
         "country": "USA",
         "description": "Phonk und Memphis Rap",
