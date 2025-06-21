@@ -364,23 +364,49 @@ router.get('/api/server-stats/current', async (req, res) => {
     let stats = await ServerStatsSupabase.getCurrentStats(guildId);
     
     if (!stats) {
+      console.log('📊 Keine Stats in Supabase gefunden, berechne neu...');
       // Berechne Stats und speichere in Supabase
       const calculatedStats = ServerStatsSupabase.calculateServerStats(guild);
       await ServerStatsSupabase.updateCurrentStats(calculatedStats, guildId);
       stats = await ServerStatsSupabase.getCurrentStats(guildId);
     }
     
+    // Fallback falls Stats immer noch null sind
+    if (!stats) {
+      console.log('⚠️ Stats konnten nicht aus Supabase geladen werden, verwende Live-Berechnung');
+      const liveStats = ServerStatsSupabase.calculateServerStats(guild);
+      
+      return res.json({
+        success: true,
+        stats: {
+          memberCount: liveStats.memberCount || 0,
+          onlineCount: liveStats.onlineCount || 0,
+          boostCount: liveStats.boostCount || 0,
+          channelCount: liveStats.channelCount || 0,
+          roleCount: liveStats.roleCount || 0,
+          serverLevel: liveStats.serverLevel || 0,
+          createdDate: liveStats.createdDate || new Date().toLocaleDateString('de-DE'),
+          botCount: liveStats.botCount || 0
+        },
+        serverName: liveStats.serverName || guild.name,
+        serverIcon: liveStats.serverIcon || guild.iconURL({ dynamic: true }),
+        lastUpdated: new Date().toISOString(),
+        _source: 'live-calculation',
+        note: 'Stats wurden live berechnet - Supabase-Daten nicht verfügbar'
+      });
+    }
+    
     res.json({
       success: true,
       stats: {
-        memberCount: stats.member_count,
-        onlineCount: stats.online_count,
-        boostCount: stats.boost_count,
-        channelCount: stats.channel_count,
-        roleCount: stats.role_count,
-        serverLevel: stats.server_level,
-        createdDate: stats.created_date,
-        botCount: stats.bot_count
+        memberCount: stats.member_count || 0,
+        onlineCount: stats.online_count || 0,
+        boostCount: stats.boost_count || 0,
+        channelCount: stats.channel_count || 0,
+        roleCount: stats.role_count || 0,
+        serverLevel: stats.server_level || 0,
+        createdDate: stats.created_date || new Date().toLocaleDateString('de-DE'),
+        botCount: stats.bot_count || 0
       },
       serverName: stats.server_name || guild.name,
       serverIcon: stats.server_icon || guild.iconURL({ dynamic: true }),
