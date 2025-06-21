@@ -767,17 +767,32 @@ async function createInteractiveRadioPanel(guildId) {
 
 async function postInteractiveRadioPanel(guildId) {
     try {
+        console.log(`📻 Starte Interactive Radio Panel Post für Guild: ${guildId}`);
+        
         const guild = global.client?.guilds.cache.get(guildId);
-        if (!guild) return false;
+        if (!guild) {
+            console.log(`❌ Guild ${guildId} nicht gefunden`);
+            return false;
+        }
 
-        const channelId = musicSettings.interactivePanel.channelId;
-        const channel = guild.channels.cache.get(channelId);
-        if (!channel) return false;
+        const channelName = musicSettings.interactivePanel.channelId;
+        console.log(`🔍 Suche Channel: "${channelName}"`);
+        
+        // Suche Channel nach Name (nicht ID)
+        const channel = guild.channels.cache.find(ch => ch.name === channelName && ch.type === 0);
+        if (!channel) {
+            console.log(`❌ Channel "${channelName}" nicht gefunden in Guild ${guild.name}`);
+            console.log(`📋 Verfügbare Text-Channels:`, guild.channels.cache.filter(ch => ch.type === 0).map(ch => ch.name).join(', '));
+            return false;
+        }
 
-        console.log(`📻 Poste Interactive Radio Panel in #${channel.name}`);
+        console.log(`📻 Poste Interactive Radio Panel in #${channel.name} (ID: ${channel.id})`);
 
         const panelData = await createInteractiveRadioPanel(guildId);
-        if (!panelData) return false;
+        if (!panelData) {
+            console.log('❌ Konnte Panel-Daten nicht erstellen');
+            return false;
+        }
 
         // Lösche alte Message
         const oldMessageId = musicSettings.interactivePanel.messageId;
@@ -789,7 +804,7 @@ async function postInteractiveRadioPanel(guildId) {
                     console.log('🗑️ Alte Radio Panel Message gelöscht');
                 }
             } catch (error) {
-                console.log('⚠️ Alte Message nicht gefunden');
+                console.log('⚠️ Alte Message nicht gefunden oder bereits gelöscht');
             }
         }
 
@@ -800,7 +815,7 @@ async function postInteractiveRadioPanel(guildId) {
         musicSettings.interactivePanel.messageId = message.id;
         saveMusicSettings();
 
-        console.log(`✅ Radio Panel gepostet: ${message.id}`);
+        console.log(`✅ Radio Panel erfolgreich gepostet: ${message.id} in #${channel.name}`);
         return true;
 
     } catch (error) {
@@ -829,10 +844,10 @@ async function updateInteractiveRadioPanel(guildId, forceUpdate = false) {
             return false;
         }
 
-        const channelId = musicSettings.interactivePanel.channelId;
+        const channelName = musicSettings.interactivePanel.channelId;
         const messageId = musicSettings.interactivePanel.messageId;
         
-        if (!channelId) {
+        if (!channelName) {
             console.log('⚠️ Kein Channel für Interactive Panel konfiguriert');
             return false;
         }
@@ -842,9 +857,10 @@ async function updateInteractiveRadioPanel(guildId, forceUpdate = false) {
             return false;
         }
 
-        const channel = guild.channels.cache.get(channelId);
+        // Suche Channel nach Name
+        const channel = guild.channels.cache.find(ch => ch.name === channelName && ch.type === 0);
         if (!channel) {
-            console.log(`⚠️ Channel ${channelId} nicht gefunden`);
+            console.log(`⚠️ Channel "${channelName}" nicht gefunden`);
             return false;
         }
 
