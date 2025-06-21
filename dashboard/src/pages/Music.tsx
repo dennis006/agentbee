@@ -352,15 +352,34 @@ const Music: React.FC = () => {
   
 
 
-  // Load Guild Channels - DEAKTIVIERT (Radio-System entfernt)
+  // Load Guild Channels
   const loadGuildChannels = async (targetGuildId: string) => {
     try {
-      console.log(`🔄 Guild-Channels Laden übersprungen (Radio-System entfernt)`);
-      // Setze leere Standardwerte
-      setGuildInfo({ id: targetGuildId, name: 'Discord Server', icon: '' });
-      setChannels({ text: [], voice: [] });
+      console.log(`🔄 Lade Channels für Guild: ${targetGuildId}`);
+      
+      const response = await fetch(`${apiUrl}/api/music/channels/${targetGuildId}`);
+      if (response.ok) {
+        const channels = await response.json();
+        console.log(`✅ ${channels.length} Channels geladen`);
+        
+        // Separiere Text- und Voice-Channels
+        const textChannels = channels.filter((ch: any) => ch.type === 'text');
+        const voiceChannels = channels.filter((ch: any) => ch.type === 'voice');
+        
+        setChannels({ 
+          text: textChannels.map((ch: any) => ({ id: ch.id, name: ch.name, position: 0 })), 
+          voice: voiceChannels.map((ch: any) => ({ id: ch.id, name: ch.name, position: 0, members: 0, joinable: true }))
+        });
+        
+        // Setze Guild-Info (falls verfügbar vom Discord Client)
+        setGuildInfo({ id: targetGuildId, name: 'Discord Server', icon: '' });
+      } else {
+        console.warn('⚠️ Fehler beim Laden der Guild-Channels:', response.status);
+        setChannels({ text: [], voice: [] });
+      }
     } catch (error) {
-      console.error('❌ Fehler beim Setzen der Guild-Channels:', error);
+      console.error('❌ Fehler beim Laden der Guild-Channels:', error);
+      setChannels({ text: [], voice: [] });
     }
   };
 
