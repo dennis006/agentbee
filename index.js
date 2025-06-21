@@ -1468,58 +1468,8 @@ app.post('/api/bot/settings', async (req, res) => {
     }
 });
 
-// Rules laden
-app.get('/api/rules', (req, res) => {
-    try {
-        if (fs.existsSync('./rules.json')) {
-            const rules = JSON.parse(fs.readFileSync('./rules.json', 'utf8'));
-            
-            // Migration: Füge channelName hinzu falls es nicht existiert
-            if (!rules.channelName && rules.channel) {
-                rules.channelName = rules.channel;
-            } else if (!rules.channelName) {
-                rules.channelName = 'rules';
-            }
-            
-            res.json(rules);
-        } else {
-            res.json(rulesData); // Fallback zu eingebauten Regeln
-        }
-    } catch (error) {
-        console.error('Fehler beim Laden der Regeln:', error);
-        res.status(500).json({ error: 'Fehler beim Laden der Regeln' });
-    }
-});
-
-// Rules speichern
-app.post('/api/rules', (req, res) => {
-    try {
-        const rulesUpdate = req.body;
-        
-        // Stelle sicher, dass channelName gesetzt ist
-        if (!rulesUpdate.channelName && rulesUpdate.channel) {
-            rulesUpdate.channelName = rulesUpdate.channel;
-        } else if (!rulesUpdate.channelName) {
-            rulesUpdate.channelName = 'rules';
-        }
-        
-        // Behalte beide Felder für Rückwärtskompatibilität
-        if (rulesUpdate.channelName && !rulesUpdate.channel) {
-            rulesUpdate.channel = rulesUpdate.channelName;
-        }
-        
-        fs.writeFileSync('./rules.json', JSON.stringify(rulesUpdate, null, 2));
-        
-        // Lade neue Regeln in den Bot
-        rulesData = rulesUpdate;
-        console.log('✅ Regeln aktualisiert mit Channel:', rulesData.channelName);
-        
-        res.json({ success: true, message: 'Regeln gespeichert' });
-    } catch (error) {
-        console.error('Fehler beim Speichern der Regeln:', error);
-        res.status(500).json({ error: 'Fehler beim Speichern der Regeln' });
-    }
-});
+// Legacy Rules API entfernt - verwendet jetzt Supabase API
+// Siehe rules-supabase-api.js für neue Endpunkte
 
 // Welcome Settings
 let welcomeSettings = {
@@ -2118,14 +2068,24 @@ app.post('/api/rules/repost', async (req, res) => {
     }
 });
 
-// Lade Regeln aus JSON-Datei
-let rulesData;
-try {
-    rulesData = JSON.parse(fs.readFileSync('./rules.json', 'utf8'));
-} catch (error) {
-    console.error('❌ Fehler beim Laden der rules.json:', error);
-    process.exit(1);
-}
+// Regeln werden jetzt über Supabase API geladen
+let rulesData = {
+    title: "📜 SERVERREGELN",
+    description: "Willkommen auf **{serverName}**! Bitte lies und befolge diese Regeln:",
+    color: "0xFF6B6B",
+    channelName: "rules",
+    rules: [
+        { emoji: "1️⃣", name: "Respekt", value: "Sei respektvoll und freundlich zu allen Mitgliedern" },
+        { emoji: "2️⃣", name: "Kein Spam", value: "Kein Spam, keine Werbung oder Eigenwerbung" }
+    ],
+    footer: "Viel Spaß auf dem Server! 🎉",
+    reaction: {
+        emoji: "✅",
+        message: "Reagiere mit ✅ um die Regeln zu akzeptieren!",
+        acceptedRole: "verified",
+        acceptedMessage: "Willkommen! Du hast die Regeln akzeptiert."
+    }
+};
 
 // Daily Message Counter für echte "heute" Statistiken
 let dailyMessageCount = 0;
@@ -4769,15 +4729,9 @@ client.on(Events.InteractionCreate, async interaction => {
             // Sofort antworten um Timeout zu vermeiden
             await interaction.deferReply({ ephemeral: true });
             
-            // Reload music settings to get latest configuration
-            loadMusicSettings();
-            // Load fresh settings directly from file
-            const fs = require('fs');
-            if (fs.existsSync('music-settings.json')) {
-                const freshSettings = JSON.parse(fs.readFileSync('music-settings.json', 'utf8'));
-                musicSettings = freshSettings;
-                console.log(`🔍 Fresh settings loaded for buttons: requireDJForControls = ${freshSettings.songRequests?.interactivePanel?.requireDJForControls}`);
-            }
+            // Music settings werden jetzt über Supabase geladen
+            // Die aktuellen Einstellungen sind bereits im musicSettings Objekt verfügbar
+            console.log(`🔍 Using current music settings for buttons: requireDJForControls = ${musicSettings.songRequests?.interactivePanel?.requireDJForControls}`);
             
             // Check if DJ role is required for music controls
             const requireDJForControls = musicSettings.songRequests?.interactivePanel?.requireDJForControls || false;
