@@ -9,7 +9,7 @@ let supabase = null;
 // Initialisiere Supabase
 function initializeSupabase() {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.log('âš ï¸ Supabase nicht konfiguriert - verwende JSON-Fallback');
+    console.log('🤔 Supabase nicht konfiguriert - verwende JSON-Fallback');
     return false;
   }
   
@@ -18,7 +18,7 @@ function initializeSupabase() {
     process.env.SUPABASE_ANON_KEY
   );
   
-  console.log('âœ… Supabase fÃ¼r Server Stats initialisiert');
+  console.log('✅ Supabase für Server Stats initialisiert');
   return true;
 }
 
@@ -30,54 +30,54 @@ let serverStatsSettings = {
     memberCount: {
       enabled: true,
       channelId: '',
-      name: 'ðŸ‘¥ Mitglieder: {count}',
+      name: '👥 Mitglieder: {count}',
       position: 0
     },
     onlineCount: {
       enabled: true,
       channelId: '',
-      name: 'ðŸŸ¢ Online: {count}',
+      name: '🟢 Online: {count}',
       position: 1
     },
     boostCount: {
       enabled: true,
       channelId: '',
-      name: 'ðŸš€ Boosts: {count}',
+      name: '🚀 Boosts: {count}',
       position: 2
     },
     channelCount: {
       enabled: false,
       channelId: '',
-      name: 'ðŸ“º KanÃ¤le: {count}',
+      name: '📺 Kanäle: {count}',
       position: 3
     },
     roleCount: {
       enabled: false,
       channelId: '',
-      name: 'ðŸŽ­ Rollen: {count}',
+      name: '🎭 Rollen: {count}',
       position: 4
     },
     serverLevel: {
       enabled: false,
       channelId: '',
-      name: 'â­ Level: {count}',
+      name: '⭐ Level: {count}',
       position: 5
     },
     createdDate: {
       enabled: false,
       channelId: '',
-      name: 'ðŸ“… Erstellt: {date}',
+      name: '📅 Erstellt: {date}',
       position: 6
     },
     botCount: {
       enabled: false,
       channelId: '',
-      name: 'ðŸ¤– Bots: {count}',
+      name: '🤖 Bots: {count}',
       position: 7
     }
   },
   categoryId: '',
-  categoryName: 'ðŸ“Š Server Statistiken',
+  categoryName: '📊 Server Statistiken',
   permissions: {
     viewChannel: true,
     connect: false,
@@ -85,9 +85,9 @@ let serverStatsSettings = {
     useVAD: false
   },
   design: {
-    emoji: 'ðŸ“Š',
+    emoji: '📊',
     color: '0x00FF7F',
-    separator: ' â€¢ ',
+    separator: ' • ',
     format: 'modern' // modern, classic, minimal
   }
 };
@@ -116,7 +116,7 @@ async function loadServerStatsSettings() {
         serverStatsSettings = data.config;
         settingsLoaded = true;
         const enabledChannels = Object.entries(serverStatsSettings.channels).filter(([_, config]) => config.enabled).length;
-        console.log(`ðŸ“Š Server-Stats aus Supabase geladen: ${enabledChannels} Channels aktiv`);
+        console.log(`📊 Server-Stats aus Supabase geladen: ${enabledChannels} Channels aktiv`);
         return;
       }
     }
@@ -131,13 +131,13 @@ async function loadServerStatsSettings() {
       settingsLoaded = true;
       
       const enabledChannels = Object.entries(serverStatsSettings.channels).filter(([_, config]) => config.enabled).length;
-      console.log(`ðŸ“Š Server-Stats aus JSON geladen: ${enabledChannels} Channels aktiv`);
+      console.log(`📊 Server-Stats aus JSON geladen: ${enabledChannels} Channels aktiv`);
       
     } else {
       settingsLoaded = true;
     }
   } catch (error) {
-    console.error('âŒ Fehler beim Laden der Server-Stats Einstellungen:', error);
+    console.error('🤔 Fehler beim Laden der Server-Stats Einstellungen:', error);
     settingsLoaded = true;
   }
 }
@@ -157,17 +157,17 @@ async function saveServerStatsSettings() {
         });
 
       if (!error) {
-        console.log('ðŸ’¾ Server-Stats in Supabase gespeichert');
+        console.log('✅ Server-Stats in Supabase gespeichert');
         return true;
       }
     }
 
     // Fallback auf JSON
     fs.writeFileSync(STATS_SETTINGS_FILE, JSON.stringify(serverStatsSettings, null, 2));
-    console.log('ðŸ’¾ Server-Stats in JSON gespeichert');
+    console.log('✅ Server-Stats in JSON gespeichert');
     return true;
   } catch (error) {
-    console.error('âŒ Fehler beim Speichern der Server-Stats Einstellungen:', error);
+    console.error('🤔 Fehler beim Speichern der Server-Stats Einstellungen:', error);
     return false;
   }
 }
@@ -184,25 +184,25 @@ async function initializeServerStats(discordClient) {
     await loadServerStatsSettings();
   }
   
-  // Lade alle Mitglieder fÃ¼r bessere Presence-Daten
+  // Lade alle Mitglieder für bessere Presence-Daten
   try {
     for (const guild of client.guilds.cache.values()) {
       await guild.members.fetch();
     }
   } catch (error) {
-    console.error('âŒ Fehler beim Laden der Mitglieder:', error);
+    console.error('🤔 Fehler beim Laden der Mitglieder:', error);
   }
   
   if (serverStatsSettings.enabled) {
-    // RADIKALE LÃ–SUNG: Komplett-Reset der Stats-Channels
-    console.log('ðŸ”„ FÃ¼hre kompletten Stats-Channel Reset durch...');
+    // RADIKALE LÖSUNG: Komplett-Reset der Stats-Channels
+    console.log('🚀 Führe kompletten Stats-Channel Reset durch...');
     for (const guild of client.guilds.cache.values()) {
       await completeStatsChannelReset(guild);
       await new Promise(resolve => setTimeout(resolve, 3000)); // 3 Sekunden warten
     }
     
     startStatsUpdater();
-    console.log('ðŸ“Š Server-Stats aktiviert mit komplettem Channel-Reset');
+    console.log('📊 Server-Stats aktiviert mit komplettem Channel-Reset');
   }
 }
 
@@ -221,8 +221,8 @@ function startStatsUpdater() {
   }, serverStatsSettings.updateInterval);
   
   // ENTFERNT: Automatisches Update beim Start
-  // Server-Stats Channels werden jetzt nur noch manuell Ã¼ber das Dashboard erstellt
-  console.log('ðŸ“Š Auto-Updater gestartet (ohne automatische Channel-Erstellung)');
+  // Server-Stats Channels werden jetzt nur noch manuell über das Dashboard erstellt
+  console.log('📊 Auto-Updater gestartet (ohne automatische Channel-Erstellung)');
 }
 
 // Stoppe automatische Updates
@@ -254,7 +254,7 @@ async function createStatsCategory(guild) {
     
     return category;
   } catch (error) {
-    console.error('âŒ Fehler beim Erstellen der Stats-Kategorie:', error);
+    console.error('🤔 Fehler beim Erstellen der Stats-Kategorie:', error);
     return null;
   }
 }
@@ -288,7 +288,7 @@ async function createStatsChannel(guild, statType, statConfig) {
     
     return channel;
   } catch (error) {
-    console.error(`âŒ Fehler beim Erstellen des ${statType} Channels:`, error);
+    console.error(`🤔 Fehler beim Erstellen des ${statType} Channels:`, error);
     return null;
   }
 }
@@ -299,7 +299,7 @@ function calculateServerStats(guild) {
   let onlineCount = 0;
   
   try {
-    // Versuche zuerst Ã¼ber Presences
+    // Versuche zuerst über Presences
     onlineCount = guild.members.cache.filter(member => {
       if (!member.presence) return false;
       return member.presence.status === 'online' || 
@@ -307,18 +307,18 @@ function calculateServerStats(guild) {
              member.presence.status === 'dnd';
     }).size;
     
-    // Fallback: Wenn keine Presences verfÃ¼gbar, schÃ¤tze basierend auf Voice-Channels
+    // Fallback: Wenn keine Presences verfügbar, schätze basierend auf Voice-Channels
     if (onlineCount === 0) {
       const voiceChannelMembers = guild.channels.cache
         .filter(channel => channel.type === ChannelType.GuildVoice)
         .reduce((count, channel) => count + channel.members.size, 0);
       
-      // SchÃ¤tze Online-Nutzer als mindestens die in Voice-Channels + 20% der Gesamtmitglieder
+      // Schätze Online-Nutzer als mindestens die in Voice-Channels + 20% der Gesamtmitglieder
       onlineCount = Math.max(voiceChannelMembers, Math.floor(guild.memberCount * 0.2));
     }
   } catch (error) {
-    console.error('âŒ Fehler beim Berechnen der Online-Nutzer:', error);
-    // Fallback: 20% der Gesamtmitglieder als SchÃ¤tzung
+    console.error('🤔 Fehler beim Berechnen der Online-Nutzer:', error);
+    // Fallback: 20% der Gesamtmitglieder als Schätzung
     onlineCount = Math.floor(guild.memberCount * 0.2);
   }
   
@@ -330,7 +330,7 @@ function calculateServerStats(guild) {
       channel.type === ChannelType.GuildText || 
       channel.type === ChannelType.GuildVoice
     ).size,
-    roleCount: guild.roles.cache.size - 1, // -1 fÃ¼r @everyone
+    roleCount: guild.roles.cache.size - 1, // -1 für @everyone
     serverLevel: guild.premiumTier,
     createdDate: guild.createdAt.toLocaleDateString('de-DE'),
     botCount: guild.members.cache.filter(member => member.user.bot).size
@@ -344,7 +344,7 @@ function formatChannelName(template, value, statType) {
   let formatted = template.replace('{count}', value);
   formatted = formatted.replace('{date}', value);
   
-  // Spezielle Formatierung fÃ¼r verschiedene Stat-Typen
+  // Spezielle Formatierung für verschiedene Stat-Typen
   switch (statType) {
     case 'serverLevel':
       const levelNames = ['Keine', 'Level 1', 'Level 2', 'Level 3'];
@@ -367,22 +367,22 @@ async function updateStatsChannel(guild, statType, statValue) {
     
     let channel = guild.channels.cache.get(statConfig.channelId);
     
-    // GEÃ„NDERT: Keine automatische Channel-Erstellung mehr
-    // Channels mÃ¼ssen manuell Ã¼ber das Dashboard erstellt werden
+    // GEÄNDERT: Keine automatische Channel-Erstellung mehr
+    // Channels müssen manuell über das Dashboard erstellt werden
     if (!channel) {
-      console.log(`âš ï¸ Stats-Channel fÃ¼r ${statType} nicht gefunden (ID: ${statConfig.channelId}). Bitte Ã¼ber Dashboard erstellen.`);
+      console.log(`🤔 Stats-Channel für ${statType} nicht gefunden (ID: ${statConfig.channelId}). Bitte über Dashboard erstellen.`);
       return;
     }
     
     const newName = formatChannelName(statConfig.name, statValue, statType);
     
-    // Update nur wenn Name sich geÃ¤ndert hat
+    // Update nur wenn Name sich geändert hat
     if (channel.name !== newName) {
       await channel.setName(newName);
     }
     
   } catch (error) {
-    console.error(`âŒ Fehler beim Aktualisieren des ${statType} Channels:`, error);
+    console.error(`🤔 Fehler beim Aktualisieren des ${statType} Channels:`, error);
   }
 }
 
@@ -395,7 +395,7 @@ async function updateAllServerStats() {
     lastUpdateTime = Date.now();
     
     for (const guild of client.guilds.cache.values()) {
-      // Aktualisiere Mitglieder-Cache alle 10 Minuten fÃ¼r bessere Presence-Daten
+      // Aktualisiere Mitglieder-Cache alle 10 Minuten für bessere Presence-Daten
       const lastFetch = guild._lastMemberFetch || 0;
       const now = Date.now();
       if (now - lastFetch > 600000) { // 10 Minuten
@@ -403,7 +403,7 @@ async function updateAllServerStats() {
           await guild.members.fetch();
           guild._lastMemberFetch = now;
         } catch (error) {
-          console.error(`âŒ Fehler beim Aktualisieren der Mitglieder fÃ¼r ${guild.name}:`, error);
+          console.error(`🤔 Fehler beim Aktualisieren der Mitglieder für ${guild.name}:`, error);
         }
       }
       
@@ -414,17 +414,17 @@ async function updateAllServerStats() {
         if (statConfig.enabled && stats[statType] !== undefined) {
           await updateStatsChannel(guild, statType, stats[statType]);
           
-          // Kleine VerzÃ¶gerung zwischen Updates um Rate-Limits zu vermeiden
+          // Kleine Verzögerung zwischen Updates um Rate-Limits zu vermeiden
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     }
   } catch (error) {
-    console.error('âŒ Fehler beim Aktualisieren der Server-Stats:', error);
+    console.error('🤔 Fehler beim Aktualisieren der Server-Stats:', error);
   }
 }
 
-// LÃ¶sche Stats-Channel
+// Lösche Stats-Channel
 async function deleteStatsChannel(guild, statType) {
   try {
     const channelId = serverStatsSettings.channels[statType].channelId;
@@ -432,18 +432,18 @@ async function deleteStatsChannel(guild, statType) {
     
     if (channel) {
       await channel.delete();
-      console.log(`ðŸ—‘ï¸ Stats-Channel gelÃ¶scht: ${statType}`);
+      console.log(`🗑️ Stats-Channel gelöscht: ${statType}`);
     }
     
     serverStatsSettings.channels[statType].channelId = '';
     saveServerStatsSettings();
     
   } catch (error) {
-    console.error(`âŒ Fehler beim LÃ¶schen des ${statType} Channels:`, error);
+    console.error(`🤔 Fehler beim Löschen des ${statType} Channels:`, error);
   }
 }
 
-// LÃ¶sche alle Stats-Channels
+// Lösche alle Stats-Channels
 async function deleteAllStatsChannels(guild) {
   try {
     for (const statType of Object.keys(serverStatsSettings.channels)) {
@@ -451,19 +451,19 @@ async function deleteAllStatsChannels(guild) {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // LÃ¶sche auch die Kategorie
+    // Lösche auch die Kategorie
     if (serverStatsSettings.categoryId) {
       const category = guild.channels.cache.get(serverStatsSettings.categoryId);
       if (category) {
         await category.delete();
-        console.log('ðŸ—‘ï¸ Stats-Kategorie gelÃ¶scht');
+        console.log('🗑️ Stats-Kategorie gelöscht');
       }
       serverStatsSettings.categoryId = '';
       saveServerStatsSettings();
     }
     
   } catch (error) {
-    console.error('âŒ Fehler beim LÃ¶schen aller Stats-Channels:', error);
+    console.error('🤔 Fehler beim Löschen aller Stats-Channels:', error);
   }
 }
 
@@ -473,49 +473,49 @@ async function validateAndRepairStatsChannels() {
   
   try {
     for (const guild of client.guilds.cache.values()) {
-      console.log(`ðŸ” Validiere Server-Stats Channels fÃ¼r ${guild.name}...`);
+      console.log(`🚀 Validiere Server-Stats Channels für ${guild.name}...`);
       
       let channelsRepaired = 0;
       let channelsValid = 0;
       let duplicatesRemoved = 0;
       
-      // Erst alle doppelten Stats-Kategorien und Channels lÃ¶schen
+      // Erst alle doppelten Stats-Kategorien und Channels löschen
       const allCategories = guild.channels.cache.filter(ch => 
         ch.type === ChannelType.GuildCategory && 
         (ch.name.includes('Server Statistiken') || 
-         ch.name.includes('ðŸ“Š') ||
+         ch.name.includes('📊') ||
          ch.name.toLowerCase().includes('statistik'))
       );
       
       if (allCategories.size > 1) {
-        console.log(`âš ï¸ ${allCategories.size} doppelte Stats-Kategorien gefunden, lÃ¶sche alte...`);
+        console.log(`🤔 ${allCategories.size} doppelte Stats-Kategorien gefunden, lösche alte...`);
         
-        // Sortiere nach Erstellungsdatum (Ã¤lteste zuerst)
+        // Sortiere nach Erstellungsdatum (älteste zuerst)
         const sortedCategories = allCategories.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
         
         // Behalte nur die neueste Kategorie
         for (let i = 0; i < sortedCategories.size - 1; i++) {
           const oldCategory = sortedCategories.at(i);
           
-          // LÃ¶sche alle Channels in der alten Kategorie
+          // Lösche alle Channels in der alten Kategorie
           const channelsInCategory = guild.channels.cache.filter(ch => ch.parentId === oldCategory.id);
           for (const [_, channel] of channelsInCategory) {
             try {
               await channel.delete();
               duplicatesRemoved++;
-              console.log(`ðŸ—‘ï¸ Doppelten Channel gelÃ¶scht: ${channel.name}`);
+              console.log(`🗑️ Doppelten Channel gelöscht: ${channel.name}`);
             } catch (error) {
-              console.error(`âŒ Fehler beim LÃ¶schen von ${channel.name}:`, error);
+              console.error(`🤔 Fehler beim Löschen von ${channel.name}:`, error);
             }
           }
           
-          // LÃ¶sche die alte Kategorie
+          // Lösche die alte Kategorie
           try {
             await oldCategory.delete();
             duplicatesRemoved++;
-            console.log(`ðŸ—‘ï¸ Alte Stats-Kategorie gelÃ¶scht: ${oldCategory.name}`);
+            console.log(`🗑️ Alte Stats-Kategorie gelöscht: ${oldCategory.name}`);
           } catch (error) {
-            console.error(`âŒ Fehler beim LÃ¶schen der Kategorie:`, error);
+            console.error(`🤔 Fehler beim Löschen der Kategorie:`, error);
           }
           
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -527,11 +527,11 @@ async function validateAndRepairStatsChannels() {
         saveServerStatsSettings();
       }
       
-      // PrÃ¼fe Kategorie
+      // Prüfe Kategorie
       if (serverStatsSettings.categoryId) {
         const category = guild.channels.cache.get(serverStatsSettings.categoryId);
         if (!category) {
-          console.log(`âš ï¸ Stats-Kategorie nicht gefunden, erstelle neue...`);
+          console.log(`🤔 Stats-Kategorie nicht gefunden, erstelle neue...`);
           await createStatsCategory(guild);
           channelsRepaired++;
         } else {
@@ -539,27 +539,27 @@ async function validateAndRepairStatsChannels() {
         }
       } else if (Object.values(serverStatsSettings.channels).some(ch => ch.enabled)) {
         // Erstelle Kategorie wenn aktivierte Channels vorhanden sind
-        console.log(`ðŸ“ Erstelle Stats-Kategorie...`);
+        console.log(`🚀 Erstelle Stats-Kategorie...`);
         await createStatsCategory(guild);
         channelsRepaired++;
       }
       
-      // PrÃ¼fe jeden aktivierten Channel
+      // Prüfe jeden aktivierten Channel
       for (const [statType, statConfig] of Object.entries(serverStatsSettings.channels)) {
         if (statConfig.enabled) {
           if (statConfig.channelId) {
             const channel = guild.channels.cache.get(statConfig.channelId);
             if (!channel) {
-              console.log(`âš ï¸ Stats-Channel ${statType} nicht gefunden (ID: ${statConfig.channelId}), erstelle neu...`);
+              console.log(`🤔 Stats-Channel ${statType} nicht gefunden (ID: ${statConfig.channelId}), erstelle neu...`);
               await createStatsChannel(guild, statType, statConfig);
               channelsRepaired++;
               await new Promise(resolve => setTimeout(resolve, 1000));
             } else {
               channelsValid++;
-              console.log(`âœ… Stats-Channel ${statType} ist gÃ¼ltig: ${channel.name}`);
+              console.log(`✅ Stats-Channel ${statType} ist gültig: ${channel.name}`);
             }
           } else {
-            console.log(`ðŸ“Š Erstelle fehlenden Stats-Channel: ${statType}`);
+            console.log(`📊 Erstelle fehlenden Stats-Channel: ${statType}`);
             await createStatsChannel(guild, statType, statConfig);
             channelsRepaired++;
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -568,21 +568,21 @@ async function validateAndRepairStatsChannels() {
       }
       
       if (duplicatesRemoved > 0) {
-        console.log(`ðŸ§¹ ${duplicatesRemoved} doppelte Channels/Kategorien entfernt`);
+        console.log(`🗑️ ${duplicatesRemoved} doppelte Channels/Kategorien entfernt`);
       }
       
       if (channelsRepaired > 0) {
-        console.log(`âœ… ${channelsRepaired} Stats-Channels repariert, ${channelsValid} waren bereits vorhanden`);
+        console.log(`✅ ${channelsRepaired} Stats-Channels repariert, ${channelsValid} waren bereits vorhanden`);
         // Sofortiges Update nach Reparatur
         await updateAllServerStats();
       } else if (channelsValid > 0) {
-        console.log(`âœ… Alle ${channelsValid} Stats-Channels sind gÃ¼ltig`);
+        console.log(`✅ Alle ${channelsValid} Stats-Channels sind gültig`);
       } else {
-        console.log(`â„¹ï¸ Keine aktiven Stats-Channels konfiguriert`);
+        console.log(`🤔 Keine aktiven Stats-Channels konfiguriert`);
       }
     }
   } catch (error) {
-    console.error('âŒ Fehler bei der Channel-Validierung:', error);
+    console.error('🤔 Fehler bei der Channel-Validierung:', error);
   }
 }
 
@@ -606,55 +606,55 @@ async function createAllStatsChannels(guild) {
     await updateAllServerStats();
     
   } catch (error) {
-    console.error('âŒ Fehler beim Erstellen aller Stats-Channels:', error);
+    console.error('🤔 Fehler beim Erstellen aller Stats-Channels:', error);
   }
 }
 
-// Kompletter Reset aller Stats-Channels (RADIKALE LÃ–SUNG)
+// Kompletter Reset aller Stats-Channels (RADIKALE LÖSUNG)
 async function completeStatsChannelReset(guild) {
   try {
-    console.log(`ðŸ”„ Kompletter Stats-Channel Reset fÃ¼r ${guild.name}...`);
+    console.log(`🚀 Kompletter Stats-Channel Reset für ${guild.name}...`);
     
     let deletedCount = 0;
     
-    // SCHRITT 1: LÃ¶sche ALLE Stats-Kategorien (egal wie sie heiÃŸen)
+    // SCHRITT 1: Lösche ALLE Stats-Kategorien (egal wie sie heißen)
     const allStatsCategories = guild.channels.cache.filter(ch => 
       ch.type === ChannelType.GuildCategory && 
       (ch.name.includes('Server Statistiken') || 
-       ch.name.includes('ðŸ“Š') ||
+       ch.name.includes('📊') ||
        ch.name.toLowerCase().includes('statistik') ||
        ch.name.toLowerCase().includes('stats'))
     );
     
-    console.log(`ðŸ—‘ï¸ LÃ¶sche ${allStatsCategories.size} Stats-Kategorien...`);
+    console.log(`🗑️ Lösche ${allStatsCategories.size} Stats-Kategorien...`);
     
     for (const [_, category] of allStatsCategories) {
-      // LÃ¶sche alle Channels in der Kategorie
+      // Lösche alle Channels in der Kategorie
       const channelsInCategory = guild.channels.cache.filter(ch => ch.parentId === category.id);
       for (const [_, channel] of channelsInCategory) {
         try {
           await channel.delete();
           deletedCount++;
-          console.log(`ðŸ—‘ï¸ Channel gelÃ¶scht: ${channel.name}`);
+          console.log(`🗑️ Channel gelöscht: ${channel.name}`);
         } catch (error) {
-          console.error(`âŒ Fehler beim LÃ¶schen von ${channel.name}:`, error);
+          console.error(`🤔 Fehler beim Löschen von ${channel.name}:`, error);
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      // LÃ¶sche die Kategorie
+      // Lösche die Kategorie
       try {
         await category.delete();
         deletedCount++;
-        console.log(`ðŸ—‘ï¸ Kategorie gelÃ¶scht: ${category.name}`);
+        console.log(`��️ Kategorie gelöscht: ${category.name}`);
       } catch (error) {
-        console.error(`âŒ Fehler beim LÃ¶schen der Kategorie:`, error);
+        console.error(`🤔 Fehler beim Löschen der Kategorie:`, error);
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // SCHRITT 2: LÃ¶sche alle verwaisten Stats-Channels (auÃŸerhalb von Kategorien)
-    const statsChannelPatterns = ['ðŸ‘¥ Mitglieder:', 'ðŸŸ¢ Online:', 'ðŸš€ Boosts:', 'ðŸ“º KanÃ¤le:', 'ðŸŽ­ Rollen:', 'â­ Level:', 'ðŸ“… Erstellt:', 'ðŸ¤– Bots:'];
+    // SCHRITT 2: Lösche alle verwaisten Stats-Channels (außerhalb von Kategorien)
+    const statsChannelPatterns = ['👥 Mitglieder:', '🟢 Online:', '🚀 Boosts:', '📺 Kanäle:', '🎭 Rollen:', '⭐ Level:', '📅 Erstellt:', '🤖 Bots:'];
     
     for (const pattern of statsChannelPatterns) {
       const matchingChannels = guild.channels.cache.filter(ch => 
@@ -666,37 +666,37 @@ async function completeStatsChannelReset(guild) {
         try {
           await channel.delete();
           deletedCount++;
-          console.log(`ðŸ—‘ï¸ Verwaister Stats-Channel gelÃ¶scht: ${channel.name}`);
+          console.log(`🗑️ Verwaister Stats-Channel gelöscht: ${channel.name}`);
         } catch (error) {
-          console.error(`âŒ Fehler beim LÃ¶schen von ${channel.name}:`, error);
+          console.error(`🤔 Fehler beim Löschen von ${channel.name}:`, error);
         }
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     
-    console.log(`ðŸ§¹ ${deletedCount} Channels/Kategorien gelÃ¶scht`);
+    console.log(`🗑️ ${deletedCount} Channels/Kategorien gelöscht`);
     
-    // SCHRITT 3: Setze alle Channel-IDs zurÃ¼ck
+    // SCHRITT 3: Setze alle Channel-IDs zurück
     for (const [statType, statConfig] of Object.entries(serverStatsSettings.channels)) {
       statConfig.channelId = '';
     }
     serverStatsSettings.categoryId = '';
     saveServerStatsSettings();
     
-    console.log(`ðŸ”„ Channel-IDs zurÃ¼ckgesetzt`);
+    console.log(`🚀 Channel-IDs zurückgesetzt`);
     
     // SCHRITT 4: Warte 2 Sekunden und erstelle dann alles neu
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // SCHRITT 5: Erstelle alles komplett neu
-    console.log(`ðŸ—ï¸ Erstelle Stats-Channels komplett neu...`);
+    console.log(`🚀 Erstelle Stats-Channels komplett neu...`);
     await createAllStatsChannels(guild);
     
-    console.log(`âœ… Kompletter Stats-Channel Reset abgeschlossen`);
+    console.log(`✅ Kompletter Stats-Channel Reset abgeschlossen`);
     return deletedCount;
     
   } catch (error) {
-    console.error('âŒ Fehler beim kompletten Stats-Channel Reset:', error);
+    console.error('🤔 Fehler beim kompletten Stats-Channel Reset:', error);
     return 0;
   }
 }
@@ -704,7 +704,7 @@ async function completeStatsChannelReset(guild) {
 // Bereinige alle doppelten Stats-Channels
 async function cleanupDuplicateStatsChannels(guild) {
   try {
-    console.log(`ðŸ§¹ Bereinige doppelte Stats-Channels fÃ¼r ${guild.name}...`);
+    console.log(`🗑️ Bereinige doppelte Stats-Channels für ${guild.name}...`);
     
     let duplicatesRemoved = 0;
     
@@ -712,46 +712,46 @@ async function cleanupDuplicateStatsChannels(guild) {
     const allCategories = guild.channels.cache.filter(ch => 
       ch.type === ChannelType.GuildCategory && 
       (ch.name.includes('Server Statistiken') || 
-       ch.name.includes('ðŸ“Š') ||
+       ch.name.includes('📊') ||
        ch.name.toLowerCase().includes('statistik') ||
        ch.name.toLowerCase().includes('stats'))
     );
     
-    console.log(`ðŸ” Gefundene Kategorien: ${allCategories.map(c => `"${c.name}" (ID: ${c.id})`).join(', ')}`);
+    console.log(`🤔 Gefundene Kategorien: ${allCategories.map(c => `"${c.name}" (ID: ${c.id})`).join(', ')}`);
     
     if (allCategories.size > 1) {
-      console.log(`âš ï¸ ${allCategories.size} Stats-Kategorien gefunden, behalte nur die neueste...`);
+      console.log(`🤔 ${allCategories.size} Stats-Kategorien gefunden, behalte nur die neueste...`);
       
-      // Sortiere nach Erstellungsdatum (Ã¤lteste zuerst)
+      // Sortiere nach Erstellungsdatum (älteste zuerst)
       const sortedCategories = allCategories.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
       
-      // LÃ¶sche alle auÃŸer der neuesten
+      // Lösche alle außer der neuesten
       for (let i = 0; i < sortedCategories.size - 1; i++) {
         const oldCategory = sortedCategories.at(i);
-        console.log(`ðŸ—‘ï¸ LÃ¶sche alte Kategorie: "${oldCategory.name}" (ID: ${oldCategory.id})`);
+        console.log(`🗑️ Lösche alte Kategorie: "${oldCategory.name}" (ID: ${oldCategory.id})`);
         
-        // LÃ¶sche alle Channels in der alten Kategorie
+        // Lösche alle Channels in der alten Kategorie
         const channelsInCategory = guild.channels.cache.filter(ch => ch.parentId === oldCategory.id);
-        console.log(`ðŸ“‹ Channels in alter Kategorie: ${channelsInCategory.size}`);
+        console.log(`🤔 Channels in alter Kategorie: ${channelsInCategory.size}`);
         
         for (const [_, channel] of channelsInCategory) {
           try {
-            console.log(`ðŸ—‘ï¸ LÃ¶sche Channel: "${channel.name}" (ID: ${channel.id})`);
+            console.log(`🗑️ Lösche Channel: "${channel.name}" (ID: ${channel.id})`);
             await channel.delete();
             duplicatesRemoved++;
           } catch (error) {
-            console.error(`âŒ Fehler beim LÃ¶schen von ${channel.name}:`, error);
+            console.error(`🤔 Fehler beim Löschen von ${channel.name}:`, error);
           }
           await new Promise(resolve => setTimeout(resolve, 500));
         }
         
-        // LÃ¶sche die alte Kategorie
+        // Lösche die alte Kategorie
         try {
           await oldCategory.delete();
           duplicatesRemoved++;
-          console.log(`âœ… Alte Stats-Kategorie gelÃ¶scht: ${oldCategory.name}`);
+          console.log(`✅ Alte Stats-Kategorie gelöscht: ${oldCategory.name}`);
         } catch (error) {
-          console.error(`âŒ Fehler beim LÃ¶schen der Kategorie:`, error);
+          console.error(`🤔 Fehler beim Löschen der Kategorie:`, error);
         }
         
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -759,13 +759,13 @@ async function cleanupDuplicateStatsChannels(guild) {
       
       // Aktualisiere die Category-ID auf die neueste
       const newestCategory = sortedCategories.at(-1);
-      console.log(`âœ… Behalte neueste Kategorie: "${newestCategory.name}" (ID: ${newestCategory.id})`);
+      console.log(`✅ Behalte neueste Kategorie: "${newestCategory.name}" (ID: ${newestCategory.id})`);
       serverStatsSettings.categoryId = newestCategory.id;
       saveServerStatsSettings();
     }
     
-    // Finde auch doppelte Stats-Channels auÃŸerhalb von Kategorien oder in verschiedenen Kategorien
-    const statsChannelPatterns = ['ðŸ‘¥ Mitglieder:', 'ðŸŸ¢ Online:', 'ðŸš€ Boosts:', 'ðŸ“º KanÃ¤le:', 'ðŸŽ­ Rollen:', 'â­ Level:', 'ðŸ“… Erstellt:', 'ðŸ¤– Bots:'];
+    // Finde auch doppelte Stats-Channels außerhalb von Kategorien oder in verschiedenen Kategorien
+    const statsChannelPatterns = ['👥 Mitglieder:', '🟢 Online:', '🚀 Boosts:', '📺 Kanäle:', '🎭 Rollen:', '⭐ Level:', '📅 Erstellt:', '🤖 Bots:'];
     
     for (const pattern of statsChannelPatterns) {
       const matchingChannels = guild.channels.cache.filter(ch => 
@@ -774,7 +774,7 @@ async function cleanupDuplicateStatsChannels(guild) {
       );
       
       if (matchingChannels.size > 1) {
-        console.log(`âš ï¸ ${matchingChannels.size} doppelte "${pattern}" Channels gefunden:`);
+        console.log(`🤔 ${matchingChannels.size} doppelte "${pattern}" Channels gefunden:`);
         matchingChannels.forEach(ch => console.log(`   - "${ch.name}" (ID: ${ch.id}, Kategorie: ${ch.parent?.name || 'Keine'})`));
         
         // Sortiere nach Erstellungsdatum und behalte nur den neuesten
@@ -783,26 +783,26 @@ async function cleanupDuplicateStatsChannels(guild) {
         for (let i = 0; i < sortedChannels.size - 1; i++) {
           const oldChannel = sortedChannels.at(i);
           try {
-            console.log(`ðŸ—‘ï¸ LÃ¶sche doppelten Channel: "${oldChannel.name}" (ID: ${oldChannel.id})`);
+            console.log(`🗑️ Lösche doppelten Channel: "${oldChannel.name}" (ID: ${oldChannel.id})`);
             await oldChannel.delete();
             duplicatesRemoved++;
           } catch (error) {
-            console.error(`âŒ Fehler beim LÃ¶schen von ${oldChannel.name}:`, error);
+            console.error(`🤔 Fehler beim Löschen von ${oldChannel.name}:`, error);
           }
           await new Promise(resolve => setTimeout(resolve, 500));
         }
         
         // Behalte den neuesten
         const newestChannel = sortedChannels.at(-1);
-        console.log(`âœ… Behalte neuesten Channel: "${newestChannel.name}" (ID: ${newestChannel.id})`);
+        console.log(`✅ Behalte neuesten Channel: "${newestChannel.name}" (ID: ${newestChannel.id})`);
       }
     }
     
-    console.log(`âœ… Bereinigung abgeschlossen: ${duplicatesRemoved} doppelte Channels/Kategorien entfernt`);
+    console.log(`✅ Bereinigung abgeschlossen: ${duplicatesRemoved} doppelte Channels/Kategorien entfernt`);
     return duplicatesRemoved;
     
   } catch (error) {
-    console.error('âŒ Fehler bei der Bereinigung doppelter Channels:', error);
+    console.error('🤔 Fehler bei der Bereinigung doppelter Channels:', error);
     return 0;
   }
 }
@@ -851,7 +851,7 @@ router.get('/api/server-stats', async (req, res) => {
     }
     res.json(serverStatsSettings);
   } catch (error) {
-    console.error('âŒ Fehler beim Laden der Konfiguration:', error);
+    console.error('🤔 Fehler beim Laden der Konfiguration:', error);
     res.status(500).json({ error: 'Serverfehler beim Laden der Konfiguration' });
   }
 });
@@ -875,7 +875,7 @@ router.post('/api/server-stats', async (req, res) => {
     
     res.json({ success: true, message: 'Konfiguration erfolgreich gespeichert' });
   } catch (error) {
-    console.error('âŒ Fehler beim Speichern der Konfiguration:', error);
+    console.error('🤔 Fehler beim Speichern der Konfiguration:', error);
     res.status(500).json({ error: 'Serverfehler beim Speichern der Konfiguration' });
   }
 });
@@ -884,7 +884,7 @@ router.post('/api/server-stats', async (req, res) => {
 router.get('/api/server-stats/current', async (req, res) => {
   try {
     if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfÃ¼gbar' });
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
     
     const guild = client.guilds.cache.first();
@@ -912,7 +912,7 @@ router.get('/api/server-stats/current', async (req, res) => {
       _source: supabase ? 'supabase-hybrid' : 'json-file'
     });
   } catch (error) {
-    console.error('âŒ Fehler beim Laden der aktuellen Stats:', error);
+    console.error('🤔 Fehler beim Laden der aktuellen Stats:', error);
     res.status(500).json({ error: 'Fehler beim Laden der Stats' });
   }
 });
@@ -927,7 +927,7 @@ router.get('/api/server-stats/timer-status', (req, res) => {
       _source: supabase ? 'supabase-hybrid' : 'json-file'
     });
   } catch (error) {
-    console.error('âŒ Fehler beim Laden des Timer Status:', error);
+    console.error('🤔 Fehler beim Laden des Timer Status:', error);
     res.status(500).json({ error: 'Serverfehler beim Laden des Timer Status' });
   }
 });
@@ -935,7 +935,7 @@ router.get('/api/server-stats/timer-status', (req, res) => {
 // POST /api/server-stats/update-now - Manuelles Update
 router.post('/api/server-stats/update-now', async (req, res) => {
   try {
-    console.log('ðŸ”„ Starte manuelles Server-Stats Update...');
+    console.log('🚀 Starte manuelles Server-Stats Update...');
     await updateAllServerStats();
     res.json({ 
       success: true, 
@@ -944,7 +944,7 @@ router.post('/api/server-stats/update-now', async (req, res) => {
       _source: supabase ? 'supabase-hybrid' : 'json-file'
     });
   } catch (error) {
-    console.error('âŒ Fehler beim manuellen Update:', error);
+    console.error('🤔 Fehler beim manuellen Update:', error);
     res.status(500).json({ error: 'Serverfehler beim manuellen Update' });
   }
 });
@@ -953,7 +953,7 @@ router.post('/api/server-stats/update-now', async (req, res) => {
 router.post('/api/server-stats/create-channels', async (req, res) => {
   try {
     if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfÃ¼gbar' });
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
     
     const guild = client.guilds.cache.first();
@@ -964,16 +964,16 @@ router.post('/api/server-stats/create-channels', async (req, res) => {
     await createAllStatsChannels(guild);
     res.json({ success: true, message: 'Alle Stats-Channels erfolgreich erstellt!' });
   } catch (error) {
-    console.error('âŒ Fehler beim Erstellen der Stats-Channels:', error);
+    console.error('🤔 Fehler beim Erstellen der Stats-Channels:', error);
     res.status(500).json({ error: 'Fehler beim Erstellen der Channels' });
   }
 });
 
-// DELETE /api/server-stats/delete-channels - LÃ¶sche alle Channels
+// DELETE /api/server-stats/delete-channels - Lösche alle Channels
 router.delete('/api/server-stats/delete-channels', async (req, res) => {
   try {
     if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfÃ¼gbar' });
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
     
     const guild = client.guilds.cache.first();
@@ -982,10 +982,10 @@ router.delete('/api/server-stats/delete-channels', async (req, res) => {
     }
     
     await deleteAllStatsChannels(guild);
-    res.json({ success: true, message: 'Alle Stats-Channels erfolgreich gelÃ¶scht!' });
+    res.json({ success: true, message: 'Alle Stats-Channels erfolgreich gelöscht!' });
   } catch (error) {
-    console.error('âŒ Fehler beim LÃ¶schen der Stats-Channels:', error);
-    res.status(500).json({ error: 'Fehler beim LÃ¶schen der Channels' });
+    console.error('🤔 Fehler beim Löschen der Stats-Channels:', error);
+    res.status(500).json({ error: 'Fehler beim Löschen der Channels' });
   }
 });
 
@@ -995,7 +995,7 @@ router.post('/api/server-stats/validate-channels', async (req, res) => {
     await validateAndRepairStatsChannels();
     res.json({ success: true, message: 'Stats-Channels validiert und repariert!' });
   } catch (error) {
-    console.error('âŒ Fehler bei der Channel-Validierung:', error);
+    console.error('🤔 Fehler bei der Channel-Validierung:', error);
     res.status(500).json({ error: 'Fehler bei der Channel-Validierung' });
   }
 });
@@ -1004,7 +1004,7 @@ router.post('/api/server-stats/validate-channels', async (req, res) => {
 router.post('/api/server-stats/cleanup-duplicates', async (req, res) => {
   try {
     if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfÃ¼gbar' });
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
     
     const guild = client.guilds.cache.first();
@@ -1019,7 +1019,7 @@ router.post('/api/server-stats/cleanup-duplicates', async (req, res) => {
       removedCount 
     });
   } catch (error) {
-    console.error('âŒ Fehler bei der Bereinigung:', error);
+    console.error('🤔 Fehler bei der Bereinigung:', error);
     res.status(500).json({ error: 'Fehler bei der Bereinigung' });
   }
 });
@@ -1028,7 +1028,7 @@ router.post('/api/server-stats/cleanup-duplicates', async (req, res) => {
 router.post('/api/server-stats/complete-reset', async (req, res) => {
   try {
     if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfÃ¼gbar' });
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
     
     const guild = client.guilds.cache.first();
@@ -1039,11 +1039,11 @@ router.post('/api/server-stats/complete-reset', async (req, res) => {
     const resetCount = await completeStatsChannelReset(guild);
     res.json({ 
       success: true, 
-      message: `Kompletter Reset durchgefÃ¼hrt! ${resetCount} Channels/Kategorien zurÃ¼ckgesetzt.`,
+      message: `Kompletter Reset durchgeführt! ${resetCount} Channels/Kategorien zurückgesetzt.`,
       resetCount 
     });
   } catch (error) {
-    console.error('âŒ Fehler beim kompletten Reset:', error);
+    console.error('🤔 Fehler beim kompletten Reset:', error);
     res.status(500).json({ error: 'Fehler beim kompletten Reset' });
   }
 });
@@ -1054,7 +1054,7 @@ router.post('/api/server-stats/test-channel/:statType', async (req, res) => {
     const { statType } = req.params;
     
     if (!client || !client.guilds) {
-      return res.status(500).json({ error: 'Discord Client nicht verfÃ¼gbar' });
+      return res.status(500).json({ error: 'Discord Client nicht verfügbar' });
     }
     
     const guild = client.guilds.cache.first();
@@ -1078,7 +1078,7 @@ router.post('/api/server-stats/test-channel/:statType', async (req, res) => {
       value: statValue 
     });
   } catch (error) {
-    console.error(`âŒ Fehler beim Testen des ${req.params.statType} Channels:`, error);
+    console.error(`🤔 Fehler beim Testen des ${req.params.statType} Channels:`, error);
     res.status(500).json({ error: 'Fehler beim Testen des Channels' });
   }
 });
@@ -1099,6 +1099,6 @@ module.exports = {
   getTimerStatus,
   serverStatsSettings,
   calculateServerStats,
-  // Express Router fÃ¼r API-Endpunkte
+  // Express Router für API-Endpunkte
   router
 }; 
