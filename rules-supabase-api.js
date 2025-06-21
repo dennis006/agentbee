@@ -27,7 +27,7 @@ function initializeSupabase() {
 initializeSupabase();
 
 // Standard Server ID (kann später dynamisch gemacht werden)
-const DEFAULT_SERVER_ID = '123456789012345678';
+const DEFAULT_SERVER_ID = process.env.GUILD_ID || '1203994020779532348';
 
 // Standard Rules Template
 const DEFAULT_RULES = {
