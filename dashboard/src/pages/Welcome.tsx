@@ -62,7 +62,7 @@ interface WelcomeSettings {
 }
 
 const Welcome = () => {
-  const { toasts, success, error: showError, removeToast } = useToast()
+  const { toasts, showSuccess, showError, removeToast } = useToast()
   const [emojiPickerOpen, setEmojiPickerOpen] = useState<string | null>(null)
   const [previewMode, setPreviewMode] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<any[]>([])
@@ -148,13 +148,17 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        success('🎉 Willkommensnachrichten-Einstellungen gespeichert!');
+        const result = await response.json();
+        showSuccess('Einstellungen gespeichert', '🎉 Willkommensnachrichten-Einstellungen gespeichert!');
+        console.log('Einstellungen gespeichert:', result);
       } else {
-        showError('❌ Fehler beim Speichern der Einstellungen');
+        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        console.error('API Error:', response.status, errorData);
+        showError('Speichern fehlgeschlagen', `❌ ${errorData.error || 'Fehler beim Speichern der Einstellungen'}`);
       }
     } catch (err) {
       console.error('Fehler beim Speichern:', err);
-      showError('❌ Netzwerkfehler beim Speichern');
+      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Speichern');
     }
   };
 
@@ -164,31 +168,42 @@ const Welcome = () => {
       if (response.ok) {
         const data = await response.json();
         
-        // Sicherstellen dass imageRotation existiert (neues Feature)
-        if (!data.imageRotation) {
-          data.imageRotation = {
-            enabled: false,
-            mode: 'random'
-          };
-        }
+        // Robuste Verarbeitung der Daten
+        if (data && typeof data === 'object') {
+          // Sicherstellen dass imageRotation existiert (neues Feature)
+          if (!data.imageRotation) {
+            data.imageRotation = {
+              enabled: false,
+              mode: 'random'
+            };
+          }
 
-        // Sicherstellen dass leaveMessage existiert (neues Feature)
-        if (!data.leaveMessage) {
-          data.leaveMessage = {
-            enabled: false,
-            channelName: 'verlassen',
-            title: '👋 Tschüss!',
-            description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-            color: '0xFF6B6B',
-            mentionUser: false,
-            deleteAfter: 0
-          };
+          // Sicherstellen dass leaveMessage existiert (neues Feature)
+          if (!data.leaveMessage) {
+            data.leaveMessage = {
+              enabled: false,
+              channelName: 'verlassen',
+              title: '👋 Tschüss!',
+              description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+              color: '0xFF6B6B',
+              mentionUser: false,
+              deleteAfter: 0
+            };
+          }
+          
+          setWelcomeSettings(data);
+          console.log('Einstellungen geladen:', data);
+        } else {
+          console.error('Ungültige Datenstruktur von API erhalten:', data);
+          showError('Ungültige Daten', '❌ Ungültige Daten von Server erhalten');
         }
-        
-        setWelcomeSettings(data);
+      } else {
+        console.error('API Error beim Laden der Einstellungen:', response.status, response.statusText);
+                 showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Einstellungen');
       }
     } catch (err) {
       console.error('Fehler beim Laden der Einstellungen:', err);
+             showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Einstellungen');
     }
   };
 
@@ -203,12 +218,12 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        success('📨 Test-Willkommensnachricht gesendet!');
+        showSuccess('Test erfolgreich', '📨 Test-Willkommensnachricht gesendet!');
       } else {
-        showError('❌ Fehler beim Senden der Testnachricht');
+                  showError('Test fehlgeschlagen', '❌ Fehler beim Senden der Testnachricht');
       }
     } catch (err) {
-      showError('❌ Fehler beim Testen der Nachricht');
+              showError('Test Netzwerkfehler', '❌ Fehler beim Testen der Nachricht');
     }
   };
 
@@ -224,13 +239,13 @@ const Welcome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(`👋 ${data.message}`);
+        showSuccess('Test Leave erfolgreich', `👋 ${data.message}`);
       } else {
         const errorData = await response.json();
         showError(`❌ ${errorData.error || 'Fehler beim Senden der Test-Abschiedsnachricht'}`);
       }
     } catch (err) {
-      showError('❌ Fehler beim Testen der Abschiedsnachricht');
+      showError('Test Netzwerkfehler', '❌ Fehler beim Testen der Abschiedsnachricht');
     }
   };
 
@@ -267,17 +282,26 @@ const Welcome = () => {
       const response = await fetch('/api/welcome/images');
       if (response.ok) {
         const data = await response.json();
-        setUploadedImages(data.images || []);
-        setFolders(data.folders || {});
+        
+        // Robuste Verarbeitung der API-Response
+        const images = Array.isArray(data.images) ? data.images : [];
+        const folders = data.folders && typeof data.folders === 'object' ? data.folders : {};
+        
+        setUploadedImages(images);
+        setFolders(folders);
         
         // Setze ersten verfügbaren Ordner als Standard falls selectedFolder nicht existiert
-        const availableFolders = data.allFolderNames || data.folderNames || [];
+        const availableFolders = data.allFolderNames || data.folderNames || Object.keys(folders) || [];
         if (availableFolders.length > 0 && !availableFolders.includes(selectedFolder)) {
           setSelectedFolder(availableFolders[0]);
         }
+      } else {
+        console.error('API Error:', response.status, response.statusText);
+        showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Bilder');
       }
     } catch (err) {
       console.error('Fehler beim Laden der Bilder:', err);
+             showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Bilder');
     }
   };
 
@@ -287,12 +311,12 @@ const Welcome = () => {
 
     // Validierung
     if (file.size > 5 * 1024 * 1024) {
-      showError('❌ Datei ist zu groß! Maximum: 5MB');
+      showError('Datei zu groß', '❌ Datei ist zu groß! Maximum: 5MB');
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      showError('❌ Nur Bilddateien sind erlaubt!');
+              showError('Falscher Dateityp', '❌ Nur Bilddateien sind erlaubt!');
       return;
     }
 
@@ -310,24 +334,35 @@ const Welcome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success('🎉 Bild erfolgreich hochgeladen!');
         
-        // Automatisch das neue Bild auswählen
-        setWelcomeSettings({
-          ...welcomeSettings,
-          thumbnail: 'custom',
-          customThumbnail: data.url
-        });
+        if (data && data.success && data.url) {
+          showSuccess('Upload erfolgreich', '🎉 Bild erfolgreich hochgeladen!');
+          
+          // Automatisch das neue Bild auswählen
+          setWelcomeSettings({
+            ...welcomeSettings,
+            thumbnail: 'custom',
+            customThumbnail: data.url
+          });
 
-        // Bilderliste neu laden
-        await loadUploadedImages();
+          // Bilderliste neu laden
+          try {
+            await loadUploadedImages();
+          } catch (loadError) {
+            console.error('Fehler beim Neuladen der Bilder:', loadError);
+          }
+        } else {
+          console.error('Ungültige Upload-Response:', data);
+          showError('Upload fehlgeschlagen', '❌ Ungültige Server-Antwort');
+        }
       } else {
-        const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Upload fehlgeschlagen'}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        console.error('Upload API Error:', response.status, errorData);
+        showError('Upload fehlgeschlagen', `❌ ${errorData.error || 'Upload fehlgeschlagen'}`);
       }
     } catch (err) {
       console.error('Upload Fehler:', err);
-      showError('❌ Netzwerkfehler beim Upload');
+      showError('Upload Netzwerkfehler', '❌ Netzwerkfehler beim Upload');
     } finally {
       setUploading(false);
       // Reset file input
@@ -364,7 +399,7 @@ const Welcome = () => {
         });
 
         if (response.ok) {
-          success('🗑️ Bild erfolgreich gelöscht!');
+          showSuccess('Gelöscht', '🗑️ Bild erfolgreich gelöscht!');
           
           // Wenn das gelöschte Bild gerade ausgewählt ist, zurücksetzen
           if (welcomeSettings.customThumbnail === `/images/welcome/${filename}`) {
@@ -388,7 +423,7 @@ const Welcome = () => {
 
         await Promise.all(deletePromises);
         
-        success('🗑️ Alle Bilder erfolgreich gelöscht!');
+        showSuccess('Alle gelöscht', '🗑️ Alle Bilder erfolgreich gelöscht!');
         
         // Settings zurücksetzen
         setWelcomeSettings({
@@ -402,7 +437,7 @@ const Welcome = () => {
       }
     } catch (err) {
       console.error('Lösch-Fehler:', err);
-      showError('❌ Fehler beim Löschen');
+      showError('Löschen fehlgeschlagen', '❌ Fehler beim Löschen');
     } finally {
       setDeleteModal({ show: false, filename: '', type: 'single' });
     }
@@ -419,7 +454,7 @@ const Welcome = () => {
   // Ordner-Management Funktionen
   const createFolder = async () => {
     if (!newFolderName.trim()) {
-      showError('❌ Bitte geben Sie einen Ordnernamen ein');
+      showError('Ordnername erforderlich', '❌ Bitte geben Sie einen Ordnernamen ein');
       return;
     }
 
@@ -431,7 +466,7 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        success(`📁 Ordner "${newFolderName}" erfolgreich erstellt!`);
+        showSuccess('Ordner erstellt', `📁 Ordner "${newFolderName}" erfolgreich erstellt!`);
         setNewFolderName('');
         setShowNewFolderInput(false);
         setSelectedFolder(newFolderName.trim());
@@ -441,13 +476,13 @@ const Welcome = () => {
         showError(`❌ ${errorData.error || 'Fehler beim Erstellen des Ordners'}`);
       }
     } catch (err) {
-      showError('❌ Netzwerkfehler beim Erstellen des Ordners');
+      showError('Ordner Netzwerkfehler', '❌ Netzwerkfehler beim Erstellen des Ordners');
     }
   };
 
   const deleteFolder = async (folderName: string) => {
     if (folderName === 'general') {
-      showError('❌ Der General-Ordner kann nicht gelöscht werden');
+      showError('Löschen nicht erlaubt', '❌ Der General-Ordner kann nicht gelöscht werden');
       return;
     }
 
@@ -461,7 +496,7 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        success(`🗑️ Ordner "${folderName}" erfolgreich gelöscht!`);
+        showSuccess('Ordner gelöscht', `🗑️ Ordner "${folderName}" erfolgreich gelöscht!`);
         
         // Wechsle zu anderem Ordner falls der aktuelle gelöscht wurde
         if (selectedFolder === folderName) {
@@ -474,7 +509,7 @@ const Welcome = () => {
         showError(`❌ ${errorData.error || 'Fehler beim Löschen des Ordners'}`);
       }
     } catch (err) {
-      showError('❌ Netzwerkfehler beim Löschen des Ordners');
+              showError('Löschen Netzwerkfehler', '❌ Netzwerkfehler beim Löschen des Ordners');
     }
   };
 
@@ -489,7 +524,7 @@ const Welcome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        success(`📦 Bild erfolgreich von "${sourceFolder}" nach "${targetFolder}" verschoben!`);
+        showSuccess('Bild verschoben', `📦 Bild erfolgreich von "${sourceFolder}" nach "${targetFolder}" verschoben!`);
         
         // Falls das verschobene Bild aktuell ausgewählt ist, Update die URL
         if (welcomeSettings.customThumbnail === `/images/welcome/${sourceFolder}/${filename}`) {
@@ -505,7 +540,7 @@ const Welcome = () => {
         showError(`❌ ${errorData.error || 'Fehler beim Verschieben'}`);
       }
     } catch (err) {
-      showError('❌ Netzwerkfehler beim Verschieben');
+      showError('Verschieben Netzwerkfehler', '❌ Netzwerkfehler beim Verschieben');
     }
   };
 
@@ -546,8 +581,18 @@ const Welcome = () => {
   };
 
   useEffect(() => {
-    loadWelcomeSettings();
-    loadUploadedImages();
+    const initializeData = async () => {
+      try {
+        await Promise.allSettled([
+          loadWelcomeSettings(),
+          loadUploadedImages()
+        ]);
+      } catch (error) {
+        console.error('Fehler bei der Initialisierung:', error);
+      }
+    };
+    
+    initializeData();
   }, []);
 
   return (
@@ -1240,7 +1285,7 @@ const Welcome = () => {
                         // Schöner Toast mit emojis und Formatierung  
                         const toastMessage = `ℹ️ **Bild Information**\n📁 Ordner: **${image.folder}**\n📷 Datei: **${shortFilename}**\n💾 Größe: **${displaySize}**\n🗑️ Tipp: Löschbar mit Papierkorb-Button`;
                         
-                        success(toastMessage);
+                        showSuccess('Bild Information', toastMessage);
                       }}
                       className="absolute bottom-2 left-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-50 pointer-events-auto shadow-lg"
                       title="Bild Info anzeigen"
