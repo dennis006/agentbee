@@ -5654,58 +5654,11 @@ app.get('/api/verification/users', async (req, res) => {
     }
 });
 
-// Verifizierung eines Users löschen (Supabase + JSON Fallback)
+// Verifizierung eines Users löschen (Nur-Supabase Version)
 app.delete('/api/verification/users/:discordId', async (req, res) => {
     try {
         const { discordId } = req.params;
         
-        // Versuche zuerst Supabase
-        if (supabase) {
-            const { data: userData, error: fetchError } = await supabase
-                .from('verification_users')
-                .select('*')
-                .eq('discord_id', discordId)
-                .single();
-
-            if (userData && !fetchError) {
-                // Lösche aus Supabase
-                const { error: deleteError } = await supabase
-                    .from('verification_users')
-                    .delete()
-                    .eq('discord_id', discordId);
-
-                if (!deleteError) {
-                    console.log(`🗑️ User ${userData.username} aus Supabase gelöscht`);
-                    
-                    // Entferne Discord-Rollen
-                    const guild = client.guilds.cache.first();
-                    if (guild) {
-                        const member = await guild.members.fetch(discordId).catch(() => null);
-                        if (member && userData.assigned_roles) {
-                            for (const roleName of userData.assigned_roles) {
-                                const role = guild.roles.cache.find(r => r.name === roleName);
-                                if (role && member.roles.cache.has(role.id)) {
-                                    try {
-                                        await member.roles.remove(role);
-                                        console.log(`🗑️ Rolle "${roleName}" von ${userData.username} entfernt`);
-                                    } catch (error) {
-                                        console.error(`❌ Fehler beim Entfernen der Rolle "${roleName}":`, error.message);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    return res.json({ 
-                        success: true, 
-                        message: `Verifizierung von ${userData.username} entfernt`, 
-                        user: userData 
-                    });
-                }
-            }
-        }
-
-        // Fallback auf JSON-System
         const result = await removeVerifiedUser(discordId);
         
         if (result.success) {
@@ -5715,7 +5668,11 @@ app.delete('/api/verification/users/:discordId', async (req, res) => {
         }
     } catch (error) {
         console.error('❌ Fehler beim Löschen der Verifizierung:', error);
-        res.status(500).json({ error: 'Fehler beim Löschen der Verifizierung' });
+        if (error.message && error.message.includes('Supabase nicht initialisiert')) {
+            res.status(503).json({ error: 'Supabase-Datenbank nicht verfügbar' });
+        } else {
+            res.status(500).json({ error: 'Fehler beim Löschen der Verifizierung' });
+        }
     }
 });
 
@@ -6517,73 +6474,49 @@ app.post('/api/verification/create-roles', async (req, res) => {
     }
 });
 
-// Speichere verifizierten User in der Datenbank
-async function saveVerifiedUser(userData) {
-    try {
-        let verifiedUsers = { users: [], totalCount: 0 };
-        
-        // Lade bestehende Datenbank
-        if (fs.existsSync('./verified-users.json')) {
-            verifiedUsers = JSON.parse(fs.readFileSync('./verified-users.json', 'utf8'));
-        }
-        
-        // Prüfe ob User bereits existiert (Update statt Duplicate)
-        const existingUserIndex = verifiedUsers.users.findIndex(u => u.discordId === userData.discordId);
-        
-        if (existingUserIndex !== -1) {
-            // Update bestehenden User
-            verifiedUsers.users[existingUserIndex] = { ...verifiedUsers.users[existingUserIndex], ...userData };
-            console.log(`🔄 User ${userData.username} aktualisiert`);
-        } else {
-            // Neuen User hinzufügen
-            verifiedUsers.users.push(userData);
-            console.log(`➕ Neuer User ${userData.username} hinzugefügt`);
-        }
-        
-        // Aktualisiere Meta-Daten
-        verifiedUsers.totalCount = verifiedUsers.users.length;
-        verifiedUsers.lastUpdated = new Date().toISOString();
-        
-        // Speichere Datenbank
-        fs.writeFileSync('./verified-users.json', JSON.stringify(verifiedUsers, null, 2));
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern des Users:', error);
-    }
-}
+// ENTFERNT: Alte JSON-Funktion durch saveVerifiedUserToSupabase ersetzt
 
-// Entferne Verifizierung eines Users
+// Entferne Verifizierung eines Users (Supabase-Version)
 async function removeVerifiedUser(discordId) {
     try {
-        if (!fs.existsSync('./verified-users.json')) {
-            return { success: false, message: 'Keine verifizierten User gefunden' };
+        // Nur Supabase - keine JSON-Fallbacks mehr
+        if (!supabase) {
+            throw new Error('Supabase nicht initialisiert - Verification System erfordert Supabase-Datenbank');
         }
-        
-        let verifiedUsers = JSON.parse(fs.readFileSync('./verified-users.json', 'utf8'));
-        const userIndex = verifiedUsers.users.findIndex(u => u.discordId === discordId);
-        
-        if (userIndex === -1) {
+
+        // Hole User-Daten bevor wir löschen (für Rollen-Entfernung)
+        const { data: userData, error: fetchError } = await supabase
+            .from('verification_users')
+            .select('*')
+            .eq('discord_id', discordId)
+            .single();
+
+        if (fetchError || !userData) {
             return { success: false, message: 'User nicht gefunden' };
         }
-        
-        const removedUser = verifiedUsers.users.splice(userIndex, 1)[0];
-        verifiedUsers.totalCount = verifiedUsers.users.length;
-        verifiedUsers.lastUpdated = new Date().toISOString();
-        
-        // Speichere aktualisierte Datenbank
-        fs.writeFileSync('./verified-users.json', JSON.stringify(verifiedUsers, null, 2));
-        
-        // Optional: Entferne Rollen vom Discord-User
+
+        // Lösche User aus Supabase
+        const { error: deleteError } = await supabase
+            .from('verification_users')
+            .delete()
+            .eq('discord_id', discordId);
+
+        if (deleteError) {
+            console.error('❌ Supabase-Fehler beim Löschen:', deleteError);
+            throw deleteError;
+        }
+
+        // Entferne Rollen vom Discord-User
         const guild = client.guilds.cache.first();
         if (guild) {
             const member = await guild.members.fetch(discordId).catch(() => null);
-            if (member && removedUser.assignedRoles) {
-                for (const roleName of removedUser.assignedRoles) {
+            if (member && userData.assigned_roles) {
+                for (const roleName of userData.assigned_roles) {
                     const role = guild.roles.cache.find(r => r.name === roleName);
                     if (role && member.roles.cache.has(role.id)) {
                         try {
                             await member.roles.remove(role);
-                            console.log(`🗑️ Rolle "${roleName}" von ${removedUser.username} entfernt`);
+                            console.log(`🗑️ Rolle "${roleName}" von ${userData.username} entfernt`);
                         } catch (error) {
                             console.error(`❌ Fehler beim Entfernen der Rolle "${roleName}":`, error.message);
                         }
@@ -6591,74 +6524,37 @@ async function removeVerifiedUser(discordId) {
                 }
             }
         }
-        
-        return { success: true, message: `Verifizierung von ${removedUser.username} entfernt`, user: removedUser };
+
+        console.log(`✅ User ${userData.username} aus Supabase entfernt`);
+        return { 
+            success: true, 
+            message: `Verifizierung von ${userData.username} entfernt`, 
+            user: {
+                discordId: userData.discord_id,
+                username: userData.username,
+                discriminator: userData.discriminator,
+                avatar: userData.avatar,
+                games: userData.games,
+                platform: userData.platform,
+                agents: userData.agents,
+                assignedRoles: userData.assigned_roles,
+                verificationDate: userData.verification_date,
+                guildId: userData.guild_id,
+                guildName: userData.guild_name,
+                wantsBotUpdates: userData.wants_bot_updates
+            }
+        };
         
     } catch (error) {
         console.error('❌ Fehler beim Entfernen des Users:', error);
+        if (error.message.includes('Supabase nicht initialisiert')) {
+            return { success: false, message: 'Supabase-Datenbank nicht verfügbar' };
+        }
         return { success: false, message: 'Fehler beim Entfernen der Verifizierung' };
     }
 }
 
-// Statistiken aktualisieren
-function updateVerificationStats(games, platform) {
-    try {
-        // Lade bestehende Stats
-        if (fs.existsSync('./verification-stats.json')) {
-            verificationStats = JSON.parse(fs.readFileSync('./verification-stats.json', 'utf8'));
-        }
-
-        // Aktualisiere Zähler
-        verificationStats.totalVerifications++;
-        
-        // Heute-Zähler (einfache Implementation)
-        const today = new Date().toDateString();
-        if (verificationStats.lastDay !== today) {
-            verificationStats.todayVerifications = 1;
-            verificationStats.lastDay = today;
-        } else {
-            verificationStats.todayVerifications++;
-        }
-
-        // Game-Statistiken
-        if (!verificationStats.popularGames) {
-            verificationStats.popularGames = [];
-        }
-        
-        for (const game of games) {
-            const existingGame = verificationStats.popularGames.find(g => g.game === game);
-            if (existingGame) {
-                existingGame.count++;
-            } else {
-                verificationStats.popularGames.push({ game, count: 1 });
-            }
-        }
-
-        // Sortiere nach Beliebtheit
-        verificationStats.popularGames.sort((a, b) => b.count - a.count);
-
-        // Plattform-Statistiken
-        if (!verificationStats.platformStats) {
-            verificationStats.platformStats = [];
-        }
-
-        const existingPlatform = verificationStats.platformStats.find(p => p.platform === platform);
-        if (existingPlatform) {
-            existingPlatform.count++;
-        } else {
-            verificationStats.platformStats.push({ platform, count: 1 });
-        }
-
-        // Sortiere nach Beliebtheit
-        verificationStats.platformStats.sort((a, b) => b.count - a.count);
-
-        // Speichere Stats
-        fs.writeFileSync('./verification-stats.json', JSON.stringify(verificationStats, null, 2));
-
-    } catch (error) {
-        console.error('❌ Fehler beim Aktualisieren der Verification-Stats:', error);
-    }
-}
+// ENTFERNT: Alte JSON-Funktion - Statistiken werden jetzt automatisch via Supabase-Trigger aktualisiert
 
 // Bot Settings anwenden
 async function applyBotSettings(settings) {
