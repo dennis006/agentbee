@@ -247,6 +247,25 @@ export const useToast = () => {
     });
   };
 
+  // Simple functions for single-parameter usage (backwards compatibility)
+  const success = (message: string) => {
+    return addToast({
+      type: 'success',
+      title: 'Erfolg',
+      message,
+      duration: 4000
+    });
+  };
+
+  const error = (message: string) => {
+    return addToast({
+      type: 'error',
+      title: 'Fehler',
+      message,
+      duration: 6000
+    });
+  };
+
   return {
     toasts,
     addToast,
@@ -256,6 +275,8 @@ export const useToast = () => {
     showBotStopping,
     showBotRestarting,
     showSuccess,
-    showError
+    showError,
+    success,
+    error
   };
 }; 
