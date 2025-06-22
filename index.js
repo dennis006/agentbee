@@ -36,13 +36,14 @@ const {
     loadWelcomeSettings,
     saveWelcomeSettings,
     loadWelcomeImages,
+    saveWelcomeImage,
+    deleteWelcomeImage,
+    createWelcomeFolder,
+    deleteWelcomeFolder,
     createWelcomeEmbed,
     createLeaveEmbed,
     getRandomWelcomeImage,
     autoCreateGameFolders,
-    saveWelcomeImage,
-    createWelcomeFolder,
-    deleteWelcomeFolder,
     updateWelcomeStats
 } = require('./welcome-supabase-api');
 require('dotenv').config();
