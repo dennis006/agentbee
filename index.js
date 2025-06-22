@@ -5487,20 +5487,9 @@ async function loadVerificationConfig() {
                 ],
                 defaultRoles: ['Member', 'verify'],
                 welcomeMessage: 'Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.',
-                embedColor: '0x00FF7F',
                 logChannel: 'verify-logs',
                 autoAssignRoles: true,
                 verificationChannel: 'verify',
-                verificationMessage: {
-                    title: '🛡️ Server Verifizierung',
-                    description: 'Willkommen auf dem Server! Um Zugang zu allen Channels zu erhalten, musst du dich verifizieren.',
-                    buttonText: '🚀 Jetzt verifizieren',
-                    steps: [
-                        '✅ Wähle deine Lieblingsspiele',
-                        '💻 Gib deine Gaming-Plattform an',
-                        '🎯 Erhalte passende Rollen automatisch'
-                    ]
-                },
                 botUpdates: {
                     enabled: true,
                     optInText: '📢 Ich möchte Bot-Updates und Neuigkeiten erhalten',

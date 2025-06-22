@@ -48,28 +48,30 @@ CREATE TABLE verification_config (
                 "id": "fragpunk",
                 "label": "Fragpunk",
                 "emoji": "🔞"
-            },
-            {
-                "id": "minecraft",
-                "label": "Minecraft",
-                "emoji": "🧱"
-            },
-            {
-                "id": "fortnite",
-                "label": "Fortnite",
-                "emoji": "🪂"
-            },
-            {
-                "id": "cs2",
-                "label": "Counter-Strike 2",
-                "emoji": "💥"
-            },
-            {
-                "id": "apex",
-                "label": "Apex Legends",
-                "emoji": "🚀"
             }
         ],
+        "defaultRoles": [
+            "Member",
+            "verify"
+        ],
+        "welcomeMessage": "Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.",
+        "logChannel": "verify-logs",
+        "autoAssignRoles": true,
+        "gameRoles": {
+            "valorant": "Valorant Player",
+            "lol": "LoL Player",
+            "minecraft": "Minecraft Player",
+            "fortnite": "Fortnite Player",
+            "cs2": "CS2 Player",
+            "apex": "Apex Player"
+        },
+        "platformRoles": {
+            "pc": "PC Gamer",
+            "ps5": "PlayStation Gamer",
+            "xbox": "Xbox Gamer",
+            "switch": "Switch Gamer",
+            "mobile": "Mobile Gamer"
+        },
         "allowedPlatforms": [
             {
                 "id": "pc",
@@ -88,29 +90,10 @@ CREATE TABLE verification_config (
                 "label": "PS5",
                 "emoji": "🎮",
                 "role": "🎮PS5"
-            },
-            {
-                "id": "switch",
-                "label": "Nintendo Switch",
-                "emoji": "🎮",
-                "role": "Switch"
-            },
-            {
-                "id": "mobile",
-                "label": "Mobile",
-                "emoji": "📱",
-                "role": "Mobile"
             }
         ],
-        "defaultRoles": [
-            "Member",
-            "verify"
-        ],
-        "welcomeMessage": "Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.",
-        "embedColor": "0x00FF7F",
-        "logChannel": "verify-logs",
-        "autoAssignRoles": true,
         "verificationChannel": "verify",
+        "embedColor": "0x00FF7F",
         "verificationMessage": {
             "title": "🛡️ Server Verifizierung",
             "description": "Willkommen auf dem Server! Um Zugang zu allen Channels zu erhalten, musst du dich verifizieren.",

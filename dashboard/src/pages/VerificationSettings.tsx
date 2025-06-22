@@ -140,35 +140,18 @@ const VerificationSettings = () => {
   const [config, setConfig] = useState<VerificationConfig>({
     enabled: true,
     requireCaptcha: true,
-    allowedGames: [
-      { id: 'valorant', label: 'Valorant', emoji: '🎯' },
-      { id: 'lol', label: 'League of Legends', emoji: '⚔️' },
-      { id: 'minecraft', label: 'Minecraft', emoji: '🧱' },
-      { id: 'fortnite', label: 'Fortnite', emoji: '🪂' },
-      { id: 'cs2', label: 'Counter-Strike 2', emoji: '💥' },
-      { id: 'apex', label: 'Apex Legends', emoji: '🚀' }
-    ],
-    allowedPlatforms: [
-      { id: 'pc', label: 'PC (Windows/Mac/Linux)', emoji: '💻' },
-      { id: 'ps5', label: 'PlayStation 5', emoji: '🎮' },
-      { id: 'xbox', label: 'Xbox Series X/S', emoji: '🎮' },
-      { id: 'switch', label: 'Nintendo Switch', emoji: '🎮' },
-      { id: 'mobile', label: 'Mobile (iOS/Android)', emoji: '📱' }
-    ],
-    defaultRoles: ['Member', 'Verified'],
-    welcomeMessage: 'Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.',
+    allowedGames: [],
+    allowedPlatforms: [],
+    defaultRoles: [],
+    welcomeMessage: '',
     embedColor: '0x00FF7F',
     logChannel: '',
     verificationChannel: '',
     verificationMessage: {
-      title: '🛡️ Server Verifizierung',
-      description: 'Willkommen auf dem Server! Um Zugang zu allen Channels zu erhalten, musst du dich verifizieren.',
-      buttonText: '🚀 Jetzt verifizieren',
-      steps: [
-        '✅ Wähle deine Lieblingsspiele',
-        '💻 Gib deine Gaming-Plattform an',
-        '🎯 Erhalte passende Rollen automatisch'
-      ]
+      title: '',
+      description: '',
+      buttonText: '',
+      steps: []
     },
     autoAssignRoles: true
   });
