@@ -287,11 +287,29 @@ const Welcome = () => {
         const images = Array.isArray(data.images) ? data.images : [];
         const folders = data.folders && typeof data.folders === 'object' ? data.folders : {};
         
+        // Normalisiere Folder-Struktur: Stelle sicher dass jeder Folder ein Array ist
+        const normalizedFolders: {[key: string]: any[]} = {};
+        Object.keys(folders).forEach(folderName => {
+          const folderData = folders[folderName];
+          // Wenn es ein Objekt mit 'images' Property ist, extrahiere das Array
+          if (folderData && typeof folderData === 'object' && Array.isArray(folderData.images)) {
+            normalizedFolders[folderName] = folderData.images;
+          } 
+          // Wenn es bereits ein Array ist, verwende es direkt
+          else if (Array.isArray(folderData)) {
+            normalizedFolders[folderName] = folderData;
+          } 
+          // Fallback: leeres Array
+          else {
+            normalizedFolders[folderName] = [];
+          }
+        });
+        
         setUploadedImages(images);
-        setFolders(folders);
+        setFolders(normalizedFolders);
         
         // Setze ersten verfügbaren Ordner als Standard falls selectedFolder nicht existiert
-        const availableFolders = data.allFolderNames || data.folderNames || Object.keys(folders) || [];
+        const availableFolders = data.allFolderNames || data.folderNames || Object.keys(normalizedFolders) || [];
         if (availableFolders.length > 0 && !availableFolders.includes(selectedFolder)) {
           setSelectedFolder(availableFolders[0]);
         }

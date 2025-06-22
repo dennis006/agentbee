@@ -1218,7 +1218,7 @@ async function deleteImageFromGitHub(filename, folder = 'general') {
 async function listImagesFromGitHub() {
     try {
         const folders = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
-        const result = { folders: {}, images: [] };
+        const result = { folders: {}, images: [], folderNames: folders, allFolderNames: folders };
         
         for (const folder of folders) {
             try {
@@ -1248,19 +1248,11 @@ async function listImagesFromGitHub() {
                     }
                 }
                 
-                result.folders[folder] = {
-                    name: folder,
-                    images: folderImages,
-                    count: folderImages.length
-                };
+                result.folders[folder] = folderImages;
                 
             } catch (error) {
                 console.log(`📁 Ordner ${folder} existiert noch nicht auf GitHub`);
-                result.folders[folder] = {
-                    name: folder,
-                    images: [],
-                    count: 0
-                };
+                result.folders[folder] = [];
             }
         }
         
