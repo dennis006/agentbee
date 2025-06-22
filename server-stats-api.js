@@ -341,15 +341,13 @@ async function initializeServerStats(discordClient) {
   }
   
   if (serverStatsSettings.enabled) {
-    // RADIKALE LÖSUNG: Komplett-Reset der Stats-Channels
-    console.log('🚀 Führe kompletten Stats-Channel Reset durch...');
-    for (const guild of client.guilds.cache.values()) {
-      await completeStatsChannelReset(guild);
-      await new Promise(resolve => setTimeout(resolve, 3000)); // 3 Sekunden warten
-    }
+    // TEMPORÄR DEAKTIVIERT: Kompletter Reset verursacht Performance-Probleme
+    console.log('📊 Server-Stats System aktiviert (ohne automatischen Reset)');
+    console.log('ℹ️ Verwende Dashboard für Channel-Management');
     
+    // Starte nur den Updater, ohne Reset
     startStatsUpdater();
-    console.log('📊 Server-Stats aktiviert mit komplettem Channel-Reset');
+    console.log('✅ Server-Stats Updater gestartet');
   }
 }
 
