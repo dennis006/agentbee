@@ -191,22 +191,28 @@ const Welcome = () => {
             'keys': Object.keys(data)
           });
           
-          // Sicherstellen dass imageRotation existiert (neues Feature)
+          // ✅ FIXED: Nur Default-Werte setzen wenn imageRotation NICHT existiert
           if (!data.imageRotation) {
+            console.log('🔧 Erstelle neue imageRotation (war nicht vorhanden)');
             data.imageRotation = {
               enabled: false,
               mode: 'random',
-              folder: undefined  // Explizit setzen für korrekte TypeScript-Struktur
+              folder: undefined
             };
-          }
-          
-          // Sicherstellen dass folder property existiert falls imageRotation vorhanden ist
-          if (data.imageRotation && !data.imageRotation.hasOwnProperty('folder')) {
-            data.imageRotation.folder = undefined;
+          } else {
+            console.log('✅ imageRotation vorhanden - behalte alle Werte:', data.imageRotation);
+            // Nur folder property hinzufügen wenn es komplett fehlt UND es kein string ist
+            if (!data.imageRotation.hasOwnProperty('folder')) {
+              console.log('🔧 Füge fehlende folder property hinzu');
+              data.imageRotation.folder = undefined;
+            } else {
+              console.log('✅ folder property bereits vorhanden:', data.imageRotation.folder);
+            }
           }
 
-          // Sicherstellen dass leaveMessage existiert (neues Feature)
+          // ✅ FIXED: Nur Default-Werte setzen wenn leaveMessage NICHT existiert
           if (!data.leaveMessage) {
+            console.log('🔧 Erstelle neue leaveMessage (war nicht vorhanden)');
             data.leaveMessage = {
               enabled: false,
               channelName: 'verlassen',
@@ -230,7 +236,7 @@ const Welcome = () => {
               ...data,
               imageRotation: {
                 ...prevSettings.imageRotation,
-                ...data.imageRotation
+                ...data.imageRotation  // ✅ Überschreibt nur die Properties die in data.imageRotation vorhanden sind
               },
               leaveMessage: {
                 ...prevSettings.leaveMessage,
