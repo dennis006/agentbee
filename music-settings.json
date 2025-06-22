@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "localMusic": {
+    "enabled": true,
+    "musicDirectory": "./music",
+    "stations": [],
+    "defaultStation": "custom1",
+    "autoStop": false,
+    "showNowPlaying": true,
+    "embedColor": "#FF6B6B"
+  },
+  "voiceChannel": {
+    "preferredChannelId": "",
+    "autoJoin": true
+  },
+  "announcements": {
+    "channelId": ""
+  },
+  "interactivePanel": {
+    "enabled": true,
+    "channelId": "",
+    "messageId": "",
+    "autoUpdate": true,
+    "embedColor": "#FF6B6B"
+  },
+  "migrationCompleted": true
+}
