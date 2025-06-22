@@ -62,7 +62,7 @@ interface WelcomeSettings {
 }
 
 const Welcome = () => {
-  const { toasts, showSuccess, showError, removeToast } = useToast()
+  const { toasts, success, error: showError, removeToast } = useToast()
   const [emojiPickerOpen, setEmojiPickerOpen] = useState<string | null>(null)
   const [previewMode, setPreviewMode] = useState(false)
   const [uploadedImages, setUploadedImages] = useState<any[]>([])
@@ -71,8 +71,6 @@ const Welcome = () => {
   const [selectedFolder, setSelectedFolder] = useState<string>('general')
   const [newFolderName, setNewFolderName] = useState('')
   const [showNewFolderInput, setShowNewFolderInput] = useState(false)
-  const [settingsLoaded, setSettingsLoaded] = useState(false)
-  // Entfernt: Auto-Save und userModified - nur noch manuelles Speichern
   const [deleteModal, setDeleteModal] = useState<{
     show: boolean;
     filename: string;
@@ -141,14 +139,6 @@ const Welcome = () => {
   // API-Funktionen
   const saveWelcomeSettings = async () => {
     try {
-      console.log('💾 SPEICHERE Settings - RAW DATA:', JSON.stringify(welcomeSettings, null, 2));
-      console.log('🔍 ImageRotation vor Speichern:', {
-        enabled: welcomeSettings.imageRotation?.enabled,
-        mode: welcomeSettings.imageRotation?.mode,
-        folder: welcomeSettings.imageRotation?.folder,
-        'typeof folder': typeof welcomeSettings.imageRotation?.folder
-      });
-      
       const response = await fetch('/api/welcome', {
         method: 'POST',
         headers: {
@@ -158,107 +148,47 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        showSuccess('Einstellungen gespeichert', '🎉 Willkommensnachrichten-Einstellungen gespeichert!');
-        console.log('✅ Einstellungen gespeichert - Server Response:', result);
+        success('🎉 Willkommensnachrichten-Einstellungen gespeichert!');
       } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
-        console.error('API Error:', response.status, errorData);
-        showError('Speichern fehlgeschlagen', `❌ ${errorData.error || 'Fehler beim Speichern der Einstellungen'}`);
+        showError('❌ Fehler beim Speichern der Einstellungen');
       }
     } catch (err) {
       console.error('Fehler beim Speichern:', err);
-      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Speichern');
+      showError('❌ Netzwerkfehler beim Speichern');
     }
   };
 
   const loadWelcomeSettings = async () => {
     try {
-      console.log('🔄 Starte Laden der Welcome Settings...');
       const response = await fetch('/api/welcome');
-      console.log('📡 API Response Status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('📦 RAW API Data erhalten:', JSON.stringify(data, null, 2));
         
-        // Robuste Verarbeitung der Daten
-        if (data && typeof data === 'object') {
-          console.log('🔍 Analysiere API Data:', {
-            'data.thumbnail': data.thumbnail,
-            'data.customThumbnail': data.customThumbnail,
-            'typeof data': typeof data,
-            'keys': Object.keys(data)
-          });
-          
-          // Sicherstellen dass imageRotation existiert (neues Feature)
-          if (!data.imageRotation) {
-            data.imageRotation = {
-              enabled: false,
-              mode: 'random',
-              folder: undefined  // Explizit setzen für korrekte TypeScript-Struktur
-            };
-          }
-          
-          // Sicherstellen dass folder property existiert falls imageRotation vorhanden ist
-          if (data.imageRotation && !data.imageRotation.hasOwnProperty('folder')) {
-            data.imageRotation.folder = undefined;
-          }
-
-          // Sicherstellen dass leaveMessage existiert (neues Feature)
-          if (!data.leaveMessage) {
-            data.leaveMessage = {
-              enabled: false,
-              channelName: 'verlassen',
-              title: '👋 Tschüss!',
-              description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-              color: '0xFF6B6B',
-              mentionUser: false,
-              deleteAfter: 0
-            };
-          }
-          
-          console.log('⚙️ Vor setState - aktuelle Settings:', {
-            'prevSettings.thumbnail': welcomeSettings.thumbnail,
-            'data.thumbnail': data.thumbnail
-          });
-          
-          // Merge mit aktuellen Einstellungen statt kompletten Ersatz
-          setWelcomeSettings(prevSettings => {
-            const newSettings = {
-              ...prevSettings,
-              ...data,
-              imageRotation: {
-                ...prevSettings.imageRotation,
-                ...data.imageRotation
-              },
-              leaveMessage: {
-                ...prevSettings.leaveMessage,
-                ...data.leaveMessage
-              }
-            };
-            console.log('🎯 Neue Settings nach Merge:', {
-              'thumbnail': newSettings.thumbnail,
-              'customThumbnail': newSettings.customThumbnail,
-              'imageRotation.folder': newSettings.imageRotation?.folder,
-              'imageRotation.enabled': newSettings.imageRotation?.enabled
-            });
-            return newSettings;
-          });
-          setSettingsLoaded(true);
-          // NICHT setUserModified(true) hier - das ist das initiale Laden!
-          console.log('✅ Settings erfolgreich geladen und gesetzt!');
-        } else {
-          console.error('❌ Ungültige Datenstruktur von API erhalten:', data);
-          showError('Ungültige Daten', '❌ Ungültige Daten von Server erhalten');
+        // Sicherstellen dass imageRotation existiert (neues Feature)
+        if (!data.imageRotation) {
+          data.imageRotation = {
+            enabled: false,
+            mode: 'random'
+          };
         }
-      } else {
-        console.error('❌ API Error beim Laden der Einstellungen:', response.status, response.statusText);
-        showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Einstellungen');
+
+        // Sicherstellen dass leaveMessage existiert (neues Feature)
+        if (!data.leaveMessage) {
+          data.leaveMessage = {
+            enabled: false,
+            channelName: 'verlassen',
+            title: '👋 Tschüss!',
+            description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+            color: '0xFF6B6B',
+            mentionUser: false,
+            deleteAfter: 0
+          };
+        }
+        
+        setWelcomeSettings(data);
       }
     } catch (err) {
-      console.error('❌ Fehler beim Laden der Einstellungen:', err);
-      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Einstellungen');
+      console.error('Fehler beim Laden der Einstellungen:', err);
     }
   };
 
@@ -273,12 +203,12 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        showSuccess('Test erfolgreich', '📨 Test-Willkommensnachricht gesendet!');
+        success('📨 Test-Willkommensnachricht gesendet!');
       } else {
-                  showError('Test fehlgeschlagen', '❌ Fehler beim Senden der Testnachricht');
+        showError('❌ Fehler beim Senden der Testnachricht');
       }
     } catch (err) {
-              showError('Test Netzwerkfehler', '❌ Fehler beim Testen der Nachricht');
+      showError('❌ Fehler beim Testen der Nachricht');
     }
   };
 
@@ -294,13 +224,13 @@ const Welcome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('Test Leave erfolgreich', `👋 ${data.message}`);
+        success(`👋 ${data.message}`);
       } else {
         const errorData = await response.json();
         showError(`❌ ${errorData.error || 'Fehler beim Senden der Test-Abschiedsnachricht'}`);
       }
     } catch (err) {
-      showError('Test Netzwerkfehler', '❌ Fehler beim Testen der Abschiedsnachricht');
+      showError('❌ Fehler beim Testen der Abschiedsnachricht');
     }
   };
 
@@ -337,76 +267,40 @@ const Welcome = () => {
       const response = await fetch('/api/welcome/images');
       if (response.ok) {
         const data = await response.json();
-        
-        // Robuste Verarbeitung der API-Response
-        const images = Array.isArray(data.images) ? data.images : [];
-        const folders = data.folders && typeof data.folders === 'object' ? data.folders : {};
-        
-        // Normalisiere Folder-Struktur: Stelle sicher dass jeder Folder ein Array ist
-        const normalizedFolders: {[key: string]: any[]} = {};
-        Object.keys(folders).forEach(folderName => {
-          const folderData = folders[folderName];
-          // Wenn es ein Objekt mit 'images' Property ist, extrahiere das Array
-          if (folderData && typeof folderData === 'object' && Array.isArray(folderData.images)) {
-            normalizedFolders[folderName] = folderData.images;
-          } 
-          // Wenn es bereits ein Array ist, verwende es direkt
-          else if (Array.isArray(folderData)) {
-            normalizedFolders[folderName] = folderData;
-          } 
-          // Fallback: leeres Array
-          else {
-            normalizedFolders[folderName] = [];
-          }
-        });
-        
-        setUploadedImages(images);
-        setFolders(normalizedFolders);
+        setUploadedImages(data.images || []);
+        setFolders(data.folders || {});
         
         // Setze ersten verfügbaren Ordner als Standard falls selectedFolder nicht existiert
-        const availableFolders = data.allFolderNames || data.folderNames || Object.keys(normalizedFolders) || [];
+        const availableFolders = data.allFolderNames || data.folderNames || [];
         if (availableFolders.length > 0 && !availableFolders.includes(selectedFolder)) {
           setSelectedFolder(availableFolders[0]);
         }
-      } else {
-        console.error('API Error:', response.status, response.statusText);
-        showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Bilder');
       }
     } catch (err) {
       console.error('Fehler beim Laden der Bilder:', err);
-             showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Bilder');
     }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    const fileArray = Array.from(files);
-    
-    // Validierung aller Dateien
-    for (const file of fileArray) {
-      if (file.size > 5 * 1024 * 1024) {
-        showError('Datei zu groß', `❌ ${file.name} ist zu groß! Maximum: 5MB`);
-        return;
-      }
+    // Validierung
+    if (file.size > 5 * 1024 * 1024) {
+      showError('❌ Datei ist zu groß! Maximum: 5MB');
+      return;
+    }
 
-      if (!file.type.startsWith('image/')) {
-        showError('Falscher Dateityp', `❌ ${file.name} ist keine Bilddatei!`);
-        return;
-      }
+    if (!file.type.startsWith('image/')) {
+      showError('❌ Nur Bilddateien sind erlaubt!');
+      return;
     }
 
     setUploading(true);
-    let successCount = 0;
-    let lastUploadedUrl = '';
 
     try {
-      // Multi-Upload: Alle Dateien in einem Request
       const formData = new FormData();
-      fileArray.forEach(file => {
-        formData.append('welcomeImage', file);
-      });
+      formData.append('welcomeImage', file);
       formData.append('folder', selectedFolder);
 
       const response = await fetch('/api/welcome/upload', {
@@ -416,54 +310,24 @@ const Welcome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        if (data && data.success) {
-          successCount = data.successCount || data.totalFiles || 1;
-          
-          // Finde die letzte erfolgreiche URL für Auto-Auswahl
-          if (data.results && Array.isArray(data.results)) {
-            const successfulResults = data.results.filter((r: any) => r.success);
-            if (successfulResults.length > 0) {
-              lastUploadedUrl = successfulResults[successfulResults.length - 1].url;
-            }
-          } else if (data.url) {
-            // Fallback für Single-Upload Kompatibilität
-            lastUploadedUrl = data.url;
-            successCount = 1;
-          }
-        } else {
-          throw new Error(data.message || 'Upload fehlgeschlagen');
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
-        throw new Error(errorData.error || 'Upload fehlgeschlagen');
-      }
-      
-      // Erfolgs-Meldung
-      if (successCount === 1) {
-        showSuccess('Upload erfolgreich', '🎉 Bild erfolgreich hochgeladen!');
-      } else {
-        showSuccess('Uploads erfolgreich', `🎉 ${successCount} Bilder erfolgreich hochgeladen!`);
-      }
-      
-      // Automatisch das letzte Bild auswählen
-      if (lastUploadedUrl) {
+        success('🎉 Bild erfolgreich hochgeladen!');
+        
+        // Automatisch das neue Bild auswählen
         setWelcomeSettings({
           ...welcomeSettings,
           thumbnail: 'custom',
-          customThumbnail: lastUploadedUrl
+          customThumbnail: data.url
         });
-      }
 
-      // Bilderliste neu laden
-      try {
+        // Bilderliste neu laden
         await loadUploadedImages();
-      } catch (loadError) {
-        console.error('Fehler beim Neuladen der Bilder:', loadError);
+      } else {
+        const errorData = await response.json();
+        showError(`❌ ${errorData.error || 'Upload fehlgeschlagen'}`);
       }
-      
     } catch (err) {
       console.error('Upload Fehler:', err);
-      showError('Upload fehlgeschlagen', `❌ ${successCount}/${fileArray.length} Bilder hochgeladen`);
+      showError('❌ Netzwerkfehler beim Upload');
     } finally {
       setUploading(false);
       // Reset file input
@@ -500,7 +364,7 @@ const Welcome = () => {
         });
 
         if (response.ok) {
-          showSuccess('Gelöscht', '🗑️ Bild erfolgreich gelöscht!');
+          success('🗑️ Bild erfolgreich gelöscht!');
           
           // Wenn das gelöschte Bild gerade ausgewählt ist, zurücksetzen
           if (welcomeSettings.customThumbnail === `/images/welcome/${filename}`) {
@@ -524,7 +388,7 @@ const Welcome = () => {
 
         await Promise.all(deletePromises);
         
-        showSuccess('Alle gelöscht', '🗑️ Alle Bilder erfolgreich gelöscht!');
+        success('🗑️ Alle Bilder erfolgreich gelöscht!');
         
         // Settings zurücksetzen
         setWelcomeSettings({
@@ -538,7 +402,7 @@ const Welcome = () => {
       }
     } catch (err) {
       console.error('Lösch-Fehler:', err);
-      showError('Löschen fehlgeschlagen', '❌ Fehler beim Löschen');
+      showError('❌ Fehler beim Löschen');
     } finally {
       setDeleteModal({ show: false, filename: '', type: 'single' });
     }
@@ -552,35 +416,10 @@ const Welcome = () => {
     });
   };
 
-  // GitHub-Ordner-Erstellung
-  const createGitHubFolders = async () => {
-    try {
-      const response = await fetch('/api/welcome/create-github-folders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        showSuccess('GitHub-Ordner erstellt', `✅ ${result.message}`);
-        // Lade Bilder neu um die neuen Ordner anzuzeigen
-        await loadUploadedImages();
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
-        showError('GitHub-Ordner Fehler', `❌ ${errorData.error || 'Fehler beim Erstellen der GitHub-Ordner'}`);
-      }
-    } catch (err) {
-      console.error('Fehler beim Erstellen der GitHub-Ordner:', err);
-      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Erstellen der GitHub-Ordner');
-    }
-  };
-
   // Ordner-Management Funktionen
   const createFolder = async () => {
     if (!newFolderName.trim()) {
-      showError('Ordnername erforderlich', '❌ Bitte geben Sie einen Ordnernamen ein');
+      showError('❌ Bitte geben Sie einen Ordnernamen ein');
       return;
     }
 
@@ -592,7 +431,7 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        showSuccess('Ordner erstellt', `📁 Ordner "${newFolderName}" erfolgreich erstellt!`);
+        success(`📁 Ordner "${newFolderName}" erfolgreich erstellt!`);
         setNewFolderName('');
         setShowNewFolderInput(false);
         setSelectedFolder(newFolderName.trim());
@@ -602,13 +441,13 @@ const Welcome = () => {
         showError(`❌ ${errorData.error || 'Fehler beim Erstellen des Ordners'}`);
       }
     } catch (err) {
-      showError('Ordner Netzwerkfehler', '❌ Netzwerkfehler beim Erstellen des Ordners');
+      showError('❌ Netzwerkfehler beim Erstellen des Ordners');
     }
   };
 
   const deleteFolder = async (folderName: string) => {
     if (folderName === 'general') {
-      showError('Löschen nicht erlaubt', '❌ Der General-Ordner kann nicht gelöscht werden');
+      showError('❌ Der General-Ordner kann nicht gelöscht werden');
       return;
     }
 
@@ -622,7 +461,7 @@ const Welcome = () => {
       });
 
       if (response.ok) {
-        showSuccess('Ordner gelöscht', `🗑️ Ordner "${folderName}" erfolgreich gelöscht!`);
+        success(`🗑️ Ordner "${folderName}" erfolgreich gelöscht!`);
         
         // Wechsle zu anderem Ordner falls der aktuelle gelöscht wurde
         if (selectedFolder === folderName) {
@@ -635,7 +474,7 @@ const Welcome = () => {
         showError(`❌ ${errorData.error || 'Fehler beim Löschen des Ordners'}`);
       }
     } catch (err) {
-              showError('Löschen Netzwerkfehler', '❌ Netzwerkfehler beim Löschen des Ordners');
+      showError('❌ Netzwerkfehler beim Löschen des Ordners');
     }
   };
 
@@ -650,7 +489,7 @@ const Welcome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        showSuccess('Bild verschoben', `📦 Bild erfolgreich von "${sourceFolder}" nach "${targetFolder}" verschoben!`);
+        success(`📦 Bild erfolgreich von "${sourceFolder}" nach "${targetFolder}" verschoben!`);
         
         // Falls das verschobene Bild aktuell ausgewählt ist, Update die URL
         if (welcomeSettings.customThumbnail === `/images/welcome/${sourceFolder}/${filename}`) {
@@ -666,7 +505,7 @@ const Welcome = () => {
         showError(`❌ ${errorData.error || 'Fehler beim Verschieben'}`);
       }
     } catch (err) {
-      showError('Verschieben Netzwerkfehler', '❌ Netzwerkfehler beim Verschieben');
+      showError('❌ Netzwerkfehler beim Verschieben');
     }
   };
 
@@ -707,31 +546,9 @@ const Welcome = () => {
   };
 
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        // Erst Settings laden, dann Images
-        await loadWelcomeSettings();
-        await loadUploadedImages();
-      } catch (error) {
-        console.error('Fehler bei der Initialisierung:', error);
-      }
-    };
-    
-    initializeData();
+    loadWelcomeSettings();
+    loadUploadedImages();
   }, []);
-
-  // Auto-Save entfernt - nur noch manuelles Speichern über "Speichern" Button
-
-  // Debug: Track imageRotation folder changes
-  useEffect(() => {
-    console.log('🔄 imageRotation.folder STATE CHANGED:', {
-      folder: welcomeSettings.imageRotation?.folder,
-      enabled: welcomeSettings.imageRotation?.enabled,
-      mode: welcomeSettings.imageRotation?.mode,
-      'typeof folder': typeof welcomeSettings.imageRotation?.folder,
-      'hasOwnProperty folder': welcomeSettings.imageRotation?.hasOwnProperty('folder')
-    });
-  }, [welcomeSettings.imageRotation?.folder]);
 
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
@@ -1155,25 +972,14 @@ const Welcome = () => {
                 <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20 space-y-4">
                 <div className="flex items-center justify-between mb-4">
                   <h5 className="text-sm font-medium text-dark-text">📁 Ordner-Management</h5>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={createGitHubFolders}
-                      size="sm"
-                      className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-xs"
-                      title="Erstellt automatisch alle Standard-Ordner auf GitHub"
-                    >
-                      <span className="mr-1">🐙</span>
-                      GitHub-Ordner
-                    </Button>
-                    <Button
-                      onClick={() => setShowNewFolderInput(!showNewFolderInput)}
-                      size="sm"
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs"
-                    >
-                      <span className="mr-1">+</span>
-                      Neuer Ordner
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => setShowNewFolderInput(!showNewFolderInput)}
+                    size="sm"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs"
+                  >
+                    <span className="mr-1">+</span>
+                    Neuer Ordner
+                  </Button>
                 </div>
                 
                 {/* Neuer Ordner Input */}
@@ -1280,14 +1086,14 @@ const Welcome = () => {
                         type="checkbox"
                         id="imageRotation"
                         checked={welcomeSettings.imageRotation?.enabled || false}
-                        onChange={(e) =>                           setWelcomeSettings({
-                            ...welcomeSettings, 
-                            imageRotation: {
-                              ...welcomeSettings.imageRotation,  // ✅ Preserve ALL existing values
-                              enabled: e.target.checked,
-                              mode: welcomeSettings.imageRotation?.mode || 'random'
-                            }
-                          })}
+                        onChange={(e) => setWelcomeSettings({
+                          ...welcomeSettings, 
+                          imageRotation: {
+                            enabled: e.target.checked,
+                            mode: welcomeSettings.imageRotation?.mode || 'random',
+                            folder: welcomeSettings.imageRotation?.folder
+                          }
+                        })}
                         className="w-4 h-4 text-pink-400 bg-dark-bg border-purple-primary/30 rounded focus:ring-pink-400 focus:ring-2"
                       />
                       <label htmlFor="imageRotation" className="text-xs text-dark-text">
@@ -1309,30 +1115,13 @@ const Welcome = () => {
                       <label className="text-xs text-dark-muted mb-1 block">Rotation auf bestimmten Ordner beschränken:</label>
                       <select
                         value={welcomeSettings.imageRotation.folder || ''}
-                        onChange={(e) => {
-                          console.log('📁 DROPDOWN CHANGE EVENT:', {
-                            'e.target.value': e.target.value,
-                            'e.target.value || undefined': e.target.value || undefined,
-                            'typeof e.target.value': typeof e.target.value,
-                            'currentFolder': welcomeSettings.imageRotation.folder
-                          });
-                          
-                          const newFolder = e.target.value || undefined;
-                          console.log('🎯 SETZE NEUEN FOLDER:', newFolder);
-                          
-                          setWelcomeSettings({
-                            ...welcomeSettings,
-                            imageRotation: {
-                              ...welcomeSettings.imageRotation,
-                              folder: newFolder
-                            }
-                          });
-                          
-                          console.log('✅ FOLDER GESETZT - State sollte jetzt enthalten:', {
+                        onChange={(e) => setWelcomeSettings({
+                          ...welcomeSettings,
+                          imageRotation: {
                             ...welcomeSettings.imageRotation,
-                            folder: newFolder
-                          });
-                        }}
+                            folder: e.target.value || undefined
+                          }
+                        })}
                         className="w-full bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-3 py-1 focus:border-pink-400 text-xs"
                       >
                         <option value="">Alle Ordner (Standard)</option>
@@ -1373,16 +1162,14 @@ const Welcome = () => {
                   ) : (
                     <div className="text-center text-dark-muted group-hover:text-pink-400 transition-colors duration-300">
                       <Upload className="w-10 h-10 mx-auto mb-2" />
-                      <div className="text-sm font-medium">Bilder hochladen</div>
+                      <div className="text-sm font-medium">Neues Bild</div>
                       <div className="text-xs">Nach "{selectedFolder}"</div>
-                      <div className="text-xs opacity-70 mt-1">📸 Multi-Upload möglich</div>
                     </div>
                   )}
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    multiple
                     onChange={handleFileUpload}
                     className="hidden"
                   />
@@ -1453,7 +1240,7 @@ const Welcome = () => {
                         // Schöner Toast mit emojis und Formatierung  
                         const toastMessage = `ℹ️ **Bild Information**\n📁 Ordner: **${image.folder}**\n📷 Datei: **${shortFilename}**\n💾 Größe: **${displaySize}**\n🗑️ Tipp: Löschbar mit Papierkorb-Button`;
                         
-                        showSuccess('Bild Information', toastMessage);
+                        success(toastMessage);
                       }}
                       className="absolute bottom-2 left-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-50 pointer-events-auto shadow-lg"
                       title="Bild Info anzeigen"

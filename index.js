@@ -42,13 +42,6 @@ function initializeSupabase() {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_ANON_KEY;
         
-        console.log('🔑 Supabase Environment Check:', {
-            hasUrl: !!supabaseUrl,
-            hasKey: !!supabaseKey,
-            urlLength: supabaseUrl ? supabaseUrl.length : 0,
-            keyLength: supabaseKey ? supabaseKey.length : 0
-        });
-        
         if (supabaseUrl && supabaseKey) {
             const { createClient } = require('@supabase/supabase-js');
             supabase = createClient(supabaseUrl, supabaseKey);
@@ -66,104 +59,7 @@ function initializeSupabase() {
 }
 
 // Supabase beim Start initialisieren
-console.log('🚀 Bot startet - initialisiere Supabase...');
-const supabaseInitialized = initializeSupabase();
-console.log('🔍 Supabase Initialisierung Ergebnis:', supabaseInitialized);
-
-// GitHub Welcome-Ordner vorab erstellen (OHNE Upload)
-async function createWelcomeFoldersOnGitHub() {
-    console.log('🚀 createWelcomeFoldersOnGitHub gestartet...');
-    
-    // Prüfe GitHub-Konfiguration
-    if (!apiKeys.github?.token || !apiKeys.github?.username || !apiKeys.github?.repository) {
-        console.error('❌ GitHub Credentials unvollständig:', {
-            hasToken: !!apiKeys.github?.token,
-            hasUsername: !!apiKeys.github?.username,
-            hasRepository: !!apiKeys.github?.repository
-        });
-        return false;
-    }
-    
-    console.log('🔧 GitHub Config:', {
-        username: apiKeys.github.username,
-        repository: apiKeys.github.repository,
-        hasToken: !!apiKeys.github.token
-    });
-    
-    const WELCOME_FOLDERS = [
-        { name: 'general', desc: 'Allgemeine Welcome Bilder' },
-        { name: 'valorant', desc: 'Valorant-themed Welcome Bilder' },
-        { name: 'minecraft', desc: 'Minecraft-themed Welcome Bilder' },
-        { name: 'gaming', desc: 'Gaming-themed Welcome Bilder' },
-        { name: 'anime', desc: 'Anime-themed Welcome Bilder' },
-        { name: 'memes', desc: 'Lustige Meme Welcome Bilder' },
-        { name: 'seasonal', desc: 'Saisonale Welcome Bilder (Weihnachten, Halloween, etc.)' }
-    ];
-    
-    let successCount = 0;
-    
-    try {
-        console.log('📁 Erstelle Welcome-Ordner auf GitHub vorab...');
-        
-        // Dynamischer Import für ES Module
-        const { Octokit } = await import('@octokit/rest');
-        const octokit = new Octokit({ auth: apiKeys.github.token });
-        
-        console.log('🐙 Octokit Client initialisiert');
-        
-        for (const folder of WELCOME_FOLDERS) {
-            try {
-                console.log(`📁 Erstelle Ordner: ${folder.name}`);
-                
-                const path = `public/images/welcome/${folder.name}/.gitkeep`;
-                const content = `# Welcome Images Folder: ${folder.name}\n` +
-                              `# ${folder.desc}\n` +
-                              `# Created: ${new Date().toISOString()}\n` +
-                              `# This file ensures the folder exists on GitHub\n` +
-                              `# Images will be uploaded here by the Discord Bot\n`;
-                
-                await octokit.rest.repos.createOrUpdateFileContents({
-                    owner: apiKeys.github.username,
-                    repo: apiKeys.github.repository,
-                    path: path,
-                    message: `📁 Create welcome folder: ${folder.name}`,
-                    content: Buffer.from(content).toString('base64'),
-                    branch: 'main'
-                });
-                
-                console.log(`✅ Ordner ${folder.name} erstellt/aktualisiert`);
-                successCount++;
-                
-            } catch (error) {
-                if (error.status === 422 && (error.message.includes('same') || error.message.includes('no changes'))) {
-                    console.log(`📁 Ordner ${folder.name} existiert bereits (unverändert)`);
-                    successCount++;
-                } else {
-                    console.error(`❌ Fehler bei ${folder.name}:`, {
-                        status: error.status,
-                        message: error.message,
-                        url: error.request?.url
-                    });
-                }
-            }
-        }
-        
-        const allSuccess = successCount === WELCOME_FOLDERS.length;
-        console.log(`🎉 GitHub Welcome-Ordner Setup: ${successCount}/${WELCOME_FOLDERS.length} erfolgreich! Alle erfolgreich: ${allSuccess}`);
-        return allSuccess;
-        
-    } catch (error) {
-        console.error('❌ GitHub Ordner-Setup fehlgeschlagen:', {
-            message: error.message,
-            status: error.status,
-            stack: error.stack
-        });
-        return false;
-    }
-}
-
-// GitHub-Ordner werden nur bei Bedarf erstellt (z.B. via Script oder manuell)
-// Automatische Erstellung bei jedem Restart wurde entfernt für bessere Performance
+initializeSupabase();
 
 // ================== API KEYS MANAGEMENT ==================
 // Zentrale API-Key-Verwaltung - alle Keys hier konfigurieren
@@ -181,11 +77,6 @@ let apiKeys = {
     valorant: process.env.VALORANT_API_TOKEN || '',
     youtube: {
         apiKey: process.env.YOUTUBE_API_KEY || ''
-    },
-    github: {
-        token: process.env.GITHUB_TOKEN || '',
-        username: process.env.GITHUB_USERNAME || '',
-        repository: process.env.GITHUB_REPOSITORY || 'discordbot'
     }
 };
 
@@ -1196,180 +1087,23 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Größere Uploads erlauben
 
-// GitHub Integration für persistente Image Storage
-let Octokit = null;
-
-// GitHub Client initialisieren
-let githubClient = null;
-const GITHUB_REPO = apiKeys.github?.repository || 'discordbot';
-const GITHUB_OWNER = apiKeys.github?.username || process.env.GITHUB_USERNAME || 'default-user';
-const GITHUB_BRANCH = 'main';
-const GITHUB_BASE_PATH = 'public/images/welcome';
-
-async function initializeGitHub() {
-    if (apiKeys.github?.token) {
-        try {
-            // Dynamischer Import für ES Module
-            if (!Octokit) {
-                const octokitModule = await import('@octokit/rest');
-                Octokit = octokitModule.Octokit;
-            }
-            
-            githubClient = new Octokit({
-                auth: apiKeys.github.token
-            });
-            console.log(`🐙 GitHub Client initialisiert für Image Storage (${GITHUB_OWNER}/${GITHUB_REPO})`);
-            return true;
-        } catch (error) {
-            console.error('❌ Fehler beim Laden von @octokit/rest:', error);
-            console.log('⚠️ GitHub Integration nicht verfügbar - verwende lokalen Storage');
-            return false;
+// Multer für Datei-Uploads konfigurieren
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadPath = './dashboard/public/images/welcome/';
+        // Stelle sicher, dass der Ordner existiert
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
         }
-    } else {
-        console.log('⚠️ GitHub Token nicht konfiguriert - verwende lokalen Storage');
-        console.log('💡 Füge GitHub Token in api-keys.json hinzu für persistente Image Storage');
-        return false;
+        cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+        // Generiere einen einzigartigen Dateinamen
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = path.extname(file.originalname);
+        cb(null, 'welcome-' + uniqueSuffix + extension);
     }
-}
-
-// GitHub beim Start initialisieren
-let useGitHubStorage = false;
-initializeGitHub().then(result => {
-    useGitHubStorage = result;
-}).catch(error => {
-    console.error('❌ GitHub-Initialisierung fehlgeschlagen:', error);
-    useGitHubStorage = false;
 });
-
-// GitHub Image Upload Funktion
-async function uploadImageToGitHub(buffer, filename, folder = 'general') {
-    try {
-        const filePath = `${GITHUB_BASE_PATH}/${folder}/${filename}`;
-        const base64Content = buffer.toString('base64');
-        
-        // Prüfe ob Datei bereits existiert
-        let sha = null;
-        try {
-            const existingFile = await githubClient.rest.repos.getContent({
-                owner: GITHUB_OWNER,
-                repo: GITHUB_REPO,
-                path: filePath,
-                ref: GITHUB_BRANCH
-            });
-            sha = existingFile.data.sha;
-        } catch (error) {
-            // Datei existiert nicht - das ist OK
-        }
-        
-        // Upload oder Update der Datei
-        const response = await githubClient.rest.repos.createOrUpdateFileContents({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            message: `Upload welcome image: ${filename}`,
-            content: base64Content,
-            branch: GITHUB_BRANCH,
-            ...(sha && { sha })
-        });
-        
-        console.log(`✅ Bild zu GitHub hochgeladen: ${filePath}`);
-        return {
-            success: true,
-            url: `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${GITHUB_BRANCH}/${filePath}`,
-            githubUrl: response.data.content.html_url,
-            downloadUrl: response.data.content.download_url
-        };
-        
-    } catch (error) {
-        console.error('❌ Fehler beim GitHub Upload:', error);
-        throw error;
-    }
-}
-
-// GitHub Image Delete Funktion
-async function deleteImageFromGitHub(filename, folder = 'general') {
-    try {
-        const filePath = `${GITHUB_BASE_PATH}/${folder}/${filename}`;
-        
-        // Hole SHA der zu löschenden Datei
-        const existingFile = await githubClient.rest.repos.getContent({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            ref: GITHUB_BRANCH
-        });
-        
-        // Lösche die Datei
-        await githubClient.rest.repos.deleteFile({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            message: `Delete welcome image: ${filename}`,
-            sha: existingFile.data.sha,
-            branch: GITHUB_BRANCH
-        });
-        
-        console.log(`🗑️ Bild von GitHub gelöscht: ${filePath}`);
-        return { success: true };
-        
-    } catch (error) {
-        console.error('❌ Fehler beim GitHub Delete:', error);
-        throw error;
-    }
-}
-
-// GitHub Image List Funktion
-async function listImagesFromGitHub() {
-    try {
-        const folders = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
-        const result = { folders: {}, images: [], folderNames: folders, allFolderNames: folders };
-        
-        for (const folder of folders) {
-            try {
-                const folderPath = `${GITHUB_BASE_PATH}/${folder}`;
-                const response = await githubClient.rest.repos.getContent({
-                    owner: GITHUB_OWNER,
-                    repo: GITHUB_REPO,
-                    path: folderPath,
-                    ref: GITHUB_BRANCH
-                });
-                
-                const folderImages = [];
-                if (Array.isArray(response.data)) {
-                    for (const file of response.data) {
-                        if (file.type === 'file' && /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name)) {
-                            const imageData = {
-                                filename: file.name,
-                                folder: folder,
-                                url: `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${GITHUB_BRANCH}/${folderPath}/${file.name}`,
-                                githubUrl: file.html_url,
-                                size: file.size,
-                                uploadedAt: new Date().toISOString()
-                            };
-                            folderImages.push(imageData);
-                            result.images.push(imageData);
-                        }
-                    }
-                }
-                
-                result.folders[folder] = folderImages;
-                
-            } catch (error) {
-                console.log(`📁 Ordner ${folder} existiert noch nicht auf GitHub`);
-                result.folders[folder] = [];
-            }
-        }
-        
-        return result;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der GitHub Images:', error);
-        throw error;
-    }
-}
-
-// Multer für Memory Storage (da wir zu GitHub uploaden)
-const storage = multer.memoryStorage();
 
 const upload = multer({ 
     storage: storage,
@@ -1386,27 +1120,8 @@ const upload = multer({
     }
 });
 
-// Fallback: Statische Dateien servieren (für lokale Entwicklung)
-if (!useGitHubStorage) {
+// Statische Dateien servieren
 app.use('/images', express.static('./dashboard/public/images'));
-}
-
-// Welcome Images Ordner-Struktur initialisieren
-function initializeWelcomeImagesFolders() {
-    const baseDir = './dashboard/public/images/welcome/';
-    const folders = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
-    
-    folders.forEach(folder => {
-        const folderPath = path.join(baseDir, folder);
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath, { recursive: true });
-            console.log(`📁 Welcome Images Ordner erstellt: ${folder}`);
-        }
-    });
-}
-
-// Initialisiere Welcome Images Ordner beim Server-Start
-initializeWelcomeImagesFolders();
 
 // Bot Status für API
 let currentBotStatus = {
@@ -1719,12 +1434,6 @@ app.get('/api/keys/status', (req, res) => {
             youtube: {
                 apiKey: !!apiKeys.youtube.apiKey,
                 configured: !!apiKeys.youtube.apiKey
-            },
-            github: {
-                token: !!apiKeys.github.token,
-                username: !!apiKeys.github.username,
-                repository: !!apiKeys.github.repository,
-                configured: !!(apiKeys.github.token && apiKeys.github.username)
             }
         };
         res.json({ success: true, status });
@@ -1737,7 +1446,7 @@ app.get('/api/keys/status', (req, res) => {
 // API-Keys aktualisieren
 app.post('/api/keys', (req, res) => {
     try {
-        const { discord, openai, twitch, valorant, github } = req.body;
+        const { discord, openai, twitch, valorant } = req.body;
         
         // Nur nicht-leere Keys aktualisieren
         if (discord) {
@@ -1754,11 +1463,6 @@ app.post('/api/keys', (req, res) => {
         if (req.body.youtube && req.body.youtube.apiKey) {
             apiKeys.youtube.apiKey = req.body.youtube.apiKey;
         }
-        if (github) {
-            if (github.token) apiKeys.github.token = github.token;
-            if (github.username) apiKeys.github.username = github.username;
-            if (github.repository) apiKeys.github.repository = github.repository;
-        }
         
         // Speichern
         const saved = saveAPIKeys();
@@ -1774,14 +1478,6 @@ app.post('/api/keys', (req, res) => {
                 if (twitchSystem) {
                     twitchSystem.setCredentials(apiKeys.twitch.clientId, apiKeys.twitch.clientSecret);
                 }
-            }
-            
-            if (github && apiKeys.github.token) {
-                initializeGitHub().then(result => {
-                    useGitHubStorage = result;
-                }).catch(error => {
-                    console.error('❌ GitHub-Reinitialisierung fehlgeschlagen:', error);
-                });
             }
             
             console.log('🔑 API-Keys aktualisiert');
@@ -1805,12 +1501,6 @@ app.post('/api/keys', (req, res) => {
                     youtube: {
                         apiKey: !!apiKeys.youtube.apiKey,
                         configured: !!apiKeys.youtube.apiKey
-                    },
-                    github: {
-                        token: !!apiKeys.github.token,
-                        username: !!apiKeys.github.username,
-                        repository: !!apiKeys.github.repository,
-                        configured: !!(apiKeys.github.token && apiKeys.github.username)
                     }
                 }
             });
@@ -1884,167 +1574,72 @@ app.post('/api/bot/settings', async (req, res) => {
 // Legacy Rules API entfernt - verwendet jetzt Supabase API
 // Siehe rules-supabase-api.js für neue Endpunkte
 
-// ================== WELCOME SYSTEM - SUPABASE FUNCTIONS ==================
-
-// Welcome Settings Cache - Werte werden aus Supabase geladen
-let welcomeSettings = null;
-
-// Cache für Welcome Settings
-let welcomeSettingsCache = null;
-let welcomeSettingsCacheTime = 0;
-const WELCOME_CACHE_DURATION = 300000; // 5 Minuten
-
-// Lade Welcome Settings aus Supabase
-async function loadWelcomeSettingsFromSupabase() {
-    try {
-        if (!supabase) {
-            console.error('❌ Supabase ist erforderlich für Welcome Settings!');
-            throw new Error('Supabase nicht verfügbar - Welcome Settings können nicht geladen werden');
+// Welcome Settings
+let welcomeSettings = {
+    enabled: true,
+    channelName: 'willkommen',
+    title: '🎉 Willkommen auf dem Server!',
+    description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
+    color: '0x00FF7F',
+    thumbnail: 'user',
+    customThumbnail: '',
+    imageRotation: {
+        enabled: false,
+        mode: 'random' // 'random' oder 'sequential'
+    },
+    fields: [
+        {
+            name: '📋 Erste Schritte',
+            value: 'Schaue dir unsere Regeln an und werde Teil der Community!',
+            inline: false
+        },
+        {
+            name: '💬 Support',
+            value: 'Bei Fragen wende dich an unsere Moderatoren!',
+            inline: true
+        },
+        {
+            name: '🎮 Viel Spaß',
+            value: 'Wir freuen uns auf dich!',
+            inline: true
         }
-        
-        // Cache prüfen
-        const now = Date.now();
-        if (welcomeSettingsCache && (now - welcomeSettingsCacheTime) < WELCOME_CACHE_DURATION) {
-            return welcomeSettingsCache;
-        }
-        
-        console.log('🔄 Lade Welcome Settings aus Supabase...');
-        
-        const { data: settings, error } = await supabase
-            .from('welcome_settings')
-            .select('*')
-            .single();
-        
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-            console.error('❌ Fehler beim Laden der Welcome Settings:', error);
-            throw error;
-        }
-        
-        if (!settings) {
-            console.log('📄 Keine Welcome Settings in Supabase gefunden, erstelle Default-Settings');
-            
-            // Erstelle Default-Settings direkt in Supabase
-            const defaultSettings = {
-                enabled: true,
-                channelName: 'willkommen',
-                title: '🎉 Willkommen auf dem Server!',
-                description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-                color: '0x00FF7F',
-                thumbnail: 'user',
-                customThumbnail: '',
-                imageRotation: { enabled: false, mode: 'random', folder: undefined },
-                fields: [
-                    { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
-                    { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
-                    { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
-                ],
-                footer: 'Mitglied #{memberCount} • {server}',
-                autoRole: '',
-                mentionUser: true,
-                deleteAfter: 0,
-                dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
-                leaveMessage: {
-                    enabled: false,
-                    channelName: 'verlassen',
-                    title: '👋 Tschüss!',
-                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-                    color: '0xFF6B6B',
-                    mentionUser: false,
-                    deleteAfter: 0
-                }
-            };
-            
-            // Speichere Default-Settings in Supabase
-            console.log('💾 Speichere Default-Settings in Supabase...');
-            const success = await saveWelcomeSettingsToSupabase(defaultSettings);
-            if (!success) {
-                throw new Error('Fehler beim Erstellen der Default-Settings in Supabase');
-            }
-            
-            welcomeSettings = defaultSettings;
-            return defaultSettings;
-        }
-        
-        // Intelligente Struktur-Erkennung: config-basiert ODER flach
-        let settingsData;
-        if (settings.config) {
-            // Alte Struktur mit config JSONB
-            console.log('📥 BACKEND RAW Supabase Data (config-basiert):', JSON.stringify(settings.config, null, 2));
-            settingsData = settings.config;
-        } else {
-            // Neue Struktur mit flachen Spalten
-            console.log('📥 BACKEND RAW Supabase Data (flach):', JSON.stringify(settings, null, 2));
-            settingsData = settings;
-        }
-        
-        console.log('🔍 BACKEND settingsData.imageRotation:', {
-            enabled: settingsData?.imageRotation?.enabled,
-            mode: settingsData?.imageRotation?.mode,
-            folder: settingsData?.imageRotation?.folder,
-            'typeof folder': typeof settingsData?.imageRotation?.folder,
-            'hasOwnProperty folder': settingsData?.imageRotation?.hasOwnProperty('folder'),
-            'raw imageRotation': settingsData?.imageRotation
-        });
-        
-        const mergedSettings = {
-            ...settingsData,
-            id: settings.id,
-            updated_at: settings.updated_at
-        };
-        
-        console.log('🔍 BACKEND mergedSettings.imageRotation NACH Merge:', {
-            enabled: mergedSettings.imageRotation?.enabled,
-            mode: mergedSettings.imageRotation?.mode,
-            folder: mergedSettings.imageRotation?.folder,
-            'typeof folder': typeof mergedSettings.imageRotation?.folder,
-            'hasOwnProperty folder': mergedSettings.imageRotation?.hasOwnProperty('folder')
-        });
-        
-        // Cache aktualisieren
-        welcomeSettingsCache = mergedSettings;
-        welcomeSettingsCacheTime = now;
-        welcomeSettings = mergedSettings; // Globale Variable aktualisieren
-        
-        console.log('✅ Welcome Settings aus Supabase geladen:', {
-            id: mergedSettings.id,
-            thumbnail: mergedSettings.thumbnail,
-            customThumbnail: mergedSettings.customThumbnail ? mergedSettings.customThumbnail.substring(0, 50) + '...' : 'keine',
-            imageRotation: mergedSettings.imageRotation
-        });
-        return welcomeSettingsCache;
-        
-    } catch (error) {
-        console.error('❌ Kritischer Fehler beim Laden der Welcome Settings:', error);
-        throw error; // Kein Fallback mehr - Supabase ist erforderlich
+    ],
+    footer: 'Mitglied #{memberCount} • {server}',
+    autoRole: '',
+    mentionUser: true,
+    deleteAfter: 0,
+    dmMessage: {
+        enabled: false,
+        message: 'Willkommen! Schau gerne im Server vorbei! 😊'
+    },
+    leaveMessage: {
+        enabled: false,
+        channelName: 'verlassen',
+        title: '👋 Tschüss!',
+        description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+        color: '0xFF6B6B',
+        mentionUser: false,
+        deleteAfter: 0
     }
-}
+};
 
-// JSON Fallback für Welcome Settings
-function loadWelcomeSettingsFromJSON() {
+// Welcome Settings laden
+app.get('/api/welcome', (req, res) => {
     try {
         if (fs.existsSync('./welcome.json')) {
             const settings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
             
-            // Migration: Sicherstellen dass alle Felder existieren
-            const mergedSettings = {
-                ...settings
-            };
-            
-            if (!mergedSettings.imageRotation) {
-                mergedSettings.imageRotation = {
+            // Migration: Sicherstellen dass imageRotation existiert
+            if (!settings.imageRotation) {
+                settings.imageRotation = {
                     enabled: false,
-                    mode: 'random',
-                    folder: undefined  // Explizit für korrekte Struktur
+                    mode: 'random'
                 };
             }
-            
-            // Sicherstellen dass folder property existiert 
-            if (mergedSettings.imageRotation && !mergedSettings.imageRotation.hasOwnProperty('folder')) {
-                mergedSettings.imageRotation.folder = undefined;
-            }
 
-            if (!mergedSettings.leaveMessage) {
-                mergedSettings.leaveMessage = {
+            // Migration: Sicherstellen dass leaveMessage existiert
+            if (!settings.leaveMessage) {
+                settings.leaveMessage = {
                     enabled: false,
                     channelName: 'verlassen',
                     title: '👋 Tschüss!',
@@ -2055,656 +1650,23 @@ function loadWelcomeSettingsFromJSON() {
                 };
             }
             
-            welcomeSettings = mergedSettings;
-            console.log('✅ Welcome Settings aus JSON geladen:', {
-                thumbnail: mergedSettings.thumbnail,
-                customThumbnail: mergedSettings.customThumbnail ? mergedSettings.customThumbnail.substring(0, 50) + '...' : 'keine',
-                imageRotation: mergedSettings.imageRotation
-            });
-            return mergedSettings;
-        }
-        // Fallback wenn keine Datei existiert
-        const defaultSettings = {
-            enabled: true,
-            channelName: 'willkommen',
-            title: '🎉 Willkommen auf dem Server!',
-            description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-            color: '0x00FF7F',
-            thumbnail: 'user',
-            customThumbnail: '',
-            imageRotation: { enabled: false, mode: 'random', folder: undefined },
-            fields: [
-                { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
-                { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
-                { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
-            ],
-            footer: 'Mitglied #{memberCount} • {server}',
-            autoRole: '',
-            mentionUser: true,
-            deleteAfter: 0,
-            dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
-            leaveMessage: {
-                enabled: false,
-                channelName: 'verlassen',
-                title: '👋 Tschüss!',
-                description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-                color: '0xFF6B6B',
-                mentionUser: false,
-                deleteAfter: 0
-            }
-        };
-        return defaultSettings;
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Welcome Settings aus JSON:', error);
-        // Fallback Default-Settings
-        return {
-            enabled: true,
-            channelName: 'willkommen',
-            title: '🎉 Willkommen auf dem Server!',
-            description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-            color: '0x00FF7F',
-            thumbnail: 'user',
-            customThumbnail: '',
-            imageRotation: { enabled: false, mode: 'random', folder: undefined },
-            fields: [
-                { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
-                { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
-                { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
-            ],
-            footer: 'Mitglied #{memberCount} • {server}',
-            autoRole: '',
-            mentionUser: true,
-            deleteAfter: 0,
-            dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
-            leaveMessage: {
-                enabled: false,
-                channelName: 'verlassen',
-                title: '👋 Tschüss!',
-                description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-                color: '0xFF6B6B',
-                mentionUser: false,
-                deleteAfter: 0
-            }
-        };
-    }
-}
-
-// Speichere Welcome Settings in Supabase
-async function saveWelcomeSettingsToSupabase(settings) {
-    console.log('🚀 ENTERING saveWelcomeSettingsToSupabase...');
-    try {
-        console.log('📥 BACKEND saveWelcomeSettingsToSupabase - Input:', JSON.stringify(settings, null, 2));
-        console.log('🔍 BACKEND ImageRotation beim Speichern:', {
-            hasImageRotation: !!settings.imageRotation,
-            enabled: settings.imageRotation?.enabled,
-            mode: settings.imageRotation?.mode,
-            folder: settings.imageRotation?.folder,
-            'typeof folder': typeof settings.imageRotation?.folder,
-            'hasOwnProperty folder': settings.imageRotation ? settings.imageRotation.hasOwnProperty('folder') : false
-        });
-        
-        console.log('🔍 Checking supabase variable:', { supabase: !!supabase, type: typeof supabase });
-        
-        if (!supabase) {
-            console.error('❌ Supabase ist erforderlich zum Speichern!');
-            throw new Error('Supabase nicht verfügbar - Welcome Settings können nicht gespeichert werden');
-        }
-        
-        console.log('✅ Supabase OK - proceeding to database operations...');
-        
-        console.log('💾 Speichere Welcome Settings in Supabase...');
-        
-        // Prüfe ob bereits Einstellungen existieren
-        console.log('🔍 Prüfe existierende Settings...');
-        console.log('🗄️ Versuche Zugriff auf welcome_settings Tabelle...');
-        const { data: existingSettings, error: selectError } = await supabase
-            .from('welcome_settings')
-            .select('id')
-            .single();
-        
-        console.log('📋 SELECT Ergebnis:', {
-            data: existingSettings,
-            error: selectError,
-            errorCode: selectError?.code,
-            errorMessage: selectError?.message
-        });
-        
-        if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = No rows found
-            console.log('⚠️ Fehler beim Prüfen existierender Settings:', selectError);
-        }
-        
-        console.log('📋 Existierende Settings:', existingSettings ? `ID: ${existingSettings.id}` : 'Keine gefunden');
-        
-        const configData = {
-            config: settings,
-            updated_at: new Date().toISOString()
-        };
-        
-        console.log('📦 Sende an Supabase:', {
-            hasConfig: !!configData.config,
-            configKeys: configData.config ? Object.keys(configData.config) : null,
-            imageRotation: configData.config?.imageRotation,
-            operation: existingSettings ? 'UPDATE' : 'INSERT'
-        });
-        
-        let result;
-        if (existingSettings) {
-            // Update existierende Einstellungen
-            console.log('🔄 UPDATE existierende Settings...');
-            result = await supabase
-                .from('welcome_settings')
-                .update(configData)
-                .eq('id', existingSettings.id)
-                .select()
-                .single();
+            res.json(settings);
         } else {
-            // Erstelle neue Einstellungen
-            console.log('➕ INSERT neue Settings...');
-            result = await supabase
-                .from('welcome_settings')
-                .insert([configData])
-                .select()
-                .single();
+            res.json(welcomeSettings);
         }
-        
-        console.log('📤 Supabase Antwort:', {
-            success: !result.error,
-            error: result.error,
-            dataReceived: !!result.data,
-            dataId: result.data?.id
-        });
-        
-        if (result.error) {
-            console.error('💥 Supabase Error Details:', result.error);
-            throw result.error;
-        }
-        
-        // Cache invalidieren
-        welcomeSettingsCache = null;
-        welcomeSettings = settings;
-        
-        // Kein JSON-Fallback mehr - nur Supabase
-        
-        console.log('✅ Welcome Settings in Supabase gespeichert');
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der Welcome Settings in Supabase:', error);
-        console.error('💥 Error Details:', {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            stack: error.stack
-        });
-        console.log('❌ Kein Fallback verfügbar - Supabase ist erforderlich!');
-        throw error; // Kein JSON-Fallback mehr
-    }
-}
-
-// JSON Fallback für Speichern
-function saveWelcomeSettingsToJSON(settings) {
-    try {
-        fs.writeFileSync('./welcome.json', JSON.stringify(settings, null, 2));
-        welcomeSettings = settings;
-        console.log('✅ Welcome Settings in JSON gespeichert (Fallback)');
-        return true;
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der Welcome Settings in JSON:', error);
-        return false;
-    }
-}
-
-// Welcome Images Cache
-let welcomeImagesCache = null;
-let welcomeImagesCacheTime = 0;
-
-// Lade Welcome Images aus Supabase
-async function loadWelcomeImagesFromSupabase() {
-    try {
-        if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, verwende Dateisystem-Fallback');
-            return loadWelcomeImagesFromFileSystem();
-        }
-        
-        // Cache prüfen
-        const now = Date.now();
-        if (welcomeImagesCache && (now - welcomeImagesCacheTime) < WELCOME_CACHE_DURATION) {
-            return welcomeImagesCache;
-        }
-        
-        console.log('🔄 Lade Welcome Images aus Supabase...');
-        
-        const { data: images, error } = await supabase
-            .from('welcome_images')
-            .select('*')
-            .order('folder')
-            .order('created_at', { ascending: false });
-        
-        if (error) {
-            console.error('❌ Fehler beim Laden der Welcome Images:', error);
-            return loadWelcomeImagesFromFileSystem();
-        }
-        
-        // Organisiere Bilder nach Ordnern
-        const folders = {};
-        const allImages = [];
-        
-        if (images && images.length > 0) {
-            images.forEach(image => {
-                const folder = image.folder || 'general';
-                if (!folders[folder]) {
-                    folders[folder] = [];
-                }
-                
-                const imageData = {
-                    filename: image.filename,
-                    url: image.url,
-                    folder: folder,
-                    size: image.size,
-                    created: new Date(image.created_at),
-                    id: image.id
-                };
-                
-                folders[folder].push(imageData);
-                allImages.push(imageData);
-            });
-        }
-        
-        // Lade auch Ordner-Informationen
-        const { data: folderData } = await supabase
-            .from('welcome_folders')
-            .select('*')
-            .order('name');
-        
-        // Sicherstellen dass alle Ordner existieren, auch leere
-        if (folderData && folderData.length > 0) {
-            folderData.forEach(folder => {
-                if (!folders[folder.name]) {
-                    folders[folder.name] = [];
-                }
-            });
-        }
-        
-        // Sicherstellen dass 'general' Ordner existiert
-        if (!folders['general']) {
-            folders['general'] = [];
-        }
-        
-        const result = {
-            folders,
-            images: allImages.sort((a, b) => b.created - a.created),
-            folderNames: Object.keys(folders),
-            allFolderNames: Object.keys(folders)
-        };
-        
-        // Cache aktualisieren
-        welcomeImagesCache = result;
-        welcomeImagesCacheTime = now;
-        
-        console.log(`✅ ${allImages.length} Welcome Images aus Supabase geladen`);
-        return result;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Welcome Images:', error);
-        return loadWelcomeImagesFromFileSystem();
-    }
-}
-
-// Dateisystem Fallback für Images
-function loadWelcomeImagesFromFileSystem() {
-    try {
-        const welcomeImagesPath = './dashboard/public/images/welcome/';
-        
-        if (!fs.existsSync(welcomeImagesPath)) {
-            return { folders: {}, images: [] };
-        }
-        
-        const folders = {};
-        const allImages = [];
-        
-        const items = fs.readdirSync(welcomeImagesPath);
-        
-        // Zuerst lose Bilder im Hauptverzeichnis (legacy)
-        const looseImages = items
-            .filter(item => {
-                const itemPath = path.join(welcomeImagesPath, item);
-                const isFile = fs.statSync(itemPath).isFile();
-                if (isFile) {
-                    const ext = path.extname(item).toLowerCase();
-                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
-                }
-                return false;
-            })
-            .map(file => {
-                const stats = fs.statSync(path.join(welcomeImagesPath, file));
-                return {
-                    filename: file,
-                    url: `/images/welcome/${file}`,
-                    folder: 'general',
-                    size: stats.size,
-                    created: stats.birthtime
-                };
-            });
-
-        if (looseImages.length > 0) {
-            folders['general'] = looseImages;
-            allImages.push(...looseImages);
-        }
-        
-        // Dann Ordner durchsuchen
-        const folderNames = items.filter(item => {
-            const itemPath = path.join(welcomeImagesPath, item);
-            return fs.statSync(itemPath).isDirectory();
-        });
-        
-        folderNames.forEach(folderName => {
-            const folderPath = path.join(welcomeImagesPath, folderName);
-            const folderFiles = fs.readdirSync(folderPath);
-            
-            const images = folderFiles
-                .filter(file => {
-                    const ext = path.extname(file).toLowerCase();
-                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
-                })
-                .map(file => {
-                    const stats = fs.statSync(path.join(folderPath, file));
-                    return {
-                        filename: file,
-                        url: `/images/welcome/${folderName}/${file}`,
-                        folder: folderName,
-                        size: stats.size,
-                        created: stats.birthtime
-                    };
-                })
-                .sort((a, b) => b.created - a.created);
-            
-            folders[folderName] = images;
-            if (images.length > 0) {
-                allImages.push(...images);
-            }
-        });
-        
-        return { 
-            folders, 
-            images: allImages.sort((a, b) => b.created - a.created),
-            folderNames: Object.keys(folders),
-            allFolderNames: folderNames
-        };
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Images aus Dateisystem:', error);
-        return { folders: {}, images: [] };
-    }
-}
-
-// Speichere Welcome Image in Supabase
-async function saveWelcomeImageToSupabase(imageData) {
-    try {
-        if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, nur lokale Speicherung');
-            return true;
-        }
-        
-        const { data, error } = await supabase
-            .from('welcome_images')
-            .insert([{
-                filename: imageData.filename,
-                url: imageData.url,
-                folder: imageData.folder || 'general',
-                size: imageData.size,
-                original_name: imageData.originalname || imageData.filename,
-                created_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-        
-        if (error) {
-            throw error;
-        }
-        
-        // Cache invalidieren
-        welcomeImagesCache = null;
-        
-        console.log(`✅ Welcome Image in Supabase gespeichert: ${imageData.folder}/${imageData.filename}`);
-        return data;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern des Welcome Images in Supabase:', error);
-        return false;
-    }
-}
-
-// Lösche Welcome Image aus Supabase
-async function deleteWelcomeImageFromSupabase(filename, folder) {
-    try {
-        if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, nur lokale Löschung');
-            return true;
-        }
-        
-        const { error } = await supabase
-            .from('welcome_images')
-            .delete()
-            .eq('filename', filename)
-            .eq('folder', folder || 'general');
-        
-        if (error) {
-            throw error;
-        }
-        
-        // Cache invalidieren
-        welcomeImagesCache = null;
-        
-        console.log(`✅ Welcome Image aus Supabase gelöscht: ${folder}/${filename}`);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Löschen des Welcome Images aus Supabase:', error);
-        return false;
-    }
-}
-
-// Erstelle Welcome Folder in Supabase
-async function createWelcomeFolderInSupabase(folderName) {
-    try {
-        if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, nur lokale Erstellung');
-            return true;
-        }
-        
-        const { data, error } = await supabase
-            .from('welcome_folders')
-            .insert([{
-                name: folderName,
-                created_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-        
-        if (error) {
-            throw error;
-        }
-        
-        // Cache invalidieren
-        welcomeImagesCache = null;
-        
-        console.log(`✅ Welcome Folder in Supabase erstellt: ${folderName}`);
-        return data;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Erstellen des Welcome Folders in Supabase:', error);
-        return false;
-    }
-}
-
-// Lösche Welcome Folder aus Supabase
-async function deleteWelcomeFolderFromSupabase(folderName) {
-    try {
-        if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, nur lokale Löschung');
-            return true;
-        }
-        
-        // Lösche erst alle Bilder im Ordner
-        const { error: imagesError } = await supabase
-            .from('welcome_images')
-            .delete()
-            .eq('folder', folderName);
-        
-        if (imagesError) {
-            console.error('Fehler beim Löschen der Bilder im Ordner:', imagesError);
-        }
-        
-        // Lösche dann den Ordner
-        const { error: folderError } = await supabase
-            .from('welcome_folders')
-            .delete()
-            .eq('name', folderName);
-        
-        if (folderError) {
-            throw folderError;
-        }
-        
-        // Cache invalidieren
-        welcomeImagesCache = null;
-        
-        console.log(`✅ Welcome Folder aus Supabase gelöscht: ${folderName}`);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Löschen des Welcome Folders aus Supabase:', error);
-        return false;
-    }
-}
-
-// Verschiebe Image zwischen Ordnern in Supabase
-async function moveWelcomeImageInSupabase(filename, sourceFolder, targetFolder) {
-    try {
-        if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, nur lokale Verschiebung');
-            return { newUrl: `/images/welcome/${targetFolder}/${filename}` };
-        }
-        
-        const { data, error } = await supabase
-            .from('welcome_images')
-            .update({ 
-                folder: targetFolder,
-                url: `/images/welcome/${targetFolder}/${filename}`
-            })
-            .eq('filename', filename)
-            .eq('folder', sourceFolder)
-            .select()
-            .single();
-        
-        if (error) {
-            throw error;
-        }
-        
-        // Cache invalidieren
-        welcomeImagesCache = null;
-        
-        console.log(`✅ Welcome Image in Supabase verschoben: ${sourceFolder}/${filename} → ${targetFolder}/${filename}`);
-        return { newUrl: data.url };
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Verschieben des Welcome Images in Supabase:', error);
-        return { newUrl: `/images/welcome/${targetFolder}/${filename}` };
-    }
-}
-
-// Welcome Settings beim Start laden
-async function initializeWelcomeSettings() {
-    try {
-        console.log('🔄 Initialisiere Welcome Settings...');
-        await loadWelcomeSettingsFromSupabase();
-        console.log('✅ Welcome Settings initialisiert');
-    } catch (error) {
-        console.error('❌ Fehler bei Welcome Settings Initialisierung:', error);
-    }
-}
-
-// ================== WELCOME API ENDPOINTS ==================
-
-// Welcome Settings laden
-app.get('/api/welcome', async (req, res) => {
-    try {
-        const settings = await loadWelcomeSettingsFromSupabase();
-        res.json(settings);
     } catch (error) {
         console.error('Fehler beim Laden der Welcome-Einstellungen:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Welcome-Einstellungen' });
     }
 });
 
-// DEBUG API: RAW Supabase Data direkt abfragen
-app.get('/api/welcome/debug-raw', async (req, res) => {
-    try {
-        console.log('🔍 DEBUG API: RAW Supabase Data abgefragt');
-        
-        if (!supabase) {
-            return res.json({ 
-                error: 'Supabase nicht initialisiert',
-                fallback: 'JSON-File wird verwendet',
-                jsonData: fs.existsSync('./welcome.json') ? JSON.parse(fs.readFileSync('./welcome.json', 'utf8')) : null
-            });
-        }
-        
-        // Direkte Supabase-Abfrage
-        const { data: settings, error } = await supabase
-            .from('welcome_settings')
-            .select('*')
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .single();
-            
-        if (error) {
-            console.error('🔍 DEBUG: Supabase Error:', error);
-            return res.json({ 
-                error: 'Supabase Error', 
-                details: error,
-                fallback: 'JSON-File wird verwendet',
-                jsonData: fs.existsSync('./welcome.json') ? JSON.parse(fs.readFileSync('./welcome.json', 'utf8')) : null
-            });
-        }
-        
-        console.log('🔍 DEBUG: RAW Supabase Data:', JSON.stringify(settings, null, 2));
-        
-        res.json({
-            success: true,
-            supabaseRawData: settings,
-            configData: settings?.config,
-            imageRotationInConfig: settings?.config?.imageRotation,
-            folderInImageRotation: settings?.config?.imageRotation?.folder,
-            hasFolder: settings?.config?.imageRotation?.hasOwnProperty('folder'),
-            typeofFolder: typeof settings?.config?.imageRotation?.folder
-        });
-        
-    } catch (error) {
-        console.error('🔍 DEBUG API Error:', error);
-        res.status(500).json({ error: 'Debug API Error', details: error.message });
-    }
-});
-
 // Welcome Settings speichern
-app.post('/api/welcome', async (req, res) => {
+app.post('/api/welcome', (req, res) => {
     try {
-        console.log('📥 POST /api/welcome - Empfangene Daten:', JSON.stringify(req.body, null, 2));
-        console.log('🔍 ImageRotation empfangen:', {
-            enabled: req.body.imageRotation?.enabled,
-            mode: req.body.imageRotation?.mode,
-            folder: req.body.imageRotation?.folder,
-            'typeof folder': typeof req.body.imageRotation?.folder,
-            'hasOwnProperty folder': req.body.imageRotation?.hasOwnProperty('folder')
-        });
-        
-        const success = await saveWelcomeSettingsToSupabase(req.body);
-        if (success) {
-            console.log('✅ Welcome-Einstellungen aktualisiert');
-            res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
-        } else {
-            res.status(500).json({ error: 'Fehler beim Speichern der Welcome-Einstellungen' });
-        }
+        fs.writeFileSync('./welcome.json', JSON.stringify(req.body, null, 2));
+        welcomeSettings = req.body;
+        console.log('✅ Welcome-Einstellungen aktualisiert');
+        res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
     } catch (error) {
         console.error('Fehler beim Speichern der Welcome-Einstellungen:', error);
         res.status(500).json({ error: 'Fehler beim Speichern der Welcome-Einstellungen' });
@@ -2851,118 +1813,39 @@ app.post('/api/welcome/test-leave', async (req, res) => {
     }
 });
 
-// Upload Welcome Images - Multi-Upload Support (GitHub Integration mit Fallback)
-app.post('/api/welcome/upload', upload.array('welcomeImage', 10), async (req, res) => {
+// Upload Welcome Image (mit Ordner-Support)
+app.post('/api/welcome/upload', upload.single('welcomeImage'), (req, res) => {
     try {
-        const files = req.files;
-        if (!files || files.length === 0) {
-            return res.status(400).json({ error: 'Keine Dateien hochgeladen' });
+        if (!req.file) {
+            return res.status(400).json({ error: 'Keine Datei hochgeladen' });
         }
 
         const folder = req.body.folder || 'general'; // Default-Ordner
-        const results = [];
-        let successCount = 0;
+        const folderPath = `./dashboard/public/images/welcome/${folder}`;
         
-        console.log(`📤 Multi-Upload gestartet: ${files.length} Datei(en) nach "${folder}"`);
-        
-        // Verarbeite alle Dateien parallel
-        const uploadPromises = files.map(async (file) => {
-            try {
-                // Generiere einen einzigartigen Dateinamen
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                const extension = path.extname(file.originalname);
-                const filename = 'welcome-' + uniqueSuffix + extension;
-                
-                let imageUrl;
-                let uploadSuccess = false;
-                
-                // Versuche GitHub Upload zuerst
-                if (useGitHubStorage && githubClient) {
-                    try {
-                        const githubResult = await uploadImageToGitHub(file.buffer, filename, folder);
-                        imageUrl = githubResult.url;
-                        uploadSuccess = true;
-                        
-                        console.log(`✅ ${file.originalname} zu GitHub hochgeladen: ${folder}/${filename}`);
-                        
-                    } catch (githubError) {
-                        console.error(`❌ GitHub Upload für ${file.originalname} fehlgeschlagen:`, githubError);
-                    }
-                }
-                
-                // Fallback: Lokaler Upload
-                if (!uploadSuccess) {
-                    const uploadPath = `./dashboard/public/images/welcome/${folder}/`;
-                    
-                    // Stelle sicher, dass der Ordner existiert
-                    if (!fs.existsSync(uploadPath)) {
-                        fs.mkdirSync(uploadPath, { recursive: true });
-                    }
-                    
-                    const localPath = path.join(uploadPath, filename);
-                    fs.writeFileSync(localPath, file.buffer);
-                    imageUrl = `/images/welcome/${folder}/${filename}`;
-                    
-                    console.log(`✅ ${file.originalname} lokal hochgeladen: ${folder}/${filename}`);
-                }
-                
-                // Speichere Metadaten in Supabase
-                const imageData = {
-                    filename: filename,
-                    url: imageUrl,
-                    folder: folder,
-                    size: file.size,
-                    originalname: file.originalname,
-                    uploadedAt: new Date().toISOString(),
-                    storageType: uploadSuccess ? 'github' : 'local'
-                };
-                
-                await saveWelcomeImageToSupabase(imageData);
-                successCount++;
-                
-                return {
-                    success: true,
-                    filename: filename,
-                    folder: folder,
-                    url: imageUrl,
-                    originalName: file.originalname,
-                    size: file.size,
-                    storageType: uploadSuccess ? 'github' : 'local'
-                };
-                
-            } catch (fileError) {
-                console.error(`❌ Fehler beim Upload von ${file.originalname}:`, fileError);
-                return {
-                    success: false,
-                    originalName: file.originalname,
-                    error: fileError.message
-                };
-            }
-        });
-        
-        const uploadResults = await Promise.all(uploadPromises);
-        
-        const successfulUploads = uploadResults.filter(result => result.success);
-        const failedUploads = uploadResults.filter(result => !result.success);
-        
-        console.log(`📊 Multi-Upload Ergebnis: ${successfulUploads.length}/${files.length} erfolgreich`);
-        console.log('✅ Erfolgreich hochgeladen:', successfulUploads.map(r => r.originalName));
-        if (failedUploads.length > 0) {
-            console.log('❌ Fehlgeschlagen:', failedUploads.map(r => r.originalName));
+        // Erstelle Ordner falls er nicht existiert
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath, { recursive: true });
         }
+
+        // Verschiebe Datei in den gewünschten Ordner
+        const oldPath = req.file.path;
+        const newPath = path.join(folderPath, req.file.filename);
+        fs.renameSync(oldPath, newPath);
+
+        // Konstruiere die URL für das Frontend
+        const imageUrl = `/images/welcome/${folder}/${req.file.filename}`;
+        
+        console.log(`✅ Willkommensbild hochgeladen: ${folder}/${req.file.filename}`);
         
         res.json({ 
-            success: successfulUploads.length > 0,
-            message: successfulUploads.length === files.length 
-                ? `Alle ${files.length} Bilder erfolgreich hochgeladen!`
-                : `${successfulUploads.length}/${files.length} Bilder erfolgreich hochgeladen`,
-            totalFiles: files.length,
-            successCount: successfulUploads.length,
-            failedCount: failedUploads.length,
-            results: uploadResults,
-            // Für Backward-Kompatibilität mit Single-Upload
-            url: successfulUploads.length > 0 ? successfulUploads[successfulUploads.length - 1].url : null,
-            folder: folder
+            success: true, 
+            message: 'Bild erfolgreich hochgeladen!',
+            filename: req.file.filename,
+            folder: folder,
+            url: imageUrl,
+            originalName: req.file.originalname,
+            size: req.file.size
         });
         
     } catch (error) {
@@ -2971,76 +1854,97 @@ app.post('/api/welcome/upload', upload.array('welcomeImage', 10), async (req, re
     }
 });
 
-// Get all welcome images (GitHub Integration mit Fallback)
-app.get('/api/welcome/images', async (req, res) => {
+// Get all welcome images (mit Ordner-Support)
+app.get('/api/welcome/images', (req, res) => {
     try {
-        let result;
+        const welcomeImagesPath = './dashboard/public/images/welcome/';
         
-        // Versuche GitHub zuerst
-        if (useGitHubStorage && githubClient) {
-            try {
-                result = await listImagesFromGitHub();
-                console.log('📁 Welcome Images von GitHub geladen:', {
-                    foldersCount: Object.keys(result.folders || {}).length,
-                    totalImages: result.images?.length || 0,
-                    folders: Object.keys(result.folders || {})
-                });
-            } catch (githubError) {
-                console.error('❌ GitHub Images laden fehlgeschlagen, verwende Supabase/lokalen Fallback:', githubError);
-                result = await loadWelcomeImagesFromSupabase();
-            }
-        } else {
-            // Fallback zu Supabase/Local
-            result = await loadWelcomeImagesFromSupabase();
+        if (!fs.existsSync(welcomeImagesPath)) {
+            return res.json({ folders: {}, images: [] });
         }
         
-        console.log('📁 Welcome Images API Response:', {
-            foldersCount: Object.keys(result.folders || {}).length,
-            totalImages: result.images?.length || 0,
-            folders: Object.keys(result.folders || {}),
-            source: useGitHubStorage ? 'github+supabase' : 'supabase+local'
+        const folders = {};
+        const allImages = [];
+        
+        // Lese Hauptverzeichnis und Unterordner
+        const items = fs.readdirSync(welcomeImagesPath);
+        
+        // Zuerst lose Bilder im Hauptverzeichnis (legacy)
+        const looseImages = items
+            .filter(item => {
+                const itemPath = path.join(welcomeImagesPath, item);
+                const isFile = fs.statSync(itemPath).isFile();
+                if (isFile) {
+                    const ext = path.extname(item).toLowerCase();
+                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
+                }
+                return false;
+            })
+            .map(file => {
+                const stats = fs.statSync(path.join(welcomeImagesPath, file));
+                return {
+                    filename: file,
+                    url: `/images/welcome/${file}`,
+                    folder: null, // Kein Ordner
+                    size: stats.size,
+                    created: stats.birthtime
+                };
+            });
+
+        if (looseImages.length > 0) {
+            folders['general'] = looseImages;
+            allImages.push(...looseImages);
+        }
+        
+        // Dann Ordner durchsuchen
+        const folderNames = items.filter(item => {
+            const itemPath = path.join(welcomeImagesPath, item);
+            return fs.statSync(itemPath).isDirectory();
         });
         
-        res.json(result);
+        folderNames.forEach(folderName => {
+            const folderPath = path.join(welcomeImagesPath, folderName);
+            const folderFiles = fs.readdirSync(folderPath);
+            
+            const images = folderFiles
+                .filter(file => {
+                    const ext = path.extname(file).toLowerCase();
+                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
+                })
+                .map(file => {
+                    const stats = fs.statSync(path.join(folderPath, file));
+                    return {
+                        filename: file,
+                        url: `/images/welcome/${folderName}/${file}`,
+                        folder: folderName,
+                        size: stats.size,
+                        created: stats.birthtime
+                    };
+                })
+                .sort((a, b) => b.created - a.created); // Neueste zuerst
+            
+            // Füge alle Ordner hinzu, auch leere (für bessere UX)
+            folders[folderName] = images;
+            if (images.length > 0) {
+                allImages.push(...images);
+            }
+        });
+        
+        res.json({ 
+            folders, 
+            images: allImages.sort((a, b) => b.created - a.created),
+            folderNames: Object.keys(folders),
+            allFolderNames: folderNames // Alle Ordner, auch leere
+        });
+        
     } catch (error) {
         console.error('❌ Fehler beim Laden der Bilder:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Bilder' });
     }
 });
 
-// Debug Endpunkt: Test ob Bild-URLs erreichbar sind
-app.get('/api/welcome/images/test/:folder/:filename', (req, res) => {
-    try {
-        const { folder, filename } = req.params;
-        const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
-        
-        console.log(`🔍 Teste Bild-Pfad: ${imagePath}`);
-        
-        if (fs.existsSync(imagePath)) {
-            const stats = fs.statSync(imagePath);
-        res.json({ 
-                exists: true,
-                path: imagePath,
-                size: stats.size,
-                url: `/images/welcome/${folder}/${filename}`,
-                created: stats.birthtime,
-                modified: stats.mtime
-            });
-        } else {
-            res.status(404).json({
-                exists: false,
-                path: imagePath,
-                error: 'Datei nicht gefunden'
-            });
-        }
-    } catch (error) {
-        console.error('❌ Fehler beim Testen der Bild-URL:', error);
-        res.status(500).json({ error: 'Fehler beim Testen der Bild-URL' });
-    }
-});
-
-// Delete welcome image (GitHub Integration mit Fallback)
-app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
+// Delete welcome image (mit Ordner-Support)
+app.delete('/api/welcome/images/:folder/:filename', (req, res) => {
     try {
         const folder = req.params.folder;
         const filename = req.params.filename;
@@ -3050,37 +1954,15 @@ app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
             return res.status(400).json({ error: 'Ungültiger Datei- oder Ordnername' });
         }
         
-        let deleteSuccess = false;
-        
-        // Versuche GitHub Delete zuerst
-        if (useGitHubStorage && githubClient) {
-            try {
-                await deleteImageFromGitHub(filename, folder);
-                deleteSuccess = true;
-                console.log(`🗑️ Willkommensbild von GitHub gelöscht: ${folder}/${filename}`);
-            } catch (githubError) {
-                console.error('❌ GitHub Delete fehlgeschlagen, verwende lokalen Fallback:', githubError);
-            }
-        }
-        
-        // Fallback: Lokales Löschen
-        if (!deleteSuccess) {
         const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
         
         if (fs.existsSync(imagePath)) {
             fs.unlinkSync(imagePath);
-                console.log(`🗑️ Willkommensbild lokal gelöscht: ${folder}/${filename}`);
-            }
+            console.log(`🗑️ Willkommensbild gelöscht: ${folder}/${filename}`);
+            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
+        } else {
+            res.status(404).json({ error: 'Bild nicht gefunden' });
         }
-        
-        // Lösche auch aus Supabase
-        await deleteWelcomeImageFromSupabase(filename, folder);
-        
-        res.json({ 
-            success: true, 
-            message: `Bild erfolgreich gelöscht! (${deleteSuccess ? 'GitHub' : 'Lokal'})`,
-            deletedFrom: deleteSuccess ? 'github' : 'local'
-        });
         
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Bildes:', error);
@@ -3089,7 +1971,7 @@ app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
 });
 
 // Legacy: Delete welcome image (ohne Ordner)
-app.delete('/api/welcome/images/:filename', async (req, res) => {
+app.delete('/api/welcome/images/:filename', (req, res) => {
     try {
         const filename = req.params.filename;
         const imagePath = path.join('./dashboard/public/images/welcome/', filename);
@@ -3099,16 +1981,13 @@ app.delete('/api/welcome/images/:filename', async (req, res) => {
             return res.status(400).json({ error: 'Ungültiger Dateiname' });
         }
         
-        // Lösche aus Dateisystem
         if (fs.existsSync(imagePath)) {
             fs.unlinkSync(imagePath);
-        }
-        
-        // Lösche auch aus Supabase (general folder für legacy files)
-        await deleteWelcomeImageFromSupabase(filename, 'general');
-        
             console.log(`🗑️ Willkommensbild gelöscht: ${filename}`);
             res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
+        } else {
+            res.status(404).json({ error: 'Bild nicht gefunden' });
+        }
         
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Bildes:', error);
@@ -3116,8 +1995,8 @@ app.delete('/api/welcome/images/:filename', async (req, res) => {
     }
 });
 
-// Create new folder (mit Supabase)
-app.post('/api/welcome/folders', async (req, res) => {
+// Create new folder
+app.post('/api/welcome/folders', (req, res) => {
     try {
         const { folderName } = req.body;
         
@@ -3131,12 +2010,7 @@ app.post('/api/welcome/folders', async (req, res) => {
             return res.status(400).json({ error: 'Ordner existiert bereits' });
         }
         
-        // Erstelle Ordner im Dateisystem
         fs.mkdirSync(folderPath, { recursive: true });
-        
-        // Erstelle auch in Supabase
-        await createWelcomeFolderInSupabase(folderName);
-        
         console.log(`📁 Neuer Ordner erstellt: ${folderName}`);
         
         res.json({ success: true, message: 'Ordner erfolgreich erstellt', folderName });
@@ -3147,8 +2021,8 @@ app.post('/api/welcome/folders', async (req, res) => {
     }
 });
 
-// Delete folder (mit Supabase)
-app.delete('/api/welcome/folders/:folderName', async (req, res) => {
+// Delete folder
+app.delete('/api/welcome/folders/:folderName', (req, res) => {
     try {
         const folderName = req.params.folderName;
         
@@ -3158,14 +2032,12 @@ app.delete('/api/welcome/folders/:folderName', async (req, res) => {
         
         const folderPath = `./dashboard/public/images/welcome/${folderName}`;
         
-        // Lösche Ordner aus Dateisystem
-        if (fs.existsSync(folderPath)) {
-            fs.rmSync(folderPath, { recursive: true, force: true });
+        if (!fs.existsSync(folderPath)) {
+            return res.status(404).json({ error: 'Ordner nicht gefunden' });
         }
         
-        // Lösche auch aus Supabase (inkl. aller Bilder)
-        await deleteWelcomeFolderFromSupabase(folderName);
-        
+        // Lösche Ordner rekursiv
+        fs.rmSync(folderPath, { recursive: true, force: true });
         console.log(`🗑️ Ordner gelöscht: ${folderName}`);
         
         res.json({ success: true, message: 'Ordner erfolgreich gelöscht' });
@@ -3176,8 +2048,8 @@ app.delete('/api/welcome/folders/:folderName', async (req, res) => {
     }
 });
 
-// Move image between folders (mit Supabase)
-app.post('/api/welcome/images/move', async (req, res) => {
+// Move image between folders
+app.post('/api/welcome/images/move', (req, res) => {
     try {
         const { filename, sourceFolder, targetFolder } = req.body;
         
@@ -3213,87 +2085,20 @@ app.post('/api/welcome/images/move', async (req, res) => {
             return res.status(409).json({ error: 'Datei mit diesem Namen existiert bereits im Zielordner' });
         }
         
-        // Verschiebe Datei im Dateisystem
+        // Verschiebe Datei
         fs.renameSync(sourcePath, targetPath);
-        
-        // Verschiebe auch in Supabase
-        const result = await moveWelcomeImageInSupabase(filename, sourceFolder, targetFolder);
         
         console.log(`📦 Bild verschoben: ${sourceFolder}/${filename} → ${targetFolder}/${filename}`);
         
         res.json({ 
             success: true, 
             message: `Bild erfolgreich von "${sourceFolder}" nach "${targetFolder}" verschoben`,
-            newUrl: result.newUrl || `/images/welcome/${targetFolder}/${filename}`
+            newUrl: `/images/welcome/${targetFolder}/${filename}`
         });
         
     } catch (error) {
         console.error('❌ Fehler beim Verschieben des Bildes:', error);
         res.status(500).json({ error: 'Fehler beim Verschieben des Bildes' });
-    }
-});
-
-// GitHub Welcome Folders einmalig erstellen (API Endpoint)
-app.post('/api/welcome/create-github-folders', async (req, res) => {
-    try {
-        console.log('🚀 GitHub-Ordner-Erstellung angefordert...');
-        
-        // Prüfe GitHub-Konfiguration direkt
-        if (!apiKeys.github?.token || !apiKeys.github?.username || !apiKeys.github?.repository) {
-            console.error('❌ GitHub-Konfiguration unvollständig:', {
-                hasToken: !!apiKeys.github?.token,
-                hasUsername: !!apiKeys.github?.username,
-                hasRepository: !!apiKeys.github?.repository
-            });
-            return res.status(400).json({ 
-                error: 'GitHub ist nicht vollständig konfiguriert',
-                hint: 'GitHub Token, Username oder Repository fehlt',
-                config: {
-                    hasToken: !!apiKeys.github?.token,
-                    hasUsername: !!apiKeys.github?.username,
-                    hasRepository: !!apiKeys.github?.repository
-                }
-            });
-        }
-
-        // GitHub-Client bei Bedarf re-initialisieren
-        if (!githubClient) {
-            console.log('🔄 Re-initialisiere GitHub Client...');
-            const initResult = await initializeGitHub();
-            if (!initResult) {
-                return res.status(500).json({ 
-                    error: 'GitHub-Client konnte nicht initialisiert werden',
-                    hint: 'Prüfe GitHub Token und Netzwerkverbindung'
-                });
-            }
-        }
-
-        console.log('🚀 Starte manuelle GitHub-Ordner-Erstellung...');
-        
-        const success = await createWelcomeFoldersOnGitHub();
-        
-        if (success) {
-            console.log('✅ GitHub-Ordner erfolgreich erstellt');
-            res.json({ 
-                success: true, 
-                message: 'Alle GitHub Welcome-Ordner erfolgreich erstellt!',
-                folders: ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal']
-            });
-        } else {
-            console.log('⚠️ Nicht alle Ordner konnten erstellt werden');
-            res.status(500).json({ 
-                error: 'Einige Ordner konnten nicht erstellt werden',
-                hint: 'Prüfe Console-Logs für Details'
-            });
-        }
-        
-    } catch (error) {
-        console.error('❌ Fehler bei GitHub-Ordner-Erstellung:', error);
-        res.status(500).json({ 
-            error: 'Fehler beim Erstellen der GitHub-Ordner',
-            details: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        });
     }
 });
 
@@ -3687,13 +2492,12 @@ function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
         
         // Bild-Rotation aktiviert? (überschreibt customThumbnail)
         if (settings.imageRotation && settings.imageRotation.enabled) {
-            const specificFolder = settings.imageRotation.folder || null;
-            const randomImage = getRandomWelcomeImage(specificFolder);
+            const randomImage = getRandomWelcomeImage();
             if (randomImage) {
                 thumbnailUrl = randomImage;
-                console.log(`🎲 Zufälliges Welcome-Bild gewählt${specificFolder ? ` aus Ordner "${specificFolder}"` : ' aus allen Ordnern'}: ${thumbnailUrl}`);
+                console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${thumbnailUrl}`);
             } else {
-                console.log(`⚠️ Keine Bilder${specificFolder ? ` in Ordner "${specificFolder}"` : ''} für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
+                console.log(`⚠️ Keine Bilder für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
             }
         } else {
             console.log(`📌 Spezifisches Bild verwendet: ${thumbnailUrl}`);
@@ -4421,11 +3225,6 @@ try {
     }, 9000);
     
     // Bot-Einstellungen laden und anwenden nach 3 Sekunden
-    // Welcome Settings aus Supabase laden nach 1.5 Sekunden
-    setTimeout(async () => {
-        await initializeWelcomeSettings();
-    }, 1500);
-
     setTimeout(async () => {
         try {
             console.log('🔧 Lade Bot-Einstellungen...');

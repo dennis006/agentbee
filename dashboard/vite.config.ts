@@ -21,7 +21,6 @@ export default defineConfig({
     },
   },
   server: {
-    // Proxy nur für lokale Entwicklung
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
@@ -41,9 +40,5 @@ export default defineConfig({
         },
       }
     }
-  },
-  // Zusätzliche Konfiguration für bessere Netlify-Kompatibilität
-  define: {
-    global: 'globalThis',
   }
 })
