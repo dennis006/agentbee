@@ -64,6 +64,7 @@ const VerifyPage = () => {
     role_color: string;
     enabled: boolean;
     sort_order: number;
+    icon?: string;
   }
 
   interface AgentWithIcon {
@@ -150,7 +151,7 @@ const VerifyPage = () => {
           
           roleStructure[roleType].agents.push({
             name: agent.display_name,
-            icon: defaultAgentIcons[agent.name] || '🎮'
+            icon: agent.icon || defaultAgentIcons[agent.name] || '🎮'
           });
         });
         
