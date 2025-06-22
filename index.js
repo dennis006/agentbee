@@ -3059,6 +3059,85 @@ app.get('/api/welcome/images', async (req, res) => {
     }
 });
 
+// 🚀 QUICK-FIX: Sync GitHub Images zu Supabase Datenbank
+app.post('/api/welcome/sync-github-to-supabase', async (req, res) => {
+    try {
+        console.log('🔄 SYNC GITHUB → SUPABASE gestartet...');
+        
+        if (!supabase) {
+            return res.status(500).json({ error: 'Supabase nicht verfügbar' });
+        }
+        
+        // Lade alle Bilder aus GitHub
+        const githubImages = await listImagesFromGitHub();
+        console.log(`📊 GitHub Bilder gefunden:`, {
+            totalImages: githubImages.images?.length || 0,
+            folders: Object.keys(githubImages.folders || {})
+        });
+        
+        if (!githubImages.images || githubImages.images.length === 0) {
+            return res.json({ 
+                success: true, 
+                message: 'Keine GitHub Bilder zum Synchronisieren gefunden',
+                synced: 0
+            });
+        }
+        
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
+        
+        // Synchronisiere jedes Bild
+        for (const image of githubImages.images) {
+            try {
+                console.log(`🔄 Sync: ${image.folder}/${image.filename}`);
+                
+                const imageData = {
+                    filename: image.filename,
+                    url: image.url,
+                    folder: image.folder,
+                    size: image.size || 0,
+                    originalname: image.filename,
+                    uploadedAt: new Date().toISOString(),
+                    storageType: 'github'
+                };
+                
+                const result = await saveWelcomeImageToSupabase(imageData);
+                if (result) {
+                    successCount++;
+                    console.log(`✅ Synced: ${image.folder}/${image.filename}`);
+                } else {
+                    errorCount++;
+                    errors.push(`Fehler bei ${image.folder}/${image.filename}`);
+                }
+                
+            } catch (error) {
+                errorCount++;
+                errors.push(`Exception bei ${image.folder}/${image.filename}: ${error.message}`);
+                console.error(`❌ Sync Error für ${image.folder}/${image.filename}:`, error);
+            }
+        }
+        
+        console.log(`📊 SYNC ERGEBNIS: ${successCount} erfolgreich, ${errorCount} Fehler`);
+        
+        res.json({
+            success: true,
+            message: `GitHub→Supabase Sync abgeschlossen: ${successCount}/${githubImages.images.length} Bilder synchronisiert`,
+            totalImages: githubImages.images.length,
+            successCount,
+            errorCount,
+            errors: errors.length > 0 ? errors : undefined
+        });
+        
+    } catch (error) {
+        console.error('❌ SYNC FEHLER:', error);
+        res.status(500).json({ 
+            error: 'Fehler beim Synchronisieren der GitHub Bilder',
+            details: error.message
+        });
+    }
+});
+
 // Debug Endpunkt: Test ob Bild-URLs erreichbar sind
 app.get('/api/welcome/images/test/:folder/:filename', (req, res) => {
     try {
