@@ -165,12 +165,23 @@ const Welcome = () => {
 
   const loadWelcomeSettings = async () => {
     try {
+      console.log('🔄 Starte Laden der Welcome Settings...');
       const response = await fetch('/api/welcome');
+      console.log('📡 API Response Status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📦 RAW API Data erhalten:', JSON.stringify(data, null, 2));
         
         // Robuste Verarbeitung der Daten
         if (data && typeof data === 'object') {
+          console.log('🔍 Analysiere API Data:', {
+            'data.thumbnail': data.thumbnail,
+            'data.customThumbnail': data.customThumbnail,
+            'typeof data': typeof data,
+            'keys': Object.keys(data)
+          });
+          
           // Sicherstellen dass imageRotation existiert (neues Feature)
           if (!data.imageRotation) {
             data.imageRotation = {
@@ -192,36 +203,43 @@ const Welcome = () => {
             };
           }
           
-          // Merge mit aktuellen Einstellungen statt kompletten Ersatz
-          setWelcomeSettings(prevSettings => ({
-            ...prevSettings,
-            ...data,
-            imageRotation: {
-              ...prevSettings.imageRotation,
-              ...data.imageRotation
-            },
-            leaveMessage: {
-              ...prevSettings.leaveMessage,
-              ...data.leaveMessage
-            }
-          }));
-          setSettingsLoaded(true);
-          console.log('✅ Einstellungen aus API geladen:', {
-            thumbnail: data.thumbnail,
-            customThumbnail: data.customThumbnail ? data.customThumbnail.substring(0, 50) + '...' : 'keine',
-            enabled: data.enabled,
-            title: data.title
+          console.log('⚙️ Vor setState - aktuelle Settings:', {
+            'prevSettings.thumbnail': welcomeSettings.thumbnail,
+            'data.thumbnail': data.thumbnail
           });
+          
+          // Merge mit aktuellen Einstellungen statt kompletten Ersatz
+          setWelcomeSettings(prevSettings => {
+            const newSettings = {
+              ...prevSettings,
+              ...data,
+              imageRotation: {
+                ...prevSettings.imageRotation,
+                ...data.imageRotation
+              },
+              leaveMessage: {
+                ...prevSettings.leaveMessage,
+                ...data.leaveMessage
+              }
+            };
+            console.log('🎯 Neue Settings nach Merge:', {
+              'thumbnail': newSettings.thumbnail,
+              'customThumbnail': newSettings.customThumbnail
+            });
+            return newSettings;
+          });
+          setSettingsLoaded(true);
+          console.log('✅ Settings erfolgreich geladen und gesetzt!');
         } else {
-          console.error('Ungültige Datenstruktur von API erhalten:', data);
+          console.error('❌ Ungültige Datenstruktur von API erhalten:', data);
           showError('Ungültige Daten', '❌ Ungültige Daten von Server erhalten');
         }
       } else {
-        console.error('API Error beim Laden der Einstellungen:', response.status, response.statusText);
+        console.error('❌ API Error beim Laden der Einstellungen:', response.status, response.statusText);
         showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Einstellungen');
       }
     } catch (err) {
-      console.error('Fehler beim Laden der Einstellungen:', err);
+      console.error('❌ Fehler beim Laden der Einstellungen:', err);
       showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Einstellungen');
     }
   };
