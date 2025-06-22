@@ -71,6 +71,7 @@ interface ValorantAgent {
   role_color: string;
   enabled: boolean;
   sort_order: number;
+  icon?: string;
 }
 
 interface ValorantAgentRole {
@@ -200,13 +201,15 @@ const VerificationSettings = () => {
   // 🎯 Agent Management States
   const [showAddAgentModal, setShowAddAgentModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<ValorantAgent | null>(null);
+  const [agentEmojiPickerOpen, setAgentEmojiPickerOpen] = useState(false);
   const [newAgent, setNewAgent] = useState({
     name: '',
     display_name: '',
     uuid: '',
     role_type: 'Duelist',
     enabled: true,
-    sort_order: 0
+    sort_order: 0,
+    icon: '🎯'
   });
   const [deleting, setDeleting] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<VerifiedUser | null>(null);
@@ -397,7 +400,8 @@ const VerificationSettings = () => {
           uuid: '',
           role_type: 'Duelist',
           enabled: true,
-          sort_order: 0
+          sort_order: 0,
+          icon: '🎯'
         });
         // Lade Agenten neu
         loadValorantAgents();
@@ -460,7 +464,8 @@ const VerificationSettings = () => {
       uuid: agent.uuid,
       role_type: agent.role_type,
       enabled: agent.enabled,
-      sort_order: agent.sort_order
+      sort_order: agent.sort_order,
+      icon: agent.icon || '🎯'
     });
     setShowAddAgentModal(true);
   };
@@ -2196,6 +2201,7 @@ const VerificationSettings = () => {
                           className="flex items-center justify-between p-3 bg-dark-bg/30 rounded-lg border border-purple-primary/10 hover:border-purple-primary/30 transition-colors"
                         >
                           <div className="flex items-center gap-3">
+                            <div className="text-2xl">{agent.icon || '🎯'}</div>
                             <div className="flex flex-col">
                               <div className="font-medium text-dark-text">{agent.display_name}</div>
                               <div className="text-sm text-dark-muted flex items-center gap-2">
@@ -2327,6 +2333,43 @@ const VerificationSettings = () => {
             
             <div className="space-y-4">
               <div>
+                <label className="block text-dark-text font-medium mb-2">Agent Icon:</label>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Button
+                      onClick={() => setAgentEmojiPickerOpen(!agentEmojiPickerOpen)}
+                      variant="outline"
+                      className="h-10 w-12 text-xl border-purple-primary/30 hover:border-neon-purple"
+                    >
+                      {newAgent.icon}
+                    </Button>
+                    {agentEmojiPickerOpen && (
+                      <div 
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm animate-fade-in"
+                        onClick={() => setAgentEmojiPickerOpen(false)}
+                      >
+                        <div 
+                          className="relative animate-scale-in"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <EmojiPicker
+                            onEmojiSelect={(emoji) => {
+                              setNewAgent(prev => ({ ...prev, icon: emoji }));
+                              setAgentEmojiPickerOpen(false);
+                            }}
+                            onClose={() => setAgentEmojiPickerOpen(false)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-dark-muted text-sm flex items-center">
+                    Klicke um ein Emoji zu wählen
+                  </div>
+                </div>
+              </div>
+              
+              <div>
                 <label className="block text-dark-text font-medium mb-2">Agent Name (technisch):</label>
                 <input
                   type="text"
@@ -2407,7 +2450,8 @@ const VerificationSettings = () => {
                     uuid: '',
                     role_type: 'Duelist',
                     enabled: true,
-                    sort_order: 0
+                    sort_order: 0,
+                    icon: '🎯'
                   });
                 }}
                 className="bg-gray-700 hover:bg-gray-600 text-white"

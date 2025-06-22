@@ -166,7 +166,7 @@ async function loadValorantAgentsFromSupabase() {
         
         const { data: agents, error } = await supabase
             .from('valorant_agents')
-            .select('name, uuid, display_name, role_type, role_color, role_config, enabled')
+            .select('id, name, uuid, display_name, role_type, role_color, role_config, enabled, sort_order, icon')
             .eq('enabled', true)
             .order('role_type')
             .order('sort_order')
@@ -8574,7 +8574,8 @@ app.get('/api/valorant/agents', async (req, res) => {
                 role_color: agent.role_color,
                 enabled: agent.enabled,
                 sort_order: agent.sort_order || 0,
-                role_config: agent.role_config || {}
+                role_config: agent.role_config || {},
+                icon: agent.icon || '🎯'
             }))
         });
         
@@ -8636,7 +8637,7 @@ app.post('/api/valorant/agents', async (req, res) => {
             });
         }
         
-        const { name, uuid, display_name, role_type, role_color, role_config } = req.body;
+        const { name, uuid, display_name, role_type, role_color, role_config, icon } = req.body;
         
         if (!name || !role_type) {
             return res.status(400).json({ 
@@ -8659,7 +8660,8 @@ app.post('/api/valorant/agents', async (req, res) => {
                     permissions: [],
                     position: 7
                 },
-                enabled: true
+                enabled: true,
+                icon: icon || '🎯'
             })
             .select()
             .single();
@@ -8702,7 +8704,7 @@ app.put('/api/valorant/agents/:agentId', async (req, res) => {
         }
         
         const { agentId } = req.params;
-        const { name, uuid, display_name, role_type, role_color, role_config, enabled, sort_order } = req.body;
+        const { name, uuid, display_name, role_type, role_color, role_config, enabled, sort_order, icon } = req.body;
         
         const updateData = {};
         if (name !== undefined) updateData.name = name;
@@ -8713,6 +8715,7 @@ app.put('/api/valorant/agents/:agentId', async (req, res) => {
         if (role_config !== undefined) updateData.role_config = role_config;
         if (enabled !== undefined) updateData.enabled = enabled;
         if (sort_order !== undefined) updateData.sort_order = sort_order;
+        if (icon !== undefined) updateData.icon = icon;
         
         const { data: agent, error } = await supabase
             .from('valorant_agents')
