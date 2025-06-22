@@ -3560,20 +3560,54 @@ async function getRandomWelcomeImage(specificFolder = null) {
         console.log(`🔍 Suche nach Bildern für Rotation - Ordner: ${specificFolder || 'alle'}`);
         
         // Versuche zuerst Supabase (für GitHub Storage)
+        console.log(`🔄 LADE SUPABASE DATEN...`);
         const welcomeData = await loadWelcomeImagesFromSupabase();
+        console.log(`📊 SUPABASE ERGEBNIS:`, {
+            'welcomeData': !!welcomeData,
+            'welcomeData.images': welcomeData?.images?.length || 0,
+            'welcomeData.folders': welcomeData ? Object.keys(welcomeData.folders || {}) : [],
+            'istNull': welcomeData === null,
+            'istUndefined': welcomeData === undefined
+        });
         
         if (welcomeData && welcomeData.images && welcomeData.images.length > 0) {
             console.log(`📊 Supabase: ${welcomeData.images.length} Bilder verfügbar, Ordner:`, Object.keys(welcomeData.folders));
+            
+            // Debug: Zeige alle Ordner mit Bildanzahl
+            Object.entries(welcomeData.folders).forEach(([folderName, images]) => {
+                console.log(`📁 Ordner "${folderName}": ${images.length} Bilder`);
+                if (images.length > 0) {
+                    console.log(`   Beispiel-Bilder:`, images.slice(0, 2).map(img => ({
+                        filename: img.filename,
+                        url: img.url.substring(0, 50) + '...',
+                        folder: img.folder
+                    })));
+                }
+            });
             
             let availableImages = [];
             
             if (specificFolder) {
                 // Nur aus einem spezifischen Ordner
+                console.log(`🎯 SUCHE SPEZIFISCHEN ORDNER: "${specificFolder}"`);
+                console.log(`🔍 VERFÜGBARE ORDNER:`, Object.keys(welcomeData.folders));
+                
                 if (welcomeData.folders[specificFolder]) {
                     availableImages = welcomeData.folders[specificFolder];
-                    console.log(`📁 ${specificFolder}-Ordner (Supabase): ${availableImages.length} Bilder gefunden`);
+                    console.log(`✅ ORDNER GEFUNDEN - ${specificFolder}: ${availableImages.length} Bilder`);
+                    
+                    // Debug: Zeige erste paar Bilder
+                    if (availableImages.length > 0) {
+                        console.log(`📸 VERFÜGBARE BILDER IN ${specificFolder}:`, 
+                            availableImages.slice(0, 3).map(img => ({
+                                filename: img.filename,
+                                url: img.url.substring(0, 60) + '...'
+                            }))
+                        );
+                    }
                 } else {
-                    console.log(`⚠️ Ordner "${specificFolder}" nicht in Supabase gefunden`);
+                    console.log(`❌ ORDNER "${specificFolder}" NICHT GEFUNDEN!`);
+                    console.log(`💡 VERFÜGBARE ORDNER SIND:`, Object.keys(welcomeData.folders));
                 }
             } else {
                 // Alle Bilder aus allen Ordnern
@@ -3726,30 +3760,49 @@ async function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
         embed.setThumbnail(iconUrl);
         console.log(`🖼️ Setze Server Thumbnail: ${iconUrl}`);
     } else if (settings.thumbnail === 'custom') {
+        console.log(`🔧 CUSTOM THUMBNAIL MODUS AKTIV - Debug Info:`, {
+            'customThumbnail': settings.customThumbnail,
+            'imageRotation': settings.imageRotation,
+            'imageRotation.enabled': settings.imageRotation?.enabled,
+            'imageRotation.folder': settings.imageRotation?.folder
+        });
+        
         let thumbnailUrl = settings.customThumbnail;
         
         // 🔧 FIXED: Verwende das originale imageRotation System das bereits funktioniert!
         if (settings.imageRotation && settings.imageRotation.enabled) {
             const specificFolder = settings.imageRotation.folder || null;
+            console.log(`🎯 STARTE BILD-ROTATION für Ordner: "${specificFolder}"`);
+            
             const randomImage = await getRandomWelcomeImage(specificFolder);
+            console.log(`🎲 BILD-ROTATION ERGEBNIS:`, {
+                'gefundenesBild': randomImage,
+                'typOfResult': typeof randomImage,
+                'istNull': randomImage === null,
+                'istUndefined': randomImage === undefined,
+                'istEmpty': randomImage === ''
+            });
+            
             if (randomImage) {
                 thumbnailUrl = randomImage;
-                console.log(`🎲 Zufälliges Welcome-Bild gewählt${specificFolder ? ` aus Ordner "${specificFolder}"` : ' aus allen Ordnern'}: ${thumbnailUrl}`);
+                console.log(`✅ ZUFÄLLIGES BILD GESETZT: ${thumbnailUrl}`);
             } else {
-                console.log(`⚠️ Keine Bilder${specificFolder ? ` in Ordner "${specificFolder}"` : ''} für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
+                console.log(`❌ KEINE BILDER GEFUNDEN - Fallback zu customThumbnail: "${thumbnailUrl}"`);
             }
         } else {
-            console.log(`📌 Spezifisches Bild verwendet: ${thumbnailUrl}`);
+            console.log(`📌 ROTATION DEAKTIVIERT - verwende customThumbnail: "${thumbnailUrl}"`);
         }
         
         // 🚨 WICHTIG: Fallback zu User Avatar wenn thumbnailUrl immer noch leer/undefined ist
         if (!thumbnailUrl || thumbnailUrl === '') {
-            console.log(`⚠️ Kein Bild verfügbar (customThumbnail leer und keine Rotation) - Fallback zu User Avatar`);
+            console.log(`⚠️ KEIN BILD VERFÜGBAR - Final Fallback zu User Avatar`);
             const avatarUrl = member.displayAvatarURL({ dynamic: true });
             embed.setThumbnail(avatarUrl);
-            console.log(`🖼️ Fallback User Thumbnail gesetzt: ${avatarUrl}`);
+            console.log(`🖼️ USER AVATAR FALLBACK GESETZT: ${avatarUrl}`);
             return { embed, attachment };
         }
+        
+        console.log(`🎯 FINALE THUMBNAIL URL: ${thumbnailUrl}`);
         
         // Für lokale URLs, verwende Attachments statt Base64
         if (thumbnailUrl && thumbnailUrl.startsWith('/images/')) {
