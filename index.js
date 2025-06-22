@@ -31,6 +31,20 @@ const { setupBulkServerManagementRoutes } = require('./bulk-server-management-ro
 const { setupAIOptimizationRoutes } = require('./ai-optimization-routes');
 const { setupRulesSupabaseRoutes } = require('./rules-supabase-api');
 const { setupModerationSupabaseRoutes } = require('./moderation-supabase-api');
+const { 
+    initializeSupabaseForWelcome,
+    loadWelcomeSettings,
+    saveWelcomeSettings,
+    loadWelcomeImages,
+    createWelcomeEmbed,
+    createLeaveEmbed,
+    getRandomWelcomeImage,
+    autoCreateGameFolders,
+    saveWelcomeImage,
+    createWelcomeFolder,
+    deleteWelcomeFolder,
+    updateWelcomeStats
+} = require('./welcome-supabase-api');
 require('dotenv').config();
 
 // ================== SUPABASE INITIALIZATION ==================
@@ -59,7 +73,12 @@ function initializeSupabase() {
 }
 
 // Supabase beim Start initialisieren
-initializeSupabase();
+const supabaseInitialized = initializeSupabase();
+
+// Welcome System mit Supabase initialisieren
+if (supabaseInitialized && supabase) {
+    initializeSupabaseForWelcome(supabase);
+}
 
 // ================== API KEYS MANAGEMENT ==================
 // Zentrale API-Key-Verwaltung - alle Keys hier konfigurieren
@@ -1574,533 +1593,14 @@ app.post('/api/bot/settings', async (req, res) => {
 // Legacy Rules API entfernt - verwendet jetzt Supabase API
 // Siehe rules-supabase-api.js für neue Endpunkte
 
-// Welcome Settings
-let welcomeSettings = {
-    enabled: true,
-    channelName: 'willkommen',
-    title: '🎉 Willkommen auf dem Server!',
-    description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-    color: '0x00FF7F',
-    thumbnail: 'user',
-    customThumbnail: '',
-    imageRotation: {
-        enabled: false,
-        mode: 'random' // 'random' oder 'sequential'
-    },
-    fields: [
-        {
-            name: '📋 Erste Schritte',
-            value: 'Schaue dir unsere Regeln an und werde Teil der Community!',
-            inline: false
-        },
-        {
-            name: '💬 Support',
-            value: 'Bei Fragen wende dich an unsere Moderatoren!',
-            inline: true
-        },
-        {
-            name: '🎮 Viel Spaß',
-            value: 'Wir freuen uns auf dich!',
-            inline: true
-        }
-    ],
-    footer: 'Mitglied #{memberCount} • {server}',
-    autoRole: '',
-    mentionUser: true,
-    deleteAfter: 0,
-    dmMessage: {
-        enabled: false,
-        message: 'Willkommen! Schau gerne im Server vorbei! 😊'
-    },
-    leaveMessage: {
-        enabled: false,
-        channelName: 'verlassen',
-        title: '👋 Tschüss!',
-        description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-        color: '0xFF6B6B',
-        mentionUser: false,
-        deleteAfter: 0
-    }
-};
+// Legacy Welcome API entfernt - verwendet jetzt welcome-supabase-api.js
+// Siehe welcome-supabase-api.js für neue Endpunkte
 
-// Welcome Settings laden
-app.get('/api/welcome', (req, res) => {
-    try {
-        if (fs.existsSync('./welcome.json')) {
-            const settings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
-            
-            // Migration: Sicherstellen dass imageRotation existiert
-            if (!settings.imageRotation) {
-                settings.imageRotation = {
-                    enabled: false,
-                    mode: 'random'
-                };
-            }
 
-            // Migration: Sicherstellen dass leaveMessage existiert
-            if (!settings.leaveMessage) {
-                settings.leaveMessage = {
-                    enabled: false,
-                    channelName: 'verlassen',
-                    title: '👋 Tschüss!',
-                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-                    color: '0xFF6B6B',
-                    mentionUser: false,
-                    deleteAfter: 0
-                };
-            }
-            
-            res.json(settings);
-        } else {
-            res.json(welcomeSettings);
-        }
-    } catch (error) {
-        console.error('Fehler beim Laden der Welcome-Einstellungen:', error);
-        res.status(500).json({ error: 'Fehler beim Laden der Welcome-Einstellungen' });
-    }
-});
 
-// Welcome Settings speichern
-app.post('/api/welcome', (req, res) => {
-    try {
-        fs.writeFileSync('./welcome.json', JSON.stringify(req.body, null, 2));
-        welcomeSettings = req.body;
-        console.log('✅ Welcome-Einstellungen aktualisiert');
-        res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
-    } catch (error) {
-        console.error('Fehler beim Speichern der Welcome-Einstellungen:', error);
-        res.status(500).json({ error: 'Fehler beim Speichern der Welcome-Einstellungen' });
-    }
-});
 
-// Test Welcome Message
-app.post('/api/welcome/test', async (req, res) => {
-    if (!client.isReady()) {
-        return res.status(503).json({ error: 'Bot ist nicht online' });
-    }
 
-    try {
-        const settings = req.body || welcomeSettings;
-        
-        // Finde einen passenden Kanal
-        for (const guild of client.guilds.cache.values()) {
-            const channel = guild.channels.cache.find(ch => 
-                ch.name.toLowerCase().includes(settings.channelName.toLowerCase()) ||
-                ch.name.toLowerCase().includes('willkommen') ||
-                ch.name.toLowerCase().includes('welcome') ||
-                ch.name.toLowerCase().includes('general')
-            );
 
-            if (channel) {
-                // Erstelle ein vollständiges Test-Member-Objekt
-                const testMember = {
-                    displayName: 'TestUser',
-                    id: '123456789',
-                    displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/0.png' // Default Discord Avatar
-                };
-                
-                const { embed, attachment } = createWelcomeEmbed(guild, testMember, settings);
-                
-                let messageContent = '';
-                if (settings.mentionUser) {
-                    messageContent = '<@123456789>';
-                }
-                
-                const messageOptions = { 
-                    content: messageContent, 
-                    embeds: [embed] 
-                };
-                
-                // Füge Attachment hinzu, falls vorhanden
-                if (attachment) {
-                    messageOptions.files = [attachment];
-                }
-                
-                const message = await channel.send(messageOptions);
-                
-                // Auto-Delete nach Zeit falls konfiguriert
-                if (settings.deleteAfter > 0) {
-                    setTimeout(() => {
-                        message.delete().catch(console.error);
-                    }, settings.deleteAfter * 1000);
-                }
-                
-                console.log(`✅ Test-Welcome Message gesendet in ${guild.name}`);
-                return res.json({ success: true, message: 'Test-Nachricht gesendet!' });
-            }
-        }
-        
-        res.status(404).json({ error: 'Kein passender Kanal gefunden' });
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Senden der Test-Nachricht:', error);
-        res.status(500).json({ error: 'Fehler beim Senden der Test-Nachricht' });
-    }
-});
-
-// Test Leave Message
-app.post('/api/welcome/test-leave', async (req, res) => {
-    if (!client.isReady()) {
-        return res.status(503).json({ error: 'Bot ist nicht online' });
-    }
-
-    try {
-        const settings = req.body || welcomeSettings;
-        
-        // Prüfe ob Leave Messages aktiviert sind
-        if (!settings.leaveMessage || !settings.leaveMessage.enabled) {
-            return res.status(400).json({ error: 'Leave Messages sind nicht aktiviert' });
-        }
-        
-        // Finde einen passenden Kanal
-        for (const guild of client.guilds.cache.values()) {
-            const leaveChannelName = settings.leaveMessage.channelName || 'verlassen';
-            const channel = guild.channels.cache.find(ch => 
-                ch.name.toLowerCase().includes(leaveChannelName.toLowerCase()) ||
-                ch.name === leaveChannelName ||
-                ch.name.toLowerCase().includes('leave') ||
-                ch.name.toLowerCase().includes('verlassen')
-            );
-
-            if (channel) {
-                // Erstelle ein vollständiges Test-Member-Objekt
-                const testMember = {
-                    user: {
-                        username: 'TestUser',
-                        tag: 'TestUser#0001',
-                        id: '123456789',
-                        displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/0.png'
-                    },
-                    displayName: 'TestUser'
-                };
-                
-                const leaveEmbed = createLeaveEmbed(guild, testMember, settings.leaveMessage);
-                
-                let messageContent = '';
-                if (settings.leaveMessage.mentionUser) {
-                    messageContent = '<@123456789>';
-                }
-                
-                const messageOptions = { 
-                    content: messageContent, 
-                    embeds: [leaveEmbed] 
-                };
-                
-                const message = await channel.send(messageOptions);
-                
-                // Auto-Delete nach Zeit falls konfiguriert
-                if (settings.leaveMessage.deleteAfter > 0) {
-                    setTimeout(() => {
-                        message.delete().catch(console.error);
-                    }, settings.leaveMessage.deleteAfter * 1000);
-                }
-                
-                console.log(`✅ Test-Leave Message gesendet in ${guild.name} -> #${channel.name}`);
-                return res.json({ 
-                    success: true, 
-                    message: `Test-Abschiedsnachricht gesendet in #${channel.name}!` 
-                });
-            }
-        }
-        
-        res.status(404).json({ 
-            error: `Kein "${settings.leaveMessage.channelName || 'verlassen'}"-Kanal gefunden` 
-        });
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Senden der Test-Leave-Nachricht:', error);
-        res.status(500).json({ error: 'Fehler beim Senden der Test-Nachricht' });
-    }
-});
-
-// Upload Welcome Image (mit Ordner-Support)
-app.post('/api/welcome/upload', upload.single('welcomeImage'), (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Keine Datei hochgeladen' });
-        }
-
-        const folder = req.body.folder || 'general'; // Default-Ordner
-        const folderPath = `./dashboard/public/images/welcome/${folder}`;
-        
-        // Erstelle Ordner falls er nicht existiert
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath, { recursive: true });
-        }
-
-        // Verschiebe Datei in den gewünschten Ordner
-        const oldPath = req.file.path;
-        const newPath = path.join(folderPath, req.file.filename);
-        fs.renameSync(oldPath, newPath);
-
-        // Konstruiere die URL für das Frontend
-        const imageUrl = `/images/welcome/${folder}/${req.file.filename}`;
-        
-        console.log(`✅ Willkommensbild hochgeladen: ${folder}/${req.file.filename}`);
-        
-        res.json({ 
-            success: true, 
-            message: 'Bild erfolgreich hochgeladen!',
-            filename: req.file.filename,
-            folder: folder,
-            url: imageUrl,
-            originalName: req.file.originalname,
-            size: req.file.size
-        });
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Upload:', error);
-        res.status(500).json({ error: 'Fehler beim Hochladen des Bildes' });
-    }
-});
-
-// Get all welcome images (mit Ordner-Support)
-app.get('/api/welcome/images', (req, res) => {
-    try {
-        const welcomeImagesPath = './dashboard/public/images/welcome/';
-        
-        if (!fs.existsSync(welcomeImagesPath)) {
-            return res.json({ folders: {}, images: [] });
-        }
-        
-        const folders = {};
-        const allImages = [];
-        
-        // Lese Hauptverzeichnis und Unterordner
-        const items = fs.readdirSync(welcomeImagesPath);
-        
-        // Zuerst lose Bilder im Hauptverzeichnis (legacy)
-        const looseImages = items
-            .filter(item => {
-                const itemPath = path.join(welcomeImagesPath, item);
-                const isFile = fs.statSync(itemPath).isFile();
-                if (isFile) {
-                    const ext = path.extname(item).toLowerCase();
-                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
-                }
-                return false;
-            })
-            .map(file => {
-                const stats = fs.statSync(path.join(welcomeImagesPath, file));
-                return {
-                    filename: file,
-                    url: `/images/welcome/${file}`,
-                    folder: null, // Kein Ordner
-                    size: stats.size,
-                    created: stats.birthtime
-                };
-            });
-
-        if (looseImages.length > 0) {
-            folders['general'] = looseImages;
-            allImages.push(...looseImages);
-        }
-        
-        // Dann Ordner durchsuchen
-        const folderNames = items.filter(item => {
-            const itemPath = path.join(welcomeImagesPath, item);
-            return fs.statSync(itemPath).isDirectory();
-        });
-        
-        folderNames.forEach(folderName => {
-            const folderPath = path.join(welcomeImagesPath, folderName);
-            const folderFiles = fs.readdirSync(folderPath);
-            
-            const images = folderFiles
-                .filter(file => {
-                    const ext = path.extname(file).toLowerCase();
-                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
-                })
-                .map(file => {
-                    const stats = fs.statSync(path.join(folderPath, file));
-                    return {
-                        filename: file,
-                        url: `/images/welcome/${folderName}/${file}`,
-                        folder: folderName,
-                        size: stats.size,
-                        created: stats.birthtime
-                    };
-                })
-                .sort((a, b) => b.created - a.created); // Neueste zuerst
-            
-            // Füge alle Ordner hinzu, auch leere (für bessere UX)
-            folders[folderName] = images;
-            if (images.length > 0) {
-                allImages.push(...images);
-            }
-        });
-        
-        res.json({ 
-            folders, 
-            images: allImages.sort((a, b) => b.created - a.created),
-            folderNames: Object.keys(folders),
-            allFolderNames: folderNames // Alle Ordner, auch leere
-        });
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Bilder:', error);
-        res.status(500).json({ error: 'Fehler beim Laden der Bilder' });
-    }
-});
-
-// Delete welcome image (mit Ordner-Support)
-app.delete('/api/welcome/images/:folder/:filename', (req, res) => {
-    try {
-        const folder = req.params.folder;
-        const filename = req.params.filename;
-        
-        // Sicherheitscheck
-        if (!filename || !folder || filename.includes('..') || folder.includes('..')) {
-            return res.status(400).json({ error: 'Ungültiger Datei- oder Ordnername' });
-        }
-        
-        const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
-        
-        if (fs.existsSync(imagePath)) {
-            fs.unlinkSync(imagePath);
-            console.log(`🗑️ Willkommensbild gelöscht: ${folder}/${filename}`);
-            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
-        } else {
-            res.status(404).json({ error: 'Bild nicht gefunden' });
-        }
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Löschen des Bildes:', error);
-        res.status(500).json({ error: 'Fehler beim Löschen des Bildes' });
-    }
-});
-
-// Legacy: Delete welcome image (ohne Ordner)
-app.delete('/api/welcome/images/:filename', (req, res) => {
-    try {
-        const filename = req.params.filename;
-        const imagePath = path.join('./dashboard/public/images/welcome/', filename);
-        
-        // Sicherheitscheck: Nur Dateien im welcome-Ordner löschen
-        if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-            return res.status(400).json({ error: 'Ungültiger Dateiname' });
-        }
-        
-        if (fs.existsSync(imagePath)) {
-            fs.unlinkSync(imagePath);
-            console.log(`🗑️ Willkommensbild gelöscht: ${filename}`);
-            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
-        } else {
-            res.status(404).json({ error: 'Bild nicht gefunden' });
-        }
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Löschen des Bildes:', error);
-        res.status(500).json({ error: 'Fehler beim Löschen des Bildes' });
-    }
-});
-
-// Create new folder
-app.post('/api/welcome/folders', (req, res) => {
-    try {
-        const { folderName } = req.body;
-        
-        if (!folderName || folderName.includes('..') || folderName.includes('/') || folderName.includes('\\')) {
-            return res.status(400).json({ error: 'Ungültiger Ordnername' });
-        }
-        
-        const folderPath = `./dashboard/public/images/welcome/${folderName}`;
-        
-        if (fs.existsSync(folderPath)) {
-            return res.status(400).json({ error: 'Ordner existiert bereits' });
-        }
-        
-        fs.mkdirSync(folderPath, { recursive: true });
-        console.log(`📁 Neuer Ordner erstellt: ${folderName}`);
-        
-        res.json({ success: true, message: 'Ordner erfolgreich erstellt', folderName });
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Erstellen des Ordners:', error);
-        res.status(500).json({ error: 'Fehler beim Erstellen des Ordners' });
-    }
-});
-
-// Delete folder
-app.delete('/api/welcome/folders/:folderName', (req, res) => {
-    try {
-        const folderName = req.params.folderName;
-        
-        if (!folderName || folderName.includes('..') || folderName === 'general') {
-            return res.status(400).json({ error: 'Ungültiger Ordnername oder protected folder' });
-        }
-        
-        const folderPath = `./dashboard/public/images/welcome/${folderName}`;
-        
-        if (!fs.existsSync(folderPath)) {
-            return res.status(404).json({ error: 'Ordner nicht gefunden' });
-        }
-        
-        // Lösche Ordner rekursiv
-        fs.rmSync(folderPath, { recursive: true, force: true });
-        console.log(`🗑️ Ordner gelöscht: ${folderName}`);
-        
-        res.json({ success: true, message: 'Ordner erfolgreich gelöscht' });
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Löschen des Ordners:', error);
-        res.status(500).json({ error: 'Fehler beim Löschen des Ordners' });
-    }
-});
-
-// Move image between folders
-app.post('/api/welcome/images/move', (req, res) => {
-    try {
-        const { filename, sourceFolder, targetFolder } = req.body;
-        
-        // Validierung
-        if (!filename || !sourceFolder || !targetFolder) {
-            return res.status(400).json({ error: 'Filename, sourceFolder und targetFolder sind erforderlich' });
-        }
-        
-        if (filename.includes('..') || sourceFolder.includes('..') || targetFolder.includes('..')) {
-            return res.status(400).json({ error: 'Ungültige Pfadzeichen' });
-        }
-        
-        if (sourceFolder === targetFolder) {
-            return res.status(400).json({ error: 'Quell- und Zielordner sind identisch' });
-        }
-        
-        const sourcePath = path.join('./dashboard/public/images/welcome/', sourceFolder, filename);
-        const targetFolderPath = `./dashboard/public/images/welcome/${targetFolder}`;
-        const targetPath = path.join(targetFolderPath, filename);
-        
-        // Prüfe ob Quelldatei existiert
-        if (!fs.existsSync(sourcePath)) {
-            return res.status(404).json({ error: 'Quelldatei nicht gefunden' });
-        }
-        
-        // Erstelle Zielordner falls er nicht existiert
-        if (!fs.existsSync(targetFolderPath)) {
-            fs.mkdirSync(targetFolderPath, { recursive: true });
-        }
-        
-        // Prüfe ob Zieldatei bereits existiert
-        if (fs.existsSync(targetPath)) {
-            return res.status(409).json({ error: 'Datei mit diesem Namen existiert bereits im Zielordner' });
-        }
-        
-        // Verschiebe Datei
-        fs.renameSync(sourcePath, targetPath);
-        
-        console.log(`📦 Bild verschoben: ${sourceFolder}/${filename} → ${targetFolder}/${filename}`);
-        
-        res.json({ 
-            success: true, 
-            message: `Bild erfolgreich von "${sourceFolder}" nach "${targetFolder}" verschoben`,
-            newUrl: `/images/welcome/${targetFolder}/${filename}`
-        });
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Verschieben des Bildes:', error);
-        res.status(500).json({ error: 'Fehler beim Verschieben des Bildes' });
-    }
-});
 
 // Ticket-API wird jetzt in ticket-api.js behandelt
 
@@ -2355,239 +1855,7 @@ async function createRulesEmbed(guildName) {
     return embed;
 }
 
-// Funktion um ein zufälliges Welcome-Bild zu wählen (mit Ordner-Support)
-function getRandomWelcomeImage(specificFolder = null) {
-    try {
-        const welcomeImagesPath = './dashboard/public/images/welcome/';
-        console.log(`🔍 Suche nach Bildern in: ${welcomeImagesPath}`);
-        
-        if (!fs.existsSync(welcomeImagesPath)) {
-            console.log(`❌ Ordner existiert nicht: ${welcomeImagesPath}`);
-            return null;
-        }
-        
-        let allImages = [];
-        
-        if (specificFolder) {
-            // Nur aus einem spezifischen Ordner
-            const folderPath = path.join(welcomeImagesPath, specificFolder);
-            if (fs.existsSync(folderPath)) {
-                const folderFiles = fs.readdirSync(folderPath).filter(file => 
-                    file.toLowerCase().endsWith('.png') || 
-                    file.toLowerCase().endsWith('.jpg') || 
-                    file.toLowerCase().endsWith('.jpeg') || 
-                    file.toLowerCase().endsWith('.gif') || 
-                    file.toLowerCase().endsWith('.webp')
-                );
-                allImages = folderFiles.map(file => ({
-                    file,
-                    path: `/images/welcome/${specificFolder}/${file}`,
-                    folder: specificFolder
-                }));
-                console.log(`📁 ${specificFolder}-Ordner: ${folderFiles.length} Bilder gefunden`);
-            }
-        } else {
-            // Alle Bilder aus allen Ordnern sammeln
-            const items = fs.readdirSync(welcomeImagesPath);
-            
-            // Zuerst lose Bilder im Hauptverzeichnis (legacy)
-            const looseFiles = items.filter(item => {
-                const itemPath = path.join(welcomeImagesPath, item);
-                const isFile = fs.statSync(itemPath).isFile();
-                if (isFile) {
-                    return item.toLowerCase().endsWith('.png') || 
-                           item.toLowerCase().endsWith('.jpg') || 
-                           item.toLowerCase().endsWith('.jpeg') || 
-                           item.toLowerCase().endsWith('.gif') || 
-                           item.toLowerCase().endsWith('.webp');
-                }
-                return false;
-            });
-            
-            allImages.push(...looseFiles.map(file => ({
-                file,
-                path: `/images/welcome/${file}`,
-                folder: 'root'
-            })));
-            
-            // Dann alle Ordner durchsuchen
-            const folders = items.filter(item => {
-                const itemPath = path.join(welcomeImagesPath, item);
-                return fs.statSync(itemPath).isDirectory();
-            });
-            
-            folders.forEach(folder => {
-                const folderPath = path.join(welcomeImagesPath, folder);
-                const folderFiles = fs.readdirSync(folderPath).filter(file => 
-                    file.toLowerCase().endsWith('.png') || 
-                    file.toLowerCase().endsWith('.jpg') || 
-                    file.toLowerCase().endsWith('.jpeg') || 
-                    file.toLowerCase().endsWith('.gif') || 
-                    file.toLowerCase().endsWith('.webp')
-                );
-                
-                allImages.push(...folderFiles.map(file => ({
-                    file,
-                    path: `/images/welcome/${folder}/${file}`,
-                    folder
-                })));
-            });
-        }
-        
-        console.log(`📁 Gefundene Bilder insgesamt: ${allImages.length}`);
-        
-        if (allImages.length === 0) {
-            console.log(`⚠️ Keine Bilder gefunden für Rotation`);
-            return null;
-        }
-        
-        // Zufälliges Bild auswählen
-        const randomIndex = Math.floor(Math.random() * allImages.length);
-        const randomImage = allImages[randomIndex];
-        
-        console.log(`🎯 Gewähltes Bild: ${randomImage.folder}/${randomImage.file} (Index: ${randomIndex}/${allImages.length - 1})`);
-        console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${randomImage.path}`);
-        return randomImage.path;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Welcome-Bilder:', error);
-        return null;
-    }
-}
-
-// Funktion um Welcome-Embed zu erstellen
-function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
-    // Fallback für description falls leer oder undefined
-    let description = settings.description || 'Willkommen auf dem Server!';
-    
-    description = description
-        .replace(/{user}/g, `<@${member.id}>`)
-        .replace(/{server}/g, guild.name)
-        .replace(/{memberCount}/g, guild.memberCount.toString());
-    
-    // Sicherstellen dass description nicht leer ist
-    if (!description.trim()) {
-        description = `Willkommen <@${member.id}> auf **${guild.name}**! 🎉`;
-    }
-    
-    const embed = new EmbedBuilder()
-        .setColor(parseInt(settings.color.replace('0x', ''), 16))
-        .setTitle(settings.title || '🎉 Willkommen!')
-        .setDescription(description)
-        .setTimestamp();
-
-    let attachment = null;
-
-    // Thumbnail setzen
-    if (settings.thumbnail === 'user' && member.displayAvatarURL) {
-        const avatarUrl = member.displayAvatarURL({ dynamic: true });
-        embed.setThumbnail(avatarUrl);
-        console.log(`🖼️ Setze User Thumbnail: ${avatarUrl}`);
-    } else if (settings.thumbnail === 'server' && guild.iconURL) {
-        const iconUrl = guild.iconURL({ dynamic: true });
-        embed.setThumbnail(iconUrl);
-        console.log(`🖼️ Setze Server Thumbnail: ${iconUrl}`);
-    } else if (settings.thumbnail === 'custom') {
-        let thumbnailUrl = settings.customThumbnail;
-        
-        // Bild-Rotation aktiviert? (überschreibt customThumbnail)
-        if (settings.imageRotation && settings.imageRotation.enabled) {
-            const randomImage = getRandomWelcomeImage();
-            if (randomImage) {
-                thumbnailUrl = randomImage;
-                console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${thumbnailUrl}`);
-            } else {
-                console.log(`⚠️ Keine Bilder für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
-            }
-        } else {
-            console.log(`📌 Spezifisches Bild verwendet: ${thumbnailUrl}`);
-        }
-        
-        // Für lokale URLs, verwende Attachments statt Base64
-        if (thumbnailUrl && thumbnailUrl.startsWith('/images/')) {
-            try {
-                const imagePath = `./dashboard/public${thumbnailUrl}`;
-                if (fs.existsSync(imagePath)) {
-                    // Erstelle einen Attachment
-                    const fileName = path.basename(imagePath);
-                    attachment = new AttachmentBuilder(imagePath, { name: fileName });
-                    
-                    // Verwende attachment:// URL für das große Bild
-                    embed.setImage(`attachment://${fileName}`);
-                    console.log(`🎮 Lokales Bild als großes Image verwendet: ${imagePath}`);
-                } else {
-                    console.log(`⚠️ Bild nicht gefunden: ${imagePath}`);
-                    embed.setImage('https://cdn.discordapp.com/embed/avatars/0.png');
-                }
-            } catch (error) {
-                console.error(`❌ Fehler beim Laden des Bildes:`, error);
-                embed.setImage('https://cdn.discordapp.com/embed/avatars/0.png');
-            }
-        } else {
-            // Externe URL direkt verwenden
-            embed.setImage(thumbnailUrl);
-            console.log(`🖼️ Setze externe Image URL: ${thumbnailUrl}`);
-        }
-    }
-
-    // Felder hinzufügen
-    settings.fields.forEach(field => {
-        embed.addFields({
-            name: field.name,
-            value: field.value
-                .replace(/{user}/g, `<@${member.id}>`)
-                .replace(/{server}/g, guild.name)
-                .replace(/{memberCount}/g, guild.memberCount.toString()),
-            inline: field.inline
-        });
-    });
-
-    // Footer hinzufügen
-    if (settings.footer) {
-        const footerText = settings.footer
-            .replace(/{user}/g, member.displayName)
-            .replace(/{server}/g, guild.name)
-            .replace(/{memberCount}/g, guild.memberCount.toString());
-        embed.setFooter({ text: footerText });
-    }
-
-    return { embed, attachment };
-}
-
-// Funktion um Leave-Embed zu erstellen
-function createLeaveEmbed(guild, member, leaveSettings) {
-    const { 
-        title = '👋 Tschüss!',
-        description = '**{user}** hat den Server verlassen. Auf Wiedersehen!',
-        color = '0xFF6B6B'
-    } = leaveSettings;
-
-    // Erstelle Discord Embed
-    const embed = new EmbedBuilder()
-        .setTitle(title)
-        .setColor(parseInt(color, 16))
-        .setTimestamp();
-
-    // Verarbeite Platzhalter in der Beschreibung
-    let processedDescription = description
-        .replace(/{user}/g, member.user.username)
-        .replace(/{server}/g, guild.name)
-        .replace(/{memberCount}/g, guild.memberCount.toString());
-
-    embed.setDescription(processedDescription);
-
-    // User Avatar als Thumbnail
-    embed.setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }));
-
-    // Footer mit Member Count
-    embed.setFooter({
-        text: `Mitglied verlassen • ${guild.name}`,
-        iconURL: guild.iconURL({ dynamic: true }) || undefined
-    });
-
-    console.log(`✅ Leave-Embed erstellt für ${member.user.tag}`);
-    return embed;
-}
+// Legacy Welcome-Funktionen entfernt - verwende jetzt welcome-supabase-api.js
 
 // Funktion um automatisch Regeln zu posten
 async function autoPostRules() {
@@ -3966,7 +3234,7 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-// Event: Neues Mitglied beitritt
+// Event: Neues Mitglied beitritt (nutzt jetzt Supabase Welcome-System)
 client.on(Events.GuildMemberAdd, async member => {
     console.log(`👋 ${member.user.tag} ist ${member.guild.name} beigetreten`);
     console.log(`🔍 DEBUG: User ID: ${member.id}, Guild: ${member.guild.name}, Timestamp: ${new Date().toISOString()}`);
@@ -3975,34 +3243,27 @@ client.on(Events.GuildMemberAdd, async member => {
     // Invite-Tracking für Giveaways (wird jetzt automatisch von GiveawaySystem behandelt)
     // Das neue System hört direkt auf member join events
     
-    // Lade Welcome-Einstellungen
-    let currentWelcomeSettings = welcomeSettings;
     try {
-        if (fs.existsSync('./welcome.json')) {
-            currentWelcomeSettings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
-        }
-    } catch (error) {
-        console.error('Fehler beim Laden der Welcome-Einstellungen:', error);
-    }
+        // Lade Welcome-Einstellungen aus Supabase (mit Fallback)
+        const currentWelcomeSettings = await loadWelcomeSettings(member.guild.id);
 
-    // Prüfe ob Welcome-Messages aktiviert sind
-    if (!currentWelcomeSettings.enabled) {
-        console.log('Welcome-Messages sind deaktiviert');
-        return;
-    }
-    
-    // Finde Welcome-Channel
-    const welcomeChannel = member.guild.channels.cache.find(ch => 
-        ch.name.toLowerCase().includes(currentWelcomeSettings.channelName.toLowerCase()) ||
-        ch.name.toLowerCase().includes('willkommen') ||
-        ch.name.toLowerCase().includes('welcome') ||
-        ch.name.toLowerCase().includes('general')
-    );
-    
-    if (welcomeChannel) {
-        try {
-            // Erstelle Welcome-Embed mit Settings
-            const { embed: welcomeEmbed, attachment } = createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
+        // Prüfe ob Welcome-Messages aktiviert sind
+        if (!currentWelcomeSettings || !currentWelcomeSettings.enabled) {
+            console.log('Welcome-Messages sind deaktiviert');
+            return;
+        }
+        
+        // Finde Welcome-Channel
+        const welcomeChannel = member.guild.channels.cache.find(ch => 
+            ch.name.toLowerCase().includes(currentWelcomeSettings.channelName.toLowerCase()) ||
+            ch.name.toLowerCase().includes('willkommen') ||
+            ch.name.toLowerCase().includes('welcome') ||
+            ch.name.toLowerCase().includes('general')
+        );
+        
+        if (welcomeChannel) {
+            // Erstelle Welcome-Embed mit Supabase-Funktionen
+            const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
             
             // Mention User falls aktiviert
             let messageContent = '';
@@ -4032,59 +3293,60 @@ client.on(Events.GuildMemberAdd, async member => {
             console.log(`✅ Welcome-Message für ${member.user.tag} gesendet in #${welcomeChannel.name}`);
             console.log(`🔍 DEBUG: Message ID: ${welcomeMessage.id}, Channel: ${welcomeChannel.name}`);
             
-        } catch (error) {
-            console.error('❌ Fehler beim Senden der Welcome-Message:', error);
-        }
-    } else {
-        console.log(`⚠️ Kein Welcome-Channel in ${member.guild.name} gefunden`);
-    }
-
-    // Auto-Role vergeben falls konfiguriert
-    if (currentWelcomeSettings.autoRole) {
-        try {
-            const autoRole = member.guild.roles.cache.find(role => 
-                role.name.toLowerCase() === currentWelcomeSettings.autoRole.toLowerCase()
-            );
+            // Aktualisiere Welcome-Statistiken
+            await updateWelcomeStats(member.guild.id, 'welcome');
             
-            if (autoRole) {
-                await member.roles.add(autoRole);
-                console.log(`✅ Auto-Role "${autoRole.name}" vergeben an ${member.user.tag}`);
-            } else {
-                console.log(`⚠️ Auto-Role "${currentWelcomeSettings.autoRole}" nicht gefunden`);
-            }
-        } catch (error) {
-            console.error('❌ Fehler beim Vergeben der Auto-Role:', error);
+        } else {
+            console.log(`⚠️ Kein Welcome-Channel in ${member.guild.name} gefunden`);
         }
-    }
 
-    // DM an User senden falls aktiviert
-    if (currentWelcomeSettings.dmMessage.enabled && currentWelcomeSettings.dmMessage.message) {
-        try {
-            await member.send(currentWelcomeSettings.dmMessage.message
-                .replace(/{user}/g, member.displayName)
-                .replace(/{server}/g, member.guild.name)
-                .replace(/{memberCount}/g, member.guild.memberCount.toString())
-            );
-            console.log(`📨 Welcome-DM an ${member.user.tag} gesendet`);
-        } catch (error) {
-            console.log(`⚠️ Konnte keine Welcome-DM an ${member.user.tag} senden:`, error.message);
+        // Auto-Role vergeben falls konfiguriert
+        if (currentWelcomeSettings.autoRole) {
+            try {
+                const autoRole = member.guild.roles.cache.find(role => 
+                    role.name.toLowerCase() === currentWelcomeSettings.autoRole.toLowerCase()
+                );
+                
+                if (autoRole) {
+                    await member.roles.add(autoRole);
+                    console.log(`✅ Auto-Role "${autoRole.name}" vergeben an ${member.user.tag}`);
+                } else {
+                    console.log(`⚠️ Auto-Role "${currentWelcomeSettings.autoRole}" nicht gefunden`);
+                }
+            } catch (error) {
+                console.error('❌ Fehler beim Vergeben der Auto-Role:', error);
+            }
         }
+
+        // DM an User senden falls aktiviert
+        if (currentWelcomeSettings.dmMessage && currentWelcomeSettings.dmMessage.enabled && currentWelcomeSettings.dmMessage.message) {
+            try {
+                await member.send(currentWelcomeSettings.dmMessage.message
+                    .replace(/{user}/g, member.displayName)
+                    .replace(/{server}/g, member.guild.name)
+                    .replace(/{memberCount}/g, member.guild.memberCount.toString())
+                );
+                console.log(`📨 Welcome-DM an ${member.user.tag} gesendet`);
+            } catch (error) {
+                console.log(`⚠️ Konnte keine Welcome-DM an ${member.user.tag} senden:`, error.message);
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Fehler im Welcome-System:', error);
     }
 });
 
-// Event: Mitglied verlässt Server
+// Event: Mitglied verlässt Server (nutzt jetzt Supabase Welcome-System)
 client.on(Events.GuildMemberRemove, async member => {
     console.log(`👋 ${member.user.tag} hat den Server verlassen`);
     
     try {
-        // Lade Welcome-Einstellungen (inkl. Leave Messages)
-        let currentSettings = welcomeSettings;
-        if (fs.existsSync('./welcome.json')) {
-            currentSettings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
-        }
+        // Lade Welcome-Einstellungen aus Supabase (inkl. Leave Messages)
+        const currentSettings = await loadWelcomeSettings(member.guild.id);
 
         // Prüfe ob Leave Messages aktiviert sind
-        if (!currentSettings.leaveMessage || !currentSettings.leaveMessage.enabled) {
+        if (!currentSettings || !currentSettings.leaveMessage || !currentSettings.leaveMessage.enabled) {
             console.log('📴 Leave Messages sind deaktiviert');
             return;
         }
@@ -4101,8 +3363,8 @@ client.on(Events.GuildMemberRemove, async member => {
             return;
         }
 
-        // Erstelle Leave Embed
-        const leaveEmbed = createLeaveEmbed(member.guild, member, currentSettings.leaveMessage);
+        // Erstelle Leave Embed mit Supabase-Funktionen
+        const leaveEmbed = await createLeaveEmbed(member.guild, member, currentSettings.leaveMessage);
         
         // Sende Leave Message
         const messageContent = currentSettings.leaveMessage.mentionUser ? `<@${member.user.id}>` : '';
@@ -4119,6 +3381,9 @@ client.on(Events.GuildMemberRemove, async member => {
         }
 
         console.log(`✅ Leave Message gesendet für ${member.user.tag} in #${leaveChannel.name}`);
+        
+        // Aktualisiere Welcome-Statistiken
+        await updateWelcomeStats(member.guild.id, 'leave');
 
     } catch (error) {
         console.error('❌ Fehler beim Senden der Leave Message:', error);
@@ -4241,19 +3506,21 @@ client.on(Events.MessageCreate, async message => {
         }
     }
 
-    // Test Welcome-Message (nur für Debugging)
+    // Test Welcome-Message (nutzt jetzt Supabase Welcome-System)
     if (message.content === '!test-welcome' && message.member.permissions.has('ManageMessages')) {
         try {
-            // Lade aktuelle Welcome-Einstellungen
-            let currentWelcomeSettings = welcomeSettings;
-            if (fs.existsSync('./welcome.json')) {
-                currentWelcomeSettings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
+            // Lade aktuelle Welcome-Einstellungen aus Supabase
+            const currentWelcomeSettings = await loadWelcomeSettings(message.guild.id);
+            
+            if (!currentWelcomeSettings) {
+                message.reply('❌ Keine Welcome-Einstellungen gefunden!');
+                return;
             }
             
             console.log('🧪 Test Welcome-Message gestartet...');
-            console.log('Settings:', JSON.stringify(currentWelcomeSettings, null, 2));
+            console.log('Settings aus Supabase:', JSON.stringify(currentWelcomeSettings, null, 2));
             
-            const { embed: welcomeEmbed, attachment } = createWelcomeEmbed(message.guild, message.member, currentWelcomeSettings);
+            const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(message.guild, message.member, currentWelcomeSettings);
             
             const messageOptions = { 
                 content: currentWelcomeSettings.mentionUser ? `<@${message.author.id}>` : '', 

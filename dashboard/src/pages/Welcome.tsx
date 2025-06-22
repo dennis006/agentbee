@@ -30,7 +30,7 @@ interface WelcomeSettings {
   title: string;
   description: string;
   color: string;
-  thumbnail: 'user' | 'server' | 'custom' | 'none';
+  thumbnail: 'custom';
   customThumbnail: string;
   imageRotation: {
     enabled: boolean;
@@ -93,7 +93,7 @@ const Welcome = () => {
     title: '🎉 Willkommen auf dem Server!',
     description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
     color: '0x00FF7F',
-    thumbnail: 'user',
+    thumbnail: 'custom',
     customThumbnail: '',
     imageRotation: {
       enabled: false,
