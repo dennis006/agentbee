@@ -2005,11 +2005,12 @@ async function saveWelcomeSettingsToSupabase(settings) {
     try {
         console.log('📥 BACKEND saveWelcomeSettingsToSupabase - Input:', JSON.stringify(settings, null, 2));
         console.log('🔍 BACKEND ImageRotation beim Speichern:', {
+            hasImageRotation: !!settings.imageRotation,
             enabled: settings.imageRotation?.enabled,
             mode: settings.imageRotation?.mode,
             folder: settings.imageRotation?.folder,
             'typeof folder': typeof settings.imageRotation?.folder,
-            'hasOwnProperty folder': settings.imageRotation?.hasOwnProperty('folder')
+            'hasOwnProperty folder': settings.imageRotation ? settings.imageRotation.hasOwnProperty('folder') : false
         });
         
         console.log('🔍 Checking supabase variable:', { supabase: !!supabase, type: typeof supabase });
