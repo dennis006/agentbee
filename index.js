@@ -42,6 +42,13 @@ function initializeSupabase() {
         const supabaseUrl = process.env.SUPABASE_URL;
         const supabaseKey = process.env.SUPABASE_ANON_KEY;
         
+        console.log('🔑 Supabase Environment Check:', {
+            hasUrl: !!supabaseUrl,
+            hasKey: !!supabaseKey,
+            urlLength: supabaseUrl ? supabaseUrl.length : 0,
+            keyLength: supabaseKey ? supabaseKey.length : 0
+        });
+        
         if (supabaseUrl && supabaseKey) {
             const { createClient } = require('@supabase/supabase-js');
             supabase = createClient(supabaseUrl, supabaseKey);
@@ -59,7 +66,9 @@ function initializeSupabase() {
 }
 
 // Supabase beim Start initialisieren
-initializeSupabase();
+console.log('🚀 Bot startet - initialisiere Supabase...');
+const supabaseInitialized = initializeSupabase();
+console.log('🔍 Supabase Initialisierung Ergebnis:', supabaseInitialized);
 
 // ================== API KEYS MANAGEMENT ==================
 // Zentrale API-Key-Verwaltung - alle Keys hier konfigurieren
