@@ -1920,7 +1920,7 @@ async function loadWelcomeSettingsFromSupabase() {
             throw error;
         }
         
-        if (!settings || !settings.config) {
+        if (!settings) {
             console.log('📄 Keine Welcome Settings in Supabase gefunden, erstelle Default-Settings');
             
             // Erstelle Default-Settings direkt in Supabase
@@ -1965,18 +1965,29 @@ async function loadWelcomeSettingsFromSupabase() {
             return defaultSettings;
         }
         
-        // Grundlegende Struktur sicherstellen
-        console.log('📥 BACKEND RAW Supabase Data:', JSON.stringify(settings.config, null, 2));
-        console.log('🔍 BACKEND settings.config.imageRotation:', {
-            enabled: settings.config?.imageRotation?.enabled,
-            mode: settings.config?.imageRotation?.mode,
-            folder: settings.config?.imageRotation?.folder,
-            'typeof folder': typeof settings.config?.imageRotation?.folder,
-            'hasOwnProperty folder': settings.config?.imageRotation?.hasOwnProperty('folder')
+        // Intelligente Struktur-Erkennung: config-basiert ODER flach
+        let settingsData;
+        if (settings.config) {
+            // Alte Struktur mit config JSONB
+            console.log('📥 BACKEND RAW Supabase Data (config-basiert):', JSON.stringify(settings.config, null, 2));
+            settingsData = settings.config;
+        } else {
+            // Neue Struktur mit flachen Spalten
+            console.log('📥 BACKEND RAW Supabase Data (flach):', JSON.stringify(settings, null, 2));
+            settingsData = settings;
+        }
+        
+        console.log('🔍 BACKEND settingsData.imageRotation:', {
+            enabled: settingsData?.imageRotation?.enabled,
+            mode: settingsData?.imageRotation?.mode,
+            folder: settingsData?.imageRotation?.folder,
+            'typeof folder': typeof settingsData?.imageRotation?.folder,
+            'hasOwnProperty folder': settingsData?.imageRotation?.hasOwnProperty('folder'),
+            'raw imageRotation': settingsData?.imageRotation
         });
         
         const mergedSettings = {
-            ...settings.config,
+            ...settingsData,
             id: settings.id,
             updated_at: settings.updated_at
         };
