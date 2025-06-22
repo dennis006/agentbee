@@ -171,6 +171,12 @@ INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, ro
 -- HELPER FUNCTIONS
 -- ============================
 
+-- Lösche bestehende Funktionen falls vorhanden
+DROP FUNCTION IF EXISTS get_all_valorant_agents();
+DROP FUNCTION IF EXISTS get_agents_by_role(TEXT);
+DROP FUNCTION IF EXISTS get_agent_uuid(TEXT);
+DROP FUNCTION IF EXISTS get_role_config(TEXT);
+
 -- Funktion um alle Agenten zu holen
 CREATE OR REPLACE FUNCTION get_all_valorant_agents()
 RETURNS TABLE (
