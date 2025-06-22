@@ -35,7 +35,7 @@ interface WelcomeSettings {
   imageRotation: {
     enabled: boolean;
     mode: 'random' | 'sequential';
-    folder?: string; // Spezifischer Ordner für Rotation
+    folders?: string[]; // Mehrere Ordner für Rotation
   };
   fields: Array<{
     name: string;
@@ -105,7 +105,7 @@ const Welcome = () => {
     imageRotation: {
       enabled: false,
       mode: 'random',
-      folder: undefined
+      folders: []
     },
     fields: [
       {
@@ -183,8 +183,20 @@ const Welcome = () => {
         if (!data.imageRotation) {
           data.imageRotation = {
             enabled: false,
-            mode: 'random'
+            mode: 'random',
+            folders: []
           };
+        }
+        
+        // Migration: Alte 'folder' Eigenschaft zu 'folders' Array
+        if (data.imageRotation.folder && !data.imageRotation.folders) {
+          data.imageRotation.folders = [data.imageRotation.folder];
+          delete data.imageRotation.folder;
+        }
+        
+        // Sicherstellen dass folders Array existiert
+        if (!data.imageRotation.folders) {
+          data.imageRotation.folders = [];
         }
 
         // Sicherstellen dass leaveMessage existiert (neues Feature)
@@ -1135,25 +1147,124 @@ const Welcome = () => {
                     </div>
                     
                     <div>
-                      <label className="text-xs text-dark-muted mb-1 block">Rotation auf bestimmten Ordner beschränken:</label>
-                      <select
-                        value={welcomeSettings.imageRotation.folder || ''}
-                        onChange={(e) => setWelcomeSettings({
-                          ...welcomeSettings,
-                          imageRotation: {
-                            ...welcomeSettings.imageRotation,
-                            folder: e.target.value || undefined
-                          }
-                        })}
-                        className="w-full bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-3 py-1 focus:border-pink-400 text-xs"
-                      >
-                        <option value="">Alle Ordner (Standard)</option>
-                        {availableFolders.map(folderName => (
-                          <option key={folderName} value={folderName}>
-                            {folderName} ({folders[folderName]?.length || 0} Bilder)
-                          </option>
-                        ))}
-                      </select>
+                      <label className="text-xs text-dark-muted mb-2 block">
+                        🎯 Ordner für Rotation auswählen:
+                      </label>
+                      <div className="bg-dark-bg/50 border border-purple-primary/30 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                        {/* Alle Ordner Option */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="rotation-all-folders"
+                            checked={!welcomeSettings.imageRotation.folders || welcomeSettings.imageRotation.folders.length === 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setWelcomeSettings({
+                                  ...welcomeSettings,
+                                  imageRotation: {
+                                    ...welcomeSettings.imageRotation,
+                                    folders: []
+                                  }
+                                });
+                              }
+                            }}
+                            className="w-4 h-4 text-green-400 bg-dark-bg border-purple-primary/30 rounded focus:ring-green-400 focus:ring-2"
+                          />
+                          <label htmlFor="rotation-all-folders" className="text-xs text-green-400 font-medium">
+                            🌟 Alle Ordner (Standard)
+                          </label>
+                          <span className="text-xs text-dark-muted">
+                            ({uploadedImages.length} Bilder total)
+                          </span>
+                        </div>
+                        
+                        {/* Individuelle Ordner */}
+                        <div className="border-t border-purple-primary/20 pt-2">
+                          <div className="text-xs text-dark-muted mb-2 font-medium">Oder spezifische Ordner:</div>
+                          {availableFolders.map(folderName => {
+                            const isSelected = welcomeSettings.imageRotation.folders?.includes(folderName);
+                            const imageCount = folders[folderName]?.length || 0;
+                            
+                            return (
+                              <div key={folderName} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  id={`rotation-folder-${folderName}`}
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const currentFolders = welcomeSettings.imageRotation.folders || [];
+                                    let newFolders;
+                                    
+                                    if (e.target.checked) {
+                                      newFolders = [...currentFolders, folderName];
+                                    } else {
+                                      newFolders = currentFolders.filter(f => f !== folderName);
+                                    }
+                                    
+                                    setWelcomeSettings({
+                                      ...welcomeSettings,
+                                      imageRotation: {
+                                        ...welcomeSettings.imageRotation,
+                                        folders: newFolders
+                                      }
+                                    });
+                                  }}
+                                  className="w-4 h-4 text-pink-400 bg-dark-bg border-purple-primary/30 rounded focus:ring-pink-400 focus:ring-2"
+                                />
+                                <label 
+                                  htmlFor={`rotation-folder-${folderName}`} 
+                                  className={`text-xs flex items-center gap-1 cursor-pointer ${
+                                    isSelected ? 'text-pink-400 font-medium' : 'text-dark-text'
+                                  }`}
+                                >
+                                  <span>
+                                    {folderName === 'general' ? '📂' : 
+                                     folderName.includes('valorant') ? '🎯' :
+                                     folderName.includes('minecraft') ? '⛏️' :
+                                     folderName.includes('fortnite') ? '🏗️' :
+                                     folderName.includes('beellgrounds') ? '🐝' :
+                                     folderName.includes('apex') ? '🔫' :
+                                     folderName.includes('lol') ? '⚔️' :
+                                     folderName.includes('cs') ? '💣' :
+                                     '🎮'}
+                                  </span>
+                                  {folderName}
+                                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                    isSelected 
+                                      ? 'bg-pink-400/20 text-pink-300' 
+                                      : 'bg-purple-primary/20 text-purple-300'
+                                  }`}>
+                                    {imageCount}
+                                  </span>
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Ausgewählte Ordner Zusammenfassung */}
+                        {welcomeSettings.imageRotation.folders && welcomeSettings.imageRotation.folders.length > 0 && (
+                          <div className="border-t border-purple-primary/20 pt-2 mt-2">
+                            <div className="text-xs text-pink-400 font-medium mb-1">
+                              ✅ Ausgewählt: {welcomeSettings.imageRotation.folders.length} Ordner
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {welcomeSettings.imageRotation.folders.map(folderName => (
+                                <span 
+                                  key={folderName}
+                                  className="text-xs bg-pink-400/20 text-pink-300 px-2 py-1 rounded-full"
+                                >
+                                  {folderName} ({folders[folderName]?.length || 0})
+                                </span>
+                              ))}
+                            </div>
+                            <div className="text-xs text-green-400 mt-1">
+                              🎲 Rotation mit {welcomeSettings.imageRotation.folders.reduce((total, folderName) => 
+                                total + (folders[folderName]?.length || 0), 0)} Bildern
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

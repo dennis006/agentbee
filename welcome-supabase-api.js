@@ -154,7 +154,7 @@ async function createDefaultWelcomeSettings(guildId) {
         imageRotation: {
             enabled: false,
             mode: 'random',
-            folder: null
+            folders: []
         },
         fields: [
             {
@@ -567,8 +567,8 @@ function getFolderEmoji(folderName) {
 // WELCOME EMBED FUNKTIONEN
 // ==============================================
 
-// Hole zufälliges Welcome-Bild aus Supabase
-async function getRandomWelcomeImage(specificFolder = null, guildId = process.env.GUILD_ID || '1203994020779532348') {
+// Hole zufälliges Welcome-Bild aus Supabase (unterstützt mehrere Ordner)
+async function getRandomWelcomeImage(specificFolders = null, guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Keine Bilder verfügbar!');
         return null;
@@ -578,19 +578,32 @@ async function getRandomWelcomeImage(specificFolder = null, guildId = process.en
         const { images } = await loadWelcomeImages(guildId);
         
         let availableImages = images;
-        if (specificFolder) {
-            availableImages = images.filter(img => img.folder === specificFolder);
+        
+        // Multi-Folder Support
+        if (specificFolders) {
+            // Backward compatibility: String zu Array konvertieren
+            const foldersArray = Array.isArray(specificFolders) ? specificFolders : [specificFolders];
+            
+            if (foldersArray.length > 0) {
+                availableImages = images.filter(img => foldersArray.includes(img.folder));
+                console.log(`🎯 Filtere Bilder aus Ordnern: ${foldersArray.join(', ')}`);
+            }
         }
 
         if (availableImages.length === 0) {
-            console.log(`⚠️ Keine Bilder gefunden${specificFolder ? ` in Ordner: ${specificFolder}` : ''}`);
+            const folderInfo = specificFolders 
+                ? Array.isArray(specificFolders) 
+                    ? ` in Ordnern: ${specificFolders.join(', ')}` 
+                    : ` in Ordner: ${specificFolders}`
+                : '';
+            console.log(`⚠️ Keine Bilder gefunden${folderInfo}`);
             return null;
         }
 
         const randomIndex = Math.floor(Math.random() * availableImages.length);
         const randomImage = availableImages[randomIndex];
         
-        console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${randomImage.folder}/${randomImage.filename}`);
+        console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${randomImage.folder}/${randomImage.filename} (aus ${availableImages.length} verfügbaren)`);
         return randomImage.url;
 
     } catch (error) {
@@ -628,10 +641,18 @@ async function createWelcomeEmbed(guild, member, settings) {
 
         // Bild setzen (nur custom mit Supabase)
         if (settings.imageRotation && settings.imageRotation.enabled) {
-            const randomImageUrl = await getRandomWelcomeImage(settings.imageRotation.folder, guild.id);
+            // Multi-Folder Support: Verwende folders Array oder fallback zu folder (Backward compatibility)
+            const selectedFolders = settings.imageRotation.folders && settings.imageRotation.folders.length > 0 
+                ? settings.imageRotation.folders 
+                : settings.imageRotation.folder 
+                    ? [settings.imageRotation.folder] 
+                    : null;
+                    
+            const randomImageUrl = await getRandomWelcomeImage(selectedFolders, guild.id);
             if (randomImageUrl) {
                 embed.setImage(randomImageUrl);
-                console.log(`🎲 Zufälliges Welcome-Bild verwendet: ${randomImageUrl}`);
+                const folderInfo = selectedFolders ? ` aus ${selectedFolders.join(', ')}` : ' aus allen Ordnern';
+                console.log(`🎲 Zufälliges Welcome-Bild verwendet${folderInfo}: ${randomImageUrl}`);
             }
         } else if (settings.customThumbnail) {
             embed.setImage(settings.customThumbnail);
