@@ -2450,6 +2450,55 @@ app.get('/api/welcome', async (req, res) => {
     }
 });
 
+// DEBUG API: RAW Supabase Data direkt abfragen
+app.get('/api/welcome/debug-raw', async (req, res) => {
+    try {
+        console.log('🔍 DEBUG API: RAW Supabase Data abgefragt');
+        
+        if (!supabase) {
+            return res.json({ 
+                error: 'Supabase nicht initialisiert',
+                fallback: 'JSON-File wird verwendet',
+                jsonData: fs.existsSync('./welcome.json') ? JSON.parse(fs.readFileSync('./welcome.json', 'utf8')) : null
+            });
+        }
+        
+        // Direkte Supabase-Abfrage
+        const { data: settings, error } = await supabase
+            .from('welcome_settings')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+        if (error) {
+            console.error('🔍 DEBUG: Supabase Error:', error);
+            return res.json({ 
+                error: 'Supabase Error', 
+                details: error,
+                fallback: 'JSON-File wird verwendet',
+                jsonData: fs.existsSync('./welcome.json') ? JSON.parse(fs.readFileSync('./welcome.json', 'utf8')) : null
+            });
+        }
+        
+        console.log('🔍 DEBUG: RAW Supabase Data:', JSON.stringify(settings, null, 2));
+        
+        res.json({
+            success: true,
+            supabaseRawData: settings,
+            configData: settings?.config,
+            imageRotationInConfig: settings?.config?.imageRotation,
+            folderInImageRotation: settings?.config?.imageRotation?.folder,
+            hasFolder: settings?.config?.imageRotation?.hasOwnProperty('folder'),
+            typeofFolder: typeof settings?.config?.imageRotation?.folder
+        });
+        
+    } catch (error) {
+        console.error('🔍 DEBUG API Error:', error);
+        res.status(500).json({ error: 'Debug API Error', details: error.message });
+    }
+});
+
 // Welcome Settings speichern
 app.post('/api/welcome', async (req, res) => {
     try {
