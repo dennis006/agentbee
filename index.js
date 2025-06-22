@@ -1634,34 +1634,34 @@ async function loadWelcomeSettingsFromSupabase() {
             console.log('📄 Keine Welcome Settings in Supabase gefunden, Standard-Einstellungen werden automatisch erstellt');
             // Fallback für den Fall dass die Migration noch nicht ausgeführt wurde
             const defaultSettings = {
-                enabled: true,
-                channelName: 'willkommen',
-                title: '🎉 Willkommen auf dem Server!',
-                description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-                color: '0x00FF7F',
-                thumbnail: 'user',
-                customThumbnail: '',
+    enabled: true,
+    channelName: 'willkommen',
+    title: '🎉 Willkommen auf dem Server!',
+    description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
+    color: '0x00FF7F',
+    thumbnail: 'user',
+    customThumbnail: '',
                 imageRotation: { enabled: false, mode: 'random' },
-                fields: [
+    fields: [
                     { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
                     { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
                     { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
-                ],
-                footer: 'Mitglied #{memberCount} • {server}',
-                autoRole: '',
-                mentionUser: true,
-                deleteAfter: 0,
+    ],
+    footer: 'Mitglied #{memberCount} • {server}',
+    autoRole: '',
+    mentionUser: true,
+    deleteAfter: 0,
                 dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
-                leaveMessage: {
-                    enabled: false,
-                    channelName: 'verlassen',
-                    title: '👋 Tschüss!',
-                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-                    color: '0xFF6B6B',
-                    mentionUser: false,
-                    deleteAfter: 0
-                }
-            };
+    leaveMessage: {
+        enabled: false,
+        channelName: 'verlassen',
+        title: '👋 Tschüss!',
+        description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+        color: '0xFF6B6B',
+        mentionUser: false,
+        deleteAfter: 0
+    }
+};
             return defaultSettings;
         }
         
@@ -2241,8 +2241,8 @@ app.post('/api/welcome', async (req, res) => {
     try {
         const success = await saveWelcomeSettingsToSupabase(req.body);
         if (success) {
-            console.log('✅ Welcome-Einstellungen aktualisiert');
-            res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
+        console.log('✅ Welcome-Einstellungen aktualisiert');
+        res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
         } else {
             res.status(500).json({ error: 'Fehler beim Speichern der Welcome-Einstellungen' });
         }
@@ -2462,7 +2462,7 @@ app.get('/api/welcome/images/test/:folder/:filename', (req, res) => {
         
         if (fs.existsSync(imagePath)) {
             const stats = fs.statSync(imagePath);
-            res.json({
+        res.json({ 
                 exists: true,
                 path: imagePath,
                 size: stats.size,
@@ -2504,8 +2504,8 @@ app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
         // Lösche auch aus Supabase
         await deleteWelcomeImageFromSupabase(filename, folder);
         
-        console.log(`🗑️ Willkommensbild gelöscht: ${folder}/${filename}`);
-        res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
+            console.log(`🗑️ Willkommensbild gelöscht: ${folder}/${filename}`);
+            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
         
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Bildes:', error);
@@ -2532,8 +2532,8 @@ app.delete('/api/welcome/images/:filename', async (req, res) => {
         // Lösche auch aus Supabase (general folder für legacy files)
         await deleteWelcomeImageFromSupabase(filename, 'general');
         
-        console.log(`🗑️ Willkommensbild gelöscht: ${filename}`);
-        res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
+            console.log(`🗑️ Willkommensbild gelöscht: ${filename}`);
+            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
         
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Bildes:', error);
