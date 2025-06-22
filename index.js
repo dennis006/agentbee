@@ -2001,6 +2001,7 @@ function loadWelcomeSettingsFromJSON() {
 
 // Speichere Welcome Settings in Supabase
 async function saveWelcomeSettingsToSupabase(settings) {
+    console.log('🚀 ENTERING saveWelcomeSettingsToSupabase...');
     try {
         console.log('📥 BACKEND saveWelcomeSettingsToSupabase - Input:', JSON.stringify(settings, null, 2));
         console.log('🔍 BACKEND ImageRotation beim Speichern:', {
@@ -2011,10 +2012,14 @@ async function saveWelcomeSettingsToSupabase(settings) {
             'hasOwnProperty folder': settings.imageRotation?.hasOwnProperty('folder')
         });
         
+        console.log('🔍 Checking supabase variable:', { supabase: !!supabase, type: typeof supabase });
+        
         if (!supabase) {
             console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback');
             return saveWelcomeSettingsToJSON(settings);
         }
+        
+        console.log('✅ Supabase OK - proceeding to database operations...');
         
         console.log('💾 Speichere Welcome Settings in Supabase...');
         
