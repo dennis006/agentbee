@@ -595,52 +595,96 @@ const VerifyPage = () => {
                       <span className="text-neon-purple font-medium cyber-text-glow">Valorant Agenten: </span>
                       <span className="text-dark-text">{formData.agents.join(', ')}</span>
                     </div>
-                    
-                    {/* Zeige die Rollen an, die basierend auf Agenten vergeben werden */}
-                    {(() => {
-                      const assignedRoles = new Set<string>();
-                      formData.agents.forEach(agentName => {
-                        Object.entries(valorantAgentRoles).forEach(([roleName, roleData]) => {
-                          if (roleData.agents.some(agent => agent.name === agentName)) {
-                            assignedRoles.add(roleName);
-                          }
-                        });
-                      });
-                      
-                      if (assignedRoles.size > 0) {
-                        return (
-                          <div>
-                            <span className="text-neon-purple font-medium cyber-text-glow">Erhaltene Rollen: </span>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/50 animate-fade-in-scale hover:scale-110 transition-transform duration-300 cyber-tag">
-                                Valorant
-                              </span>
-                              {Array.from(assignedRoles).map((role, index) => {
-                                const roleData = valorantAgentRoles[role as keyof typeof valorantAgentRoles];
-                                return (
-                                  <span 
-                                    key={role}
-                                    className={cn(
-                                      "px-2 py-1 text-xs rounded-full border animate-fade-in-scale hover:scale-110 transition-transform duration-300 cyber-tag",
-                                      role === 'Duelist' && "bg-red-500/20 text-red-400 border-red-500/50",
-                                      role === 'Sentinel' && "bg-green-500/20 text-green-400 border-green-500/50",
-                                      role === 'Initiator' && "bg-purple-500/20 text-purple-400 border-purple-500/50",
-                                      role === 'Controller' && "bg-blue-500/20 text-blue-400 border-blue-500/50"
-                                    )}
-                                    style={{ animationDelay: `${index * 0.1}s` }}
-                                  >
-                                    <span className="emoji-glow">{roleData.emoji}</span> {role}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
                   </div>
                 )}
+
+                {/* Zeige alle erhaltenen Rollen an */}
+                {(() => {
+                  const allRoles = new Set<string>();
+                  
+                  // Basis-Rollen aus Verification Config
+                  if (verificationConfig?.defaultRoles) {
+                    verificationConfig.defaultRoles.forEach((role: string) => allRoles.add(role));
+                  }
+                  
+                  // Game-Rollen hinzufügen
+                  formData.games.forEach(gameId => {
+                    const game = gameOptions.find(g => g.id === gameId);
+                    if (game?.role && game.role.trim()) {
+                      allRoles.add(game.role);
+                    }
+                  });
+                  
+                  // Plattform-Rolle hinzufügen
+                  const platform = platformOptions.find(p => p.id === formData.platform);
+                  if (platform?.role && platform.role.trim()) {
+                    allRoles.add(platform.role);
+                  }
+                  
+                  // Valorant-Rollen basierend auf Agenten
+                  if (formData.agents.length > 0) {
+                    allRoles.add('Valorant');
+                    
+                    formData.agents.forEach(agentName => {
+                      Object.entries(valorantAgentRoles).forEach(([roleName, roleData]) => {
+                        if (roleData.agents.some(agent => agent.name === agentName)) {
+                          allRoles.add(roleName);
+                        }
+                      });
+                    });
+                  }
+                  
+                  if (allRoles.size > 0) {
+                    return (
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-neon-purple font-medium cyber-text-glow">Erhaltene Rollen: </span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {Array.from(allRoles).map((role, index) => {
+                              // Bestimme Farbe basierend auf Rolle
+                              let colorClass = "bg-blue-500/20 text-blue-400 border-blue-500/50";
+                              
+                              if (role === 'Valorant') colorClass = "bg-red-500/20 text-red-400 border-red-500/50";
+                              else if (role === 'Duelist') colorClass = "bg-red-500/20 text-red-400 border-red-500/50";
+                              else if (role === 'Sentinel') colorClass = "bg-green-500/20 text-green-400 border-green-500/50";
+                              else if (role === 'Initiator') colorClass = "bg-purple-500/20 text-purple-400 border-purple-500/50";
+                              else if (role === 'Controller') colorClass = "bg-blue-500/20 text-blue-400 border-blue-500/50";
+                              else if (verificationConfig?.defaultRoles?.includes(role)) colorClass = "bg-green-500/20 text-green-400 border-green-500/50";
+                              else if (gameOptions.some(g => g.role === role)) colorClass = "bg-orange-500/20 text-orange-400 border-orange-500/50";
+                              else if (platformOptions.some(p => p.role === role)) colorClass = "bg-cyan-500/20 text-cyan-400 border-cyan-500/50";
+                              
+                              // Finde passendes Emoji
+                              let emoji = '🎮';
+                              if (role === 'Valorant') emoji = '🎯';
+                              else if (valorantAgentRoles[role as keyof typeof valorantAgentRoles]) {
+                                emoji = valorantAgentRoles[role as keyof typeof valorantAgentRoles].emoji;
+                              } else {
+                                const game = gameOptions.find(g => g.role === role);
+                                const platform = platformOptions.find(p => p.role === role);
+                                if (game) emoji = game.emoji;
+                                else if (platform) emoji = platform.emoji;
+                              }
+                              
+                              return (
+                                <span 
+                                  key={role}
+                                  className={cn(
+                                    "px-2 py-1 text-xs rounded-full border animate-fade-in-scale hover:scale-110 transition-transform duration-300 cyber-tag",
+                                    colorClass
+                                  )}
+                                  style={{ animationDelay: `${index * 0.1}s` }}
+                                >
+                                  <span className="emoji-glow">{emoji}</span> {role}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Rules Acceptance */}
