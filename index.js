@@ -8638,10 +8638,10 @@ app.post('/api/valorant/agents', async (req, res) => {
         
         const { name, uuid, display_name, role_type, role_color, role_config } = req.body;
         
-        if (!name || !uuid || !role_type) {
+        if (!name || !role_type) {
             return res.status(400).json({ 
                 success: false, 
-                error: 'Name, UUID und Role-Type sind erforderlich' 
+                error: 'Name und Role-Type sind erforderlich' 
             });
         }
         
@@ -8649,7 +8649,7 @@ app.post('/api/valorant/agents', async (req, res) => {
             .from('valorant_agents')
             .insert({
                 name,
-                uuid,
+                uuid: uuid || null,
                 display_name: display_name || name,
                 role_type,
                 role_color: role_color || '#FF4655',
