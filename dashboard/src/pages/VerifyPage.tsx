@@ -52,14 +52,7 @@ const VerifyPage = () => {
     rulesAccepted: false,
   });
 
-  const [gameOptions, setGameOptions] = useState([
-    { id: 'valorant', label: 'Valorant', emoji: '🎯' },
-    { id: 'lol', label: 'League of Legends', emoji: '⚔️' },
-    { id: 'minecraft', label: 'Minecraft', emoji: '🧱' },
-    { id: 'fortnite', label: 'Fortnite', emoji: '🪂' },
-    { id: 'cs2', label: 'Counter-Strike 2', emoji: '💥' },
-    { id: 'apex', label: 'Apex Legends', emoji: '🚀' },
-  ]);
+  const [gameOptions, setGameOptions] = useState<{ id: string; label: string; emoji: string; role?: string }[]>([]);
 
   // 🎯 Valorant Agenten nach Rollen kategorisiert mit Icons
   const valorantAgentRoles = {
@@ -119,15 +112,10 @@ const VerifyPage = () => {
   // Legacy Support - alle Agenten in einem Array (nur Namen)
   const valorantAgents = Object.values(valorantAgentRoles).flatMap(role => role.agents.map(agent => agent.name));
 
-  const [platformOptions, setPlatformOptions] = useState([
-    { id: 'pc', label: 'PC (Windows/Mac/Linux)', emoji: '💻' },
-    { id: 'ps5', label: 'PlayStation 5', emoji: '🎮' },
-    { id: 'xbox', label: 'Xbox Series X/S', emoji: '🎮' },
-    { id: 'switch', label: 'Nintendo Switch', emoji: '🎮' },
-    { id: 'mobile', label: 'Mobile (iOS/Android)', emoji: '📱' },
-  ]);
+  const [platformOptions, setPlatformOptions] = useState<{ id: string; label: string; emoji: string; role?: string }[]>([]);
 
   const [verificationConfig, setVerificationConfig] = useState<any>(null);
+  const [configLoading, setConfigLoading] = useState(true);
 
   const steps = [
     { title: 'Discord Login', icon: Users, description: 'Authentifizierung mit Discord' },
@@ -145,27 +133,36 @@ const VerifyPage = () => {
 
   // Lade Verification-Konfiguration
   const loadVerificationConfig = async () => {
+    setConfigLoading(true);
     try {
       const response = await fetch('/api/verification/config');
       
       if (response.ok) {
         const config = await response.json();
         
+        console.log('📋 Verification Config geladen:', config);
+        
         // Aktualisiere gameOptions mit Backend-Daten
         if (config.allowedGames && Array.isArray(config.allowedGames)) {
+          console.log('🎮 Spiele geladen:', config.allowedGames);
           setGameOptions(config.allowedGames);
         }
         
         // Aktualisiere platformOptions mit Backend-Daten
         if (config.allowedPlatforms && Array.isArray(config.allowedPlatforms)) {
+          console.log('💻 Plattformen geladen:', config.allowedPlatforms);
           setPlatformOptions(config.allowedPlatforms);
         }
 
         // Speichere die komplette Config für Bot-Updates
         setVerificationConfig(config);
+      } else {
+        console.error('❌ Fehler beim Laden der Verification Config:', response.status);
       }
     } catch (error) {
-      // Config loading error handled silently
+      console.error('❌ Netzwerkfehler beim Laden der Config:', error);
+    } finally {
+      setConfigLoading(false);
     }
   };
 
@@ -650,8 +647,8 @@ const VerifyPage = () => {
                               else if (role === 'Initiator') colorClass = "bg-purple-500/20 text-purple-400 border-purple-500/50";
                               else if (role === 'Controller') colorClass = "bg-blue-500/20 text-blue-400 border-blue-500/50";
                               else if (verificationConfig?.defaultRoles?.includes(role)) colorClass = "bg-green-500/20 text-green-400 border-green-500/50";
-                              else if (gameOptions.some(g => g.role === role)) colorClass = "bg-orange-500/20 text-orange-400 border-orange-500/50";
-                              else if (platformOptions.some(p => p.role === role)) colorClass = "bg-cyan-500/20 text-cyan-400 border-cyan-500/50";
+                              else if (gameOptions.some(g => (g as any).role === role)) colorClass = "bg-orange-500/20 text-orange-400 border-orange-500/50";
+                              else if (platformOptions.some(p => (p as any).role === role)) colorClass = "bg-cyan-500/20 text-cyan-400 border-cyan-500/50";
                               
                               // Finde passendes Emoji
                               let emoji = '🎮';
@@ -659,8 +656,8 @@ const VerifyPage = () => {
                               else if (valorantAgentRoles[role as keyof typeof valorantAgentRoles]) {
                                 emoji = valorantAgentRoles[role as keyof typeof valorantAgentRoles].emoji;
                               } else {
-                                const game = gameOptions.find(g => g.role === role);
-                                const platform = platformOptions.find(p => p.role === role);
+                                const game = gameOptions.find(g => (g as any).role === role);
+                                const platform = platformOptions.find(p => (p as any).role === role);
                                 if (game) emoji = game.emoji;
                                 else if (platform) emoji = platform.emoji;
                               }
@@ -805,7 +802,7 @@ const VerifyPage = () => {
     );
   };
 
-  if (loading) {
+  if (loading || configLoading) {
     return (
       <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
         <div className="text-center">
@@ -814,8 +811,12 @@ const VerifyPage = () => {
             <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-purple-secondary rounded-full animate-spin mx-auto animate-reverse"></div>
             <div className="absolute inset-2 w-12 h-12 border-2 border-transparent border-t-neon-purple rounded-full animate-spin mx-auto" style={{animationDuration: '0.8s'}}></div>
           </div>
-          <p className="text-dark-text animate-pulse">Discord-Authentifizierung läuft...</p>
-          <p className="text-dark-muted text-sm mt-2 animate-fade-in-out">Überprüfe Discord-Login und Berechtigung</p>
+          <p className="text-dark-text animate-pulse">
+            {loading ? 'Discord-Authentifizierung läuft...' : 'Lade Verification-Konfiguration...'}
+          </p>
+          <p className="text-dark-muted text-sm mt-2 animate-fade-in-out">
+            {loading ? 'Überprüfe Discord-Login und Berechtigung' : 'Lade Spiele und Plattformen aus der Datenbank'}
+          </p>
         </div>
       </div>
     );
