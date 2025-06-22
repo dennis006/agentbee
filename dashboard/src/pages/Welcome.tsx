@@ -89,8 +89,6 @@ const Welcome = () => {
   const [galleryCollapsed, setGalleryCollapsed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-
-  
   const [welcomeSettings, setWelcomeSettings] = useState<WelcomeSettings>({
     enabled: true,
     channelName: 'willkommen',
@@ -193,28 +191,22 @@ const Welcome = () => {
             'keys': Object.keys(data)
           });
           
-          // ✅ FIXED: Nur Default-Werte setzen wenn imageRotation NICHT existiert
+          // Sicherstellen dass imageRotation existiert (neues Feature)
           if (!data.imageRotation) {
-            console.log('🔧 Erstelle neue imageRotation (war nicht vorhanden)');
             data.imageRotation = {
               enabled: false,
               mode: 'random',
-              folder: undefined
+              folder: undefined  // Explizit setzen für korrekte TypeScript-Struktur
             };
-          } else {
-            console.log('✅ imageRotation vorhanden - behalte alle Werte:', data.imageRotation);
-            // Nur folder property hinzufügen wenn es komplett fehlt UND es kein string ist
-            if (!data.imageRotation.hasOwnProperty('folder')) {
-              console.log('🔧 Füge fehlende folder property hinzu');
-              data.imageRotation.folder = undefined;
-            } else {
-              console.log('✅ folder property bereits vorhanden:', data.imageRotation.folder);
-            }
+          }
+          
+          // Sicherstellen dass folder property existiert falls imageRotation vorhanden ist
+          if (data.imageRotation && !data.imageRotation.hasOwnProperty('folder')) {
+            data.imageRotation.folder = undefined;
           }
 
-          // ✅ FIXED: Nur Default-Werte setzen wenn leaveMessage NICHT existiert
+          // Sicherstellen dass leaveMessage existiert (neues Feature)
           if (!data.leaveMessage) {
-            console.log('🔧 Erstelle neue leaveMessage (war nicht vorhanden)');
             data.leaveMessage = {
               enabled: false,
               channelName: 'verlassen',
@@ -238,7 +230,7 @@ const Welcome = () => {
               ...data,
               imageRotation: {
                 ...prevSettings.imageRotation,
-                ...data.imageRotation  // ✅ Überschreibt nur die Properties die in data.imageRotation vorhanden sind
+                ...data.imageRotation
               },
               leaveMessage: {
                 ...prevSettings.leaveMessage,
@@ -740,8 +732,6 @@ const Welcome = () => {
       'hasOwnProperty folder': welcomeSettings.imageRotation?.hasOwnProperty('folder')
     });
   }, [welcomeSettings.imageRotation?.folder]);
-
-
 
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
@@ -1290,10 +1280,10 @@ const Welcome = () => {
                         type="checkbox"
                         id="imageRotation"
                         checked={welcomeSettings.imageRotation?.enabled || false}
-                        onChange={(e) => setWelcomeSettings({
+                        onChange={(e) =>                           setWelcomeSettings({
                             ...welcomeSettings, 
                             imageRotation: {
-                              ...welcomeSettings.imageRotation,
+                              ...welcomeSettings.imageRotation,  // ✅ Preserve ALL existing values
                               enabled: e.target.checked,
                               mode: welcomeSettings.imageRotation?.mode || 'random'
                             }

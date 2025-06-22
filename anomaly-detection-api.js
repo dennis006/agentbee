@@ -437,47 +437,6 @@ class AnomalyDetectionAPI {
         }
     }
 
-    checkMassLeaves(guildId, member) {
-        const key = `mass_leaves_${guildId}`;
-        const now = Date.now();
-        const timeWindow = this.thresholds.massLeaves.timeWindow;
-
-        if (!this.patterns.has(key)) {
-            this.patterns.set(key, []);
-        }
-
-        const leaves = this.patterns.get(key);
-        leaves.push({
-            userId: member.user.id,
-            username: member.user.username,
-            timestamp: now
-        });
-
-        // Clean old entries
-        this.patterns.set(key, leaves.filter(leave => now - leave.timestamp < timeWindow));
-
-        const recentLeaves = this.patterns.get(key);
-        if (recentLeaves.length >= this.thresholds.massLeaves.count) {
-            this.createAlert({
-                type: 'mass_leaves',
-                guildId: guildId,
-                severity: recentLeaves.length > this.thresholds.massLeaves.count * 1.5 ? 'high' : 'medium',
-                title: '⚠️ Ungewöhnlich viele Austritte',
-                description: `${recentLeaves.length} Mitglieder haben den Server in den letzten ${Math.round(timeWindow/60000)} Minuten verlassen`,
-                details: {
-                    leaveCount: recentLeaves.length,
-                    timeWindow: timeWindow,
-                    users: recentLeaves.map(l => ({
-                        id: l.userId,
-                        username: l.username,
-                        timestamp: l.timestamp
-                    }))
-                },
-                timestamp: now
-            });
-        }
-    }
-
     calculateRapidJoinSuspicion(joins) {
         let score = 0;
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
