@@ -140,6 +140,14 @@ const Welcome = () => {
   // API-Funktionen
   const saveWelcomeSettings = async () => {
     try {
+      console.log('💾 SPEICHERE Settings - RAW DATA:', JSON.stringify(welcomeSettings, null, 2));
+      console.log('🔍 ImageRotation vor Speichern:', {
+        enabled: welcomeSettings.imageRotation?.enabled,
+        mode: welcomeSettings.imageRotation?.mode,
+        folder: welcomeSettings.imageRotation?.folder,
+        'typeof folder': typeof welcomeSettings.imageRotation?.folder
+      });
+      
       const response = await fetch('/api/welcome', {
         method: 'POST',
         headers: {
@@ -151,7 +159,7 @@ const Welcome = () => {
       if (response.ok) {
         const result = await response.json();
         showSuccess('Einstellungen gespeichert', '🎉 Willkommensnachrichten-Einstellungen gespeichert!');
-        console.log('Einstellungen gespeichert:', result);
+        console.log('✅ Einstellungen gespeichert - Server Response:', result);
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
         console.error('API Error:', response.status, errorData);

@@ -2427,10 +2427,19 @@ app.get('/api/welcome', async (req, res) => {
 // Welcome Settings speichern
 app.post('/api/welcome', async (req, res) => {
     try {
+        console.log('📥 POST /api/welcome - Empfangene Daten:', JSON.stringify(req.body, null, 2));
+        console.log('🔍 ImageRotation empfangen:', {
+            enabled: req.body.imageRotation?.enabled,
+            mode: req.body.imageRotation?.mode,
+            folder: req.body.imageRotation?.folder,
+            'typeof folder': typeof req.body.imageRotation?.folder,
+            'hasOwnProperty folder': req.body.imageRotation?.hasOwnProperty('folder')
+        });
+        
         const success = await saveWelcomeSettingsToSupabase(req.body);
         if (success) {
-        console.log('✅ Welcome-Einstellungen aktualisiert');
-        res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
+            console.log('✅ Welcome-Einstellungen aktualisiert');
+            res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
         } else {
             res.status(500).json({ error: 'Fehler beim Speichern der Welcome-Einstellungen' });
         }
