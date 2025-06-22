@@ -643,30 +643,22 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Server Count */}
+        {/* Server Count - Nur Anzeige */}
         <Card 
-          className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-neon hover:shadow-neon-strong transition-all duration-300 animate-fade-in hover:scale-105 cursor-pointer group" 
+          className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-neon transition-all duration-300 animate-fade-in" 
           style={{animationDelay: '0.1s'}}
-          onClick={() => {
-            // Navigation innerhalb des Dashboard-Systems
-            const event = new CustomEvent('navigate-to-server-manager');
-            window.dispatchEvent(event);
-          }}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-dark-text group-hover:text-blue-400 transition-colors">Server</CardTitle>
-            <Users className="h-6 w-6 text-purple-accent group-hover:text-blue-400 transition-colors" />
+            <CardTitle className="text-sm font-medium text-dark-text">Server</CardTitle>
+            <Users className="h-6 w-6 text-purple-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-neon-purple group-hover:text-blue-400 transition-colors animate-pulse-slow">
+            <div className="text-3xl font-bold text-neon-purple animate-pulse-slow">
               {botStatus.guilds}
             </div>
-            <p className="text-xs text-dark-muted group-hover:text-blue-400/70 transition-colors">
+            <p className="text-xs text-dark-muted">
               🌐 Aktive Verbindungen
             </p>
-            <div className="mt-2 text-xs text-purple-accent/70 group-hover:text-blue-400 transition-colors">
-              👆 Klicken für Server Manager
-            </div>
           </CardContent>
         </Card>
 

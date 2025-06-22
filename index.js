@@ -20,14 +20,12 @@ const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
 const ServerStats = require('./server-stats-api');
 const settingsAPI = require('./settings-api');
-const AnomalyDetectionAPI = require('./anomaly-detection-api');
-const ServerHealthAPI = require('./server-health-api');
-const ServerManagerAnalyticsAPI = require('./server-manager-analytics-api');
+// GELÖSCHT: Analytics-APIs entfernt (verursachten Bot-Crashes)
 const BulkServerActionsAPI = require('./bulk-server-actions-api');
 const MassMemberManagementAPI = require('./mass-member-management-api');
 const AIOptimizationAPI = require('./ai-optimization-api');
-const { setupServerManagerAnalyticsRoutes } = require('./server-manager-analytics-routes');
-const { setupBulkServerManagementRoutes } = require('./bulk-server-management-routes');
+// GELÖSCHT: Server Manager Analytics Routes entfernt
+// GELÖSCHT: Bulk Server Management Routes entfernt
 const { setupAIOptimizationRoutes } = require('./ai-optimization-routes');
 const { setupRulesSupabaseRoutes } = require('./rules-supabase-api');
 const { setupModerationSupabaseRoutes } = require('./moderation-supabase-api');
@@ -7010,10 +7008,7 @@ app.use(ServerStats.router);
 app.set('discordClient', client); // Client für Routen verfügbar machen
 
 // Server Manager Analytics Routen registrieren (wird später mit dem Client verbunden)
-setupServerManagerAnalyticsRoutes(app, null);
-
-// Bulk Server Management Routen registrieren
-setupBulkServerManagementRoutes(app);
+// GELÖSCHT: Analytics und Bulk Management Routes entfernt (verursachten Crashes)
 
 // AI Optimization Routen registrieren
 setupAIOptimizationRoutes(app);

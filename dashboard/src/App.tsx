@@ -19,7 +19,7 @@ import TwitchNotifications from './pages/TwitchNotifications'
 import Valorant from './pages/Valorant'
 import APIKeys from './pages/APIKeys'
 import Security from './pages/Security'
-import ServerManager from './pages/ServerManager'
+// GELÖSCHT: ServerManager entfernt
 
 import BotIntroduction from './pages/BotIntroduction'
 import TicketSystem from './pages/TicketSystem'
@@ -82,7 +82,7 @@ const Navigation = ({
         { id: 'rules', icon: FileText, label: 'Rules', description: 'Server Rules Management' },
         { id: 'logs', icon: BarChart3, label: 'Statistiken', description: 'Stats & User Management' },
         { id: 'server-stats', icon: Activity, label: 'Server Stats', description: 'Live Server Statistics' },
-        { id: 'server-manager', icon: Server, label: 'Server Manager', description: 'Discord Server Management' },
+        // GELÖSCHT: Server Manager entfernt
         { id: 'verification', icon: Users, label: 'Verification', description: 'Verify Settings' }
       ]
     },
@@ -377,16 +377,10 @@ const DashboardLayout = () => {
       setActiveTab('security');
     };
 
-    const handleServerManagerNavigation = () => {
-      setActiveTab('server-manager');
-    };
-
     window.addEventListener('navigate-to-security', handleSecurityNavigation);
-    window.addEventListener('navigate-to-server-manager', handleServerManagerNavigation);
     
     return () => {
       window.removeEventListener('navigate-to-security', handleSecurityNavigation);
-      window.removeEventListener('navigate-to-server-manager', handleServerManagerNavigation);
     };
   }, []);
 
@@ -425,8 +419,7 @@ const DashboardLayout = () => {
         return <Security />
       case 'bot-introduction':
         return <BotIntroduction />
-      case 'server-manager':
-        return <ServerManager />
+      // GELÖSCHT: Server Manager Case entfernt
       default:
         return <Dashboard />
     }
