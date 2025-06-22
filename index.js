@@ -1090,7 +1090,10 @@ app.use(express.json({ limit: '10mb' })); // Größere Uploads erlauben
 // Multer für Datei-Uploads konfigurieren
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        const uploadPath = './dashboard/public/images/welcome/';
+        // Verwende den Ordner aus dem Request oder 'general' als Default
+        const folder = req.body.folder || 'general';
+        const uploadPath = `./dashboard/public/images/welcome/${folder}/`;
+        
         // Stelle sicher, dass der Ordner existiert
         if (!fs.existsSync(uploadPath)) {
             fs.mkdirSync(uploadPath, { recursive: true });
@@ -1122,6 +1125,23 @@ const upload = multer({
 
 // Statische Dateien servieren
 app.use('/images', express.static('./dashboard/public/images'));
+
+// Welcome Images Ordner-Struktur initialisieren
+function initializeWelcomeImagesFolders() {
+    const baseDir = './dashboard/public/images/welcome/';
+    const folders = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
+    
+    folders.forEach(folder => {
+        const folderPath = path.join(baseDir, folder);
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath, { recursive: true });
+            console.log(`📁 Welcome Images Ordner erstellt: ${folder}`);
+        }
+    });
+}
+
+// Initialisiere Welcome Images Ordner beim Server-Start
+initializeWelcomeImagesFolders();
 
 // Bot Status für API
 let currentBotStatus = {
@@ -2380,18 +2400,8 @@ app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) 
         }
 
         const folder = req.body.folder || 'general'; // Default-Ordner
-        const folderPath = `./dashboard/public/images/welcome/${folder}`;
         
-        // Erstelle Ordner falls er nicht existiert
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath, { recursive: true });
-        }
-
-        // Verschiebe Datei in den gewünschten Ordner
-        const oldPath = req.file.path;
-        const newPath = path.join(folderPath, req.file.filename);
-        fs.renameSync(oldPath, newPath);
-
+        // Datei ist bereits im richtigen Ordner durch multer storage config
         // Konstruiere die URL für das Frontend
         const imageUrl = `/images/welcome/${folder}/${req.file.filename}`;
         
@@ -2407,6 +2417,8 @@ app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) 
         await saveWelcomeImageToSupabase(imageData);
         
         console.log(`✅ Willkommensbild hochgeladen: ${folder}/${req.file.filename}`);
+        console.log(`📂 Gespeichert unter: ${req.file.path}`);
+        console.log(`🌐 URL: ${imageUrl}`);
         
         res.json({ 
             success: true, 
@@ -2428,10 +2440,46 @@ app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) 
 app.get('/api/welcome/images', async (req, res) => {
     try {
         const result = await loadWelcomeImagesFromSupabase();
+        console.log('📁 Welcome Images API Response:', {
+            foldersCount: Object.keys(result.folders || {}).length,
+            totalImages: result.images?.length || 0,
+            folders: Object.keys(result.folders || {})
+        });
         res.json(result);
     } catch (error) {
         console.error('❌ Fehler beim Laden der Bilder:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Bilder' });
+    }
+});
+
+// Debug Endpunkt: Test ob Bild-URLs erreichbar sind
+app.get('/api/welcome/images/test/:folder/:filename', (req, res) => {
+    try {
+        const { folder, filename } = req.params;
+        const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
+        
+        console.log(`🔍 Teste Bild-Pfad: ${imagePath}`);
+        
+        if (fs.existsSync(imagePath)) {
+            const stats = fs.statSync(imagePath);
+            res.json({
+                exists: true,
+                path: imagePath,
+                size: stats.size,
+                url: `/images/welcome/${folder}/${filename}`,
+                created: stats.birthtime,
+                modified: stats.mtime
+            });
+        } else {
+            res.status(404).json({
+                exists: false,
+                path: imagePath,
+                error: 'Datei nicht gefunden'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Testen der Bild-URL:', error);
+        res.status(500).json({ error: 'Fehler beim Testen der Bild-URL' });
     }
 });
 
