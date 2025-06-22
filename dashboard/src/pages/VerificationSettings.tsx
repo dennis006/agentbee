@@ -190,12 +190,24 @@ const VerificationSettings = () => {
   const [saved, setSaved] = useState(false);
   const [creatingRoles, setCreatingRoles] = useState(false);
   const [postingVerification, setPostingVerification] = useState(false);
-  const [activeTab, setActiveTab] = useState<'settings' | 'statistics' | 'users'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'statistics' | 'users' | 'valorant'>('settings');
   
   // 🎯 Valorant Agents States
   const [valorantAgents, setValorantAgents] = useState<ValorantAgent[]>([]);
   const [valorantAgentRoles, setValorantAgentRoles] = useState<ValorantAgentRole[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
+  
+  // 🎯 Agent Management States
+  const [showAddAgentModal, setShowAddAgentModal] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<ValorantAgent | null>(null);
+  const [newAgent, setNewAgent] = useState({
+    name: '',
+    display_name: '',
+    uuid: '',
+    role_type: 'Duelist',
+    enabled: true,
+    sort_order: 0
+  });
   const [deleting, setDeleting] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<VerifiedUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -356,6 +368,101 @@ const VerificationSettings = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 🎯 Valorant Agent Management Functions
+  const saveAgent = async () => {
+    try {
+      const agentData = {
+        ...newAgent,
+        sort_order: newAgent.sort_order || valorantAgents.length + 1
+      };
+
+      const url = editingAgent ? `/api/valorant/agents/${editingAgent.id}` : '/api/valorant/agents';
+      const method = editingAgent ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agentData)
+      });
+
+      if (response.ok) {
+        success(editingAgent ? '✅ Agent erfolgreich aktualisiert!' : '✅ Agent erfolgreich hinzugefügt!');
+        setShowAddAgentModal(false);
+        setEditingAgent(null);
+        setNewAgent({
+          name: '',
+          display_name: '',
+          uuid: '',
+          role_type: 'Duelist',
+          enabled: true,
+          sort_order: 0
+        });
+        // Lade Agenten neu
+        loadValorantAgents();
+      } else {
+        const errorData = await response.json();
+        error(`❌ Fehler: ${errorData.error || 'Unbekannter Fehler'}`);
+      }
+    } catch (err) {
+      error('❌ Netzwerkfehler beim Speichern des Agenten');
+    }
+  };
+
+  const deleteAgent = async (agent: ValorantAgent) => {
+    if (!confirm(`Möchtest du den Agenten "${agent.display_name}" wirklich löschen?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/valorant/agents/${agent.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        success('✅ Agent erfolgreich gelöscht!');
+        loadValorantAgents();
+      } else {
+        const errorData = await response.json();
+        error(`❌ Fehler: ${errorData.error || 'Unbekannter Fehler'}`);
+      }
+    } catch (err) {
+      error('❌ Netzwerkfehler beim Löschen des Agenten');
+    }
+  };
+
+  const toggleAgentEnabled = async (agent: ValorantAgent) => {
+    try {
+      const response = await fetch(`/api/valorant/agents/${agent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...agent, enabled: !agent.enabled })
+      });
+
+      if (response.ok) {
+        success(`✅ Agent ${!agent.enabled ? 'aktiviert' : 'deaktiviert'}!`);
+        loadValorantAgents();
+      } else {
+        const errorData = await response.json();
+        error(`❌ Fehler: ${errorData.error || 'Unbekannter Fehler'}`);
+      }
+    } catch (err) {
+      error('❌ Netzwerkfehler beim Aktualisieren des Agenten');
+    }
+  };
+
+  const openEditAgent = (agent: ValorantAgent) => {
+    setEditingAgent(agent);
+    setNewAgent({
+      name: agent.name,
+      display_name: agent.display_name,
+      uuid: agent.uuid,
+      role_type: agent.role_type,
+      enabled: agent.enabled,
+      sort_order: agent.sort_order
+    });
+    setShowAddAgentModal(true);
   };
 
   // Game Management
@@ -679,12 +786,13 @@ const VerificationSettings = () => {
           { id: 'settings', label: 'Einstellungen', icon: Settings },
           { id: 'statistics', label: 'Statistiken', icon: BarChart3 },
           { id: 'users', label: `Verifizierte User (${usersData.totalCount})`, icon: Users },
+          { id: 'valorant', label: `🎯 Valorant Agenten (${valorantAgents.length})`, icon: Shield },
         ].map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'settings' | 'statistics' | 'users')}
+              onClick={() => setActiveTab(tab.id as 'settings' | 'statistics' | 'users' | 'valorant')}
               className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all duration-300 font-medium ${
                 activeTab === tab.id
                   ? 'bg-purple-primary text-white shadow-neon animate-glow'
@@ -1994,6 +2102,327 @@ const VerificationSettings = () => {
               </Card>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Valorant Agenten Management */}
+      {activeTab === 'valorant' && (
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-neon mb-4">
+              🎯 Valorant Agenten Verwaltung
+            </h2>
+            <p className="text-dark-text max-w-2xl mx-auto">
+              Verwalte alle Valorant Agenten und ihre Rollen-Kategorien. Änderungen werden sofort im Verification-System übernommen.
+            </p>
+          </div>
+
+          {/* Loading State */}
+          {loadingAgents ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-primary mb-4"></div>
+              <p className="text-dark-muted">Lade Valorant Agenten...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              {/* Agent Rollen */}
+              <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                    🛡️ Agent Rollen
+                  </CardTitle>
+                  <CardDescription className="text-dark-muted">
+                    Rolle-Kategorien (Duelist, Sentinel, etc.)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {valorantAgentRoles.map((role) => (
+                      <div 
+                        key={role.id}
+                        className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg border border-purple-primary/20"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: role.color }}
+                          />
+                          <div>
+                            <div className="font-medium text-dark-text">{role.display_name}</div>
+                            <div className="text-sm text-dark-muted">
+                              {valorantAgents.filter(a => a.role_type === role.role_name && a.enabled).length} Agenten
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs ${
+                            role.enabled 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {role.enabled ? 'Aktiv' : 'Deaktiviert'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+                             {/* Agenten Liste */}
+               <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+                 <CardHeader>
+                   <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                     👥 Alle Agenten ({valorantAgents.length})
+                     <Button
+                       onClick={() => setShowAddAgentModal(true)}
+                       className="ml-auto bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 h-8"
+                     >
+                       + Neuer Agent
+                     </Button>
+                   </CardTitle>
+                   <CardDescription className="text-dark-muted">
+                     Verwaltung der individuellen Agenten
+                   </CardDescription>
+                 </CardHeader>
+                <CardContent>
+                  <div className="max-h-96 overflow-y-auto space-y-2">
+                    {valorantAgents
+                      .sort((a, b) => a.sort_order - b.sort_order)
+                      .map((agent) => (
+                        <div 
+                          key={agent.id}
+                          className="flex items-center justify-between p-3 bg-dark-bg/30 rounded-lg border border-purple-primary/10 hover:border-purple-primary/30 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex flex-col">
+                              <div className="font-medium text-dark-text">{agent.display_name}</div>
+                              <div className="text-sm text-dark-muted flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded text-xs ${
+                                  agent.role_type === 'Duelist' ? 'bg-red-500/20 text-red-400' :
+                                  agent.role_type === 'Sentinel' ? 'bg-green-500/20 text-green-400' :
+                                  agent.role_type === 'Initiator' ? 'bg-purple-500/20 text-purple-400' :
+                                  'bg-blue-500/20 text-blue-400'
+                                }`}>
+                                  {agent.role_type}
+                                </span>
+                                <span>#{agent.sort_order}</span>
+                              </div>
+                            </div>
+                          </div>
+                                                     <div className="flex items-center gap-2">
+                             <button
+                               onClick={() => toggleAgentEnabled(agent)}
+                               className={`px-2 py-1 rounded text-xs transition-colors ${
+                                 agent.enabled 
+                                   ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' 
+                                   : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                               }`}
+                             >
+                               {agent.enabled ? 'Aktiv' : 'Deaktiviert'}
+                             </button>
+                             <button
+                               onClick={() => openEditAgent(agent)}
+                               className="text-blue-400 hover:text-blue-300 p-1 rounded hover:bg-blue-500/20 transition-colors"
+                               title="Bearbeiten"
+                             >
+                               ✏️
+                             </button>
+                             <button
+                               onClick={() => deleteAgent(agent)}
+                               className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-500/20 transition-colors"
+                               title="Löschen"
+                             >
+                               🗑️
+                             </button>
+                           </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Statistiken */}
+              <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow xl:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                    📊 Valorant Statistiken
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-neon-purple">{valorantAgents.length}</div>
+                      <div className="text-sm text-dark-muted">Gesamt Agenten</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400">
+                        {valorantAgents.filter(a => a.enabled).length}
+                      </div>
+                      <div className="text-sm text-dark-muted">Aktive Agenten</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400">{valorantAgentRoles.length}</div>
+                      <div className="text-sm text-dark-muted">Rollen-Typen</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-400">
+                        {usersData.users.filter(u => u.agents && u.agents.length > 0).length}
+                      </div>
+                      <div className="text-sm text-dark-muted">User mit Agenten</div>
+                    </div>
+                  </div>
+
+                  {/* Agenten nach Rollen */}
+                  <div className="mt-8">
+                    <h4 className="font-medium text-dark-text mb-4">Agenten nach Rollen:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {valorantAgentRoles.map((role) => {
+                        const roleAgents = valorantAgents.filter(a => a.role_type === role.role_name && a.enabled);
+                        return (
+                          <div key={role.id} className="p-4 bg-dark-bg/30 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: role.color }}
+                              />
+                              <span className="font-medium text-dark-text">{role.display_name}</span>
+                              <span className="text-sm text-dark-muted">({roleAgents.length})</span>
+                            </div>
+                            <div className="text-sm text-dark-muted">
+                              {roleAgents.map(a => a.display_name).join(', ') || 'Keine aktiven Agenten'}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Refresh Button */}
+          <div className="text-center">
+            <Button
+              onClick={loadValorantAgents}
+              disabled={loadingAgents}
+              className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2 mx-auto"
+            >
+              <RefreshIcon animate={loadingAgents} />
+              <span>{loadingAgents ? 'Lädt...' : 'Agenten neu laden'}</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Agent Modal */}
+      {showAddAgentModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-dark-surface border border-purple-primary/30 rounded-xl p-6 max-w-md w-full mx-4 shadow-purple-glow">
+            <h3 className="text-xl font-bold text-white mb-4">
+              {editingAgent ? '✏️ Agent bearbeiten' : '➕ Neuen Agent hinzufügen'}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-dark-text font-medium mb-2">Agent Name (technisch):</label>
+                <input
+                  type="text"
+                  value={newAgent.name}
+                  onChange={(e) => setNewAgent(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-dark-bg/70 border border-purple-primary/30 rounded-lg px-3 py-2 text-dark-text focus:border-neon-purple"
+                  placeholder="z.B. Jett"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-dark-text font-medium mb-2">Anzeigename:</label>
+                <input
+                  type="text"
+                  value={newAgent.display_name}
+                  onChange={(e) => setNewAgent(prev => ({ ...prev, display_name: e.target.value }))}
+                  className="w-full bg-dark-bg/70 border border-purple-primary/30 rounded-lg px-3 py-2 text-dark-text focus:border-neon-purple"
+                  placeholder="z.B. Jett"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-dark-text font-medium mb-2">UUID (optional):</label>
+                <input
+                  type="text"
+                  value={newAgent.uuid}
+                  onChange={(e) => setNewAgent(prev => ({ ...prev, uuid: e.target.value }))}
+                  className="w-full bg-dark-bg/70 border border-purple-primary/30 rounded-lg px-3 py-2 text-dark-text focus:border-neon-purple"
+                  placeholder="z.B. a3bfb853-43b2-7238-a4f1-ad90e9e46bcc"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-dark-text font-medium mb-2">Rollen-Typ:</label>
+                <select
+                  value={newAgent.role_type}
+                  onChange={(e) => setNewAgent(prev => ({ ...prev, role_type: e.target.value }))}
+                  className="w-full bg-dark-bg/70 border border-purple-primary/30 rounded-lg px-3 py-2 text-dark-text focus:border-neon-purple"
+                >
+                  <option value="Duelist">Duelist</option>
+                  <option value="Sentinel">Sentinel</option>
+                  <option value="Initiator">Initiator</option>
+                  <option value="Controller">Controller</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-dark-text font-medium mb-2">Sortierreihenfolge:</label>
+                <input
+                  type="number"
+                  value={newAgent.sort_order}
+                  onChange={(e) => setNewAgent(prev => ({ ...prev, sort_order: parseInt(e.target.value) || 0 }))}
+                  className="w-full bg-dark-bg/70 border border-purple-primary/30 rounded-lg px-3 py-2 text-dark-text focus:border-neon-purple"
+                  placeholder="0"
+                />
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="agentEnabled"
+                  checked={newAgent.enabled}
+                  onChange={(e) => setNewAgent(prev => ({ ...prev, enabled: e.target.checked }))}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="agentEnabled" className="text-dark-text">Agent aktiviert</label>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <Button
+                onClick={() => {
+                  setShowAddAgentModal(false);
+                  setEditingAgent(null);
+                  setNewAgent({
+                    name: '',
+                    display_name: '',
+                    uuid: '',
+                    role_type: 'Duelist',
+                    enabled: true,
+                    sort_order: 0
+                  });
+                }}
+                className="bg-gray-700 hover:bg-gray-600 text-white"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={saveAgent}
+                disabled={!newAgent.name || !newAgent.display_name}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {editingAgent ? 'Aktualisieren' : 'Hinzufügen'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
