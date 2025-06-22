@@ -1087,170 +1087,26 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Größere Uploads erlauben
 
-// GitHub Integration für persistente Image Storage
-const { Octokit } = require('@octokit/rest');
-
-// GitHub Client initialisieren
-let githubClient = null;
-const GITHUB_REPO = apiKeys.github?.repository || 'discordbot';
-const GITHUB_OWNER = apiKeys.github?.username || process.env.GITHUB_USERNAME || 'default-user';
-const GITHUB_BRANCH = 'main';
-const GITHUB_BASE_PATH = 'public/images/welcome';
-
-function initializeGitHub() {
-    if (apiKeys.github?.token) {
-        githubClient = new Octokit({
-            auth: apiKeys.github.token
-        });
-        console.log(`🐙 GitHub Client initialisiert für Image Storage (${GITHUB_OWNER}/${GITHUB_REPO})`);
-        return true;
-    } else {
-        console.log('⚠️ GitHub Token nicht konfiguriert - verwende lokalen Storage');
-        console.log('💡 Füge GitHub Token in api-keys.json hinzu für persistente Image Storage');
-        return false;
-    }
-}
-
-// GitHub beim Start initialisieren
-const useGitHubStorage = initializeGitHub();
-
-// GitHub Image Upload Funktion
-async function uploadImageToGitHub(buffer, filename, folder = 'general') {
-    try {
-        const filePath = `${GITHUB_BASE_PATH}/${folder}/${filename}`;
-        const base64Content = buffer.toString('base64');
+// Multer für Datei-Uploads konfigurieren
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        // Verwende den Ordner aus dem Request oder 'general' als Default
+        const folder = req.body.folder || 'general';
+        const uploadPath = `./public/images/welcome/${folder}/`;
         
-        // Prüfe ob Datei bereits existiert
-        let sha = null;
-        try {
-            const existingFile = await githubClient.rest.repos.getContent({
-                owner: GITHUB_OWNER,
-                repo: GITHUB_REPO,
-                path: filePath,
-                ref: GITHUB_BRANCH
-            });
-            sha = existingFile.data.sha;
-        } catch (error) {
-            // Datei existiert nicht - das ist OK
+        // Stelle sicher, dass der Ordner existiert
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
         }
-        
-        // Upload oder Update der Datei
-        const response = await githubClient.rest.repos.createOrUpdateFileContents({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            message: `Upload welcome image: ${filename}`,
-            content: base64Content,
-            branch: GITHUB_BRANCH,
-            ...(sha && { sha })
-        });
-        
-        console.log(`✅ Bild zu GitHub hochgeladen: ${filePath}`);
-        return {
-            success: true,
-            url: `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${GITHUB_BRANCH}/${filePath}`,
-            githubUrl: response.data.content.html_url,
-            downloadUrl: response.data.content.download_url
-        };
-        
-    } catch (error) {
-        console.error('❌ Fehler beim GitHub Upload:', error);
-        throw error;
+        cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+        // Generiere einen einzigartigen Dateinamen
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const extension = path.extname(file.originalname);
+        cb(null, 'welcome-' + uniqueSuffix + extension);
     }
-}
-
-// GitHub Image Delete Funktion
-async function deleteImageFromGitHub(filename, folder = 'general') {
-    try {
-        const filePath = `${GITHUB_BASE_PATH}/${folder}/${filename}`;
-        
-        // Hole SHA der zu löschenden Datei
-        const existingFile = await githubClient.rest.repos.getContent({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            ref: GITHUB_BRANCH
-        });
-        
-        // Lösche die Datei
-        await githubClient.rest.repos.deleteFile({
-            owner: GITHUB_OWNER,
-            repo: GITHUB_REPO,
-            path: filePath,
-            message: `Delete welcome image: ${filename}`,
-            sha: existingFile.data.sha,
-            branch: GITHUB_BRANCH
-        });
-        
-        console.log(`🗑️ Bild von GitHub gelöscht: ${filePath}`);
-        return { success: true };
-        
-    } catch (error) {
-        console.error('❌ Fehler beim GitHub Delete:', error);
-        throw error;
-    }
-}
-
-// GitHub Image List Funktion
-async function listImagesFromGitHub() {
-    try {
-        const folders = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
-        const result = { folders: {}, images: [] };
-        
-        for (const folder of folders) {
-            try {
-                const folderPath = `${GITHUB_BASE_PATH}/${folder}`;
-                const response = await githubClient.rest.repos.getContent({
-                    owner: GITHUB_OWNER,
-                    repo: GITHUB_REPO,
-                    path: folderPath,
-                    ref: GITHUB_BRANCH
-                });
-                
-                const folderImages = [];
-                if (Array.isArray(response.data)) {
-                    for (const file of response.data) {
-                        if (file.type === 'file' && /\.(png|jpg|jpeg|gif|webp)$/i.test(file.name)) {
-                            const imageData = {
-                                filename: file.name,
-                                folder: folder,
-                                url: `https://cdn.jsdelivr.net/gh/${GITHUB_OWNER}/${GITHUB_REPO}@${GITHUB_BRANCH}/${folderPath}/${file.name}`,
-                                githubUrl: file.html_url,
-                                size: file.size,
-                                uploadedAt: new Date().toISOString()
-                            };
-                            folderImages.push(imageData);
-                            result.images.push(imageData);
-                        }
-                    }
-                }
-                
-                result.folders[folder] = {
-                    name: folder,
-                    images: folderImages,
-                    count: folderImages.length
-                };
-                
-            } catch (error) {
-                console.log(`📁 Ordner ${folder} existiert noch nicht auf GitHub`);
-                result.folders[folder] = {
-                    name: folder,
-                    images: [],
-                    count: 0
-                };
-            }
-        }
-        
-        return result;
-        
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der GitHub Images:', error);
-        throw error;
-    }
-}
-
-// Multer für Memory Storage (da wir zu GitHub uploaden)
-const storage = multer.memoryStorage();
+});
 
 const upload = multer({ 
     storage: storage,
@@ -1267,14 +1123,12 @@ const upload = multer({
     }
 });
 
-// Fallback: Statische Dateien servieren (für lokale Entwicklung)
-if (!useGitHubStorage) {
-    app.use('/images', express.static('./dashboard/public/images'));
-}
+// Statische Dateien servieren
+app.use('/images', express.static('./public/images'));
 
 // Welcome Images Ordner-Struktur initialisieren
 function initializeWelcomeImagesFolders() {
-    const baseDir = './dashboard/public/images/welcome/';
+    const baseDir = './public/images/welcome/';
     const folders = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
     
     folders.forEach(folder => {
@@ -2099,7 +1953,7 @@ async function loadWelcomeImagesFromSupabase() {
 // Dateisystem Fallback für Images
 function loadWelcomeImagesFromFileSystem() {
     try {
-        const welcomeImagesPath = './dashboard/public/images/welcome/';
+        const welcomeImagesPath = './public/images/welcome/';
         
         if (!fs.existsSync(welcomeImagesPath)) {
             return { folders: {}, images: [] };
@@ -2538,7 +2392,7 @@ app.post('/api/welcome/test-leave', async (req, res) => {
     }
 });
 
-// Upload Welcome Image (GitHub Integration mit Fallback)
+// Upload Welcome Image (mit Ordner-Support und Supabase)
 app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2547,68 +2401,33 @@ app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) 
 
         const folder = req.body.folder || 'general'; // Default-Ordner
         
-        // Generiere einen einzigartigen Dateinamen
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = path.extname(req.file.originalname);
-        const filename = 'welcome-' + uniqueSuffix + extension;
+        // Datei ist bereits im richtigen Ordner durch multer storage config
+        // Konstruiere die URL für das Frontend
+        const imageUrl = `/images/welcome/${folder}/${req.file.filename}`;
         
-        let imageUrl;
-        let uploadSuccess = false;
-        
-        // Versuche GitHub Upload zuerst
-        if (useGitHubStorage && githubClient) {
-            try {
-                const githubResult = await uploadImageToGitHub(req.file.buffer, filename, folder);
-                imageUrl = githubResult.url;
-                uploadSuccess = true;
-                
-                console.log(`✅ Willkommensbild zu GitHub hochgeladen: ${folder}/${filename}`);
-                console.log(`🌐 GitHub CDN URL: ${imageUrl}`);
-                
-            } catch (githubError) {
-                console.error('❌ GitHub Upload fehlgeschlagen, verwende lokalen Fallback:', githubError);
-            }
-        }
-        
-        // Fallback: Lokaler Upload
-        if (!uploadSuccess) {
-            const uploadPath = `./dashboard/public/images/welcome/${folder}/`;
-            
-            // Stelle sicher, dass der Ordner existiert
-            if (!fs.existsSync(uploadPath)) {
-                fs.mkdirSync(uploadPath, { recursive: true });
-            }
-            
-            const localPath = path.join(uploadPath, filename);
-            fs.writeFileSync(localPath, req.file.buffer);
-            imageUrl = `/images/welcome/${folder}/${filename}`;
-            
-            console.log(`✅ Willkommensbild lokal hochgeladen: ${folder}/${filename}`);
-            console.log(`📂 Lokaler Pfad: ${localPath}`);
-        }
-        
-        // Speichere Metadaten in Supabase
+        // Speichere auch in Supabase für bessere Verwaltung
         const imageData = {
-            filename: filename,
+            filename: req.file.filename,
             url: imageUrl,
             folder: folder,
             size: req.file.size,
-            originalname: req.file.originalname,
-            uploadedAt: new Date().toISOString(),
-            storageType: uploadSuccess ? 'github' : 'local'
+            originalname: req.file.originalname
         };
         
         await saveWelcomeImageToSupabase(imageData);
         
+        console.log(`✅ Willkommensbild hochgeladen: ${folder}/${req.file.filename}`);
+        console.log(`📂 Gespeichert unter: ${req.file.path}`);
+        console.log(`🌐 URL: ${imageUrl}`);
+        
         res.json({ 
             success: true, 
-            message: `Bild erfolgreich hochgeladen! (${uploadSuccess ? 'GitHub' : 'Lokal'})`,
-            filename: filename,
+            message: 'Bild erfolgreich hochgeladen!',
+            filename: req.file.filename,
             folder: folder,
             url: imageUrl,
             originalName: req.file.originalname,
-            size: req.file.size,
-            storageType: uploadSuccess ? 'github' : 'local'
+            size: req.file.size
         });
         
     } catch (error) {
@@ -2617,36 +2436,15 @@ app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) 
     }
 });
 
-// Get all welcome images (GitHub Integration mit Fallback)
+// Get all welcome images (mit Ordner-Support und Supabase)
 app.get('/api/welcome/images', async (req, res) => {
     try {
-        let result;
-        
-        // Versuche GitHub zuerst
-        if (useGitHubStorage && githubClient) {
-            try {
-                result = await listImagesFromGitHub();
-                console.log('📁 Welcome Images von GitHub geladen:', {
-                    foldersCount: Object.keys(result.folders || {}).length,
-                    totalImages: result.images?.length || 0,
-                    folders: Object.keys(result.folders || {})
-                });
-            } catch (githubError) {
-                console.error('❌ GitHub Images laden fehlgeschlagen, verwende Supabase/lokalen Fallback:', githubError);
-                result = await loadWelcomeImagesFromSupabase();
-            }
-        } else {
-            // Fallback zu Supabase/Local
-            result = await loadWelcomeImagesFromSupabase();
-        }
-        
+        const result = await loadWelcomeImagesFromSupabase();
         console.log('📁 Welcome Images API Response:', {
             foldersCount: Object.keys(result.folders || {}).length,
             totalImages: result.images?.length || 0,
-            folders: Object.keys(result.folders || {}),
-            source: useGitHubStorage ? 'github+supabase' : 'supabase+local'
+            folders: Object.keys(result.folders || {})
         });
-        
         res.json(result);
     } catch (error) {
         console.error('❌ Fehler beim Laden der Bilder:', error);
@@ -2658,7 +2456,7 @@ app.get('/api/welcome/images', async (req, res) => {
 app.get('/api/welcome/images/test/:folder/:filename', (req, res) => {
     try {
         const { folder, filename } = req.params;
-        const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
+        const imagePath = path.join('./public/images/welcome/', folder, filename);
         
         console.log(`🔍 Teste Bild-Pfad: ${imagePath}`);
         
@@ -2685,7 +2483,7 @@ app.get('/api/welcome/images/test/:folder/:filename', (req, res) => {
     }
 });
 
-// Delete welcome image (GitHub Integration mit Fallback)
+// Delete welcome image (mit Ordner-Support und Supabase)
 app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
     try {
         const folder = req.params.folder;
@@ -2696,37 +2494,18 @@ app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
             return res.status(400).json({ error: 'Ungültiger Datei- oder Ordnername' });
         }
         
-        let deleteSuccess = false;
+        const imagePath = path.join('./public/images/welcome/', folder, filename);
         
-        // Versuche GitHub Delete zuerst
-        if (useGitHubStorage && githubClient) {
-            try {
-                await deleteImageFromGitHub(filename, folder);
-                deleteSuccess = true;
-                console.log(`🗑️ Willkommensbild von GitHub gelöscht: ${folder}/${filename}`);
-            } catch (githubError) {
-                console.error('❌ GitHub Delete fehlgeschlagen, verwende lokalen Fallback:', githubError);
-            }
-        }
-        
-        // Fallback: Lokales Löschen
-        if (!deleteSuccess) {
-            const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
-            
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
-                console.log(`🗑️ Willkommensbild lokal gelöscht: ${folder}/${filename}`);
-            }
+        // Lösche aus Dateisystem
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
         }
         
         // Lösche auch aus Supabase
         await deleteWelcomeImageFromSupabase(filename, folder);
         
-        res.json({ 
-            success: true, 
-            message: `Bild erfolgreich gelöscht! (${deleteSuccess ? 'GitHub' : 'Lokal'})`,
-            deletedFrom: deleteSuccess ? 'github' : 'local'
-        });
+            console.log(`🗑️ Willkommensbild gelöscht: ${folder}/${filename}`);
+            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
         
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Bildes:', error);
@@ -2738,7 +2517,7 @@ app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
 app.delete('/api/welcome/images/:filename', async (req, res) => {
     try {
         const filename = req.params.filename;
-        const imagePath = path.join('./dashboard/public/images/welcome/', filename);
+        const imagePath = path.join('./public/images/welcome/', filename);
         
         // Sicherheitscheck: Nur Dateien im welcome-Ordner löschen
         if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
@@ -2771,7 +2550,7 @@ app.post('/api/welcome/folders', async (req, res) => {
             return res.status(400).json({ error: 'Ungültiger Ordnername' });
         }
         
-        const folderPath = `./dashboard/public/images/welcome/${folderName}`;
+        const folderPath = `./public/images/welcome/${folderName}`;
         
         if (fs.existsSync(folderPath)) {
             return res.status(400).json({ error: 'Ordner existiert bereits' });
@@ -2802,7 +2581,7 @@ app.delete('/api/welcome/folders/:folderName', async (req, res) => {
             return res.status(400).json({ error: 'Ungültiger Ordnername oder protected folder' });
         }
         
-        const folderPath = `./dashboard/public/images/welcome/${folderName}`;
+        const folderPath = `./public/images/welcome/${folderName}`;
         
         // Lösche Ordner aus Dateisystem
         if (fs.existsSync(folderPath)) {
@@ -2840,8 +2619,8 @@ app.post('/api/welcome/images/move', async (req, res) => {
             return res.status(400).json({ error: 'Quell- und Zielordner sind identisch' });
         }
         
-        const sourcePath = path.join('./dashboard/public/images/welcome/', sourceFolder, filename);
-        const targetFolderPath = `./dashboard/public/images/welcome/${targetFolder}`;
+        const sourcePath = path.join('./public/images/welcome/', sourceFolder, filename);
+        const targetFolderPath = `./public/images/welcome/${targetFolder}`;
         const targetPath = path.join(targetFolderPath, filename);
         
         // Prüfe ob Quelldatei existiert
@@ -3135,7 +2914,7 @@ async function createRulesEmbed(guildName) {
 // Funktion um ein zufälliges Welcome-Bild zu wählen (mit Ordner-Support)
 function getRandomWelcomeImage(specificFolder = null) {
     try {
-        const welcomeImagesPath = './dashboard/public/images/welcome/';
+        const welcomeImagesPath = './public/images/welcome/';
         console.log(`🔍 Suche nach Bildern in: ${welcomeImagesPath}`);
         
         if (!fs.existsSync(welcomeImagesPath)) {
@@ -3283,7 +3062,7 @@ function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
         // Für lokale URLs, verwende Attachments statt Base64
         if (thumbnailUrl && thumbnailUrl.startsWith('/images/')) {
             try {
-                const imagePath = `./dashboard/public${thumbnailUrl}`;
+                const imagePath = `./public${thumbnailUrl}`;
                 if (fs.existsSync(imagePath)) {
                     // Erstelle einen Attachment
                     const fileName = path.basename(imagePath);

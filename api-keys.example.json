@@ -16,5 +16,10 @@
   },
   "youtube": {
     "apiKey": "YOUR_YOUTUBE_API_KEY_HERE"
+  },
+  "github": {
+    "token": "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN_HERE",
+    "username": "YOUR_GITHUB_USERNAME_HERE",
+    "repository": "discordbot"
   }
 } 
