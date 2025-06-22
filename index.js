@@ -2739,7 +2739,7 @@ app.post('/api/welcome/test', async (req, res) => {
                     displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/0.png' // Default Discord Avatar
                 };
                 
-                const { embed, attachment } = createWelcomeEmbed(guild, testMember, settings);
+                const { embed, attachment } = await createWelcomeEmbed(guild, testMember, settings);
                 
                 let messageContent = '';
                 if (settings.mentionUser) {
@@ -3554,14 +3554,53 @@ async function createRulesEmbed(guildName) {
     return embed;
 }
 
-// Funktion um ein zufälliges Welcome-Bild zu wählen (mit Ordner-Support)
-function getRandomWelcomeImage(specificFolder = null) {
+// Funktion um ein zufälliges Welcome-Bild zu wählen (mit Ordner-Support) - ASYNC für Supabase Support
+async function getRandomWelcomeImage(specificFolder = null) {
     try {
+        console.log(`🔍 Suche nach Bildern für Rotation - Ordner: ${specificFolder || 'alle'}`);
+        
+        // Versuche zuerst Supabase (für GitHub Storage)
+        const welcomeData = await loadWelcomeImagesFromSupabase();
+        
+        if (welcomeData && welcomeData.images && welcomeData.images.length > 0) {
+            console.log(`📊 Supabase: ${welcomeData.images.length} Bilder verfügbar, Ordner:`, Object.keys(welcomeData.folders));
+            
+            let availableImages = [];
+            
+            if (specificFolder) {
+                // Nur aus einem spezifischen Ordner
+                if (welcomeData.folders[specificFolder]) {
+                    availableImages = welcomeData.folders[specificFolder];
+                    console.log(`📁 ${specificFolder}-Ordner (Supabase): ${availableImages.length} Bilder gefunden`);
+                } else {
+                    console.log(`⚠️ Ordner "${specificFolder}" nicht in Supabase gefunden`);
+                }
+            } else {
+                // Alle Bilder aus allen Ordnern
+                availableImages = welcomeData.images;
+                console.log(`🌍 Alle Ordner (Supabase): ${availableImages.length} Bilder gefunden`);
+            }
+            
+            if (availableImages.length === 0) {
+                console.log(`⚠️ Keine Bilder für gewählte Kriterien verfügbar`);
+                return null;
+            }
+            
+            // Zufälliges Bild auswählen
+            const randomIndex = Math.floor(Math.random() * availableImages.length);
+            const randomImage = availableImages[randomIndex];
+            
+            console.log(`🎯 Gewähltes Bild (Supabase): ${randomImage.folder}/${randomImage.filename} (Index: ${randomIndex}/${availableImages.length - 1})`);
+            console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${randomImage.url}`);
+            return randomImage.url;
+        }
+        
+        // Fallback: Lokales Dateisystem
+        console.log(`⚠️ Supabase nicht verfügbar - verwende lokales Dateisystem`);
         const welcomeImagesPath = './dashboard/public/images/welcome/';
-        console.log(`🔍 Suche nach Bildern in: ${welcomeImagesPath}`);
         
         if (!fs.existsSync(welcomeImagesPath)) {
-            console.log(`❌ Ordner existiert nicht: ${welcomeImagesPath}`);
+            console.log(`❌ Lokaler Ordner existiert nicht: ${welcomeImagesPath}`);
             return null;
         }
         
@@ -3583,7 +3622,7 @@ function getRandomWelcomeImage(specificFolder = null) {
                     path: `/images/welcome/${specificFolder}/${file}`,
                     folder: specificFolder
                 }));
-                console.log(`📁 ${specificFolder}-Ordner: ${folderFiles.length} Bilder gefunden`);
+                console.log(`📁 ${specificFolder}-Ordner (lokal): ${folderFiles.length} Bilder gefunden`);
             }
         } else {
             // Alle Bilder aus allen Ordnern sammeln
@@ -3633,10 +3672,10 @@ function getRandomWelcomeImage(specificFolder = null) {
             });
         }
         
-        console.log(`📁 Gefundene Bilder insgesamt: ${allImages.length}`);
+        console.log(`📁 Gefundene Bilder insgesamt (lokal): ${allImages.length}`);
         
         if (allImages.length === 0) {
-            console.log(`⚠️ Keine Bilder gefunden für Rotation`);
+            console.log(`⚠️ Keine Bilder gefunden für Rotation (lokal)`);
             return null;
         }
         
@@ -3644,7 +3683,7 @@ function getRandomWelcomeImage(specificFolder = null) {
         const randomIndex = Math.floor(Math.random() * allImages.length);
         const randomImage = allImages[randomIndex];
         
-        console.log(`🎯 Gewähltes Bild: ${randomImage.folder}/${randomImage.file} (Index: ${randomIndex}/${allImages.length - 1})`);
+        console.log(`🎯 Gewähltes Bild (lokal): ${randomImage.folder}/${randomImage.file} (Index: ${randomIndex}/${allImages.length - 1})`);
         console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${randomImage.path}`);
         return randomImage.path;
         
@@ -3655,7 +3694,7 @@ function getRandomWelcomeImage(specificFolder = null) {
 }
 
 // Funktion um Welcome-Embed zu erstellen
-function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
+async function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
     // Fallback für description falls leer oder undefined
     let description = settings.description || 'Willkommen auf dem Server!';
     
@@ -3692,7 +3731,7 @@ function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
         // 🔧 FIXED: Verwende das originale imageRotation System das bereits funktioniert!
         if (settings.imageRotation && settings.imageRotation.enabled) {
             const specificFolder = settings.imageRotation.folder || null;
-            const randomImage = getRandomWelcomeImage(specificFolder);
+            const randomImage = await getRandomWelcomeImage(specificFolder);
             if (randomImage) {
                 thumbnailUrl = randomImage;
                 console.log(`🎲 Zufälliges Welcome-Bild gewählt${specificFolder ? ` aus Ordner "${specificFolder}"` : ' aus allen Ordnern'}: ${thumbnailUrl}`);
@@ -3701,6 +3740,15 @@ function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
             }
         } else {
             console.log(`📌 Spezifisches Bild verwendet: ${thumbnailUrl}`);
+        }
+        
+        // 🚨 WICHTIG: Fallback zu User Avatar wenn thumbnailUrl immer noch leer/undefined ist
+        if (!thumbnailUrl || thumbnailUrl === '') {
+            console.log(`⚠️ Kein Bild verfügbar (customThumbnail leer und keine Rotation) - Fallback zu User Avatar`);
+            const avatarUrl = member.displayAvatarURL({ dynamic: true });
+            embed.setThumbnail(avatarUrl);
+            console.log(`🖼️ Fallback User Thumbnail gesetzt: ${avatarUrl}`);
+            return { embed, attachment };
         }
         
         // Für lokale URLs, verwende Attachments statt Base64
@@ -5207,7 +5255,7 @@ client.on(Events.GuildMemberAdd, async member => {
     if (welcomeChannel) {
         try {
             // Erstelle Welcome-Embed mit Settings
-            const { embed: welcomeEmbed, attachment } = createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
+            const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
             
             // Mention User falls aktiviert
             let messageContent = '';
@@ -5458,7 +5506,7 @@ client.on(Events.MessageCreate, async message => {
             console.log('🧪 Test Welcome-Message gestartet...');
             console.log('Settings:', JSON.stringify(currentWelcomeSettings, null, 2));
             
-            const { embed: welcomeEmbed, attachment } = createWelcomeEmbed(message.guild, message.member, currentWelcomeSettings);
+            const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(message.guild, message.member, currentWelcomeSettings);
             
             const messageOptions = { 
                 content: currentWelcomeSettings.mentionUser ? `<@${message.author.id}>` : '', 
