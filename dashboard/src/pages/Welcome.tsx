@@ -89,16 +89,7 @@ const Welcome = () => {
   const [galleryCollapsed, setGalleryCollapsed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // ================== 📁 DEDICATED FOLDER MANAGEMENT STATE ==================
-  const [folderSettings, setFolderSettings] = useState<{
-    folderName: string | null;
-    rotationEnabled: boolean;
-    rotationMode: 'random' | 'sequential';
-  }>({
-    folderName: null,
-    rotationEnabled: false,
-    rotationMode: 'random'
-  })
+
   
   const [welcomeSettings, setWelcomeSettings] = useState<WelcomeSettings>({
     enabled: true,
@@ -726,10 +717,9 @@ const Welcome = () => {
   useEffect(() => {
     const initializeData = async () => {
       try {
-        // Erst Settings laden, dann Images, dann Ordner-Settings
+        // Erst Settings laden, dann Images
         await loadWelcomeSettings();
         await loadUploadedImages();
-        await loadFolderSettings(); // 📁 Neue Ordner-Settings laden
       } catch (error) {
         console.error('Fehler bei der Initialisierung:', error);
       }
@@ -751,60 +741,7 @@ const Welcome = () => {
     });
   }, [welcomeSettings.imageRotation?.folder]);
 
-  // ================== 📁 DEDICATED FOLDER MANAGEMENT API FUNCTIONS ==================
-  
-  const loadFolderSettings = async () => {
-    try {
-      console.log('📁 Lade dedizierte Ordner-Settings...');
-      const response = await fetch('/api/welcome/folder-settings');
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📁 Ordner-Settings von API erhalten:', data);
-        
-        setFolderSettings({
-          folderName: data.folderName,
-          rotationEnabled: data.rotationEnabled,
-          rotationMode: data.rotationMode || 'random'
-        });
-        
-        console.log('✅ Ordner-Settings erfolgreich geladen');
-      } else {
-        console.error('❌ Fehler beim Laden der Ordner-Settings:', response.status);
-        showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Ordner-Settings');
-      }
-    } catch (err) {
-      console.error('❌ Netzwerkfehler beim Laden der Ordner-Settings:', err);
-      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Ordner-Settings');
-    }
-  };
 
-  const saveFolderSettings = async () => {
-    try {
-      console.log('📁 Speichere Ordner-Settings:', folderSettings);
-      
-      const response = await fetch('/api/welcome/folder-settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(folderSettings),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        showSuccess('Ordner-Settings gespeichert', '🎉 Ordner-Management-Einstellungen gespeichert!');
-        console.log('✅ Ordner-Settings gespeichert - Server Response:', result);
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
-        console.error('API Error:', response.status, errorData);
-        showError('Speichern fehlgeschlagen', `❌ ${errorData.error || 'Fehler beim Speichern der Ordner-Settings'}`);
-      }
-    } catch (err) {
-      console.error('Fehler beim Speichern der Ordner-Settings:', err);
-      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Speichern der Ordner-Settings');
-    }
-  };
 
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
@@ -1346,110 +1283,78 @@ const Welcome = () => {
                     </span>
                   </div>
                   
-                  {/* 📁 NEUES DEDIZIERTES ORDNER-MANAGEMENT */}
-                  <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-lg p-3 border border-purple-400/30">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg">📁</span>
-                      <h6 className="text-sm font-medium text-white">Dediziertes Ordner-Management</h6>
-                      <div className="bg-green-500/20 px-2 py-1 rounded-full">
-                        <span className="text-green-400 text-xs font-medium">✨ NEU</span>
-                      </div>
-                    </div>
-                    
-                    {/* Rotation aktivieren */}
-                    <div className="flex items-center gap-3 mb-3">
+                  {/* Rotation Controls */}
+                  {uploadedImages.length > 1 && (
+                    <div className="flex items-center gap-2 bg-dark-bg/50 rounded-lg px-3 py-1 border border-purple-primary/30">
                       <input
                         type="checkbox"
-                        id="folderRotationEnabled"
-                        checked={folderSettings.rotationEnabled}
-                        onChange={(e) => setFolderSettings({
-                          ...folderSettings,
-                          rotationEnabled: e.target.checked
-                        })}
+                        id="imageRotation"
+                        checked={welcomeSettings.imageRotation?.enabled || false}
+                        onChange={(e) => setWelcomeSettings({
+                            ...welcomeSettings, 
+                            imageRotation: {
+                              ...welcomeSettings.imageRotation,
+                              enabled: e.target.checked,
+                              mode: welcomeSettings.imageRotation?.mode || 'random'
+                            }
+                          })}
                         className="w-4 h-4 text-pink-400 bg-dark-bg border-purple-primary/30 rounded focus:ring-pink-400 focus:ring-2"
                       />
-                      <label htmlFor="folderRotationEnabled" className="text-sm text-white">
-                        🎲 Bild-Rotation aktiviert
+                      <label htmlFor="imageRotation" className="text-xs text-dark-text">
+                        🎲 Zufällige Bilder
                       </label>
                     </div>
-                    
-                    {/* Rotation Settings */}
-                    {folderSettings.rotationEnabled && (
-                      <div className="space-y-3 ml-6 border-l-2 border-purple-400/30 pl-3">
-                        <div className="flex items-center gap-3 text-sm text-green-400">
-                          <span className="animate-pulse">🎲</span>
-                          <span>Rotation aktiv</span>
-                        </div>
-                        
-                        {/* Ordner-Auswahl */}
-                        <div>
-                          <label className="text-xs text-purple-300 mb-1 block">📁 Ordner für Rotation:</label>
-                          <select
-                            value={folderSettings.folderName || ''}
-                            onChange={(e) => {
-                              const newFolder = e.target.value || null;
-                              console.log('📁 NEUES DEDIZIERTES ORDNER-MANAGEMENT - Ordner geändert:', newFolder);
-                              
-                              setFolderSettings({
-                                ...folderSettings,
-                                folderName: newFolder
-                              });
-                            }}
-                            className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text rounded-lg px-3 py-2 focus:border-pink-400 text-sm"
-                          >
-                            <option value="">Alle Ordner (Standard)</option>
-                            {Object.keys(folders).map(folderName => (
-                              <option key={folderName} value={folderName}>
-                                {folderName} ({folders[folderName]?.length || 0} Bilder)
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        {/* Rotation Mode */}
-                        <div>
-                          <label className="text-xs text-purple-300 mb-1 block">🎯 Rotation-Modus:</label>
-                          <select
-                            value={folderSettings.rotationMode}
-                            onChange={(e) => setFolderSettings({
-                              ...folderSettings,
-                              rotationMode: e.target.value as 'random' | 'sequential'
-                            })}
-                            className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text rounded-lg px-3 py-2 focus:border-pink-400 text-sm"
-                          >
-                            <option value="random">🎲 Zufällig</option>
-                            <option value="sequential">📋 Sequenziell</option>
-                          </select>
-                        </div>
-                        
-                        {/* Aktueller Status */}
-                        <div className="bg-dark-bg/50 rounded-lg p-2 border border-purple-primary/20">
-                          <div className="text-xs text-purple-300">
-                            <strong>Aktuelle Einstellung:</strong>
-                          </div>
-                          <div className="text-xs text-white mt-1">
-                            {folderSettings.folderName ? (
-                              <>🎯 Nur Ordner: <strong>{folderSettings.folderName}</strong></>
-                            ) : (
-                              <>🌍 Alle Ordner</>
-                            )}
-                            {' • '}
-                            {folderSettings.rotationMode === 'random' ? '🎲 Zufällig' : '📋 Sequenziell'}
-                          </div>
-                        </div>
-                        
-                        {/* Speichern Button */}
-                        <Button
-                          onClick={saveFolderSettings}
-                          size="sm"
-                          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                        >
-                          💾 Ordner-Settings speichern
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
+                
+                {/* Ordner-spezifische Rotation */}
+                {welcomeSettings.imageRotation?.enabled && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 text-sm text-green-400">
+                      <span className="animate-pulse">🎲</span>
+                      <span>Rotation aktiv</span>
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs text-dark-muted mb-1 block">Rotation auf bestimmten Ordner beschränken:</label>
+                      <select
+                        value={welcomeSettings.imageRotation.folder || ''}
+                        onChange={(e) => {
+                          console.log('📁 DROPDOWN CHANGE EVENT:', {
+                            'e.target.value': e.target.value,
+                            'e.target.value || undefined': e.target.value || undefined,
+                            'typeof e.target.value': typeof e.target.value,
+                            'currentFolder': welcomeSettings.imageRotation.folder
+                          });
+                          
+                          const newFolder = e.target.value || undefined;
+                          console.log('🎯 SETZE NEUEN FOLDER:', newFolder);
+                          
+                          setWelcomeSettings({
+                            ...welcomeSettings,
+                            imageRotation: {
+                              ...welcomeSettings.imageRotation,
+                              folder: newFolder
+                            }
+                          });
+                          
+                          console.log('✅ FOLDER GESETZT - State sollte jetzt enthalten:', {
+                            ...welcomeSettings.imageRotation,
+                            folder: newFolder
+                          });
+                        }}
+                        className="w-full bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-3 py-1 focus:border-pink-400 text-xs"
+                      >
+                        <option value="">Alle Ordner (Standard)</option>
+                        {Object.keys(folders).map(folderName => (
+                          <option key={folderName} value={folderName}>
+                            {folderName} ({folders[folderName]?.length || 0} Bilder)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Drag & Drop Info */}
