@@ -170,28 +170,28 @@ const Welcome = () => {
         
         // Robuste Verarbeitung der Daten
         if (data && typeof data === 'object') {
-          // Sicherstellen dass imageRotation existiert (neues Feature)
-          if (!data.imageRotation) {
-            data.imageRotation = {
-              enabled: false,
-              mode: 'random'
-            };
-          }
+        // Sicherstellen dass imageRotation existiert (neues Feature)
+        if (!data.imageRotation) {
+          data.imageRotation = {
+            enabled: false,
+            mode: 'random'
+          };
+        }
 
-          // Sicherstellen dass leaveMessage existiert (neues Feature)
-          if (!data.leaveMessage) {
-            data.leaveMessage = {
-              enabled: false,
-              channelName: 'verlassen',
-              title: '👋 Tschüss!',
-              description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-              color: '0xFF6B6B',
-              mentionUser: false,
-              deleteAfter: 0
-            };
-          }
-          
-          setWelcomeSettings(data);
+        // Sicherstellen dass leaveMessage existiert (neues Feature)
+        if (!data.leaveMessage) {
+          data.leaveMessage = {
+            enabled: false,
+            channelName: 'verlassen',
+            title: '👋 Tschüss!',
+            description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+            color: '0xFF6B6B',
+            mentionUser: false,
+            deleteAfter: 0
+          };
+        }
+        
+        setWelcomeSettings(data);
           console.log('Einstellungen geladen:', data);
         } else {
           console.error('Ungültige Datenstruktur von API erhalten:', data);
@@ -337,21 +337,21 @@ const Welcome = () => {
         
         if (data && data.success && data.url) {
           showSuccess('Upload erfolgreich', '🎉 Bild erfolgreich hochgeladen!');
-          
-          // Automatisch das neue Bild auswählen
-          setWelcomeSettings({
-            ...welcomeSettings,
-            thumbnail: 'custom',
-            customThumbnail: data.url
-          });
+        
+        // Automatisch das neue Bild auswählen
+        setWelcomeSettings({
+          ...welcomeSettings,
+          thumbnail: 'custom',
+          customThumbnail: data.url
+        });
 
-          // Bilderliste neu laden
+        // Bilderliste neu laden
           try {
-            await loadUploadedImages();
+        await loadUploadedImages();
           } catch (loadError) {
             console.error('Fehler beim Neuladen der Bilder:', loadError);
           }
-        } else {
+      } else {
           console.error('Ungültige Upload-Response:', data);
           showError('Upload fehlgeschlagen', '❌ Ungültige Server-Antwort');
         }

@@ -1093,7 +1093,7 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Größere Uploads erlauben
 
 // GitHub Integration für persistente Image Storage
-const { Octokit } = require('@octokit/rest');
+let Octokit = null;
 
 // GitHub Client initialisieren
 let githubClient = null;
@@ -1102,13 +1102,25 @@ const GITHUB_OWNER = apiKeys.github?.username || process.env.GITHUB_USERNAME || 
 const GITHUB_BRANCH = 'main';
 const GITHUB_BASE_PATH = 'public/images/welcome';
 
-function initializeGitHub() {
+async function initializeGitHub() {
     if (apiKeys.github?.token) {
-        githubClient = new Octokit({
-            auth: apiKeys.github.token
-        });
-        console.log(`🐙 GitHub Client initialisiert für Image Storage (${GITHUB_OWNER}/${GITHUB_REPO})`);
-        return true;
+        try {
+            // Dynamischer Import für ES Module
+            if (!Octokit) {
+                const octokitModule = await import('@octokit/rest');
+                Octokit = octokitModule.Octokit;
+            }
+            
+            githubClient = new Octokit({
+                auth: apiKeys.github.token
+            });
+            console.log(`🐙 GitHub Client initialisiert für Image Storage (${GITHUB_OWNER}/${GITHUB_REPO})`);
+            return true;
+        } catch (error) {
+            console.error('❌ Fehler beim Laden von @octokit/rest:', error);
+            console.log('⚠️ GitHub Integration nicht verfügbar - verwende lokalen Storage');
+            return false;
+        }
     } else {
         console.log('⚠️ GitHub Token nicht konfiguriert - verwende lokalen Storage');
         console.log('💡 Füge GitHub Token in api-keys.json hinzu für persistente Image Storage');
@@ -1117,7 +1129,13 @@ function initializeGitHub() {
 }
 
 // GitHub beim Start initialisieren
-const useGitHubStorage = initializeGitHub();
+let useGitHubStorage = false;
+initializeGitHub().then(result => {
+    useGitHubStorage = result;
+}).catch(error => {
+    console.error('❌ GitHub-Initialisierung fehlgeschlagen:', error);
+    useGitHubStorage = false;
+});
 
 // GitHub Image Upload Funktion
 async function uploadImageToGitHub(buffer, filename, folder = 'general') {
@@ -1274,7 +1292,7 @@ const upload = multer({
 
 // Fallback: Statische Dateien servieren (für lokale Entwicklung)
 if (!useGitHubStorage) {
-    app.use('/images', express.static('./dashboard/public/images'));
+app.use('/images', express.static('./dashboard/public/images'));
 }
 
 // Welcome Images Ordner-Struktur initialisieren
@@ -1663,7 +1681,11 @@ app.post('/api/keys', (req, res) => {
             }
             
             if (github && apiKeys.github.token) {
-                initializeGitHub();
+                initializeGitHub().then(result => {
+                    useGitHubStorage = result;
+                }).catch(error => {
+                    console.error('❌ GitHub-Reinitialisierung fehlgeschlagen:', error);
+                });
             }
             
             console.log('🔑 API-Keys aktualisiert');
@@ -2737,10 +2759,10 @@ app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
         
         // Fallback: Lokales Löschen
         if (!deleteSuccess) {
-            const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
-            
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
+        const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
+        
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
                 console.log(`🗑️ Willkommensbild lokal gelöscht: ${folder}/${filename}`);
             }
         }

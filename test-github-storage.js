@@ -8,7 +8,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { Octokit } = require('@octokit/rest');
 
 // Lade API Keys
 let apiKeys = {};
@@ -27,14 +26,26 @@ const GITHUB_BASE_PATH = 'public/images/welcome';
 
 // GitHub Client
 let githubClient = null;
+let Octokit = null;
 
-function initializeGitHub() {
+async function initializeGitHub() {
     if (apiKeys.github?.token) {
-        githubClient = new Octokit({
-            auth: apiKeys.github.token
-        });
-        console.log(`🐙 GitHub Client initialisiert (${GITHUB_OWNER}/${GITHUB_REPO})`);
-        return true;
+        try {
+            // Dynamischer Import für ES Module
+            if (!Octokit) {
+                const octokitModule = await import('@octokit/rest');
+                Octokit = octokitModule.Octokit;
+            }
+            
+            githubClient = new Octokit({
+                auth: apiKeys.github.token
+            });
+            console.log(`🐙 GitHub Client initialisiert (${GITHUB_OWNER}/${GITHUB_REPO})`);
+            return true;
+        } catch (error) {
+            console.error('❌ Fehler beim Laden von @octokit/rest:', error);
+            return false;
+        }
     } else {
         console.error('❌ GitHub Token nicht konfiguriert in api-keys.json');
         return false;
@@ -186,7 +197,8 @@ async function runTests() {
     console.log(`Base Path: ${GITHUB_BASE_PATH}`);
     
     // Initialize GitHub
-    if (!initializeGitHub()) {
+    const initResult = await initializeGitHub();
+    if (!initResult) {
         console.error('\n❌ GitHub-Initialisierung fehlgeschlagen');
         process.exit(1);
     }
