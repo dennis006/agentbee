@@ -70,49 +70,84 @@ console.log('🚀 Bot startet - initialisiere Supabase...');
 const supabaseInitialized = initializeSupabase();
 console.log('🔍 Supabase Initialisierung Ergebnis:', supabaseInitialized);
 
-// GitHub Welcome-Ordner erstellen
+// GitHub Welcome-Ordner vorab erstellen (OHNE Upload)
 async function createWelcomeFoldersOnGitHub() {
-    if (!apiKeys.github.token) {
-        console.log('⚠️ GitHub Token fehlt - Ordner werden bei Upload erstellt');
-        return;
+    if (!apiKeys.github.token || !apiKeys.github.username || !apiKeys.github.repository) {
+        console.log('⚠️ GitHub Credentials unvollständig - Ordner werden bei Upload erstellt');
+        return false;
     }
     
-    const WELCOME_FOLDERS = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
+    const WELCOME_FOLDERS = [
+        { name: 'general', desc: 'Allgemeine Welcome Bilder' },
+        { name: 'valorant', desc: 'Valorant-themed Welcome Bilder' },
+        { name: 'minecraft', desc: 'Minecraft-themed Welcome Bilder' },
+        { name: 'gaming', desc: 'Gaming-themed Welcome Bilder' },
+        { name: 'anime', desc: 'Anime-themed Welcome Bilder' },
+        { name: 'memes', desc: 'Lustige Meme Welcome Bilder' },
+        { name: 'seasonal', desc: 'Saisonale Welcome Bilder (Weihnachten, Halloween, etc.)' }
+    ];
+    
+    let successCount = 0;
     
     try {
-        console.log('📁 Erstelle Welcome-Ordner auf GitHub...');
+        console.log('📁 Erstelle Welcome-Ordner auf GitHub vorab...');
+        
         for (const folder of WELCOME_FOLDERS) {
             try {
-                const path = `public/images/welcome/${folder}/.gitkeep`;
-                const content = `# Welcome images folder: ${folder}\n# Created automatically to ensure folder exists\n`;
+                const path = `public/images/welcome/${folder.name}/.gitkeep`;
+                const content = `# Welcome Images Folder: ${folder.name}\n` +
+                              `# ${folder.desc}\n` +
+                              `# Created: ${new Date().toISOString()}\n` +
+                              `# This file ensures the folder exists on GitHub\n` +
+                              `# Images will be uploaded here by the Discord Bot\n`;
+                
+                const { Octokit } = require('@octokit/rest');
+                const octokit = new Octokit({ auth: apiKeys.github.token });
                 
                 await octokit.repos.createOrUpdateFileContents({
                     owner: apiKeys.github.username,
                     repo: apiKeys.github.repository,
                     path: path,
-                    message: `📁 Create welcome folder: ${folder}`,
+                    message: `📁 Create welcome folder: ${folder.name}`,
                     content: Buffer.from(content).toString('base64'),
                     branch: 'main'
                 });
                 
-                console.log(`✅ Ordner ${folder} erstellt/überprüft`);
+                console.log(`✅ Ordner ${folder.name} erstellt/aktualisiert`);
+                successCount++;
+                
             } catch (error) {
-                if (error.status === 422) {
-                    console.log(`📁 Ordner ${folder} existiert bereits`);
+                if (error.status === 422 && error.message.includes('same')) {
+                    console.log(`📁 Ordner ${folder.name} existiert bereits (unverändert)`);
+                    successCount++;
                 } else {
-                    console.log(`⚠️ Fehler bei ${folder}: ${error.message}`);
+                    console.error(`❌ Fehler bei ${folder.name}: ${error.message}`);
                 }
             }
         }
-        console.log('🎉 Welcome-Ordner Setup abgeschlossen!');
+        
+        console.log(`🎉 GitHub Welcome-Ordner Setup: ${successCount}/${WELCOME_FOLDERS.length} erfolgreich!`);
+        return successCount === WELCOME_FOLDERS.length;
+        
     } catch (error) {
-        console.log('⚠️ GitHub Ordner-Setup fehlgeschlagen:', error.message);
+        console.error('❌ GitHub Ordner-Setup fehlgeschlagen:', error.message);
+        return false;
     }
 }
 
 // GitHub-Ordner beim Start erstellen (non-blocking)
 if (supabaseInitialized) {
-    createWelcomeFoldersOnGitHub().catch(console.error);
+    setTimeout(() => {
+        createWelcomeFoldersOnGitHub()
+            .then(success => {
+                if (success) {
+                    console.log('✅ Alle GitHub Welcome-Ordner sind bereit!');
+                } else {
+                    console.log('⚠️ Einige GitHub-Ordner konnten nicht erstellt werden');
+                }
+            })
+            .catch(console.error);
+    }, 2000); // 2 Sekunden warten damit GitHub initialisiert ist
 }
 
 // ================== API KEYS MANAGEMENT ==================
