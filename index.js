@@ -5358,20 +5358,37 @@ async function loadVerificationConfig() {
             throw new Error('Supabase nicht initialisiert - Verification System erfordert Supabase-Datenbank');
         }
 
+        console.log('🔍 Lade Verification-Config aus Supabase...');
+        
         const { data, error } = await supabase
             .from('verification_config')
             .select('*')
             .limit(1)
             .single();
 
+        console.log('📊 Supabase Response:', { data: !!data, error: error?.code, message: error?.message });
+
         if (data && !error) {
-            console.log('📋 Verification-Config aus Supabase geladen');
+            console.log('📋 Verification-Config aus Supabase geladen:', Object.keys(data.config || {}));
+            console.log('🎮 Anzahl Spiele in Config:', data.config?.allowedGames?.length || 0);
             return data.config;
         }
 
-        // Wenn keine Config in Supabase existiert, erstelle Standard-Config
+        // Wenn keine Config in Supabase existiert, erstelle Standard-Config NUR EINMAL
         if (error?.code === 'PGRST116') { // No rows found
-            console.log('🆕 Erstelle Standard Verification-Config in Supabase...');
+            console.log('🆕 Keine Config gefunden - erstelle Standard Verification-Config in Supabase...');
+            
+            // Prüfe nochmal ob nicht doch eine Config existiert (Race Condition vermeiden)
+            const { data: existingData } = await supabase
+                .from('verification_config')
+                .select('*')
+                .limit(1);
+
+            if (existingData && existingData.length > 0) {
+                console.log('📋 Config gefunden beim zweiten Versuch');
+                return existingData[0].config;
+            }
+            
             const defaultConfig = {
                 enabled: true,
                 requireCaptcha: true,
@@ -5419,6 +5436,7 @@ async function loadVerificationConfig() {
             }
         }
 
+        console.error('❌ Unerwarteter Supabase-Fehler:', error);
         throw new Error(`Supabase-Fehler: ${error?.message || 'Unbekannter Fehler'}`);
     } catch (error) {
         console.error('❌ Fehler beim Laden der Verification-Config:', error.message);
