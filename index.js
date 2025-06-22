@@ -1838,11 +1838,28 @@ async function loadWelcomeSettingsFromSupabase() {
         }
         
         // Grundlegende Struktur sicherstellen
+        console.log('📥 BACKEND RAW Supabase Data:', JSON.stringify(settings.config, null, 2));
+        console.log('🔍 BACKEND settings.config.imageRotation:', {
+            enabled: settings.config?.imageRotation?.enabled,
+            mode: settings.config?.imageRotation?.mode,
+            folder: settings.config?.imageRotation?.folder,
+            'typeof folder': typeof settings.config?.imageRotation?.folder,
+            'hasOwnProperty folder': settings.config?.imageRotation?.hasOwnProperty('folder')
+        });
+        
         const mergedSettings = {
             ...settings.config,
             id: settings.id,
             updated_at: settings.updated_at
         };
+        
+        console.log('🔍 BACKEND mergedSettings.imageRotation NACH Merge:', {
+            enabled: mergedSettings.imageRotation?.enabled,
+            mode: mergedSettings.imageRotation?.mode,
+            folder: mergedSettings.imageRotation?.folder,
+            'typeof folder': typeof mergedSettings.imageRotation?.folder,
+            'hasOwnProperty folder': mergedSettings.imageRotation?.hasOwnProperty('folder')
+        });
         
         // Cache aktualisieren
         welcomeSettingsCache = mergedSettings;
@@ -1976,6 +1993,15 @@ function loadWelcomeSettingsFromJSON() {
 // Speichere Welcome Settings in Supabase
 async function saveWelcomeSettingsToSupabase(settings) {
     try {
+        console.log('📥 BACKEND saveWelcomeSettingsToSupabase - Input:', JSON.stringify(settings, null, 2));
+        console.log('🔍 BACKEND ImageRotation beim Speichern:', {
+            enabled: settings.imageRotation?.enabled,
+            mode: settings.imageRotation?.mode,
+            folder: settings.imageRotation?.folder,
+            'typeof folder': typeof settings.imageRotation?.folder,
+            'hasOwnProperty folder': settings.imageRotation?.hasOwnProperty('folder')
+        });
+        
         if (!supabase) {
             console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback');
             return saveWelcomeSettingsToJSON(settings);
