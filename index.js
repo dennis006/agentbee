@@ -1795,7 +1795,9 @@ async function loadWelcomeSettingsFromSupabase() {
     try {
         if (!supabase) {
             console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback für Welcome Settings');
-            return loadWelcomeSettingsFromJSON();
+            const jsonSettings = loadWelcomeSettingsFromJSON();
+            welcomeSettings = jsonSettings; // Wichtig: Globale Variable setzen
+            return jsonSettings;
         }
         
         // Cache prüfen
@@ -1914,6 +1916,11 @@ function loadWelcomeSettingsFromJSON() {
             }
             
             welcomeSettings = mergedSettings;
+            console.log('✅ Welcome Settings aus JSON geladen:', {
+                thumbnail: mergedSettings.thumbnail,
+                customThumbnail: mergedSettings.customThumbnail ? mergedSettings.customThumbnail.substring(0, 50) + '...' : 'keine',
+                imageRotation: mergedSettings.imageRotation
+            });
             return mergedSettings;
         }
         // Fallback wenn keine Datei existiert
