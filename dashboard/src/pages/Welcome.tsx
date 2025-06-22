@@ -364,7 +364,7 @@ const Welcome = () => {
       if (response.ok) {
         const data = await response.json();
         if (data && data.success) {
-          successCount = data.successCount || 0;
+          successCount = data.successCount || data.totalFiles || 1;
           
           // Finde die letzte erfolgreiche URL für Auto-Auswahl
           if (data.results && Array.isArray(data.results)) {
@@ -375,6 +375,7 @@ const Welcome = () => {
           } else if (data.url) {
             // Fallback für Single-Upload Kompatibilität
             lastUploadedUrl = data.url;
+            successCount = 1;
           }
         } else {
           throw new Error(data.message || 'Upload fehlgeschlagen');

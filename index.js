@@ -1817,37 +1817,43 @@ async function loadWelcomeSettingsFromSupabase() {
         }
         
         if (!settings) {
-            console.log('📄 Keine Welcome Settings in Supabase gefunden, Standard-Einstellungen werden automatisch erstellt');
+            console.log('📄 Keine Welcome Settings in Supabase gefunden, verwende Standard-Einstellungen');
             // Fallback für den Fall dass die Migration noch nicht ausgeführt wurde
             const defaultSettings = {
-    enabled: true,
-    channelName: 'willkommen',
-    title: '🎉 Willkommen auf dem Server!',
-    description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-    color: '0x00FF7F',
-    thumbnail: 'user',
-    customThumbnail: '',
+                enabled: true,
+                channelName: 'willkommen',
+                title: '🎉 Willkommen auf dem Server!',
+                description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
+                color: '0x00FF7F',
+                thumbnail: 'user',
+                customThumbnail: '',
                 imageRotation: { enabled: false, mode: 'random' },
-    fields: [
+                fields: [
                     { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
                     { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
                     { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
-    ],
-    footer: 'Mitglied #{memberCount} • {server}',
-    autoRole: '',
-    mentionUser: true,
-    deleteAfter: 0,
+                ],
+                footer: 'Mitglied #{memberCount} • {server}',
+                autoRole: '',
+                mentionUser: true,
+                deleteAfter: 0,
                 dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
-    leaveMessage: {
-        enabled: false,
-        channelName: 'verlassen',
-        title: '👋 Tschüss!',
-        description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-        color: '0xFF6B6B',
-        mentionUser: false,
-        deleteAfter: 0
-    }
-};
+                leaveMessage: {
+                    enabled: false,
+                    channelName: 'verlassen',
+                    title: '👋 Tschüss!',
+                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+                    color: '0xFF6B6B',
+                    mentionUser: false,
+                    deleteAfter: 0
+                }
+            };
+            
+            // Speichere die Standard-Einstellungen in Supabase für das nächste Mal
+            console.log('💾 Erstelle Standard-Einstellungen in Supabase...');
+            await saveWelcomeSettingsToSupabase(defaultSettings);
+            
+            welcomeSettings = defaultSettings; // Globale Variable setzen
             return defaultSettings;
         }
         
@@ -1863,7 +1869,12 @@ async function loadWelcomeSettingsFromSupabase() {
         welcomeSettingsCacheTime = now;
         welcomeSettings = mergedSettings; // Globale Variable aktualisieren
         
-        console.log('✅ Welcome Settings aus Supabase geladen');
+        console.log('✅ Welcome Settings aus Supabase geladen:', {
+            id: mergedSettings.id,
+            thumbnail: mergedSettings.thumbnail,
+            customThumbnail: mergedSettings.customThumbnail ? mergedSettings.customThumbnail.substring(0, 50) + '...' : 'keine',
+            imageRotation: mergedSettings.imageRotation
+        });
         return welcomeSettingsCache;
         
     } catch (error) {
@@ -2673,6 +2684,10 @@ app.post('/api/welcome/upload', upload.array('welcomeImage', 10), async (req, re
         const failedUploads = uploadResults.filter(result => !result.success);
         
         console.log(`📊 Multi-Upload Ergebnis: ${successfulUploads.length}/${files.length} erfolgreich`);
+        console.log('✅ Erfolgreich hochgeladen:', successfulUploads.map(r => r.originalName));
+        if (failedUploads.length > 0) {
+            console.log('❌ Fehlgeschlagen:', failedUploads.map(r => r.originalName));
+        }
         
         res.json({ 
             success: successfulUploads.length > 0,
