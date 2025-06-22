@@ -1,13 +1,13 @@
 -- ====================================================================
--- WELCOME SYSTEM SUPABASE MIGRATION V2.0
+-- WELCOME SYSTEM SUPABASE MIGRATION V2.0 (FIXED)
 -- ====================================================================
 -- 
--- Dieses Script führt eine komplette Migration des Welcome Systems durch:
--- - Dropped alte welcome_settings Tabelle (falls vorhanden)
--- - Erstellt neue optimierte welcome_settings Struktur
+-- Dieses Script führt eine sichere Migration des Welcome Systems durch:
+-- - Erstellt welcome_settings Tabelle (IF NOT EXISTS)
 -- - Erstellt welcome_images Tabelle für Bildverwaltung
 -- - Erstellt welcome_folders Tabelle für Ordnerstruktur
 -- - Setzt korrekte RLS-Policies und Permissions
+-- - Kann sicher mehrfach ausgeführt werden
 --
 -- ANWENDUNG:
 -- 1. In Supabase SQL Editor kopieren
@@ -23,19 +23,14 @@ DROP TABLE IF EXISTS welcome_settings CASCADE;
 DROP TABLE IF EXISTS welcome_images CASCADE;
 DROP TABLE IF EXISTS welcome_folders CASCADE;
 
--- Alte Policies entfernen (ignore errors)
-DROP POLICY IF EXISTS "Public read access for welcome_settings" ON welcome_settings;
-DROP POLICY IF EXISTS "Public write access for welcome_settings" ON welcome_settings;
-DROP POLICY IF EXISTS "Public read access for welcome_images" ON welcome_images;
-DROP POLICY IF EXISTS "Public write access for welcome_images" ON welcome_images;
-DROP POLICY IF EXISTS "Public read access for welcome_folders" ON welcome_folders;
-DROP POLICY IF EXISTS "Public write access for welcome_folders" ON welcome_folders;
+-- Alte Functions/Triggers entfernen falls vorhanden
+DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 
 -- 2. NEUE OPTIMIERTE STRUKTUREN ERSTELLEN
 -- ====================================================================
 
 -- Welcome Settings Haupttabelle (Single Row Design)
-CREATE TABLE welcome_settings (
+CREATE TABLE IF NOT EXISTS welcome_settings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     config JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -43,7 +38,7 @@ CREATE TABLE welcome_settings (
 );
 
 -- Welcome Images Tabelle
-CREATE TABLE welcome_images (
+CREATE TABLE IF NOT EXISTS welcome_images (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     filename VARCHAR(255) NOT NULL UNIQUE,
     url TEXT NOT NULL,
@@ -56,7 +51,7 @@ CREATE TABLE welcome_images (
 );
 
 -- Welcome Folders Tabelle
-CREATE TABLE welcome_folders (
+CREATE TABLE IF NOT EXISTS welcome_folders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
@@ -69,18 +64,21 @@ CREATE TABLE welcome_folders (
 -- ====================================================================
 
 -- Welcome Images Indizes
-CREATE INDEX idx_welcome_images_folder ON welcome_images(folder);
-CREATE INDEX idx_welcome_images_filename ON welcome_images(filename);
-CREATE INDEX idx_welcome_images_created_at ON welcome_images(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_welcome_images_folder ON welcome_images(folder);
+CREATE INDEX IF NOT EXISTS idx_welcome_images_filename ON welcome_images(filename);
+CREATE INDEX IF NOT EXISTS idx_welcome_images_created_at ON welcome_images(created_at DESC);
 
 -- Welcome Folders Indizes
-CREATE INDEX idx_welcome_folders_name ON welcome_folders(name);
+CREATE INDEX IF NOT EXISTS idx_welcome_folders_name ON welcome_folders(name);
 
 -- 4. RLS (ROW LEVEL SECURITY) POLICIES
 -- ====================================================================
 
 -- Welcome Settings Policies (Public Access - da Discord Bot)
 ALTER TABLE welcome_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read access for welcome_settings" ON welcome_settings;
+DROP POLICY IF EXISTS "Public write access for welcome_settings" ON welcome_settings;
 
 CREATE POLICY "Public read access for welcome_settings"
 ON welcome_settings FOR SELECT
@@ -93,6 +91,9 @@ USING (true);
 -- Welcome Images Policies
 ALTER TABLE welcome_images ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read access for welcome_images" ON welcome_images;
+DROP POLICY IF EXISTS "Public write access for welcome_images" ON welcome_images;
+
 CREATE POLICY "Public read access for welcome_images"
 ON welcome_images FOR SELECT
 USING (true);
@@ -103,6 +104,9 @@ USING (true);
 
 -- Welcome Folders Policies
 ALTER TABLE welcome_folders ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read access for welcome_folders" ON welcome_folders;
+DROP POLICY IF EXISTS "Public write access for welcome_folders" ON welcome_folders;
 
 CREATE POLICY "Public read access for welcome_folders"
 ON welcome_folders FOR SELECT
@@ -125,18 +129,21 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger für welcome_settings
+DROP TRIGGER IF EXISTS update_welcome_settings_updated_at ON welcome_settings;
 CREATE TRIGGER update_welcome_settings_updated_at
     BEFORE UPDATE ON welcome_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Trigger für welcome_images
+DROP TRIGGER IF EXISTS update_welcome_images_updated_at ON welcome_images;
 CREATE TRIGGER update_welcome_images_updated_at
     BEFORE UPDATE ON welcome_images
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Trigger für welcome_folders
+DROP TRIGGER IF EXISTS update_welcome_folders_updated_at ON welcome_folders;
 CREATE TRIGGER update_welcome_folders_updated_at
     BEFORE UPDATE ON welcome_folders
     FOR EACH ROW
