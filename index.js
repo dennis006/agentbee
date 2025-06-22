@@ -70,6 +70,51 @@ console.log('🚀 Bot startet - initialisiere Supabase...');
 const supabaseInitialized = initializeSupabase();
 console.log('🔍 Supabase Initialisierung Ergebnis:', supabaseInitialized);
 
+// GitHub Welcome-Ordner erstellen
+async function createWelcomeFoldersOnGitHub() {
+    if (!apiKeys.github.token) {
+        console.log('⚠️ GitHub Token fehlt - Ordner werden bei Upload erstellt');
+        return;
+    }
+    
+    const WELCOME_FOLDERS = ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal'];
+    
+    try {
+        console.log('📁 Erstelle Welcome-Ordner auf GitHub...');
+        for (const folder of WELCOME_FOLDERS) {
+            try {
+                const path = `public/images/welcome/${folder}/.gitkeep`;
+                const content = `# Welcome images folder: ${folder}\n# Created automatically to ensure folder exists\n`;
+                
+                await octokit.repos.createOrUpdateFileContents({
+                    owner: apiKeys.github.username,
+                    repo: apiKeys.github.repository,
+                    path: path,
+                    message: `📁 Create welcome folder: ${folder}`,
+                    content: Buffer.from(content).toString('base64'),
+                    branch: 'main'
+                });
+                
+                console.log(`✅ Ordner ${folder} erstellt/überprüft`);
+            } catch (error) {
+                if (error.status === 422) {
+                    console.log(`📁 Ordner ${folder} existiert bereits`);
+                } else {
+                    console.log(`⚠️ Fehler bei ${folder}: ${error.message}`);
+                }
+            }
+        }
+        console.log('🎉 Welcome-Ordner Setup abgeschlossen!');
+    } catch (error) {
+        console.log('⚠️ GitHub Ordner-Setup fehlgeschlagen:', error.message);
+    }
+}
+
+// GitHub-Ordner beim Start erstellen (non-blocking)
+if (supabaseInitialized) {
+    createWelcomeFoldersOnGitHub().catch(console.error);
+}
+
 // ================== API KEYS MANAGEMENT ==================
 // Zentrale API-Key-Verwaltung - alle Keys hier konfigurieren
 let apiKeys = {
@@ -1803,10 +1848,8 @@ const WELCOME_CACHE_DURATION = 300000; // 5 Minuten
 async function loadWelcomeSettingsFromSupabase() {
     try {
         if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback für Welcome Settings');
-            const jsonSettings = loadWelcomeSettingsFromJSON();
-            welcomeSettings = jsonSettings; // Wichtig: Globale Variable setzen
-            return jsonSettings;
+            console.error('❌ Supabase ist erforderlich für Welcome Settings!');
+            throw new Error('Supabase nicht verfügbar - Welcome Settings können nicht geladen werden');
         }
         
         // Cache prüfen
@@ -1824,26 +1867,52 @@ async function loadWelcomeSettingsFromSupabase() {
         
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
             console.error('❌ Fehler beim Laden der Welcome Settings:', error);
-            return loadWelcomeSettingsFromJSON();
+            throw error;
         }
         
         if (!settings || !settings.config) {
-            console.log('📄 Keine Welcome Settings in Supabase gefunden, verwende JSON-Fallback');
-            console.log('🔍 Supabase Status:', { 
-                hasSettings: !!settings, 
-                hasConfig: !!(settings && settings.config),
-                settingsKeys: settings ? Object.keys(settings) : 'null'
-            });
+            console.log('📄 Keine Welcome Settings in Supabase gefunden, erstelle Default-Settings');
             
-            // Versuche zuerst JSON-Fallback
-            const jsonSettings = loadWelcomeSettingsFromJSON();
+            // Erstelle Default-Settings direkt in Supabase
+            const defaultSettings = {
+                enabled: true,
+                channelName: 'willkommen',
+                title: '🎉 Willkommen auf dem Server!',
+                description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
+                color: '0x00FF7F',
+                thumbnail: 'user',
+                customThumbnail: '',
+                imageRotation: { enabled: false, mode: 'random', folder: undefined },
+                fields: [
+                    { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
+                    { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
+                    { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
+                ],
+                footer: 'Mitglied #{memberCount} • {server}',
+                autoRole: '',
+                mentionUser: true,
+                deleteAfter: 0,
+                dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
+                leaveMessage: {
+                    enabled: false,
+                    channelName: 'verlassen',
+                    title: '👋 Tschüss!',
+                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+                    color: '0xFF6B6B',
+                    mentionUser: false,
+                    deleteAfter: 0
+                }
+            };
             
-            // Speichere JSON-Settings in Supabase für das nächste Mal
-            console.log('💾 Speichere JSON-Settings in Supabase...');
-            await saveWelcomeSettingsToSupabase(jsonSettings);
+            // Speichere Default-Settings in Supabase
+            console.log('💾 Speichere Default-Settings in Supabase...');
+            const success = await saveWelcomeSettingsToSupabase(defaultSettings);
+            if (!success) {
+                throw new Error('Fehler beim Erstellen der Default-Settings in Supabase');
+            }
             
-            welcomeSettings = jsonSettings; // Globale Variable setzen
-            return jsonSettings;
+            welcomeSettings = defaultSettings;
+            return defaultSettings;
         }
         
         // Grundlegende Struktur sicherstellen
@@ -1884,8 +1953,8 @@ async function loadWelcomeSettingsFromSupabase() {
         return welcomeSettingsCache;
         
     } catch (error) {
-        console.error('❌ Fehler beim Laden der Welcome Settings:', error);
-        return loadWelcomeSettingsFromJSON();
+        console.error('❌ Kritischer Fehler beim Laden der Welcome Settings:', error);
+        throw error; // Kein Fallback mehr - Supabase ist erforderlich
     }
 }
 
@@ -2016,8 +2085,8 @@ async function saveWelcomeSettingsToSupabase(settings) {
         console.log('🔍 Checking supabase variable:', { supabase: !!supabase, type: typeof supabase });
         
         if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback');
-            return saveWelcomeSettingsToJSON(settings);
+            console.error('❌ Supabase ist erforderlich zum Speichern!');
+            throw new Error('Supabase nicht verfügbar - Welcome Settings können nicht gespeichert werden');
         }
         
         console.log('✅ Supabase OK - proceeding to database operations...');
@@ -2093,10 +2162,9 @@ async function saveWelcomeSettingsToSupabase(settings) {
         welcomeSettingsCache = null;
         welcomeSettings = settings;
         
-        // ZUSÄTZLICH: Auch JSON-File aktualisieren für Konsistenz
-        saveWelcomeSettingsToJSON(settings);
+        // Kein JSON-Fallback mehr - nur Supabase
         
-        console.log('✅ Welcome Settings in Supabase UND JSON gespeichert');
+        console.log('✅ Welcome Settings in Supabase gespeichert');
         return true;
         
     } catch (error) {
@@ -2108,8 +2176,8 @@ async function saveWelcomeSettingsToSupabase(settings) {
             hint: error.hint,
             stack: error.stack
         });
-        console.log('🔄 Fallback: Speichere in JSON-Datei...');
-        return saveWelcomeSettingsToJSON(settings);
+        console.log('❌ Kein Fallback verfügbar - Supabase ist erforderlich!');
+        throw error; // Kein JSON-Fallback mehr
     }
 }
 
