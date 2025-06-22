@@ -77,6 +77,11 @@ let apiKeys = {
     valorant: process.env.VALORANT_API_TOKEN || '',
     youtube: {
         apiKey: process.env.YOUTUBE_API_KEY || ''
+    },
+    github: {
+        token: process.env.GITHUB_TOKEN || '',
+        username: process.env.GITHUB_USERNAME || '',
+        repository: process.env.GITHUB_REPOSITORY || 'discordbot'
     }
 };
 
@@ -1600,6 +1605,12 @@ app.get('/api/keys/status', (req, res) => {
             youtube: {
                 apiKey: !!apiKeys.youtube.apiKey,
                 configured: !!apiKeys.youtube.apiKey
+            },
+            github: {
+                token: !!apiKeys.github.token,
+                username: !!apiKeys.github.username,
+                repository: !!apiKeys.github.repository,
+                configured: !!(apiKeys.github.token && apiKeys.github.username)
             }
         };
         res.json({ success: true, status });
@@ -1612,7 +1623,7 @@ app.get('/api/keys/status', (req, res) => {
 // API-Keys aktualisieren
 app.post('/api/keys', (req, res) => {
     try {
-        const { discord, openai, twitch, valorant } = req.body;
+        const { discord, openai, twitch, valorant, github } = req.body;
         
         // Nur nicht-leere Keys aktualisieren
         if (discord) {
@@ -1629,6 +1640,11 @@ app.post('/api/keys', (req, res) => {
         if (req.body.youtube && req.body.youtube.apiKey) {
             apiKeys.youtube.apiKey = req.body.youtube.apiKey;
         }
+        if (github) {
+            if (github.token) apiKeys.github.token = github.token;
+            if (github.username) apiKeys.github.username = github.username;
+            if (github.repository) apiKeys.github.repository = github.repository;
+        }
         
         // Speichern
         const saved = saveAPIKeys();
@@ -1644,6 +1660,10 @@ app.post('/api/keys', (req, res) => {
                 if (twitchSystem) {
                     twitchSystem.setCredentials(apiKeys.twitch.clientId, apiKeys.twitch.clientSecret);
                 }
+            }
+            
+            if (github && apiKeys.github.token) {
+                initializeGitHub();
             }
             
             console.log('🔑 API-Keys aktualisiert');
@@ -1667,6 +1687,12 @@ app.post('/api/keys', (req, res) => {
                     youtube: {
                         apiKey: !!apiKeys.youtube.apiKey,
                         configured: !!apiKeys.youtube.apiKey
+                    },
+                    github: {
+                        token: !!apiKeys.github.token,
+                        username: !!apiKeys.github.username,
+                        repository: !!apiKeys.github.repository,
+                        configured: !!(apiKeys.github.token && apiKeys.github.username)
                     }
                 }
             });
