@@ -2046,7 +2046,10 @@ async function saveWelcomeSettingsToSupabase(settings) {
         welcomeSettingsCache = null;
         welcomeSettings = settings;
         
-        console.log('✅ Welcome Settings in Supabase gespeichert');
+        // ZUSÄTZLICH: Auch JSON-File aktualisieren für Konsistenz
+        saveWelcomeSettingsToJSON(settings);
+        
+        console.log('✅ Welcome Settings in Supabase UND JSON gespeichert');
         return true;
         
     } catch (error) {
