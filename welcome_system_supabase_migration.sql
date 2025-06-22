@@ -236,7 +236,7 @@ END $$;
 -- 5. TRIGGER FÜR AUTOMATISCHE TIMESTAMPS
 -- ===========================================
 
--- Updated_at Trigger Function
+-- Updated_at Trigger Function (CREATE OR REPLACE ist sicher)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -245,22 +245,46 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Trigger für alle Tabellen
-CREATE TRIGGER update_welcome_settings_updated_at
-    BEFORE UPDATE ON welcome_settings
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Trigger für alle Tabellen (mit Fehlerbehandlung)
+DO $$
+BEGIN
+    -- Welcome Settings Trigger
+    BEGIN
+        CREATE TRIGGER update_welcome_settings_updated_at
+            BEFORE UPDATE ON welcome_settings
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    EXCEPTION WHEN duplicate_object THEN 
+        RAISE NOTICE 'Trigger update_welcome_settings_updated_at bereits vorhanden - überspringe';
+    END;
 
-CREATE TRIGGER update_welcome_images_updated_at
-    BEFORE UPDATE ON welcome_images
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    -- Welcome Images Trigger
+    BEGIN
+        CREATE TRIGGER update_welcome_images_updated_at
+            BEFORE UPDATE ON welcome_images
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    EXCEPTION WHEN duplicate_object THEN 
+        RAISE NOTICE 'Trigger update_welcome_images_updated_at bereits vorhanden - überspringe';
+    END;
 
-CREATE TRIGGER update_welcome_folders_updated_at
-    BEFORE UPDATE ON welcome_folders
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    -- Welcome Folders Trigger
+    BEGIN
+        CREATE TRIGGER update_welcome_folders_updated_at
+            BEFORE UPDATE ON welcome_folders
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    EXCEPTION WHEN duplicate_object THEN 
+        RAISE NOTICE 'Trigger update_welcome_folders_updated_at bereits vorhanden - überspringe';
+    END;
 
-CREATE TRIGGER update_welcome_stats_updated_at
-    BEFORE UPDATE ON welcome_stats
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    -- Welcome Stats Trigger
+    BEGIN
+        CREATE TRIGGER update_welcome_stats_updated_at
+            BEFORE UPDATE ON welcome_stats
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    EXCEPTION WHEN duplicate_object THEN 
+        RAISE NOTICE 'Trigger update_welcome_stats_updated_at bereits vorhanden - überspringe';
+    END;
+
+END $$;
 
 -- 6. STANDARDDATEN EINFÜGEN
 -- ===========================================

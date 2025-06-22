@@ -103,8 +103,9 @@ Gehe zu **Authentication > Policies** und prüfe:
 ```
 
 ### Problem: "syntax error at or near NOT"
-**Lösung:** PostgreSQL unterstützt kein `IF NOT EXISTS` für Policies
+**Lösung:** PostgreSQL unterstützt kein `IF NOT EXISTS` für Policies/Triggers
 - ✅ Gefixt in v2 der Migration-Dateien
+- ✅ Exception handling für Policies UND Triggers
 
 ### Problem: Immer noch RLS Errors
 **Lösung:** Prüfe Environment Variables:
@@ -123,10 +124,20 @@ echo $SUPABASE_SERVICE_KEY  # Sollte nicht leer sein
 ### Problem: Storage Policy Conflicts
 **Lösung:** Migration prüft jetzt automatisch ob Storage Policies existieren
 
+### Problem: "trigger already exists"
+**Lösung:** Alle Trigger verwenden jetzt Exception Handling
+```sql
+-- EXCEPTION WHEN duplicate_object THEN NULL;
+```
+
+### Problem: Clean Install nötig
+**Lösung:** Verwende `welcome_system_cleanup.sql` um alles zu löschen
+
 ## 📝 Files Modified
 - ✅ `index.js` - Supabase Client Fix
-- ✅ `welcome_system_supabase_migration.sql` - Erweiterte Policies  
+- ✅ `welcome_system_supabase_migration.sql` - Erweiterte Policies + Trigger Fix
 - ✅ `welcome_rls_policies_update.sql` - Standalone Policy Update
+- ✅ `welcome_system_cleanup.sql` - Clean Install Helper
 - ✅ `WELCOME_SYSTEM_MIGRATION_FIX.md` - Diese Anleitung
 
 ---
