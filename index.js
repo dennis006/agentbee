@@ -2020,10 +2020,18 @@ async function saveWelcomeSettingsToSupabase(settings) {
         
         // Prüfe ob bereits Einstellungen existieren
         console.log('🔍 Prüfe existierende Settings...');
+        console.log('🗄️ Versuche Zugriff auf welcome_settings Tabelle...');
         const { data: existingSettings, error: selectError } = await supabase
             .from('welcome_settings')
             .select('id')
             .single();
+        
+        console.log('📋 SELECT Ergebnis:', {
+            data: existingSettings,
+            error: selectError,
+            errorCode: selectError?.code,
+            errorMessage: selectError?.message
+        });
         
         if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = No rows found
             console.log('⚠️ Fehler beim Prüfen existierender Settings:', selectError);
@@ -2087,6 +2095,14 @@ async function saveWelcomeSettingsToSupabase(settings) {
         
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Welcome Settings in Supabase:', error);
+        console.error('💥 Error Details:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            stack: error.stack
+        });
+        console.log('🔄 Fallback: Speichere in JSON-Datei...');
         return saveWelcomeSettingsToJSON(settings);
     }
 }
