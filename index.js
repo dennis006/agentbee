@@ -5447,7 +5447,22 @@ async function loadVerificationConfig() {
         if (data && !error) {
             console.log('📋 Verification-Config aus Supabase geladen:', Object.keys(data.config || {}));
             console.log('🎮 Anzahl Spiele in Config:', data.config?.allowedGames?.length || 0);
-            return data.config;
+            
+            // Merge separate Felder mit JSONB config für Konsistenz
+            const mergedConfig = {
+                ...data.config,
+                enabled: data.enabled,
+                requireCaptcha: data.require_captcha,
+                autoAssignRoles: data.auto_assign_roles
+            };
+            
+            console.log('🔧 Config-Status:', {
+                enabled: mergedConfig.enabled,
+                requireCaptcha: mergedConfig.requireCaptcha,
+                autoAssignRoles: mergedConfig.autoAssignRoles
+            });
+            
+            return mergedConfig;
         }
 
         // Wenn keine Config in Supabase existiert, erstelle Standard-Config NUR EINMAL
@@ -5539,35 +5554,45 @@ async function saveVerificationConfig(config) {
             .single();
 
         if (existingData && !fetchError) {
-            // Update bestehende Config
+            // Update bestehende Config - SOWOHL separate Felder ALS AUCH config JSONB
             console.log('🔄 Aktualisiere bestehende Config mit ID:', existingData.id);
             const { error: updateError } = await supabase
                 .from('verification_config')
                 .update({
+                    // Separate Felder aktualisieren
+                    enabled: config.enabled,
+                    require_captcha: config.requireCaptcha,
+                    auto_assign_roles: config.autoAssignRoles,
+                    // JSONB Config aktualisieren
                     config: config,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', existingData.id);
 
             if (!updateError) {
-                console.log('✅ Verification-Config erfolgreich aktualisiert');
+                console.log('✅ Verification-Config erfolgreich aktualisiert (separate Felder + JSONB)');
                 return true;
             } else {
                 console.error('❌ Fehler beim Aktualisieren:', updateError);
                 throw updateError;
             }
         } else {
-            // Erstelle neue Config
+            // Erstelle neue Config - SOWOHL separate Felder ALS AUCH config JSONB
             console.log('🆕 Erstelle neue Config-Zeile');
             const { error: insertError } = await supabase
                 .from('verification_config')
                 .insert({
+                    // Separate Felder setzen
+                    enabled: config.enabled,
+                    require_captcha: config.requireCaptcha,
+                    auto_assign_roles: config.autoAssignRoles,
+                    // JSONB Config setzen
                     config: config,
                     updated_at: new Date().toISOString()
                 });
 
             if (!insertError) {
-                console.log('✅ Neue Verification-Config erstellt');
+                console.log('✅ Neue Verification-Config erstellt (separate Felder + JSONB)');
                 return true;
             } else {
                 console.error('❌ Fehler beim Erstellen:', insertError);
