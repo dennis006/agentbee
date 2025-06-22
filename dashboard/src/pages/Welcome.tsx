@@ -1244,9 +1244,9 @@ const Welcome = () => {
                         onChange={(e) => setWelcomeSettings({
                           ...welcomeSettings, 
                           imageRotation: {
+                            ...welcomeSettings.imageRotation,  // ✅ Preserve ALL existing values
                             enabled: e.target.checked,
-                            mode: welcomeSettings.imageRotation?.mode || 'random',
-                            folder: welcomeSettings.imageRotation?.folder
+                            mode: welcomeSettings.imageRotation?.mode || 'random'
                           }
                         })}
                         className="w-4 h-4 text-pink-400 bg-dark-bg border-purple-primary/30 rounded focus:ring-pink-400 focus:ring-2"
