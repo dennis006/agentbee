@@ -171,41 +171,58 @@ const Welcome = () => {
         
         // Robuste Verarbeitung der Daten
         if (data && typeof data === 'object') {
-        // Sicherstellen dass imageRotation existiert (neues Feature)
-        if (!data.imageRotation) {
-          data.imageRotation = {
-            enabled: false,
-            mode: 'random'
-          };
-        }
+          // Sicherstellen dass imageRotation existiert (neues Feature)
+          if (!data.imageRotation) {
+            data.imageRotation = {
+              enabled: false,
+              mode: 'random'
+            };
+          }
 
-        // Sicherstellen dass leaveMessage existiert (neues Feature)
-        if (!data.leaveMessage) {
-          data.leaveMessage = {
-            enabled: false,
-            channelName: 'verlassen',
-            title: '👋 Tschüss!',
-            description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-            color: '0xFF6B6B',
-            mentionUser: false,
-            deleteAfter: 0
-          };
-        }
-        
-        setWelcomeSettings(data);
-        setSettingsLoaded(true);
-          console.log('Einstellungen geladen:', data);
+          // Sicherstellen dass leaveMessage existiert (neues Feature)
+          if (!data.leaveMessage) {
+            data.leaveMessage = {
+              enabled: false,
+              channelName: 'verlassen',
+              title: '👋 Tschüss!',
+              description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+              color: '0xFF6B6B',
+              mentionUser: false,
+              deleteAfter: 0
+            };
+          }
+          
+          // Merge mit aktuellen Einstellungen statt kompletten Ersatz
+          setWelcomeSettings(prevSettings => ({
+            ...prevSettings,
+            ...data,
+            imageRotation: {
+              ...prevSettings.imageRotation,
+              ...data.imageRotation
+            },
+            leaveMessage: {
+              ...prevSettings.leaveMessage,
+              ...data.leaveMessage
+            }
+          }));
+          setSettingsLoaded(true);
+          console.log('✅ Einstellungen aus API geladen:', {
+            thumbnail: data.thumbnail,
+            customThumbnail: data.customThumbnail ? data.customThumbnail.substring(0, 50) + '...' : 'keine',
+            enabled: data.enabled,
+            title: data.title
+          });
         } else {
           console.error('Ungültige Datenstruktur von API erhalten:', data);
           showError('Ungültige Daten', '❌ Ungültige Daten von Server erhalten');
         }
       } else {
         console.error('API Error beim Laden der Einstellungen:', response.status, response.statusText);
-                 showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Einstellungen');
+        showError('Laden fehlgeschlagen', '❌ Fehler beim Laden der Einstellungen');
       }
     } catch (err) {
       console.error('Fehler beim Laden der Einstellungen:', err);
-             showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Einstellungen');
+      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Laden der Einstellungen');
     }
   };
 
