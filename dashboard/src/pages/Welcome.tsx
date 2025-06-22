@@ -90,6 +90,10 @@ const Welcome = () => {
   const [galleryCollapsed, setGalleryCollapsed] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<{[folder: string]: number}>({})
+  const imagesPerPage = 5
+  
   const [welcomeSettings, setWelcomeSettings] = useState<WelcomeSettings>({
     enabled: true,
     channelName: 'willkommen',
@@ -1035,7 +1039,13 @@ const Welcome = () => {
                       className="relative group"
                     >
                       <button
-                        onClick={() => setSelectedFolder(folderName)}
+                        onClick={() => {
+                          setSelectedFolder(folderName);
+                          // Reset pagination when changing folders
+                          if (folderName !== selectedFolder) {
+                            setCurrentPage(prev => ({ ...prev, [folderName]: 0 }));
+                          }
+                        }}
                         onDragOver={(e) => handleDragOver(e, folderName)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, folderName)}
@@ -1188,8 +1198,60 @@ const Welcome = () => {
                   />
                 </div>
 
-                {/* Bilder aus dem aktuellen Ordner anzeigen */}
-                {(folders[selectedFolder] || []).map((image, index) => (
+                {/* Pagination Logic */}
+                {(() => {
+                  const currentImages = folders[selectedFolder] || []
+                  const folderPage = currentPage[selectedFolder] || 0
+                  const startIndex = folderPage * imagesPerPage
+                  const endIndex = startIndex + imagesPerPage
+                  const paginatedImages = currentImages.slice(startIndex, endIndex)
+                  const totalPages = Math.ceil(currentImages.length / imagesPerPage)
+                  
+                  return (
+                    <>
+                      {/* Pagination Navigation - nur anzeigen wenn mehr als 5 Bilder */}
+                      {currentImages.length > imagesPerPage && (
+                        <div className="col-span-full flex items-center justify-between bg-dark-bg/50 rounded-lg p-3 border border-purple-primary/20">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-dark-text">
+                              Seite {folderPage + 1} von {totalPages}
+                            </span>
+                            <span className="text-xs text-dark-muted">
+                              ({currentImages.length} Bilder gesamt)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={() => setCurrentPage(prev => ({
+                                ...prev,
+                                [selectedFolder]: Math.max(0, folderPage - 1)
+                              }))}
+                              disabled={folderPage === 0}
+                              size="sm"
+                              className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              ← Zurück
+                            </Button>
+                            <span className="text-xs text-dark-muted px-2">
+                              {startIndex + 1}-{Math.min(endIndex, currentImages.length)} von {currentImages.length}
+                            </span>
+                            <Button
+                              onClick={() => setCurrentPage(prev => ({
+                                ...prev,
+                                [selectedFolder]: Math.min(totalPages - 1, folderPage + 1)
+                              }))}
+                              disabled={folderPage >= totalPages - 1}
+                              size="sm"
+                              className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Weiter →
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Bilder aus dem aktuellen Ordner anzeigen (paginiert) */}
+                      {paginatedImages.map((image, index) => (
                   <div 
                     key={image.filename}
                     draggable
@@ -1267,7 +1329,7 @@ const Welcome = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                ))})()}
               </div>
 
               {/* Custom URL Input */}
