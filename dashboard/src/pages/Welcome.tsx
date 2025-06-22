@@ -1329,7 +1329,10 @@ const Welcome = () => {
                       </div>
                     </div>
                   </div>
-                ))})()}
+                ))}
+                    </>
+                  )
+                })()}
               </div>
 
               {/* Custom URL Input */}
