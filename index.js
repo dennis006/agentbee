@@ -55,15 +55,8 @@ let supabase = null;
 function initializeSupabase() {
     try {
         const supabaseUrl = process.env.SUPABASE_URL;
-        let supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Service Role für RLS
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Service Role für RLS
         const supabaseAnonKey = process.env.SUPABASE_ANON_KEY; // Fallback
-        
-        // 🚨 NOTFALL-FALLBACK: Falls SERVICE_KEY nicht gesetzt ist in Railway
-        if (!supabaseServiceKey && supabaseUrl && supabaseUrl.includes('supabase.co')) {
-            console.log('⚠️ SUPABASE_SERVICE_KEY nicht gefunden! Das kann zu RLS Policy Fehlern führen!');
-            console.log('💡 Lösung: Setze SUPABASE_SERVICE_KEY in Railway Environment Variables');
-            console.log('📝 Alternative: Führe disable_welcome_rls_emergency.sql in Supabase aus');
-        }
         
         if (supabaseUrl && (supabaseServiceKey || supabaseAnonKey)) {
             const { createClient } = require('@supabase/supabase-js');
@@ -74,11 +67,6 @@ function initializeSupabase() {
             
             supabase = createClient(supabaseUrl, keyToUse);
             console.log(`✅ Supabase erfolgreich initialisiert (${keyType})`);
-            
-            if (!supabaseServiceKey) {
-                console.log('🚨 WARNUNG: Verwende ANON_KEY - RLS Policy Fehler möglich!');
-            }
-            
             return true;
         } else {
             console.log('⚠️ Supabase Credentials nicht gefunden - verwende JSON-Fallback');
@@ -3521,7 +3509,7 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-// Event: Neues Mitglied beitritt (nutzt jetzt Supabase Welcome-System)
+// Event: Neues Mitglied beitritt (nutzt jetzt Supabase Welcome-System mit JSON Fallback)
 client.on(Events.GuildMemberAdd, async member => {
     console.log(`👋 ${member.user.tag} ist ${member.guild.name} beigetreten`);
     console.log(`🔍 DEBUG: User ID: ${member.id}, Guild: ${member.guild.name}, Timestamp: ${new Date().toISOString()}`);
@@ -3531,14 +3519,31 @@ client.on(Events.GuildMemberAdd, async member => {
     // Das neue System hört direkt auf member join events
     
     try {
-        // Lade Welcome-Einstellungen aus Supabase
-        const currentWelcomeSettings = await loadWelcomeSettings(member.guild.id);
+        // Lade Welcome-Einstellungen aus Supabase mit JSON Fallback
+        let currentWelcomeSettings = null;
+        
+        try {
+            currentWelcomeSettings = await loadWelcomeSettings(member.guild.id);
+        } catch (supabaseError) {
+            console.error('❌ Supabase Welcome Settings Fehler:', supabaseError.message);
+            console.log('📄 Verwende JSON Fallback für Welcome Settings...');
+            
+            // JSON Fallback laden
+            try {
+                if (fs.existsSync('./welcome.json')) {
+                    currentWelcomeSettings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
+                    console.log('✅ JSON Welcome Settings geladen');
+                }
+            } catch (jsonError) {
+                console.error('❌ JSON Welcome Settings Fehler:', jsonError.message);
+            }
+        }
 
-    // Prüfe ob Welcome-Messages aktiviert sind
+        // Prüfe ob Welcome-Messages aktiviert sind
         if (!currentWelcomeSettings || !currentWelcomeSettings.enabled) {
-            console.log('❌ Welcome-Messages sind deaktiviert oder Supabase nicht verfügbar');
-        return;
-    }
+            console.log('❌ Welcome-Messages sind deaktiviert oder nicht verfügbar');
+            return;
+        }
     
     // Finde Welcome-Channel
     const welcomeChannel = member.guild.channels.cache.find(ch => 
@@ -3549,39 +3554,68 @@ client.on(Events.GuildMemberAdd, async member => {
     );
     
     if (welcomeChannel) {
-            // Erstelle Welcome-Embed mit Supabase-Funktionen
-            const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
-            
-            // Mention User falls aktiviert
-            let messageContent = '';
-            if (currentWelcomeSettings.mentionUser) {
-                messageContent = `<@${member.id}>`;
+            try {
+                // Erstelle Welcome-Embed mit Supabase-Funktionen und Fallback
+                let welcomeEmbed = null;
+                let attachment = null;
+                
+                try {
+                    const embedResult = await createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
+                    welcomeEmbed = embedResult.embed;
+                    attachment = embedResult.attachment;
+                } catch (embedError) {
+                    console.error('❌ Supabase Welcome Embed Fehler:', embedError.message);
+                    console.log('📄 Verwende einfaches Welcome Embed als Fallback...');
+                    
+                    // Einfaches Fallback-Embed
+                    const { EmbedBuilder } = require('discord.js');
+                    welcomeEmbed = new EmbedBuilder()
+                        .setColor(0x00FF7F)
+                        .setTitle('🎉 Willkommen!')
+                        .setDescription(`Willkommen <@${member.id}> auf **${member.guild.name}**! 🎊\n\nMitglied #${member.guild.memberCount}`)
+                        .setTimestamp()
+                        .setFooter({ text: `${member.guild.name}` });
+                }
+                
+                // Mention User falls aktiviert
+                let messageContent = '';
+                if (currentWelcomeSettings.mentionUser) {
+                    messageContent = `<@${member.id}>`;
+                }
+                
+                // Sende Welcome-Message mit oder ohne Attachment
+                const messageOptions = { 
+                    content: messageContent, 
+                    embeds: [welcomeEmbed] 
+                };
+                
+                if (attachment) {
+                    messageOptions.files = [attachment];
+                }
+                
+                const welcomeMessage = await welcomeChannel.send(messageOptions);
+                
+                // Auto-Delete falls konfiguriert
+                if (currentWelcomeSettings.deleteAfter > 0) {
+                    setTimeout(() => {
+                        welcomeMessage.delete().catch(console.error);
+                    }, currentWelcomeSettings.deleteAfter * 1000);
+                }
+                
+                console.log(`✅ Welcome-Message für ${member.user.tag} gesendet in #${welcomeChannel.name}`);
+                console.log(`🔍 DEBUG: Message ID: ${welcomeMessage.id}, Channel: ${welcomeChannel.name}`);
+                
+                // Aktualisiere Welcome-Statistiken (mit Fehlerbehandlung)
+                try {
+                    await updateWelcomeStats(member.guild.id, 'welcome');
+                } catch (statsError) {
+                    console.error('❌ Welcome Stats Update Fehler:', statsError.message);
+                    // Statistiken sind nicht kritisch - Bot läuft weiter
+                }
+                
+            } catch (channelError) {
+                console.error('❌ Fehler beim Senden der Welcome-Message:', channelError.message);
             }
-            
-            // Sende Welcome-Message mit oder ohne Attachment
-            const messageOptions = { 
-                content: messageContent, 
-                embeds: [welcomeEmbed] 
-            };
-            
-            if (attachment) {
-                messageOptions.files = [attachment];
-            }
-            
-            const welcomeMessage = await welcomeChannel.send(messageOptions);
-            
-            // Auto-Delete falls konfiguriert
-            if (currentWelcomeSettings.deleteAfter > 0) {
-                setTimeout(() => {
-                    welcomeMessage.delete().catch(console.error);
-                }, currentWelcomeSettings.deleteAfter * 1000);
-            }
-            
-            console.log(`✅ Welcome-Message für ${member.user.tag} gesendet in #${welcomeChannel.name}`);
-            console.log(`🔍 DEBUG: Message ID: ${welcomeMessage.id}, Channel: ${welcomeChannel.name}`);
-            
-            // Aktualisiere Welcome-Statistiken
-            await updateWelcomeStats(member.guild.id, 'welcome');
             
     } else {
         console.log(`⚠️ Kein Welcome-Channel in ${member.guild.name} gefunden`);
@@ -3620,23 +3654,7 @@ client.on(Events.GuildMemberAdd, async member => {
         }
         
     } catch (error) {
-        console.error('❌ KRITISCHER FEHLER im Welcome-System:', error);
-        console.error('❌ Stack Trace:', error.stack);
-        // NIEMALS den ganzen Bot crashen lassen!
-        try {
-            // Sende Notfall-Welcome falls möglich
-            const emergencyChannel = member.guild.channels.cache.find(ch => 
-                ch.name.toLowerCase().includes('general') ||
-                ch.name.toLowerCase().includes('welcome') ||
-                ch.type === 0 // Text channel
-            );
-            if (emergencyChannel) {
-                await emergencyChannel.send(`🚨 Willkommen ${member.user.username}! (Notfall-Modus)`);
-                console.log('🚨 Notfall-Welcome-Message gesendet');
-            }
-        } catch (emergencyError) {
-            console.error('❌ Selbst Notfall-Message fehlgeschlagen:', emergencyError.message);
-        }
+        console.error('❌ Fehler im Welcome-System:', error);
     }
 });
 
@@ -3689,9 +3707,7 @@ client.on(Events.GuildMemberRemove, async member => {
         await updateWelcomeStats(member.guild.id, 'leave');
 
     } catch (error) {
-        console.error('❌ KRITISCHER FEHLER im Leave-System:', error);
-        console.error('❌ Stack Trace:', error.stack);
-        // NIEMALS den ganzen Bot crashen lassen!
+        console.error('❌ Fehler beim Senden der Leave Message:', error);
     }
 });
 
