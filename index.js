@@ -2441,36 +2441,70 @@ function loadWelcomeImagesFromFileSystem() {
 // Speichere Welcome Image in Supabase
 async function saveWelcomeImageToSupabase(imageData) {
     try {
+        console.log(`🔄 SAVE TO SUPABASE - START:`, {
+            'supabase vorhanden': !!supabase,
+            'imageData': {
+                filename: imageData.filename,
+                folder: imageData.folder,
+                url: imageData.url?.substring(0, 50) + '...',
+                size: imageData.size
+            }
+        });
+        
         if (!supabase) {
-            console.log('⚠️ Supabase nicht initialisiert, nur lokale Speicherung');
+            console.log('⚠️ SUPABASE NICHT INITIALISIERT - Return true als Fallback');
             return true;
         }
         
+        const insertData = {
+            filename: imageData.filename,
+            url: imageData.url,
+            folder: imageData.folder || 'general',
+            size: imageData.size,
+            original_name: imageData.originalname || imageData.filename,
+            created_at: new Date().toISOString()
+        };
+        
+        console.log(`📤 SUPABASE INSERT DATA:`, insertData);
+        
         const { data, error } = await supabase
             .from('welcome_images')
-            .insert([{
-                filename: imageData.filename,
-                url: imageData.url,
-                folder: imageData.folder || 'general',
-                size: imageData.size,
-                original_name: imageData.originalname || imageData.filename,
-                created_at: new Date().toISOString()
-            }])
+            .insert([insertData])
             .select()
             .single();
         
+        console.log(`📥 SUPABASE INSERT RESULT:`, {
+            'error': error,
+            'data': data,
+            'hasData': !!data,
+            'hasError': !!error
+        });
+        
         if (error) {
+            console.error('💥 SUPABASE INSERT ERROR DETAILS:', {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint
+            });
             throw error;
         }
         
         // Cache invalidieren
         welcomeImagesCache = null;
         
-        console.log(`✅ Welcome Image in Supabase gespeichert: ${imageData.folder}/${imageData.filename}`);
+        console.log(`✅ Welcome Image in Supabase erfolgreich gespeichert: ${imageData.folder}/${imageData.filename}`);
         return data;
         
     } catch (error) {
-        console.error('❌ Fehler beim Speichern des Welcome Images in Supabase:', error);
+        console.error('❌ KRITISCHER FEHLER beim Speichern des Welcome Images in Supabase:', {
+            message: error.message,
+            stack: error.stack?.substring(0, 200),
+            imageData: {
+                filename: imageData.filename,
+                folder: imageData.folder
+            }
+        });
         return false;
     }
 }
@@ -2921,7 +2955,20 @@ app.post('/api/welcome/upload', upload.array('welcomeImage', 10), async (req, re
                     storageType: uploadSuccess ? 'github' : 'local'
                 };
                 
-                await saveWelcomeImageToSupabase(imageData);
+                console.log(`💾 VERSUCHE SUPABASE SPEICHERUNG:`, {
+                    filename: imageData.filename,
+                    folder: imageData.folder,
+                    url: imageData.url.substring(0, 60) + '...',
+                    size: imageData.size
+                });
+                
+                const supabaseResult = await saveWelcomeImageToSupabase(imageData);
+                console.log(`📊 SUPABASE SPEICHER-ERGEBNIS:`, {
+                    'erfolg': !!supabaseResult,
+                    'typeof result': typeof supabaseResult,
+                    'result': supabaseResult ? 'OK' : 'FEHLER'
+                });
+                
                 successCount++;
                 
                 return {
