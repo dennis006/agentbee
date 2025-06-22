@@ -705,6 +705,17 @@ const Welcome = () => {
     }
   }, [welcomeSettings, settingsLoaded]);
 
+  // Debug: Track imageRotation folder changes
+  useEffect(() => {
+    console.log('🔄 imageRotation.folder STATE CHANGED:', {
+      folder: welcomeSettings.imageRotation?.folder,
+      enabled: welcomeSettings.imageRotation?.enabled,
+      mode: welcomeSettings.imageRotation?.mode,
+      'typeof folder': typeof welcomeSettings.imageRotation?.folder,
+      'hasOwnProperty folder': welcomeSettings.imageRotation?.hasOwnProperty('folder')
+    });
+  }, [welcomeSettings.imageRotation?.folder]);
+
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
       {/* Matrix Background Effects */}
@@ -1270,13 +1281,30 @@ const Welcome = () => {
                       <label className="text-xs text-dark-muted mb-1 block">Rotation auf bestimmten Ordner beschränken:</label>
                       <select
                         value={welcomeSettings.imageRotation.folder || ''}
-                        onChange={(e) => setWelcomeSettings({
-                          ...welcomeSettings,
-                          imageRotation: {
+                        onChange={(e) => {
+                          console.log('📁 DROPDOWN CHANGE EVENT:', {
+                            'e.target.value': e.target.value,
+                            'e.target.value || undefined': e.target.value || undefined,
+                            'typeof e.target.value': typeof e.target.value,
+                            'currentFolder': welcomeSettings.imageRotation.folder
+                          });
+                          
+                          const newFolder = e.target.value || undefined;
+                          console.log('🎯 SETZE NEUEN FOLDER:', newFolder);
+                          
+                          setWelcomeSettings({
+                            ...welcomeSettings,
+                            imageRotation: {
+                              ...welcomeSettings.imageRotation,
+                              folder: newFolder
+                            }
+                          });
+                          
+                          console.log('✅ FOLDER GESETZT - State sollte jetzt enthalten:', {
                             ...welcomeSettings.imageRotation,
-                            folder: e.target.value || undefined
-                          }
-                        })}
+                            folder: newFolder
+                          });
+                        }}
                         className="w-full bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-3 py-1 focus:border-pink-400 text-xs"
                       >
                         <option value="">Alle Ordner (Standard)</option>
