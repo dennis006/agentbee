@@ -2460,8 +2460,9 @@ async function saveWelcomeImageToSupabase(imageData) {
             filename: imageData.filename,
             url: imageData.url,
             folder: imageData.folder || 'general',
-            size: imageData.size,
-            original_name: imageData.originalname || imageData.filename,
+            size: imageData.size || 0,
+            mime_type: null, // Optional: kann später hinzugefügt werden
+            github_path: imageData.url?.includes('github') ? imageData.url : null,
             created_at: new Date().toISOString()
         };
         
