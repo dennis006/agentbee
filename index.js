@@ -2737,31 +2737,34 @@ try {
         console.log('ℹ️ Verwende guild.edit({afkChannelId, afkTimeout}) für AFK Setup');
     }, 8000);
     
-    // Anomalie-Erkennung und Server-Health-System initialisieren nach 9 Sekunden
+    // TEMPORÄR DEAKTIVIERT: Analytics-Systeme verursachen Bot-Crashes bei Member Events
     setTimeout(async () => {
         try {
-            console.log('🔍 Initialisiere Anomalie-Erkennungssystem...');
-            client.anomalyDetection = new AnomalyDetectionAPI(client);
-            console.log('✅ Anomalie-Erkennungssystem aktiviert');
+            console.log('🔍 Analytics-Systeme temporär deaktiviert (Crash-Prevention)');
+            console.log('ℹ️ Grund: Event Handler für Member Join/Leave verursachen unbehandelte Exceptions');
             
-            console.log('🏥 Initialisiere Server-Health-System...');
-            client.serverHealth = new ServerHealthAPI(client);
-            console.log('✅ Server-Health-System aktiviert');
+            // DEAKTIVIERT: Anomalie-Erkennung
+            // client.anomalyDetection = new AnomalyDetectionAPI(client);
             
-            console.log('📊 Initialisiere Server Manager Analytics...');
-            client.serverManagerAnalytics = new ServerManagerAnalyticsAPI(client);
+            // DEAKTIVIERT: Server-Health-System (hat Member Event Listener)
+            // client.serverHealth = new ServerHealthAPI(client);
+            
+            // DEAKTIVIERT: Server Manager Analytics (hat Member Event Listener)
+            // client.serverManagerAnalytics = new ServerManagerAnalyticsAPI(client);
+            
+            // Bulk Actions sind OK (keine Event Listener)
             client.bulkServerActions = new BulkServerActionsAPI(client);
             console.log('🔧 Bulk Server Actions API initialisiert');
             
-            console.log('👥 Initialisiere Mass Member Management...');
+            // Mass Member Management ist OK (keine automatischen Event Listener)
             client.massMemberManagement = new MassMemberManagementAPI(client);
             console.log('✅ Mass Member Management API initialisiert');
             
-            console.log('🤖 Initialisiere AI Optimization...');
+            // AI Optimization ist OK (keine Event Listener)
             client.aiOptimization = new AIOptimizationAPI(client);
             console.log('✅ AI Optimization API initialisiert');
             
-            console.log('✅ Server Manager Analytics aktiviert');
+            console.log('✅ Basis-Analytics aktiviert (ohne Member Event Tracking)');
         } catch (error) {
             console.error('❌ Fehler bei der Initialisierung der Analyse-Systeme:', error);
         }
@@ -3529,21 +3532,21 @@ client.on(Events.GuildMemberAdd, async member => {
             console.log('📄 Verwende JSON Fallback für Welcome Settings...');
             
             // JSON Fallback laden
-            try {
-                if (fs.existsSync('./welcome.json')) {
-                    currentWelcomeSettings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
+    try {
+        if (fs.existsSync('./welcome.json')) {
+            currentWelcomeSettings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
                     console.log('✅ JSON Welcome Settings geladen');
-                }
+        }
             } catch (jsonError) {
                 console.error('❌ JSON Welcome Settings Fehler:', jsonError.message);
             }
-        }
+    }
 
-        // Prüfe ob Welcome-Messages aktiviert sind
+    // Prüfe ob Welcome-Messages aktiviert sind
         if (!currentWelcomeSettings || !currentWelcomeSettings.enabled) {
             console.log('❌ Welcome-Messages sind deaktiviert oder nicht verfügbar');
-            return;
-        }
+        return;
+    }
     
     // Finde Welcome-Channel
     const welcomeChannel = member.guild.channels.cache.find(ch => 
@@ -3554,7 +3557,7 @@ client.on(Events.GuildMemberAdd, async member => {
     );
     
     if (welcomeChannel) {
-            try {
+        try {
                 // Erstelle Welcome-Embed mit Supabase-Funktionen und Fallback
                 let welcomeEmbed = null;
                 let attachment = null;
@@ -3576,35 +3579,35 @@ client.on(Events.GuildMemberAdd, async member => {
                         .setTimestamp()
                         .setFooter({ text: `${member.guild.name}` });
                 }
-                
-                // Mention User falls aktiviert
-                let messageContent = '';
-                if (currentWelcomeSettings.mentionUser) {
-                    messageContent = `<@${member.id}>`;
-                }
-                
-                // Sende Welcome-Message mit oder ohne Attachment
-                const messageOptions = { 
-                    content: messageContent, 
-                    embeds: [welcomeEmbed] 
-                };
-                
-                if (attachment) {
-                    messageOptions.files = [attachment];
-                }
-                
-                const welcomeMessage = await welcomeChannel.send(messageOptions);
-                
-                // Auto-Delete falls konfiguriert
-                if (currentWelcomeSettings.deleteAfter > 0) {
-                    setTimeout(() => {
-                        welcomeMessage.delete().catch(console.error);
-                    }, currentWelcomeSettings.deleteAfter * 1000);
-                }
-                
-                console.log(`✅ Welcome-Message für ${member.user.tag} gesendet in #${welcomeChannel.name}`);
-                console.log(`🔍 DEBUG: Message ID: ${welcomeMessage.id}, Channel: ${welcomeChannel.name}`);
-                
+            
+            // Mention User falls aktiviert
+            let messageContent = '';
+            if (currentWelcomeSettings.mentionUser) {
+                messageContent = `<@${member.id}>`;
+            }
+            
+            // Sende Welcome-Message mit oder ohne Attachment
+            const messageOptions = { 
+                content: messageContent, 
+                embeds: [welcomeEmbed] 
+            };
+            
+            if (attachment) {
+                messageOptions.files = [attachment];
+            }
+            
+            const welcomeMessage = await welcomeChannel.send(messageOptions);
+            
+            // Auto-Delete falls konfiguriert
+            if (currentWelcomeSettings.deleteAfter > 0) {
+                setTimeout(() => {
+                    welcomeMessage.delete().catch(console.error);
+                }, currentWelcomeSettings.deleteAfter * 1000);
+            }
+            
+            console.log(`✅ Welcome-Message für ${member.user.tag} gesendet in #${welcomeChannel.name}`);
+            console.log(`🔍 DEBUG: Message ID: ${welcomeMessage.id}, Channel: ${welcomeChannel.name}`);
+            
                 // Aktualisiere Welcome-Statistiken (mit Fehlerbehandlung)
                 try {
                     await updateWelcomeStats(member.guild.id, 'welcome');
