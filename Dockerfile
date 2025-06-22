@@ -29,7 +29,7 @@ RUN npm ci --only=production --no-audit --no-fund
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p dashboard/public/images/welcome
+RUN mkdir -p public/images/welcome
 
 # Set environment to production
 ENV NODE_ENV=production
