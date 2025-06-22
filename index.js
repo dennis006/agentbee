@@ -11,7 +11,6 @@ const { registerGiveawayAPI } = require('./giveaway-api');
 const { registerTicketAPI } = require('./ticket-api');
 const TicketSystemV2 = require('./ticket-system-v2');
 const setupTwitchAPI = require('./twitch-api');
-// AFK System entfernt - verwende Discord Native AFK
 
 // 🎵 YOUTUBE RADIO-SYSTEM
 const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
@@ -144,35 +143,112 @@ class ValorantRateLimit {
 const valorantRateLimit = new ValorantRateLimit();
 
 // Agent-Namen zu UUID-Mapping für Icons
-function getAgentUUID(agentName) {
-    const agentMap = {
-        'Breach': '5f8d3a7f-467b-97f3-062c-13acf203c006',
-        'Raze': 'f94c3b30-42be-e959-889c-5aa313dba261',
-        'Skye': '6f2a04ca-43e0-be17-7f36-b3908627744d',
-        'Cypher': '117ed9e3-49f3-6512-3ccf-0cada7e3823b',
-        'Sova': '320b2a48-4d9b-a075-30f1-1f93a9b638fa',
-        'Sage': '569fdd95-4d10-43ab-ca70-79becc718b46',
-        'Phoenix': 'eb93336a-449b-9c1b-0a54-a891f7921d69',
-        'Jett': 'add6443a-41bd-e414-f6ad-e58d267f4e95',
-        'Reyna': 'a3bfb853-43b2-7238-a4f1-ad90e9e46bcc',
-        'Killjoy': '1e58de9c-4950-5125-93e9-a0aee9f98746',
-        'Viper': '707eab51-4836-f488-046a-cda6bf494859',
-        'Omen': '8e253930-4c05-31dd-1b6c-968525494517',
-        'Brimstone': '9f0d8ba9-4140-b941-57d3-a7ad57c6b417',
-        'Yoru': '7f94d92c-4234-0a36-9646-3a87eb8b5c89',
-        'Astra': '41fb69c1-4189-7b37-f117-bcaf1e96f1bf',
-        'KAY/O': '601dbbe7-43ce-be57-2a40-4abd24953621',
-        'Chamber': '22697a3d-45bf-8dd7-4fec-84a9e28c69d7',
-        'Neon': 'bb2a4828-46eb-8cd1-e765-15848195d751',
-        'Fade': 'dade69b4-4f5a-8528-247b-219e5a1facd6',
-        'Harbor': '95b78ed7-4637-86d9-7e41-71ba8c293152',
-        'Gekko': 'e370fa57-4757-3604-3648-499e1f642d3f',
-        'Deadlock': 'cc8b64c8-4b25-4ff9-6e7f-37b4da43d235',
-        'Iso': '0e38b510-41a8-5780-5e8f-568b2a4f2d6c',
-        'Clove': '1dbf2edd-7729-4fe6-b095-9a9a46bf73fc'
-    };
-    
-    return agentMap[agentName] || agentMap['Sage']; // Fallback zu Sage
+// 🎯 Valorant Agenten Cache für Performance
+let valorantAgentsCache = null;
+let valorantAgentsCacheTime = 0;
+const VALORANT_CACHE_DURATION = 300000; // 5 Minuten
+
+// Lade alle Valorant Agenten aus Supabase
+async function loadValorantAgentsFromSupabase() {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, verwende Legacy-Agenten');
+            return getLegacyAgentData();
+        }
+        
+        // Cache prüfen
+        const now = Date.now();
+        if (valorantAgentsCache && (now - valorantAgentsCacheTime) < VALORANT_CACHE_DURATION) {
+            return valorantAgentsCache;
+        }
+        
+        console.log('🔄 Lade Valorant Agenten aus Supabase...');
+        
+        const { data: agents, error } = await supabase
+            .from('valorant_agents')
+            .select('name, uuid, display_name, role_type, role_color, role_config, enabled')
+            .eq('enabled', true)
+            .order('role_type')
+            .order('sort_order')
+            .order('name');
+        
+        if (error) {
+            console.error('❌ Fehler beim Laden der Valorant Agenten:', error);
+            return getLegacyAgentData();
+        }
+        
+        // Cache aktualisieren
+        valorantAgentsCache = agents || [];
+        valorantAgentsCacheTime = now;
+        
+        console.log(`✅ ${agents?.length || 0} Valorant Agenten aus Supabase geladen`);
+        return valorantAgentsCache;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Valorant Agenten:', error);
+        return getLegacyAgentData();
+    }
+}
+
+// Legacy Agent Daten als Fallback
+function getLegacyAgentData() {
+    return [
+        // Duelist
+        { name: 'Jett', uuid: 'add6443a-41bd-e414-f6ad-e58d267f4e95', role_type: 'Duelist' },
+        { name: 'Phoenix', uuid: 'eb93336a-449b-9c1b-0a54-a891f7921d69', role_type: 'Duelist' },
+        { name: 'Reyna', uuid: 'a3bfb853-43b2-7238-a4f1-ad90e9e46bcc', role_type: 'Duelist' },
+        { name: 'Raze', uuid: 'f94c3b30-42be-e959-889c-5aa313dba261', role_type: 'Duelist' },
+        { name: 'Yoru', uuid: '7f94d92c-4234-0a36-9646-3a87eb8b5c89', role_type: 'Duelist' },
+        { name: 'Neon', uuid: 'bb2a4828-46eb-8cd1-e765-15848195d751', role_type: 'Duelist' },
+        { name: 'Iso', uuid: '0e38b510-41a8-5780-5e8f-568b2a4f2d6c', role_type: 'Duelist' },
+        { name: 'Waylay', uuid: 'waylay-uuid-placeholder', role_type: 'Duelist' },
+        
+        // Sentinel
+        { name: 'Killjoy', uuid: '1e58de9c-4950-5125-93e9-a0aee9f98746', role_type: 'Sentinel' },
+        { name: 'Cypher', uuid: '117ed9e3-49f3-6512-3ccf-0cada7e3823b', role_type: 'Sentinel' },
+        { name: 'Sage', uuid: '569fdd95-4d10-43ab-ca70-79becc718b46', role_type: 'Sentinel' },
+        { name: 'Chamber', uuid: '22697a3d-45bf-8dd7-4fec-84a9e28c69d7', role_type: 'Sentinel' },
+        { name: 'Deadlock', uuid: 'cc8b64c8-4b25-4ff9-6e7f-37b4da43d235', role_type: 'Sentinel' },
+        { name: 'Vyse', uuid: 'vyse-uuid-placeholder', role_type: 'Sentinel' },
+        
+        // Initiator
+        { name: 'Sova', uuid: '320b2a48-4d9b-a075-30f1-1f93a9b638fa', role_type: 'Initiator' },
+        { name: 'Breach', uuid: '5f8d3a7f-467b-97f3-062c-13acf203c006', role_type: 'Initiator' },
+        { name: 'Skye', uuid: '6f2a04ca-43e0-be17-7f36-b3908627744d', role_type: 'Initiator' },
+        { name: 'Fade', uuid: 'dade69b4-4f5a-8528-247b-219e5a1facd6', role_type: 'Initiator' },
+        { name: 'KAY/O', uuid: '601dbbe7-43ce-be57-2a40-4abd24953621', role_type: 'Initiator' },
+        { name: 'Gekko', uuid: 'e370fa57-4757-3604-3648-499e1f642d3f', role_type: 'Initiator' },
+        { name: 'Tejo', uuid: 'tejo-uuid-placeholder', role_type: 'Initiator' },
+        
+        // Controller
+        { name: 'Brimstone', uuid: '9f0d8ba9-4140-b941-57d3-a7ad57c6b417', role_type: 'Controller' },
+        { name: 'Viper', uuid: '707eab51-4836-f488-046a-cda6bf494859', role_type: 'Controller' },
+        { name: 'Omen', uuid: '8e253930-4c05-31dd-1b6c-968525494517', role_type: 'Controller' },
+        { name: 'Astra', uuid: '41fb69c1-4189-7b37-f117-bcaf1e96f1bf', role_type: 'Controller' },
+        { name: 'Harbor', uuid: '95b78ed7-4637-86d9-7e41-71ba8c293152', role_type: 'Controller' },
+        { name: 'Clove', uuid: '1dbf2edd-7729-4fe6-b095-9a9a46bf73fc', role_type: 'Controller' }
+    ];
+}
+
+// Supabase-basierte getAgentUUID Funktion
+async function getAgentUUID(agentName) {
+    try {
+        const agents = await loadValorantAgentsFromSupabase();
+        const agent = agents.find(a => a.name.toLowerCase() === agentName.toLowerCase());
+        
+        if (agent) {
+            return agent.uuid;
+        }
+        
+        // Fallback zu Sage
+        const sageAgent = agents.find(a => a.name.toLowerCase() === 'sage');
+        return sageAgent ? sageAgent.uuid : '569fdd95-4d10-43ab-ca70-79becc718b46';
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Abrufen der Agent UUID:', error);
+        // Hard-coded Fallback zu Sage
+        return '569fdd95-4d10-43ab-ca70-79becc718b46';
+    }
 }
 
 // Interaktive Valorant-Nachricht posten
@@ -198,7 +274,7 @@ async function postValorantInteractiveMessage(channelName) {
             title: '🎯 Valorant Spielersuche',
             description: 'Klicke auf eine Region um deine Valorant-Statistiken abzurufen!',
             color: '0xFF4655',
-            footer: 'Powered by HenrikDev API • {timestamp}',
+            footer: 'Powered by Agentbee • {timestamp}',
             thumbnail: 'valorant',
             customThumbnail: '',
             author: {
@@ -432,7 +508,7 @@ async function handleValorantButtonInteraction(interaction) {
                         }
                     ],
                     footer: {
-                        text: '🔥 Powered by HenrikDev API',
+                        text: '🔥 Powered by AgentBee',
                     },
                     timestamp: new Date().toISOString()
                 };
@@ -688,7 +764,7 @@ async function handleValorantModalSubmission(interaction) {
             title: '🎯 {playerName}#{playerTag}',
             description: '**Region:** {region} • **Plattform:** PC{level}',
             color: 'dynamic',
-            footer: '🔥 Powered by HenrikDev API • Verbleibende Requests: {remainingRequests}/30 • {timestamp}',
+            footer: '🔥 Powered by Agentbee • Verbleibende Requests: {remainingRequests}/30 • {timestamp}',
             thumbnail: 'valorant',
             author: { enabled: false },
             fields: {
@@ -863,7 +939,7 @@ async function handleValorantModalSubmission(interaction) {
                 assists: matchStats?.assists || 0,
                 adr: Math.round(matchStats?.adr || 0),
                 hsRate: Math.round((matchStats?.headshotRate || 0) * 10) / 10,
-                agentIconUrl: mostPlayedAgent ? `https://media.valorant-api.com/agents/${getAgentUUID(mostPlayedAgent)}/displayicon.png` : null,
+                agentIconUrl: mostPlayedAgent ? `https://media.valorant-api.com/agents/${await getAgentUUID(mostPlayedAgent)}/displayicon.png` : null,
                 // Zusätzliche Daten für das neue Design
                 totalMatches: matchStats?.totalMatches || 0,
                 wins: matchStats?.wins || 0,
@@ -5502,8 +5578,8 @@ async function saveVerificationConfig(config) {
         console.error('❌ Fehler beim Speichern der Verification-Config:', error.message);
         throw error; // Fehler weiterwerfen statt Fallback
     }
-}
-
+        }
+        
 // Lade alle verifizierten User aus Supabase (Nur-Supabase Version)
 async function loadVerifiedUsers() {
     try {
@@ -5721,7 +5797,7 @@ app.delete('/api/verification/users/:discordId', async (req, res) => {
         if (error.message && error.message.includes('Supabase nicht initialisiert')) {
             res.status(503).json({ error: 'Supabase-Datenbank nicht verfügbar' });
         } else {
-            res.status(500).json({ error: 'Fehler beim Löschen der Verifizierung' });
+        res.status(500).json({ error: 'Fehler beim Löschen der Verifizierung' });
         }
     }
 });
@@ -6022,7 +6098,7 @@ app.post('/api/verification', async (req, res) => {
 
         // 🎯 VALORANT AGENTEN-ROLLEN: Automatische Rollen-Vergabe basierend auf Agenten-Auswahl
         if (agents && agents.length > 0) {
-            const valorantRoles = getValorantRolesFromAgents(agents);
+            const valorantRoles = await getValorantRolesFromAgents(agents);
             rolesToAssign.push(...valorantRoles);
             
             // Füge auch individuelle Agenten-Rollen hinzu
@@ -6175,7 +6251,7 @@ async function createMissingVerificationRoles(guild, rolesToAssign) {
 async function createVerificationRole(guild, roleName) {
     try {
         // Bestimme Farbe und Position basierend auf dem Rollen-Namen
-        const roleConfig = getVerificationRoleConfig(roleName);
+        const roleConfig = await getVerificationRoleConfig(roleName);
         
         const newRole = await guild.roles.create({
             name: roleName,
@@ -6207,7 +6283,62 @@ async function createVerificationRole(guild, roleName) {
 }
 
 // 🎯 Valorant Agenten-Rollen Mapping
-function getValorantRolesFromAgents(agents) {
+// Supabase-basierte Valorant Rollen aus Agenten ermitteln
+async function getValorantRolesFromAgents(agents) {
+    try {
+        const allAgents = await loadValorantAgentsFromSupabase();
+        const assignedRoles = new Set();
+        
+        // Prüfe für jeden ausgewählten Agenten, zu welcher Rolle er gehört
+        for (const agent of agents) {
+            const agentData = allAgents.find(a => a.name.toLowerCase() === agent.toLowerCase());
+            if (agentData) {
+                assignedRoles.add(agentData.role_type);
+                console.log(`🎯 Agent "${agent}" → Rolle "${agentData.role_type}"`);
+            } else {
+                // Fallback für nicht gefundene Agenten
+                console.log(`⚠️ Agent "${agent}" nicht in Supabase gefunden, verwende Legacy-Zuordnung`);
+                const legacyRole = getLegacyAgentRole(agent);
+                if (legacyRole) {
+                    assignedRoles.add(legacyRole);
+                    console.log(`🎯 Agent "${agent}" → Legacy-Rolle "${legacyRole}"`);
+                }
+            }
+        }
+        
+        // Füge "Valorant" Basis-Rolle hinzu, falls Agenten ausgewählt wurden
+        if (assignedRoles.size > 0) {
+            assignedRoles.add('Valorant');
+        }
+        
+        return Array.from(assignedRoles);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Ermitteln der Valorant Rollen:', error);
+        // Fallback auf Legacy-System
+        return getLegacyValorantRoles(agents);
+    }
+}
+
+// Legacy-Zuordnung für Fallback
+function getLegacyAgentRole(agentName) {
+    const valorantAgentRoles = {
+        'Duelist': ['Jett', 'Phoenix', 'Reyna', 'Raze', 'Yoru', 'Neon', 'Iso', 'Waylay'],
+        'Sentinel': ['Killjoy', 'Cypher', 'Sage', 'Chamber', 'Deadlock', 'Vyse'],
+        'Initiator': ['Sova', 'Breach', 'Skye', 'Fade', 'KAY/O', 'Gekko', 'Tejo'],
+        'Controller': ['Brimstone', 'Viper', 'Omen', 'Astra', 'Harbor', 'Clove']
+    };
+    
+    for (const [roleName, roleAgents] of Object.entries(valorantAgentRoles)) {
+        if (roleAgents.includes(agentName)) {
+            return roleName;
+        }
+    }
+    return null;
+}
+
+// Legacy Valorant Rollen System (Fallback)
+function getLegacyValorantRoles(agents) {
     const valorantAgentRoles = {
         'Duelist': ['Jett', 'Phoenix', 'Reyna', 'Raze', 'Yoru', 'Neon', 'Iso', 'Waylay'],
         'Sentinel': ['Killjoy', 'Cypher', 'Sage', 'Chamber', 'Deadlock', 'Vyse'],
@@ -6217,17 +6348,15 @@ function getValorantRolesFromAgents(agents) {
     
     const assignedRoles = new Set();
     
-    // Prüfe für jeden ausgewählten Agenten, zu welcher Rolle er gehört
     for (const agent of agents) {
         for (const [roleName, roleAgents] of Object.entries(valorantAgentRoles)) {
             if (roleAgents.includes(agent)) {
                 assignedRoles.add(roleName);
-                console.log(`🎯 Agent "${agent}" → Rolle "${roleName}"`);
+                console.log(`🎯 Legacy: Agent "${agent}" → Rolle "${roleName}"`);
             }
         }
     }
     
-    // Füge "Valorant" Basis-Rolle hinzu, falls Agenten ausgewählt wurden
     if (assignedRoles.size > 0) {
         assignedRoles.add('Valorant');
     }
@@ -6235,7 +6364,57 @@ function getValorantRolesFromAgents(agents) {
     return Array.from(assignedRoles);
 }
 
-function getVerificationRoleConfig(roleName) {
+// Supabase-basierte Rollen-Konfiguration
+async function getVerificationRoleConfig(roleName) {
+    try {
+        // Versuche zuerst Valorant-Agent Konfiguration zu laden
+        const allAgents = await loadValorantAgentsFromSupabase();
+        const agent = allAgents.find(a => a.name.toLowerCase() === roleName.toLowerCase());
+        
+        if (agent && agent.role_config) {
+            // Konvertiere Hex-Farbe zu Decimal
+            const color = agent.role_color ? parseInt(agent.role_color.replace('#', ''), 16) : 0x99AAB5;
+            return {
+                color: color,
+                hoist: agent.role_config.hoist || false,
+                mentionable: agent.role_config.mentionable || true,
+                permissions: agent.role_config.permissions || [],
+                position: agent.role_config.position || 7
+            };
+        }
+        
+        // Versuche Valorant-Rollen-Typ zu laden
+        if (supabase) {
+            const { data: roleData, error } = await supabase
+                .from('valorant_agent_roles')
+                .select('color, role_config')
+                .eq('role_name', roleName)
+                .eq('enabled', true)
+                .single();
+            
+            if (!error && roleData) {
+                const color = roleData.color ? parseInt(roleData.color.replace('#', ''), 16) : 0x99AAB5;
+                return {
+                    color: color,
+                    hoist: roleData.role_config.hoist || true,
+                    mentionable: roleData.role_config.mentionable || true,
+                    permissions: roleData.role_config.permissions || [],
+                    position: roleData.role_config.position || 6
+                };
+            }
+        }
+        
+        // Fallback auf Legacy-Konfiguration
+        return getLegacyRoleConfig(roleName);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Rollen-Konfiguration:', error);
+        return getLegacyRoleConfig(roleName);
+    }
+}
+
+// Legacy-Rollen-Konfiguration (Fallback)
+function getLegacyRoleConfig(roleName) {
     const configs = {
         'Verified': {
             color: 0x00FF7F, // Grün
@@ -6533,18 +6712,18 @@ async function removeVerifiedUser(discordId) {
         if (!supabase) {
             throw new Error('Supabase nicht initialisiert - Verification System erfordert Supabase-Datenbank');
         }
-
+        
         // Hole User-Daten bevor wir löschen (für Rollen-Entfernung)
         const { data: userData, error: fetchError } = await supabase
             .from('verification_users')
             .select('*')
             .eq('discord_id', discordId)
             .single();
-
+        
         if (fetchError || !userData) {
             return { success: false, message: 'User nicht gefunden' };
         }
-
+        
         // Lösche User aus Supabase
         const { error: deleteError } = await supabase
             .from('verification_users')
@@ -6574,7 +6753,7 @@ async function removeVerifiedUser(discordId) {
                 }
             }
         }
-
+        
         console.log(`✅ User ${userData.username} aus Supabase entfernt`);
         return { 
             success: true, 
@@ -8256,7 +8435,7 @@ app.get('/api/valorant-settings', (req, res) => {
                     title: '🎯 Valorant Spielersuche',
                     description: 'Klicke auf eine Region um deine Valorant-Statistiken abzurufen!',
                     color: '0xFF4655',
-                    footer: 'Powered by HenrikDev API • {timestamp}',
+                    footer: 'Powered by AgentBee • {timestamp}',
                     thumbnail: 'valorant',
                     customThumbnail: '',
                     author: {
@@ -8371,6 +8550,264 @@ app.get('/api/valorant/stats', (req, res) => {
         res.status(500).json({ 
             success: false,
             error: 'Fehler beim Laden der Statistiken' 
+        });
+    }
+});
+
+// ============================
+// 🎯 VALORANT AGENTS API ENDPOINTS
+// ============================
+
+// Alle Valorant Agenten abrufen
+app.get('/api/valorant/agents', async (req, res) => {
+    try {
+        const agents = await loadValorantAgentsFromSupabase();
+        
+        res.json({
+            success: true,
+            agents: agents.map(agent => ({
+                id: agent.id || agent.name,
+                name: agent.name,
+                uuid: agent.uuid,
+                display_name: agent.display_name || agent.name,
+                role_type: agent.role_type,
+                role_color: agent.role_color,
+                enabled: agent.enabled,
+                sort_order: agent.sort_order || 0,
+                role_config: agent.role_config || {}
+            }))
+        });
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Valorant Agenten:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Laden der Agenten' 
+        });
+    }
+});
+
+// Valorant Agent-Rollen abrufen
+app.get('/api/valorant/agent-roles', async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Supabase nicht verfügbar' 
+            });
+        }
+        
+        const { data: roles, error } = await supabase
+            .from('valorant_agent_roles')
+            .select('*')
+            .eq('enabled', true)
+            .order('sort_order')
+            .order('role_name');
+        
+        if (error) {
+            console.error('❌ Fehler beim Laden der Agent-Rollen:', error);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Fehler beim Laden der Rollen' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            roles: roles || []
+        });
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Valorant Agent-Rollen:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Laden der Rollen' 
+        });
+    }
+});
+
+// Neuen Valorant Agent hinzufügen
+app.post('/api/valorant/agents', async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Supabase nicht verfügbar' 
+            });
+        }
+        
+        const { name, uuid, display_name, role_type, role_color, role_config } = req.body;
+        
+        if (!name || !uuid || !role_type) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Name, UUID und Role-Type sind erforderlich' 
+            });
+        }
+        
+        const { data: agent, error } = await supabase
+            .from('valorant_agents')
+            .insert({
+                name,
+                uuid,
+                display_name: display_name || name,
+                role_type,
+                role_color: role_color || '#FF4655',
+                role_config: role_config || {
+                    hoist: false,
+                    mentionable: true,
+                    permissions: [],
+                    position: 7
+                },
+                enabled: true
+            })
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('❌ Fehler beim Hinzufügen des Agenten:', error);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Fehler beim Hinzufügen des Agenten' 
+            });
+        }
+        
+        // Cache leeren
+        valorantAgentsCache = null;
+        
+        console.log(`✅ Valorant Agent hinzugefügt: ${name}`);
+        res.json({
+            success: true,
+            message: 'Agent erfolgreich hinzugefügt',
+            agent: agent
+        });
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Hinzufügen des Valorant Agenten:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Hinzufügen des Agenten' 
+        });
+    }
+});
+
+// Valorant Agent aktualisieren
+app.put('/api/valorant/agents/:agentId', async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Supabase nicht verfügbar' 
+            });
+        }
+        
+        const { agentId } = req.params;
+        const { name, uuid, display_name, role_type, role_color, role_config, enabled, sort_order } = req.body;
+        
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (uuid !== undefined) updateData.uuid = uuid;
+        if (display_name !== undefined) updateData.display_name = display_name;
+        if (role_type !== undefined) updateData.role_type = role_type;
+        if (role_color !== undefined) updateData.role_color = role_color;
+        if (role_config !== undefined) updateData.role_config = role_config;
+        if (enabled !== undefined) updateData.enabled = enabled;
+        if (sort_order !== undefined) updateData.sort_order = sort_order;
+        
+        const { data: agent, error } = await supabase
+            .from('valorant_agents')
+            .update(updateData)
+            .eq('id', agentId)
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('❌ Fehler beim Aktualisieren des Agenten:', error);
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Fehler beim Aktualisieren des Agenten' 
+            });
+        }
+        
+        // Cache leeren
+        valorantAgentsCache = null;
+        
+        console.log(`✅ Valorant Agent aktualisiert: ${agent.name}`);
+        res.json({
+            success: true,
+            message: 'Agent erfolgreich aktualisiert',
+            agent: agent
+        });
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren des Valorant Agenten:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Aktualisieren des Agenten' 
+        });
+    }
+});
+
+// Valorant Agent löschen/deaktivieren
+app.delete('/api/valorant/agents/:agentId', async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Supabase nicht verfügbar' 
+            });
+        }
+        
+        const { agentId } = req.params;
+        const { permanent = false } = req.query;
+        
+        if (permanent === 'true') {
+            // Permanent löschen
+            const { error } = await supabase
+                .from('valorant_agents')
+                .delete()
+                .eq('id', agentId);
+            
+            if (error) {
+                console.error('❌ Fehler beim Löschen des Agenten:', error);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Fehler beim Löschen des Agenten' 
+                });
+            }
+            
+            console.log(`🗑️ Valorant Agent permanent gelöscht: ${agentId}`);
+        } else {
+            // Nur deaktivieren
+            const { error } = await supabase
+                .from('valorant_agents')
+                .update({ enabled: false })
+                .eq('id', agentId);
+            
+            if (error) {
+                console.error('❌ Fehler beim Deaktivieren des Agenten:', error);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Fehler beim Deaktivieren des Agenten' 
+                });
+            }
+            
+            console.log(`⏸️ Valorant Agent deaktiviert: ${agentId}`);
+        }
+        
+        // Cache leeren
+        valorantAgentsCache = null;
+        
+        res.json({
+            success: true,
+            message: permanent === 'true' ? 'Agent erfolgreich gelöscht' : 'Agent erfolgreich deaktiviert'
+        });
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen/Deaktivieren des Valorant Agenten:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Löschen/Deaktivieren des Agenten' 
         });
     }
 });
