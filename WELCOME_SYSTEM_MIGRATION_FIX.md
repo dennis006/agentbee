@@ -96,6 +96,16 @@ Gehe zu **Authentication > Policies** und prüfe:
 
 ## 🐛 Troubleshooting
 
+### Problem: "policy already exists" Error
+**Lösung:** SQL-Dateien verwenden jetzt Exception Handling
+```sql
+-- EXCEPTION WHEN duplicate_object THEN NULL;
+```
+
+### Problem: "syntax error at or near NOT"
+**Lösung:** PostgreSQL unterstützt kein `IF NOT EXISTS` für Policies
+- ✅ Gefixt in v2 der Migration-Dateien
+
 ### Problem: Immer noch RLS Errors
 **Lösung:** Prüfe Environment Variables:
 ```bash
@@ -109,6 +119,9 @@ echo $SUPABASE_SERVICE_KEY  # Sollte nicht leer sein
 **Lösung:** 
 1. Setze `SUPABASE_SERVICE_KEY` Environment Variable
 2. Starte Bot neu
+
+### Problem: Storage Policy Conflicts
+**Lösung:** Migration prüft jetzt automatisch ob Storage Policies existieren
 
 ## 📝 Files Modified
 - ✅ `index.js` - Supabase Client Fix

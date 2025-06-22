@@ -19,18 +19,42 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Storage Policies für Welcome Images
-CREATE POLICY "Welcome images sind öffentlich lesbar"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'welcome-images');
+-- Storage Policies für Welcome Images (falls nicht vorhanden)
+DO $$
+BEGIN
+    -- Public Read Policy
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND policyname = 'Welcome images sind öffentlich lesbar'
+    ) THEN
+        CREATE POLICY "Welcome images sind öffentlich lesbar"
+        ON storage.objects FOR SELECT
+        USING (bucket_id = 'welcome-images');
+    END IF;
 
-CREATE POLICY "Nur Admins können Welcome images hochladen"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'welcome-images' AND auth.role() = 'service_role');
+    -- Admin Upload Policy  
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND policyname = 'Nur Admins können Welcome images hochladen'
+    ) THEN
+        CREATE POLICY "Nur Admins können Welcome images hochladen"
+        ON storage.objects FOR INSERT
+        WITH CHECK (bucket_id = 'welcome-images' AND auth.role() = 'service_role');
+    END IF;
 
-CREATE POLICY "Nur Admins können Welcome images löschen"
-ON storage.objects FOR DELETE
-USING (bucket_id = 'welcome-images' AND auth.role() = 'service_role');
+    -- Admin Delete Policy
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'objects' 
+        AND policyname = 'Nur Admins können Welcome images löschen'
+    ) THEN
+        CREATE POLICY "Nur Admins können Welcome images löschen"
+        ON storage.objects FOR DELETE
+        USING (bucket_id = 'welcome-images' AND auth.role() = 'service_role');
+    END IF;
+END $$;
 
 -- 2. HAUPTTABELLEN ERSTELLEN
 -- ===========================================
@@ -129,44 +153,85 @@ ALTER TABLE welcome_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE welcome_folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE welcome_stats ENABLE ROW LEVEL SECURITY;
 
--- Service Role Policies (für Discord Bot) - umgeht RLS komplett
-CREATE POLICY "service_role_welcome_settings" ON welcome_settings
-    FOR ALL USING (auth.role() = 'service_role');
+-- RLS Policies mit Fehlerbehandlung (falls bereits vorhanden)
+DO $$
+BEGIN
+    -- Service Role Policies (für Discord Bot) - umgeht RLS komplett
+    BEGIN
+        CREATE POLICY "service_role_welcome_settings" ON welcome_settings
+            FOR ALL USING (auth.role() = 'service_role');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "service_role_welcome_images" ON welcome_images
-    FOR ALL USING (auth.role() = 'service_role');
+    BEGIN
+        CREATE POLICY "service_role_welcome_images" ON welcome_images
+            FOR ALL USING (auth.role() = 'service_role');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "service_role_welcome_folders" ON welcome_folders
-    FOR ALL USING (auth.role() = 'service_role');
+    BEGIN
+        CREATE POLICY "service_role_welcome_folders" ON welcome_folders
+            FOR ALL USING (auth.role() = 'service_role');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "service_role_welcome_stats" ON welcome_stats
-    FOR ALL USING (auth.role() = 'service_role');
+    BEGIN
+        CREATE POLICY "service_role_welcome_stats" ON welcome_stats
+            FOR ALL USING (auth.role() = 'service_role');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
--- Zusätzliche Policies für authenticated Users (Dashboard/API)
-CREATE POLICY "authenticated_welcome_settings" ON welcome_settings
-    FOR ALL USING (auth.role() = 'authenticated');
+    -- Zusätzliche Policies für authenticated Users (Dashboard/API)
+    BEGIN
+        CREATE POLICY "authenticated_welcome_settings" ON welcome_settings
+            FOR ALL USING (auth.role() = 'authenticated');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "authenticated_welcome_images" ON welcome_images
-    FOR ALL USING (auth.role() = 'authenticated');
+    BEGIN
+        CREATE POLICY "authenticated_welcome_images" ON welcome_images
+            FOR ALL USING (auth.role() = 'authenticated');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "authenticated_welcome_folders" ON welcome_folders
-    FOR ALL USING (auth.role() = 'authenticated');
+    BEGIN
+        CREATE POLICY "authenticated_welcome_folders" ON welcome_folders
+            FOR ALL USING (auth.role() = 'authenticated');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "authenticated_welcome_stats" ON welcome_stats
-    FOR ALL USING (auth.role() = 'authenticated');
+    BEGIN
+        CREATE POLICY "authenticated_welcome_stats" ON welcome_stats
+            FOR ALL USING (auth.role() = 'authenticated');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
--- Fallback Policy für anon role (falls Service Key nicht verfügbar)
-CREATE POLICY "anon_welcome_settings" ON welcome_settings
-    FOR ALL USING (auth.role() = 'anon');
+    -- Fallback Policy für anon role (falls Service Key nicht verfügbar)
+    BEGIN
+        CREATE POLICY "anon_welcome_settings" ON welcome_settings
+            FOR ALL USING (auth.role() = 'anon');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "anon_welcome_images" ON welcome_images
-    FOR ALL USING (auth.role() = 'anon');
+    BEGIN
+        CREATE POLICY "anon_welcome_images" ON welcome_images
+            FOR ALL USING (auth.role() = 'anon');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "anon_welcome_folders" ON welcome_folders
-    FOR ALL USING (auth.role() = 'anon');
+    BEGIN
+        CREATE POLICY "anon_welcome_folders" ON welcome_folders
+            FOR ALL USING (auth.role() = 'anon');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
 
-CREATE POLICY "anon_welcome_stats" ON welcome_stats
-    FOR ALL USING (auth.role() = 'anon');
+    BEGIN
+        CREATE POLICY "anon_welcome_stats" ON welcome_stats
+            FOR ALL USING (auth.role() = 'anon');
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+
+END $$;
 
 -- 5. TRIGGER FÜR AUTOMATISCHE TIMESTAMPS
 -- ===========================================
