@@ -5875,7 +5875,7 @@ app.post('/api/verification/config', async (req, res) => {
         if (error.message.includes('Supabase nicht initialisiert')) {
             res.status(503).json({ error: 'Supabase-Datenbank nicht verfügbar' });
         } else {
-            res.status(500).json({ error: 'Fehler beim Speichern der Konfiguration' });
+        res.status(500).json({ error: 'Fehler beim Speichern der Konfiguration' });
         }
     }
 });

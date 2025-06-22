@@ -111,7 +111,11 @@ const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
 };
 
 const VerificationSettings = () => {
-  const { toasts, success, error: showError, removeToast } = useToast();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
+  
+  // Wrapper functions for backward compatibility
+  const success = (message: string) => showSuccess('Erfolgreich', message);
+  const error = (message: string) => showError('Fehler', message);
   const [config, setConfig] = useState<VerificationConfig>({
     enabled: true,
     requireCaptcha: true,
@@ -285,11 +289,11 @@ const VerificationSettings = () => {
         success('💾 Verification-Einstellungen erfolgreich gespeichert!');
       } else {
         const error = await response.json();
-        showError(`❌ Fehler beim Speichern: ${error.error}`);
-      }
+                error(`❌ Fehler beim Speichern: ${error.error}`);
+      } 
       
     } catch (error) {
-      showError('❌ Netzwerkfehler beim Speichern der Konfiguration');
+      error('❌ Netzwerkfehler beim Speichern der Konfiguration');
     } finally {
       setLoading(false);
     }
