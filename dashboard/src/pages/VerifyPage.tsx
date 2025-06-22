@@ -594,9 +594,9 @@ const VerifyPage = () => {
                     </div>
                   </div>
                 )}
-
+                    
                 {/* Zeige alle erhaltenen Rollen an */}
-                {(() => {
+                    {(() => {
                   const allRoles = new Set<string>();
                   
                   // Basis-Rollen aus Verification Config
@@ -622,21 +622,21 @@ const VerifyPage = () => {
                   if (formData.agents.length > 0) {
                     allRoles.add('Valorant');
                     
-                    formData.agents.forEach(agentName => {
-                      Object.entries(valorantAgentRoles).forEach(([roleName, roleData]) => {
-                        if (roleData.agents.some(agent => agent.name === agentName)) {
+                      formData.agents.forEach(agentName => {
+                        Object.entries(valorantAgentRoles).forEach(([roleName, roleData]) => {
+                          if (roleData.agents.some(agent => agent.name === agentName)) {
                           allRoles.add(roleName);
-                        }
+                          }
+                        });
                       });
-                    });
                   }
-                  
+                      
                   if (allRoles.size > 0) {
-                    return (
+                        return (
                       <div className="space-y-2">
-                        <div>
-                          <span className="text-neon-purple font-medium cyber-text-glow">Erhaltene Rollen: </span>
-                          <div className="flex flex-wrap gap-1 mt-1">
+                          <div>
+                            <span className="text-neon-purple font-medium cyber-text-glow">Erhaltene Rollen: </span>
+                            <div className="flex flex-wrap gap-1 mt-1">
                             {Array.from(allRoles).map((role, index) => {
                               // Bestimme Farbe basierend auf Rolle
                               let colorClass = "bg-blue-500/20 text-blue-400 border-blue-500/50";
@@ -662,26 +662,26 @@ const VerifyPage = () => {
                                 else if (platform) emoji = platform.emoji;
                               }
                               
-                              return (
-                                <span 
-                                  key={role}
-                                  className={cn(
-                                    "px-2 py-1 text-xs rounded-full border animate-fade-in-scale hover:scale-110 transition-transform duration-300 cyber-tag",
+                                return (
+                                  <span 
+                                    key={role}
+                                    className={cn(
+                                      "px-2 py-1 text-xs rounded-full border animate-fade-in-scale hover:scale-110 transition-transform duration-300 cyber-tag",
                                     colorClass
-                                  )}
-                                  style={{ animationDelay: `${index * 0.1}s` }}
-                                >
+                                    )}
+                                    style={{ animationDelay: `${index * 0.1}s` }}
+                                  >
                                   <span className="emoji-glow">{emoji}</span> {role}
-                                </span>
-                              );
-                            })}
+                                  </span>
+                                );
+                              })}
                           </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
               </div>
 
               {/* Rules Acceptance */}
@@ -962,4 +962,4 @@ const VerifyPage = () => {
   );
 };
 
-export default VerifyPage;
+export default VerifyPage; 

@@ -124,6 +124,8 @@ INSERT INTO valorant_agent_roles (role_name, display_name, color, role_config, s
 -- ============================
 -- SEED DATA: VALORANT AGENTS
 -- ============================
+-- HINWEIS: UUIDs für Waylay, Vyse und Tejo sind temporäre Platzhalter
+-- und müssen ggf. mit offiziellen UUIDs aktualisiert werden, sobald verfügbar
 
 -- Duelist Agenten
 INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, role_config, sort_order) VALUES
@@ -134,7 +136,7 @@ INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, ro
 ('Yoru', '7f94d92c-4234-0a36-9646-3a87eb8b5c89', 'Yoru', 'Duelist', '#483D8B', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 5),
 ('Neon', 'bb2a4828-46eb-8cd1-e765-15848195d751', 'Neon', 'Duelist', '#00FFFF', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 6),
 ('Iso', '0e38b510-41a8-5780-5e8f-568b2a4f2d6c', 'Iso', 'Duelist', '#9932CC', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 7),
-('Waylay', 'waylay-uuid-placeholder', 'Waylay', 'Duelist', '#4682B4', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 8);
+('Waylay', 'a0fb1e56-4829-5c21-bd58-e38a9d8f4c27', 'Waylay', 'Duelist', '#4682B4', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 8);
 
 -- Sentinel Agenten
 INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, role_config, sort_order) VALUES
@@ -143,7 +145,7 @@ INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, ro
 ('Sage', '569fdd95-4d10-43ab-ca70-79becc718b46', 'Sage', 'Sentinel', '#98FB98', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 12),
 ('Chamber', '22697a3d-45bf-8dd7-4fec-84a9e28c69d7', 'Chamber', 'Sentinel', '#B8860B', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 13),
 ('Deadlock', 'cc8b64c8-4b25-4ff9-6e7f-37b4da43d235', 'Deadlock', 'Sentinel', '#2F4F4F', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 14),
-('Vyse', 'vyse-uuid-placeholder', 'Vyse', 'Sentinel', '#556B2F', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 15);
+('Vyse', 'b1a4c798-6d3e-5f42-8c91-2e5b7a8d9f26', 'Vyse', 'Sentinel', '#556B2F', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 15);
 
 -- Initiator Agenten
 INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, role_config, sort_order) VALUES
@@ -153,7 +155,7 @@ INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, ro
 ('Fade', 'dade69b4-4f5a-8528-247b-219e5a1facd6', 'Fade', 'Initiator', '#2E2E2E', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 23),
 ('KAY/O', '601dbbe7-43ce-be57-2a40-4abd24953621', 'KAY/O', 'Initiator', '#778899', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 24),
 ('Gekko', 'e370fa57-4757-3604-3648-499e1f642d3f', 'Gekko', 'Initiator', '#9ACD32', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 25),
-('Tejo', 'tejo-uuid-placeholder', 'Tejo', 'Initiator', '#DA70D6', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 26);
+('Tejo', 'c5e8d247-9b1a-4f6c-8e2d-3a7b5c9e1f84', 'Tejo', 'Initiator', '#DA70D6', '{"hoist": false, "mentionable": true, "permissions": [], "position": 7}', 26);
 
 -- Controller Agenten
 INSERT INTO valorant_agents (name, uuid, display_name, role_type, role_color, role_config, sort_order) VALUES

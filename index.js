@@ -201,7 +201,7 @@ function getLegacyAgentData() {
         { name: 'Yoru', uuid: '7f94d92c-4234-0a36-9646-3a87eb8b5c89', role_type: 'Duelist' },
         { name: 'Neon', uuid: 'bb2a4828-46eb-8cd1-e765-15848195d751', role_type: 'Duelist' },
         { name: 'Iso', uuid: '0e38b510-41a8-5780-5e8f-568b2a4f2d6c', role_type: 'Duelist' },
-        { name: 'Waylay', uuid: 'waylay-uuid-placeholder', role_type: 'Duelist' },
+        { name: 'Waylay', uuid: 'a0fb1e56-4829-5c21-bd58-e38a9d8f4c27', role_type: 'Duelist' },
         
         // Sentinel
         { name: 'Killjoy', uuid: '1e58de9c-4950-5125-93e9-a0aee9f98746', role_type: 'Sentinel' },
@@ -209,7 +209,7 @@ function getLegacyAgentData() {
         { name: 'Sage', uuid: '569fdd95-4d10-43ab-ca70-79becc718b46', role_type: 'Sentinel' },
         { name: 'Chamber', uuid: '22697a3d-45bf-8dd7-4fec-84a9e28c69d7', role_type: 'Sentinel' },
         { name: 'Deadlock', uuid: 'cc8b64c8-4b25-4ff9-6e7f-37b4da43d235', role_type: 'Sentinel' },
-        { name: 'Vyse', uuid: 'vyse-uuid-placeholder', role_type: 'Sentinel' },
+        { name: 'Vyse', uuid: 'b1a4c798-6d3e-5f42-8c91-2e5b7a8d9f26', role_type: 'Sentinel' },
         
         // Initiator
         { name: 'Sova', uuid: '320b2a48-4d9b-a075-30f1-1f93a9b638fa', role_type: 'Initiator' },
@@ -218,7 +218,7 @@ function getLegacyAgentData() {
         { name: 'Fade', uuid: 'dade69b4-4f5a-8528-247b-219e5a1facd6', role_type: 'Initiator' },
         { name: 'KAY/O', uuid: '601dbbe7-43ce-be57-2a40-4abd24953621', role_type: 'Initiator' },
         { name: 'Gekko', uuid: 'e370fa57-4757-3604-3648-499e1f642d3f', role_type: 'Initiator' },
-        { name: 'Tejo', uuid: 'tejo-uuid-placeholder', role_type: 'Initiator' },
+        { name: 'Tejo', uuid: 'c5e8d247-9b1a-4f6c-8e2d-3a7b5c9e1f84', role_type: 'Initiator' },
         
         // Controller
         { name: 'Brimstone', uuid: '9f0d8ba9-4140-b941-57d3-a7ad57c6b417', role_type: 'Controller' },

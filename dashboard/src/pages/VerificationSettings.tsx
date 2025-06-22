@@ -290,7 +290,7 @@ const VerificationSettings = () => {
       } else {
         const error = await response.json();
                 error(`❌ Fehler beim Speichern: ${error.error}`);
-      } 
+      }
       
     } catch (error) {
       error('❌ Netzwerkfehler beim Speichern der Konfiguration');
