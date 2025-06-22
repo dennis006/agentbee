@@ -1,18 +1,17 @@
 // ==============================================
-// WELCOME SYSTEM - SUPABASE API
+// WELCOME SYSTEM - SUPABASE ONLY API
 // ==============================================
 
-const fs = require('fs');
-const path = require('path');
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 
 // Supabase Client
 let supabaseClient = null;
 
-// Cache für bessere Performance
+// Cache für bessere Performance (5 Minuten)
 let welcomeSettingsCache = new Map();
 let welcomeImagesCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 Minuten
+let welcomeFoldersCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000;
 
 // ==============================================
 // SUPABASE INITIALISIERUNG
@@ -20,7 +19,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 Minuten
 
 function initializeSupabaseForWelcome(supabase) {
     supabaseClient = supabase;
-    console.log('🎉 Welcome System - Supabase Client initialisiert');
+    console.log('🎉 Welcome System - Supabase Client initialisiert (ONLY)');
 }
 
 // ==============================================
@@ -30,8 +29,8 @@ function initializeSupabaseForWelcome(supabase) {
 // Lade Welcome Settings aus Supabase
 async function loadWelcomeSettings(guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
-        console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback für Welcome Settings');
-        return loadWelcomeSettingsFromJSON();
+        console.error('❌ Supabase nicht initialisiert - Welcome System nicht verfügbar!');
+        return null;
     }
 
     // Prüfe Cache
@@ -65,6 +64,7 @@ async function loadWelcomeSettings(guildId = process.env.GUILD_ID || '1203994020
                 title: data.title,
                 description: data.description,
                 color: data.color,
+                thumbnail: 'custom', // Nur custom - wie gewünscht
                 customThumbnail: data.custom_thumbnail,
                 imageRotation: data.image_rotation,
                 fields: data.fields,
@@ -88,15 +88,15 @@ async function loadWelcomeSettings(guildId = process.env.GUILD_ID || '1203994020
 
     } catch (error) {
         console.error('❌ Fehler beim Laden der Welcome Settings:', error);
-        return loadWelcomeSettingsFromJSON();
+        return null;
     }
 }
 
 // Speichere Welcome Settings in Supabase
 async function saveWelcomeSettings(settings, guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
-        console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback');
-        return saveWelcomeSettingsToJSON(settings);
+        console.error('❌ Supabase nicht initialisiert - Welcome Settings können nicht gespeichert werden!');
+        return { success: false, error: 'Supabase nicht verfügbar' };
     }
 
     try {
@@ -117,7 +117,8 @@ async function saveWelcomeSettings(settings, guildId = process.env.GUILD_ID || '
             mention_user: settings.mentionUser,
             delete_after: settings.deleteAfter,
             dm_message: settings.dmMessage,
-            leave_message: settings.leaveMessage
+            leave_message: settings.leaveMessage,
+            updated_at: new Date().toISOString()
         };
 
         const { error } = await supabaseClient
@@ -136,7 +137,7 @@ async function saveWelcomeSettings(settings, guildId = process.env.GUILD_ID || '
 
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Welcome Settings:', error);
-        return saveWelcomeSettingsToJSON(settings);
+        return { success: false, error: error.message };
     }
 }
 
@@ -148,6 +149,7 @@ async function createDefaultWelcomeSettings(guildId) {
         title: '🎉 Willkommen auf dem Server!',
         description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
         color: '0x00FF7F',
+        thumbnail: 'custom', // Nur custom - wie gewünscht
         customThumbnail: '',
         imageRotation: {
             enabled: false,
@@ -196,15 +198,17 @@ async function createDefaultWelcomeSettings(guildId) {
 }
 
 // ==============================================
-// WELCOME IMAGES FUNKTIONEN
+// WELCOME IMAGES FUNKTIONEN (SUPABASE STORAGE)
 // ==============================================
 
 // Lade Welcome Images aus Supabase
 async function loadWelcomeImages(guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
-        return loadWelcomeImagesFromFileSystem();
+        console.error('❌ Supabase nicht initialisiert - Welcome Images nicht verfügbar!');
+        return { folders: {}, images: [], folderNames: [] };
     }
 
+    // Prüfe Cache
     const cacheKey = `images_${guildId}`;
     const cached = welcomeImagesCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
@@ -214,59 +218,46 @@ async function loadWelcomeImages(guildId = process.env.GUILD_ID || '120399402077
     try {
         console.log(`🔄 Lade Welcome Images für Guild ${guildId}...`);
 
-        // Lade Images
-        const { data: images, error: imagesError } = await supabaseClient
+        // Lade Bilder aus der Datenbank
+        const { data: images, error } = await supabaseClient
             .from('welcome_images')
             .select('*')
             .eq('guild_id', guildId)
-            .order('uploaded_at', { ascending: false });
+            .order('created_at', { ascending: false });
 
-        if (imagesError) throw imagesError;
+        if (error) throw error;
 
-        // Lade Folders
-        const { data: folders, error: foldersError } = await supabaseClient
-            .from('welcome_folders')
-            .select('*')
-            .eq('guild_id', guildId)
-            .order('folder_name');
-
-        if (foldersError) throw foldersError;
-
-        // Strukturiere Daten
-        const imagesByFolder = {};
+        // Organisiere Bilder nach Ordnern
+        const folders = {};
         const allImages = [];
+        const folderNames = new Set();
 
-        // Initialisiere alle Ordner
-        folders.forEach(folder => {
-            imagesByFolder[folder.folder_name] = [];
-        });
-
-        // Sortiere Images in Ordner
         images.forEach(image => {
+            const folderName = image.folder_name || 'general';
+            folderNames.add(folderName);
+
+            if (!folders[folderName]) {
+                folders[folderName] = [];
+            }
+
             const imageData = {
+                id: image.id,
                 filename: image.filename,
                 originalName: image.original_name,
-                folder: image.folder_name,
+                folder: folderName,
                 size: image.file_size,
-                type: image.file_type,
-                url: image.url,
-                githubPath: image.github_path,
-                uploadedAt: image.uploaded_at
+                url: image.storage_url,
+                created: new Date(image.created_at)
             };
 
+            folders[folderName].push(imageData);
             allImages.push(imageData);
-            
-            if (!imagesByFolder[image.folder_name]) {
-                imagesByFolder[image.folder_name] = [];
-            }
-            imagesByFolder[image.folder_name].push(imageData);
         });
 
         const result = {
+            folders,
             images: allImages,
-            folders: imagesByFolder,
-            allFolderNames: folders.map(f => f.folder_name),
-            folderDetails: folders
+            folderNames: Array.from(folderNames)
         };
 
         // Cache aktualisieren
@@ -280,41 +271,63 @@ async function loadWelcomeImages(guildId = process.env.GUILD_ID || '120399402077
 
     } catch (error) {
         console.error('❌ Fehler beim Laden der Welcome Images:', error);
-        return loadWelcomeImagesFromFileSystem();
+        return { folders: {}, images: [], folderNames: [] };
     }
 }
 
-// Speichere Image in Supabase
+// Upload Bild zu Supabase Storage
 async function saveWelcomeImage(imageData, guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
-        console.log('⚠️ Supabase nicht initialisiert');
+        console.error('❌ Supabase nicht initialisiert - Bild kann nicht gespeichert werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
     }
 
     try {
-        console.log(`💾 Speichere Welcome Image: ${imageData.filename}`);
+        console.log(`📤 Speichere Welcome Image: ${imageData.filename}...`);
 
-        // Metadaten in Supabase speichern
-        const { error } = await supabaseClient
+        // 1. Upload Bild zu Supabase Storage
+        const storagePath = `welcome/${guildId}/${imageData.folder || 'general'}/${imageData.filename}`;
+        
+        const { data: uploadData, error: uploadError } = await supabaseClient.storage
+            .from('welcome-images')
+            .upload(storagePath, imageData.buffer, {
+                contentType: imageData.mimetype,
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        // 2. Hole öffentliche URL
+        const { data: urlData } = supabaseClient.storage
+            .from('welcome-images')
+            .getPublicUrl(storagePath);
+
+        // 3. Speichere Metadata in Datenbank
+        const { error: dbError } = await supabaseClient
             .from('welcome_images')
             .insert({
                 guild_id: guildId,
                 filename: imageData.filename,
                 original_name: imageData.originalName,
-                folder_name: imageData.folder,
+                folder_name: imageData.folder || 'general',
+                storage_path: storagePath,
+                storage_url: urlData.publicUrl,
                 file_size: imageData.size,
-                file_type: imageData.type,
-                url: imageData.url,
-                github_path: imageData.githubPath || null
+                mime_type: imageData.mimetype
             });
 
-        if (error) throw error;
+        if (dbError) throw dbError;
 
         // Cache invalidieren
         welcomeImagesCache.delete(`images_${guildId}`);
 
         console.log('✅ Welcome Image in Supabase gespeichert');
-        return { success: true };
+        return { 
+            success: true, 
+            url: urlData.publicUrl,
+            filename: imageData.filename,
+            folder: imageData.folder || 'general'
+        };
 
     } catch (error) {
         console.error('❌ Fehler beim Speichern des Welcome Images:', error);
@@ -322,65 +335,128 @@ async function saveWelcomeImage(imageData, guildId = process.env.GUILD_ID || '12
     }
 }
 
-// ==============================================
-// ORDNER MANAGEMENT
-// ==============================================
-
-// Erstelle neuen Ordner
-async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID || '1203994020779532348') {
+// Lösche Bild aus Supabase
+async function deleteWelcomeImage(imageId, guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
-        console.log('⚠️ Supabase nicht initialisiert');
+        console.error('❌ Supabase nicht initialisiert - Bild kann nicht gelöscht werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
     }
 
     try {
-        console.log(`📁 Erstelle Welcome Ordner: ${folderName}`);
+        console.log(`🗑️ Lösche Welcome Image ID: ${imageId}...`);
+
+        // 1. Hole Image-Daten für Storage-Path
+        const { data: imageData, error: fetchError } = await supabaseClient
+            .from('welcome_images')
+            .select('storage_path')
+            .eq('id', imageId)
+            .eq('guild_id', guildId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        // 2. Lösche aus Storage
+        const { error: storageError } = await supabaseClient.storage
+            .from('welcome-images')
+            .remove([imageData.storage_path]);
+
+        if (storageError) throw storageError;
+
+        // 3. Lösche aus Datenbank
+        const { error: dbError } = await supabaseClient
+            .from('welcome_images')
+            .delete()
+            .eq('id', imageId)
+            .eq('guild_id', guildId);
+
+        if (dbError) throw dbError;
+
+        // Cache invalidieren
+        welcomeImagesCache.delete(`images_${guildId}`);
+
+        console.log('✅ Welcome Image aus Supabase gelöscht');
+        return { success: true };
+
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen des Welcome Images:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// ==============================================
+// WELCOME FOLDERS FUNKTIONEN (SUPABASE)
+// ==============================================
+
+// Erstelle neuen Ordner in Supabase
+async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID || '1203994020779532348') {
+    if (!supabaseClient) {
+        console.error('❌ Supabase nicht initialisiert - Ordner kann nicht erstellt werden!');
+        return { success: false, error: 'Supabase nicht verfügbar' };
+    }
+
+    try {
+        console.log(`📁 Erstelle Welcome Folder: ${folderName}...`);
 
         const { error } = await supabaseClient
             .from('welcome_folders')
             .insert({
                 guild_id: guildId,
                 folder_name: folderName,
-                display_name: folderName.charAt(0).toUpperCase() + folderName.slice(1),
-                emoji: getFolderEmoji(folderName)
+                emoji: getFolderEmoji(folderName),
+                description: `Folder für ${folderName} Bilder`
             });
 
-        if (error) throw error;
+        if (error) {
+            if (error.code === '23505') { // Unique constraint violation
+                return { success: false, error: 'Ordner existiert bereits' };
+            }
+            throw error;
+        }
 
         // Cache invalidieren
-        welcomeImagesCache.delete(`images_${guildId}`);
+        welcomeFoldersCache.delete(`folders_${guildId}`);
 
-        console.log(`✅ Welcome Ordner "${folderName}" erstellt`);
-        return { success: true };
+        console.log('✅ Welcome Folder in Supabase erstellt');
+        return { success: true, folderName };
 
     } catch (error) {
-        console.error('❌ Fehler beim Erstellen des Welcome Ordners:', error);
+        console.error('❌ Fehler beim Erstellen des Welcome Folders:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Lösche Ordner
+// Lösche Ordner aus Supabase
 async function deleteWelcomeFolder(folderName, guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
-        console.log('⚠️ Supabase nicht initialisiert');
+        console.error('❌ Supabase nicht initialisiert - Ordner kann nicht gelöscht werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
     }
 
-    if (folderName === 'general') {
-        return { success: false, error: 'General-Ordner kann nicht gelöscht werden' };
-    }
-
     try {
-        console.log(`🗑️ Lösche Welcome Ordner: ${folderName}`);
+        console.log(`🗑️ Lösche Welcome Folder: ${folderName}...`);
 
-        // Lösche alle Bilder in diesem Ordner
-        await supabaseClient
+        // 1. Lösche alle Bilder in diesem Ordner zuerst
+        const { data: images, error: fetchError } = await supabaseClient
             .from('welcome_images')
-            .delete()
+            .select('id, storage_path')
             .eq('guild_id', guildId)
             .eq('folder_name', folderName);
 
-        // Lösche den Ordner
+        if (fetchError) throw fetchError;
+
+        // Lösche Bilder aus Storage und DB
+        for (const image of images) {
+            await supabaseClient.storage
+                .from('welcome-images')
+                .remove([image.storage_path]);
+            
+            await supabaseClient
+                .from('welcome_images')
+                .delete()
+                .eq('id', image.id);
+        }
+
+        // 2. Lösche Ordner
         const { error } = await supabaseClient
             .from('welcome_folders')
             .delete()
@@ -390,112 +466,94 @@ async function deleteWelcomeFolder(folderName, guildId = process.env.GUILD_ID ||
         if (error) throw error;
 
         // Cache invalidieren
+        welcomeFoldersCache.delete(`folders_${guildId}`);
         welcomeImagesCache.delete(`images_${guildId}`);
 
-        console.log(`✅ Welcome Ordner "${folderName}" gelöscht`);
+        console.log('✅ Welcome Folder aus Supabase gelöscht');
         return { success: true };
 
     } catch (error) {
-        console.error('❌ Fehler beim Löschen des Welcome Ordners:', error);
+        console.error('❌ Fehler beim Löschen des Welcome Folders:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Auto-Create Game Folders
+// Erstelle Standard-Ordner automatisch
 async function autoCreateGameFolders(guildId = process.env.GUILD_ID || '1203994020779532348') {
-    const gameFolders = [
-        'valorant',
-        'minecraft', 
-        'fortnite',
-        'apex-legends',
-        'league-of-legends',
-        'cs2',
-        'beellgrounds',
-        'genshin-impact',
-        'rocket-league',
-        'overwatch'
+    const standardFolders = [
+        'general', 'valorant', 'minecraft', 'beellgrounds', 
+        'gaming', 'anime', 'memes', 'seasonal'
     ];
 
-    console.log('🎮 Erstelle automatisch Game-Ordner...');
-    
-    const results = [];
-    for (const folderName of gameFolders) {
-        const result = await createWelcomeFolder(folderName, guildId);
-        results.push({ folder: folderName, ...result });
+    console.log('🎮 Erstelle Standard Game Folders...');
+
+    for (const folder of standardFolders) {
+        await createWelcomeFolder(folder, guildId);
     }
 
-    return { success: true, results };
+    console.log('✅ Standard Folders erstellt');
 }
 
-// Hilfsfunktion für Ordner-Emojis
+// Hole Emoji für Ordner-Typ
 function getFolderEmoji(folderName) {
     const emojiMap = {
-        'general': '📂',
+        'general': '📁',
         'valorant': '🎯',
         'minecraft': '⛏️',
-        'fortnite': '🏗️',
-        'apex-legends': '🔫',
-        'league-of-legends': '⚔️',
-        'cs2': '💣',
         'beellgrounds': '🐝',
-        'genshin-impact': '⭐',
-        'rocket-league': '🚀',
-        'overwatch': '🎮',
-        'events': '🎉',
-        'seasonal': '🌟'
+        'gaming': '🎮',
+        'anime': '🎌',
+        'memes': '😂',
+        'seasonal': '🎄'
     };
     
-    return emojiMap[folderName.toLowerCase()] || '🎮';
+    return emojiMap[folderName.toLowerCase()] || '📁';
 }
 
 // ==============================================
 // WELCOME EMBED FUNKTIONEN
 // ==============================================
 
-// Zufälliges Welcome-Bild aus Supabase wählen
+// Hole zufälliges Welcome-Bild aus Supabase
 async function getRandomWelcomeImage(specificFolder = null, guildId = process.env.GUILD_ID || '1203994020779532348') {
+    if (!supabaseClient) {
+        console.error('❌ Supabase nicht initialisiert - Keine Bilder verfügbar!');
+        return null;
+    }
+
     try {
-        const imageData = await loadWelcomeImages(guildId);
+        const { images } = await loadWelcomeImages(guildId);
         
-        if (!imageData || !imageData.images.length) {
-            console.log('⚠️ Keine Bilder für Rotation gefunden');
-            return null;
-        }
-
-        let availableImages = imageData.images;
-
-        // Filter nach spezifischem Ordner falls angegeben
-        if (specificFolder && imageData.folders[specificFolder]) {
-            availableImages = imageData.folders[specificFolder];
-            console.log(`📁 ${specificFolder}-Ordner: ${availableImages.length} Bilder gefunden`);
+        let availableImages = images;
+        if (specificFolder) {
+            availableImages = images.filter(img => img.folder === specificFolder);
         }
 
         if (availableImages.length === 0) {
-            console.log(`⚠️ Keine Bilder in Ordner "${specificFolder}" gefunden`);
+            console.log(`⚠️ Keine Bilder gefunden${specificFolder ? ` in Ordner: ${specificFolder}` : ''}`);
             return null;
         }
 
-        // Zufälliges Bild auswählen
         const randomIndex = Math.floor(Math.random() * availableImages.length);
         const randomImage = availableImages[randomIndex];
         
-        console.log(`🎯 Gewähltes Bild: ${randomImage.folder}/${randomImage.filename} (Index: ${randomIndex}/${availableImages.length - 1})`);
-        console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${randomImage.url}`);
-        
+        console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${randomImage.folder}/${randomImage.filename}`);
         return randomImage.url;
 
     } catch (error) {
-        console.error('❌ Fehler beim Laden der Welcome-Bilder für Rotation:', error);
+        console.error('❌ Fehler beim Laden des zufälligen Welcome-Bildes:', error);
         return null;
     }
 }
 
-// Welcome-Embed erstellen
-async function createWelcomeEmbed(guild, member, guildId = process.env.GUILD_ID || '1203994020779532348') {
+// Erstelle Welcome-Embed mit Supabase-Daten
+async function createWelcomeEmbed(guild, member, settings) {
+    if (!settings) {
+        console.error('❌ Keine Welcome Settings vorhanden!');
+        return { embed: null, attachment: null };
+    }
+
     try {
-        // Lade aktuelle Settings
-        const settings = await loadWelcomeSettings(guildId);
-        
         // Fallback für description falls leer oder undefined
         let description = settings.description || 'Willkommen auf dem Server!';
         
@@ -515,53 +573,20 @@ async function createWelcomeEmbed(guild, member, guildId = process.env.GUILD_ID 
             .setDescription(description)
             .setTimestamp();
 
-        let attachment = null;
-        let thumbnailUrl = settings.customThumbnail;
-
-        // Bild-Rotation aktiviert? (überschreibt customThumbnail)
+        // Bild setzen (nur custom mit Supabase)
         if (settings.imageRotation && settings.imageRotation.enabled) {
-            const randomImage = await getRandomWelcomeImage(settings.imageRotation.folder, guildId);
-            if (randomImage) {
-                thumbnailUrl = randomImage;
-                console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${thumbnailUrl}`);
-            } else {
-                console.log(`⚠️ Keine Bilder für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
+            const randomImageUrl = await getRandomWelcomeImage(settings.imageRotation.folder, guild.id);
+            if (randomImageUrl) {
+                embed.setImage(randomImageUrl);
+                console.log(`🎲 Zufälliges Welcome-Bild verwendet: ${randomImageUrl}`);
             }
-        }
-
-        // Setze Bild (nur noch custom Images unterstützt)
-        if (thumbnailUrl) {
-            // GitHub/Externe URL direkt verwenden
-            if (thumbnailUrl.startsWith('https://')) {
-                embed.setImage(thumbnailUrl);
-                console.log(`🖼️ Setze externe Image URL: ${thumbnailUrl}`);
-            } 
-            // Lokale URLs für lokale Entwicklung
-            else if (thumbnailUrl.startsWith('/images/')) {
-                try {
-                    const imagePath = `./dashboard/public${thumbnailUrl}`;
-                    if (fs.existsSync(imagePath)) {
-                        const fileName = path.basename(imagePath);
-                        attachment = new AttachmentBuilder(imagePath, { name: fileName });
-                        embed.setImage(`attachment://${fileName}`);
-                        console.log(`🎮 Lokales Bild als großes Image verwendet: ${imagePath}`);
-                    } else {
-                        console.log(`⚠️ Bild nicht gefunden: ${imagePath}`);
-                        embed.setImage('https://cdn.discordapp.com/embed/avatars/0.png');
-                    }
-                } catch (error) {
-                    console.error(`❌ Fehler beim Laden des Bildes:`, error);
-                    embed.setImage('https://cdn.discordapp.com/embed/avatars/0.png');
-                }
-            } else {
-                // Externe URL direkt verwenden
-                embed.setImage(thumbnailUrl);
-                console.log(`🖼️ Setze Image URL: ${thumbnailUrl}`);
-            }
+        } else if (settings.customThumbnail) {
+            embed.setImage(settings.customThumbnail);
+            console.log(`📌 Spezifisches Bild verwendet: ${settings.customThumbnail}`);
         }
 
         // Felder hinzufügen
-        if (settings.fields && settings.fields.length > 0) {
+        if (settings.fields && Array.isArray(settings.fields)) {
             settings.fields.forEach(field => {
                 embed.addFields({
                     name: field.name,
@@ -583,41 +608,36 @@ async function createWelcomeEmbed(guild, member, guildId = process.env.GUILD_ID 
             embed.setFooter({ text: footerText });
         }
 
-        // Statistik aktualisieren
-        await updateWelcomeStats(guildId, 'welcome');
-
-        return { embed, attachment, settings };
+        return { embed, attachment: null };
 
     } catch (error) {
         console.error('❌ Fehler beim Erstellen des Welcome-Embeds:', error);
-        // Fallback zu simplem Embed
-        const embed = new EmbedBuilder()
-            .setColor(0x00FF7F)
-            .setTitle('🎉 Willkommen!')
-            .setDescription(`Willkommen <@${member.id}> auf **${guild.name}**!`)
-            .setTimestamp();
-        
-        return { embed, attachment: null, settings: null };
+        return { embed: null, attachment: null };
     }
 }
 
-// Leave-Embed erstellen
-async function createLeaveEmbed(guild, member, guildId = process.env.GUILD_ID || '1203994020779532348') {
-    try {
-        const settings = await loadWelcomeSettings(guildId);
-        const leaveSettings = settings.leaveMessage;
-        
-        if (!leaveSettings || !leaveSettings.enabled) {
-            return null;
-        }
+// Erstelle Leave-Embed mit Supabase-Daten
+async function createLeaveEmbed(guild, member, leaveSettings) {
+    if (!leaveSettings) {
+        console.error('❌ Keine Leave Settings vorhanden!');
+        return null;
+    }
 
+    try {
+        const { 
+            title = '👋 Tschüss!',
+            description = '**{user}** hat den Server verlassen. Auf Wiedersehen!',
+            color = '0xFF6B6B'
+        } = leaveSettings;
+
+        // Erstelle Discord Embed
         const embed = new EmbedBuilder()
-            .setTitle(leaveSettings.title || '👋 Tschüss!')
-            .setColor(parseInt(leaveSettings.color?.replace('0x', '') || 'FF6B6B', 16))
+            .setTitle(title)
+            .setColor(parseInt(color.replace('0x', ''), 16))
             .setTimestamp();
 
         // Verarbeite Platzhalter in der Beschreibung
-        let processedDescription = (leaveSettings.description || '**{user}** hat den Server verlassen.')
+        let processedDescription = description
             .replace(/{user}/g, member.user.username)
             .replace(/{server}/g, guild.name)
             .replace(/{memberCount}/g, guild.memberCount.toString());
@@ -633,11 +653,8 @@ async function createLeaveEmbed(guild, member, guildId = process.env.GUILD_ID ||
             iconURL: guild.iconURL({ dynamic: true }) || undefined
         });
 
-        // Statistik aktualisieren
-        await updateWelcomeStats(guildId, 'leave');
-
         console.log(`✅ Leave-Embed erstellt für ${member.user.tag}`);
-        return { embed, settings: leaveSettings };
+        return embed;
 
     } catch (error) {
         console.error('❌ Fehler beim Erstellen des Leave-Embeds:', error);
@@ -646,150 +663,37 @@ async function createLeaveEmbed(guild, member, guildId = process.env.GUILD_ID ||
 }
 
 // ==============================================
-// STATISTIK FUNKTIONEN
+// STATISTIKEN FUNKTIONEN
 // ==============================================
 
-// Aktualisiere Welcome Statistiken
+// Aktualisiere Welcome-Statistiken
 async function updateWelcomeStats(guildId, statType) {
-    if (!supabaseClient) return;
+    if (!supabaseClient) {
+        console.log('⚠️ Supabase nicht verfügbar - Statistiken werden nicht aktualisiert');
+        return;
+    }
 
     try {
         const today = new Date().toISOString().split('T')[0];
         
-        // Upsert Statistik für heute
         const { error } = await supabaseClient
             .from('welcome_stats')
             .upsert({
                 guild_id: guildId,
                 date: today,
-                [`${statType}_messages_sent`]: 1
+                welcome_count: statType === 'welcome' ? 1 : 0,
+                leave_count: statType === 'leave' ? 1 : 0
             }, {
-                onConflict: 'guild_id,date'
+                onConflict: 'guild_id,date',
+                ignoreDuplicates: false
             });
 
         if (error) throw error;
+        
+        console.log(`📊 Welcome Stats aktualisiert: ${statType}`);
 
     } catch (error) {
         console.error('❌ Fehler beim Aktualisieren der Welcome Stats:', error);
-    }
-}
-
-// ==============================================
-// FALLBACK FUNKTIONEN (für Migration)
-// ==============================================
-
-// JSON Fallback - Laden
-function loadWelcomeSettingsFromJSON() {
-    try {
-        if (fs.existsSync('./welcome.json')) {
-            const settings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
-            
-            // Migration: Sicherstellen dass alle Felder existieren
-            if (!settings.imageRotation) {
-                settings.imageRotation = { enabled: false, mode: 'random', folder: null };
-            }
-            if (!settings.leaveMessage) {
-                settings.leaveMessage = {
-                    enabled: false,
-                    channelName: 'verlassen',
-                    title: '👋 Tschüss!',
-                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-                    color: '0xFF6B6B',
-                    mentionUser: false,
-                    deleteAfter: 0
-                };
-            }
-            
-            console.log('✅ Welcome Settings aus JSON geladen (Fallback)');
-            return settings;
-        }
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Welcome Settings aus JSON:', error);
-    }
-
-    // Standard-Einstellungen zurückgeben
-    return {
-        enabled: true,
-        channelName: 'willkommen',
-        title: '🎉 Willkommen auf dem Server!',
-        description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-        color: '0x00FF7F',
-        customThumbnail: '',
-        imageRotation: { enabled: false, mode: 'random', folder: null },
-        fields: [
-            { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an!', inline: false },
-            { name: '💬 Support', value: 'Bei Fragen wende dich an Moderatoren!', inline: true },
-            { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
-        ],
-        footer: 'Mitglied #{memberCount} • {server}',
-        autoRole: '',
-        mentionUser: true,
-        deleteAfter: 0,
-        dmMessage: { enabled: false, message: 'Willkommen! 😊' },
-        leaveMessage: { enabled: false, channelName: 'verlassen', title: '👋 Tschüss!', description: '**{user}** hat uns verlassen.', color: '0xFF6B6B', mentionUser: false, deleteAfter: 0 }
-    };
-}
-
-// JSON Fallback - Speichern
-function saveWelcomeSettingsToJSON(settings) {
-    try {
-        fs.writeFileSync('./welcome.json', JSON.stringify(settings, null, 2));
-        console.log('✅ Welcome Settings in JSON gespeichert (Fallback)');
-        return { success: true };
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der Welcome Settings in JSON:', error);
-        return { success: false, error: error.message };
-    }
-}
-
-// Filesystem Fallback für Images
-function loadWelcomeImagesFromFileSystem() {
-    try {
-        const welcomeImagesPath = './dashboard/public/images/welcome/';
-        
-        if (!fs.existsSync(welcomeImagesPath)) {
-            console.log('📁 Welcome Images Ordner existiert nicht, erstelle ihn...');
-            fs.mkdirSync(welcomeImagesPath, { recursive: true });
-            return { images: [], folders: {}, allFolderNames: ['general'] };
-        }
-
-        const result = { images: [], folders: {}, allFolderNames: [] };
-        const items = fs.readdirSync(welcomeImagesPath);
-
-        // Lade Ordner und Dateien
-        items.forEach(item => {
-            const itemPath = path.join(welcomeImagesPath, item);
-            const stats = fs.statSync(itemPath);
-            
-            if (stats.isDirectory()) {
-                result.allFolderNames.push(item);
-                result.folders[item] = [];
-                
-                const folderFiles = fs.readdirSync(itemPath);
-                folderFiles.forEach(file => {
-                    if (file.match(/\.(png|jpg|jpeg|gif|webp)$/i)) {
-                        const imageData = {
-                            filename: file,
-                            originalName: file,
-                            folder: item,
-                            size: fs.statSync(path.join(itemPath, file)).size,
-                            type: path.extname(file),
-                            url: `/images/welcome/${item}/${file}`,
-                            uploadedAt: stats.mtime
-                        };
-                        result.images.push(imageData);
-                        result.folders[item].push(imageData);
-                    }
-                });
-            }
-        });
-
-        console.log(`✅ ${result.images.length} Welcome Images aus Filesystem geladen (Fallback)`);
-        return result;
-
-    } catch (error) {
-        console.error('❌ Fehler beim Laden der Images aus Filesystem:', error);
-        return { images: [], folders: {}, allFolderNames: ['general'] };
     }
 }
 
@@ -803,16 +707,12 @@ module.exports = {
     saveWelcomeSettings,
     loadWelcomeImages,
     saveWelcomeImage,
-    createWelcomeEmbed,
-    createLeaveEmbed,
-    getRandomWelcomeImage,
+    deleteWelcomeImage,
     createWelcomeFolder,
     deleteWelcomeFolder,
     autoCreateGameFolders,
-    updateWelcomeStats,
-    
-    // Fallback Funktionen
-    loadWelcomeSettingsFromJSON,
-    saveWelcomeSettingsToJSON,
-    loadWelcomeImagesFromFileSystem
+    getRandomWelcomeImage,
+    createWelcomeEmbed,
+    createLeaveEmbed,
+    updateWelcomeStats
 }; 

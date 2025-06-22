@@ -3244,24 +3244,24 @@ client.on(Events.GuildMemberAdd, async member => {
     // Das neue System hört direkt auf member join events
     
     try {
-        // Lade Welcome-Einstellungen aus Supabase (mit Fallback)
+        // Lade Welcome-Einstellungen aus Supabase
         const currentWelcomeSettings = await loadWelcomeSettings(member.guild.id);
 
         // Prüfe ob Welcome-Messages aktiviert sind
         if (!currentWelcomeSettings || !currentWelcomeSettings.enabled) {
-            console.log('Welcome-Messages sind deaktiviert');
+            console.log('❌ Welcome-Messages sind deaktiviert oder Supabase nicht verfügbar');
             return;
         }
-        
-        // Finde Welcome-Channel
-        const welcomeChannel = member.guild.channels.cache.find(ch => 
-            ch.name.toLowerCase().includes(currentWelcomeSettings.channelName.toLowerCase()) ||
-            ch.name.toLowerCase().includes('willkommen') ||
-            ch.name.toLowerCase().includes('welcome') ||
-            ch.name.toLowerCase().includes('general')
-        );
-        
-        if (welcomeChannel) {
+    
+    // Finde Welcome-Channel
+    const welcomeChannel = member.guild.channels.cache.find(ch => 
+        ch.name.toLowerCase().includes(currentWelcomeSettings.channelName.toLowerCase()) ||
+        ch.name.toLowerCase().includes('willkommen') ||
+        ch.name.toLowerCase().includes('welcome') ||
+        ch.name.toLowerCase().includes('general')
+    );
+    
+    if (welcomeChannel) {
             // Erstelle Welcome-Embed mit Supabase-Funktionen
             const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
             
@@ -3296,40 +3296,40 @@ client.on(Events.GuildMemberAdd, async member => {
             // Aktualisiere Welcome-Statistiken
             await updateWelcomeStats(member.guild.id, 'welcome');
             
-        } else {
-            console.log(`⚠️ Kein Welcome-Channel in ${member.guild.name} gefunden`);
-        }
+    } else {
+        console.log(`⚠️ Kein Welcome-Channel in ${member.guild.name} gefunden`);
+    }
 
-        // Auto-Role vergeben falls konfiguriert
-        if (currentWelcomeSettings.autoRole) {
-            try {
-                const autoRole = member.guild.roles.cache.find(role => 
-                    role.name.toLowerCase() === currentWelcomeSettings.autoRole.toLowerCase()
-                );
-                
-                if (autoRole) {
-                    await member.roles.add(autoRole);
-                    console.log(`✅ Auto-Role "${autoRole.name}" vergeben an ${member.user.tag}`);
-                } else {
-                    console.log(`⚠️ Auto-Role "${currentWelcomeSettings.autoRole}" nicht gefunden`);
-                }
-            } catch (error) {
-                console.error('❌ Fehler beim Vergeben der Auto-Role:', error);
+    // Auto-Role vergeben falls konfiguriert
+    if (currentWelcomeSettings.autoRole) {
+        try {
+            const autoRole = member.guild.roles.cache.find(role => 
+                role.name.toLowerCase() === currentWelcomeSettings.autoRole.toLowerCase()
+            );
+            
+            if (autoRole) {
+                await member.roles.add(autoRole);
+                console.log(`✅ Auto-Role "${autoRole.name}" vergeben an ${member.user.tag}`);
+            } else {
+                console.log(`⚠️ Auto-Role "${currentWelcomeSettings.autoRole}" nicht gefunden`);
             }
+        } catch (error) {
+            console.error('❌ Fehler beim Vergeben der Auto-Role:', error);
         }
+    }
 
-        // DM an User senden falls aktiviert
+    // DM an User senden falls aktiviert
         if (currentWelcomeSettings.dmMessage && currentWelcomeSettings.dmMessage.enabled && currentWelcomeSettings.dmMessage.message) {
-            try {
-                await member.send(currentWelcomeSettings.dmMessage.message
-                    .replace(/{user}/g, member.displayName)
-                    .replace(/{server}/g, member.guild.name)
-                    .replace(/{memberCount}/g, member.guild.memberCount.toString())
-                );
-                console.log(`📨 Welcome-DM an ${member.user.tag} gesendet`);
-            } catch (error) {
-                console.log(`⚠️ Konnte keine Welcome-DM an ${member.user.tag} senden:`, error.message);
-            }
+        try {
+            await member.send(currentWelcomeSettings.dmMessage.message
+                .replace(/{user}/g, member.displayName)
+                .replace(/{server}/g, member.guild.name)
+                .replace(/{memberCount}/g, member.guild.memberCount.toString())
+            );
+            console.log(`📨 Welcome-DM an ${member.user.tag} gesendet`);
+        } catch (error) {
+            console.log(`⚠️ Konnte keine Welcome-DM an ${member.user.tag} senden:`, error.message);
+        }
         }
         
     } catch (error) {
@@ -3347,7 +3347,7 @@ client.on(Events.GuildMemberRemove, async member => {
 
         // Prüfe ob Leave Messages aktiviert sind
         if (!currentSettings || !currentSettings.leaveMessage || !currentSettings.leaveMessage.enabled) {
-            console.log('📴 Leave Messages sind deaktiviert');
+            console.log('❌ Leave Messages sind deaktiviert oder Supabase nicht verfügbar');
             return;
         }
 
