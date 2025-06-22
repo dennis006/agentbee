@@ -55,12 +55,18 @@ let supabase = null;
 function initializeSupabase() {
     try {
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Service Role für RLS
+        const supabaseAnonKey = process.env.SUPABASE_ANON_KEY; // Fallback
         
-        if (supabaseUrl && supabaseKey) {
+        if (supabaseUrl && (supabaseServiceKey || supabaseAnonKey)) {
             const { createClient } = require('@supabase/supabase-js');
-            supabase = createClient(supabaseUrl, supabaseKey);
-            console.log('✅ Supabase erfolgreich initialisiert');
+            
+            // Bevorzuge Service Role für Discord Bot (umgeht RLS)
+            const keyToUse = supabaseServiceKey || supabaseAnonKey;
+            const keyType = supabaseServiceKey ? 'SERVICE_ROLE' : 'ANON_KEY';
+            
+            supabase = createClient(supabaseUrl, keyToUse);
+            console.log(`✅ Supabase erfolgreich initialisiert (${keyType})`);
             return true;
         } else {
             console.log('⚠️ Supabase Credentials nicht gefunden - verwende JSON-Fallback');

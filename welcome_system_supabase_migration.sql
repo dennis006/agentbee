@@ -129,7 +129,7 @@ ALTER TABLE welcome_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE welcome_folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE welcome_stats ENABLE ROW LEVEL SECURITY;
 
--- Service Role Policies (für Discord Bot)
+-- Service Role Policies (für Discord Bot) - umgeht RLS komplett
 CREATE POLICY "service_role_welcome_settings" ON welcome_settings
     FOR ALL USING (auth.role() = 'service_role');
 
@@ -141,6 +141,32 @@ CREATE POLICY "service_role_welcome_folders" ON welcome_folders
 
 CREATE POLICY "service_role_welcome_stats" ON welcome_stats
     FOR ALL USING (auth.role() = 'service_role');
+
+-- Zusätzliche Policies für authenticated Users (Dashboard/API)
+CREATE POLICY "authenticated_welcome_settings" ON welcome_settings
+    FOR ALL USING (auth.role() = 'authenticated');
+
+CREATE POLICY "authenticated_welcome_images" ON welcome_images
+    FOR ALL USING (auth.role() = 'authenticated');
+
+CREATE POLICY "authenticated_welcome_folders" ON welcome_folders
+    FOR ALL USING (auth.role() = 'authenticated');
+
+CREATE POLICY "authenticated_welcome_stats" ON welcome_stats
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- Fallback Policy für anon role (falls Service Key nicht verfügbar)
+CREATE POLICY "anon_welcome_settings" ON welcome_settings
+    FOR ALL USING (auth.role() = 'anon');
+
+CREATE POLICY "anon_welcome_images" ON welcome_images
+    FOR ALL USING (auth.role() = 'anon');
+
+CREATE POLICY "anon_welcome_folders" ON welcome_folders
+    FOR ALL USING (auth.role() = 'anon');
+
+CREATE POLICY "anon_welcome_stats" ON welcome_stats
+    FOR ALL USING (auth.role() = 'anon');
 
 -- 5. TRIGGER FÜR AUTOMATISCHE TIMESTAMPS
 -- ===========================================
