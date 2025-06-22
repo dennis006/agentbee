@@ -55,8 +55,15 @@ let supabase = null;
 function initializeSupabase() {
     try {
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Service Role für RLS
+        let supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Service Role für RLS
         const supabaseAnonKey = process.env.SUPABASE_ANON_KEY; // Fallback
+        
+        // 🚨 NOTFALL-FALLBACK: Falls SERVICE_KEY nicht gesetzt ist in Railway
+        if (!supabaseServiceKey && supabaseUrl && supabaseUrl.includes('supabase.co')) {
+            console.log('⚠️ SUPABASE_SERVICE_KEY nicht gefunden! Das kann zu RLS Policy Fehlern führen!');
+            console.log('💡 Lösung: Setze SUPABASE_SERVICE_KEY in Railway Environment Variables');
+            console.log('📝 Alternative: Führe disable_welcome_rls_emergency.sql in Supabase aus');
+        }
         
         if (supabaseUrl && (supabaseServiceKey || supabaseAnonKey)) {
             const { createClient } = require('@supabase/supabase-js');
@@ -67,6 +74,11 @@ function initializeSupabase() {
             
             supabase = createClient(supabaseUrl, keyToUse);
             console.log(`✅ Supabase erfolgreich initialisiert (${keyType})`);
+            
+            if (!supabaseServiceKey) {
+                console.log('🚨 WARNUNG: Verwende ANON_KEY - RLS Policy Fehler möglich!');
+            }
+            
             return true;
         } else {
             console.log('⚠️ Supabase Credentials nicht gefunden - verwende JSON-Fallback');
@@ -1777,7 +1789,7 @@ app.post('/api/welcome/upload', welcomeUpload.single('welcomeImage'), async (req
         const result = await saveWelcomeImage(imageData, guildId);
         
         if (result.success) {
-            res.json({
+        res.json({ 
                 success: true,
                 url: result.url,
                 filename: result.filename,
@@ -1844,7 +1856,7 @@ app.delete('/api/welcome/folders/:folderName', async (req, res) => {
         const result = await deleteWelcomeFolder(folderName, guildId);
         
         if (result.success) {
-            res.json({ success: true, message: 'Ordner erfolgreich gelöscht' });
+        res.json({ success: true, message: 'Ordner erfolgreich gelöscht' });
         } else {
             res.status(500).json({ error: result.error || 'Fehler beim Löschen des Ordners' });
         }
@@ -1902,9 +1914,9 @@ app.post('/api/welcome/test', async (req, res) => {
 // POST: Test Leave Message
 app.post('/api/welcome/test-leave', async (req, res) => {
     try {
-        if (!client.isReady()) {
-            return res.status(503).json({ error: 'Bot ist nicht online' });
-        }
+    if (!client.isReady()) {
+        return res.status(503).json({ error: 'Bot ist nicht online' });
+    }
 
         const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
         const settings = req.body;
@@ -1940,7 +1952,7 @@ app.post('/api/welcome/test-leave', async (req, res) => {
         });
 
         res.json({ success: true, message: 'Test-Abschiedsnachricht gesendet' });
-    } catch (error) {
+                } catch (error) {
         console.error('❌ Fehler beim Senden der Test-Leave-Nachricht:', error);
         res.status(500).json({ error: 'Test fehlgeschlagen' });
     }
@@ -3522,11 +3534,11 @@ client.on(Events.GuildMemberAdd, async member => {
         // Lade Welcome-Einstellungen aus Supabase
         const currentWelcomeSettings = await loadWelcomeSettings(member.guild.id);
 
-        // Prüfe ob Welcome-Messages aktiviert sind
+    // Prüfe ob Welcome-Messages aktiviert sind
         if (!currentWelcomeSettings || !currentWelcomeSettings.enabled) {
             console.log('❌ Welcome-Messages sind deaktiviert oder Supabase nicht verfügbar');
-            return;
-        }
+        return;
+    }
     
     // Finde Welcome-Channel
     const welcomeChannel = member.guild.channels.cache.find(ch => 
@@ -3608,7 +3620,23 @@ client.on(Events.GuildMemberAdd, async member => {
         }
         
     } catch (error) {
-        console.error('❌ Fehler im Welcome-System:', error);
+        console.error('❌ KRITISCHER FEHLER im Welcome-System:', error);
+        console.error('❌ Stack Trace:', error.stack);
+        // NIEMALS den ganzen Bot crashen lassen!
+        try {
+            // Sende Notfall-Welcome falls möglich
+            const emergencyChannel = member.guild.channels.cache.find(ch => 
+                ch.name.toLowerCase().includes('general') ||
+                ch.name.toLowerCase().includes('welcome') ||
+                ch.type === 0 // Text channel
+            );
+            if (emergencyChannel) {
+                await emergencyChannel.send(`🚨 Willkommen ${member.user.username}! (Notfall-Modus)`);
+                console.log('🚨 Notfall-Welcome-Message gesendet');
+            }
+        } catch (emergencyError) {
+            console.error('❌ Selbst Notfall-Message fehlgeschlagen:', emergencyError.message);
+        }
     }
 });
 
@@ -3661,7 +3689,9 @@ client.on(Events.GuildMemberRemove, async member => {
         await updateWelcomeStats(member.guild.id, 'leave');
 
     } catch (error) {
-        console.error('❌ Fehler beim Senden der Leave Message:', error);
+        console.error('❌ KRITISCHER FEHLER im Leave-System:', error);
+        console.error('❌ Stack Trace:', error.stack);
+        // NIEMALS den ganzen Bot crashen lassen!
     }
 });
 
