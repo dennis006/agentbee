@@ -1877,8 +1877,14 @@ function loadWelcomeSettingsFromJSON() {
             if (!mergedSettings.imageRotation) {
                 mergedSettings.imageRotation = {
                     enabled: false,
-                    mode: 'random'
+                    mode: 'random',
+                    folder: undefined  // Explizit für korrekte Struktur
                 };
+            }
+            
+            // Sicherstellen dass folder property existiert 
+            if (mergedSettings.imageRotation && !mergedSettings.imageRotation.hasOwnProperty('folder')) {
+                mergedSettings.imageRotation.folder = undefined;
             }
 
             if (!mergedSettings.leaveMessage) {
@@ -1910,7 +1916,7 @@ function loadWelcomeSettingsFromJSON() {
             color: '0x00FF7F',
             thumbnail: 'user',
             customThumbnail: '',
-            imageRotation: { enabled: false, mode: 'random' },
+            imageRotation: { enabled: false, mode: 'random', folder: undefined },
             fields: [
                 { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
                 { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
@@ -1943,7 +1949,7 @@ function loadWelcomeSettingsFromJSON() {
             color: '0x00FF7F',
             thumbnail: 'user',
             customThumbnail: '',
-            imageRotation: { enabled: false, mode: 'random' },
+            imageRotation: { enabled: false, mode: 'random', folder: undefined },
             fields: [
                 { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
                 { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
@@ -3346,12 +3352,13 @@ function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
         
         // Bild-Rotation aktiviert? (überschreibt customThumbnail)
         if (settings.imageRotation && settings.imageRotation.enabled) {
-            const randomImage = getRandomWelcomeImage();
+            const specificFolder = settings.imageRotation.folder || null;
+            const randomImage = getRandomWelcomeImage(specificFolder);
             if (randomImage) {
                 thumbnailUrl = randomImage;
-                console.log(`🎲 Zufälliges Welcome-Bild gewählt: ${thumbnailUrl}`);
+                console.log(`🎲 Zufälliges Welcome-Bild gewählt${specificFolder ? ` aus Ordner "${specificFolder}"` : ' aus allen Ordnern'}: ${thumbnailUrl}`);
             } else {
-                console.log(`⚠️ Keine Bilder für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
+                console.log(`⚠️ Keine Bilder${specificFolder ? ` in Ordner "${specificFolder}"` : ''} für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
             }
         } else {
             console.log(`📌 Spezifisches Bild verwendet: ${thumbnailUrl}`);

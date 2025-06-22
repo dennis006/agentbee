@@ -186,8 +186,14 @@ const Welcome = () => {
           if (!data.imageRotation) {
             data.imageRotation = {
               enabled: false,
-              mode: 'random'
+              mode: 'random',
+              folder: undefined  // Explizit setzen für korrekte TypeScript-Struktur
             };
+          }
+          
+          // Sicherstellen dass folder property existiert falls imageRotation vorhanden ist
+          if (data.imageRotation && !data.imageRotation.hasOwnProperty('folder')) {
+            data.imageRotation.folder = undefined;
           }
 
           // Sicherstellen dass leaveMessage existiert (neues Feature)
@@ -224,7 +230,9 @@ const Welcome = () => {
             };
             console.log('🎯 Neue Settings nach Merge:', {
               'thumbnail': newSettings.thumbnail,
-              'customThumbnail': newSettings.customThumbnail
+              'customThumbnail': newSettings.customThumbnail,
+              'imageRotation.folder': newSettings.imageRotation?.folder,
+              'imageRotation.enabled': newSettings.imageRotation?.enabled
             });
             return newSettings;
           });
