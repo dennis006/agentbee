@@ -5452,19 +5452,51 @@ async function saveVerificationConfig(config) {
             throw new Error('Supabase nicht initialisiert - Verification System erfordert Supabase-Datenbank');
         }
 
-        const { error } = await supabase
-            .from('verification_config')
-            .upsert({
-                config: config,
-                updated_at: new Date().toISOString()
-            });
+        console.log('💾 Speichere Verification-Config in Supabase...');
+        console.log('🎮 Anzahl Spiele:', config.allowedGames?.length || 0);
 
-        if (!error) {
-            console.log('💾 Verification-Config in Supabase gespeichert');
-            return true;
+        // Erst prüfen ob bereits eine Config existiert
+        const { data: existingData, error: fetchError } = await supabase
+            .from('verification_config')
+            .select('id')
+            .limit(1)
+            .single();
+
+        if (existingData && !fetchError) {
+            // Update bestehende Config
+            console.log('🔄 Aktualisiere bestehende Config mit ID:', existingData.id);
+            const { error: updateError } = await supabase
+                .from('verification_config')
+                .update({
+                    config: config,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', existingData.id);
+
+            if (!updateError) {
+                console.log('✅ Verification-Config erfolgreich aktualisiert');
+                return true;
+            } else {
+                console.error('❌ Fehler beim Aktualisieren:', updateError);
+                throw updateError;
+            }
         } else {
-            console.error('❌ Supabase-Fehler beim Speichern:', error);
-            throw error;
+            // Erstelle neue Config
+            console.log('🆕 Erstelle neue Config-Zeile');
+            const { error: insertError } = await supabase
+                .from('verification_config')
+                .insert({
+                    config: config,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (!insertError) {
+                console.log('✅ Neue Verification-Config erstellt');
+                return true;
+            } else {
+                console.error('❌ Fehler beim Erstellen:', insertError);
+                throw insertError;
+            }
         }
     } catch (error) {
         console.error('❌ Fehler beim Speichern der Verification-Config:', error.message);
