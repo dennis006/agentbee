@@ -962,4 +962,4 @@ const VerifyPage = () => {
   );
 };
 
-export default VerifyPage; a
+export default VerifyPage;
