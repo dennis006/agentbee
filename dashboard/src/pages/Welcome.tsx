@@ -72,17 +72,7 @@ const Welcome = () => {
   const [newFolderName, setNewFolderName] = useState('')
   const [showNewFolderInput, setShowNewFolderInput] = useState(false)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
-  const [userModified, setUserModified] = useState(false)
-  
-  // Helper-Funktion für User-Änderungen
-  const updateWelcomeSettings = (newSettings: Partial<WelcomeSettings> | ((prev: WelcomeSettings) => WelcomeSettings)) => {
-    if (typeof newSettings === 'function') {
-      setWelcomeSettings(newSettings);
-    } else {
-      setWelcomeSettings(prev => ({ ...prev, ...newSettings }));
-    }
-    setUserModified(true); // User hat eine Änderung gemacht
-  };
+  // Entfernt: Auto-Save und userModified - nur noch manuelles Speichern
   const [deleteModal, setDeleteModal] = useState<{
     show: boolean;
     filename: string;
@@ -730,18 +720,7 @@ const Welcome = () => {
     initializeData();
   }, []);
 
-  // Separater Effect für Auto-Save bei Änderungen (nur bei User-Modifikationen)
-  useEffect(() => {
-    // Nur speichern wenn Settings geladen wurden UND der User Änderungen gemacht hat
-    if (settingsLoaded && userModified) {
-      const timeoutId = setTimeout(() => {
-        saveWelcomeSettings();
-        setUserModified(false); // Reset nach dem Speichern
-      }, 1000); // 1 Sekunde Debounce
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [welcomeSettings, settingsLoaded, userModified]);
+  // Auto-Save entfernt - nur noch manuelles Speichern über "Speichern" Button
 
   // Debug: Track imageRotation folder changes
   useEffect(() => {
@@ -1301,14 +1280,14 @@ const Welcome = () => {
                         type="checkbox"
                         id="imageRotation"
                         checked={welcomeSettings.imageRotation?.enabled || false}
-                        onChange={(e) => updateWelcomeSettings({
-                          ...welcomeSettings, 
-                          imageRotation: {
-                            ...welcomeSettings.imageRotation,  // ✅ Preserve ALL existing values
-                            enabled: e.target.checked,
-                            mode: welcomeSettings.imageRotation?.mode || 'random'
-                          }
-                        })}
+                        onChange={(e) =>                           setWelcomeSettings({
+                            ...welcomeSettings, 
+                            imageRotation: {
+                              ...welcomeSettings.imageRotation,  // ✅ Preserve ALL existing values
+                              enabled: e.target.checked,
+                              mode: welcomeSettings.imageRotation?.mode || 'random'
+                            }
+                          })}
                         className="w-4 h-4 text-pink-400 bg-dark-bg border-purple-primary/30 rounded focus:ring-pink-400 focus:ring-2"
                       />
                       <label htmlFor="imageRotation" className="text-xs text-dark-text">
@@ -1341,7 +1320,7 @@ const Welcome = () => {
                           const newFolder = e.target.value || undefined;
                           console.log('🎯 SETZE NEUEN FOLDER:', newFolder);
                           
-                          updateWelcomeSettings({
+                          setWelcomeSettings({
                             ...welcomeSettings,
                             imageRotation: {
                               ...welcomeSettings.imageRotation,
