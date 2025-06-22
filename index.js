@@ -1574,72 +1574,118 @@ app.post('/api/bot/settings', async (req, res) => {
 // Legacy Rules API entfernt - verwendet jetzt Supabase API
 // Siehe rules-supabase-api.js für neue Endpunkte
 
-// Welcome Settings
-let welcomeSettings = {
-    enabled: true,
-    channelName: 'willkommen',
-    title: '🎉 Willkommen auf dem Server!',
-    description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-    color: '0x00FF7F',
-    thumbnail: 'user',
-    customThumbnail: '',
-    imageRotation: {
-        enabled: false,
-        mode: 'random' // 'random' oder 'sequential'
-    },
-    fields: [
-        {
-            name: '📋 Erste Schritte',
-            value: 'Schaue dir unsere Regeln an und werde Teil der Community!',
-            inline: false
-        },
-        {
-            name: '💬 Support',
-            value: 'Bei Fragen wende dich an unsere Moderatoren!',
-            inline: true
-        },
-        {
-            name: '🎮 Viel Spaß',
-            value: 'Wir freuen uns auf dich!',
-            inline: true
-        }
-    ],
-    footer: 'Mitglied #{memberCount} • {server}',
-    autoRole: '',
-    mentionUser: true,
-    deleteAfter: 0,
-    dmMessage: {
-        enabled: false,
-        message: 'Willkommen! Schau gerne im Server vorbei! 😊'
-    },
-    leaveMessage: {
-        enabled: false,
-        channelName: 'verlassen',
-        title: '👋 Tschüss!',
-        description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-        color: '0xFF6B6B',
-        mentionUser: false,
-        deleteAfter: 0
-    }
-};
+// ================== WELCOME SYSTEM - SUPABASE FUNCTIONS ==================
 
-// Welcome Settings laden
-app.get('/api/welcome', (req, res) => {
+// Welcome Settings Cache - Werte werden aus Supabase geladen
+let welcomeSettings = null;
+
+// Cache für Welcome Settings
+let welcomeSettingsCache = null;
+let welcomeSettingsCacheTime = 0;
+const WELCOME_CACHE_DURATION = 300000; // 5 Minuten
+
+// Lade Welcome Settings aus Supabase
+async function loadWelcomeSettingsFromSupabase() {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback für Welcome Settings');
+            return loadWelcomeSettingsFromJSON();
+        }
+        
+        // Cache prüfen
+        const now = Date.now();
+        if (welcomeSettingsCache && (now - welcomeSettingsCacheTime) < WELCOME_CACHE_DURATION) {
+            return welcomeSettingsCache;
+        }
+        
+        console.log('🔄 Lade Welcome Settings aus Supabase...');
+        
+        const { data: settings, error } = await supabase
+            .from('welcome_settings')
+            .select('*')
+            .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.error('❌ Fehler beim Laden der Welcome Settings:', error);
+            return loadWelcomeSettingsFromJSON();
+        }
+        
+        if (!settings) {
+            console.log('📄 Keine Welcome Settings in Supabase gefunden, Standard-Einstellungen werden automatisch erstellt');
+            // Fallback für den Fall dass die Migration noch nicht ausgeführt wurde
+            const defaultSettings = {
+                enabled: true,
+                channelName: 'willkommen',
+                title: '🎉 Willkommen auf dem Server!',
+                description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
+                color: '0x00FF7F',
+                thumbnail: 'user',
+                customThumbnail: '',
+                imageRotation: { enabled: false, mode: 'random' },
+                fields: [
+                    { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
+                    { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
+                    { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
+                ],
+                footer: 'Mitglied #{memberCount} • {server}',
+                autoRole: '',
+                mentionUser: true,
+                deleteAfter: 0,
+                dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
+                leaveMessage: {
+                    enabled: false,
+                    channelName: 'verlassen',
+                    title: '👋 Tschüss!',
+                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+                    color: '0xFF6B6B',
+                    mentionUser: false,
+                    deleteAfter: 0
+                }
+            };
+            return defaultSettings;
+        }
+        
+        // Grundlegende Struktur sicherstellen
+        const mergedSettings = {
+            ...settings.config,
+            id: settings.id,
+            updated_at: settings.updated_at
+        };
+        
+        // Cache aktualisieren
+        welcomeSettingsCache = mergedSettings;
+        welcomeSettingsCacheTime = now;
+        welcomeSettings = mergedSettings; // Globale Variable aktualisieren
+        
+        console.log('✅ Welcome Settings aus Supabase geladen');
+        return welcomeSettingsCache;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Welcome Settings:', error);
+        return loadWelcomeSettingsFromJSON();
+    }
+}
+
+// JSON Fallback für Welcome Settings
+function loadWelcomeSettingsFromJSON() {
     try {
         if (fs.existsSync('./welcome.json')) {
             const settings = JSON.parse(fs.readFileSync('./welcome.json', 'utf8'));
             
-            // Migration: Sicherstellen dass imageRotation existiert
-            if (!settings.imageRotation) {
-                settings.imageRotation = {
+            // Migration: Sicherstellen dass alle Felder existieren
+            const mergedSettings = {
+                ...settings
+            };
+            
+            if (!mergedSettings.imageRotation) {
+                mergedSettings.imageRotation = {
                     enabled: false,
                     mode: 'random'
                 };
             }
 
-            // Migration: Sicherstellen dass leaveMessage existiert
-            if (!settings.leaveMessage) {
-                settings.leaveMessage = {
+            if (!mergedSettings.leaveMessage) {
+                mergedSettings.leaveMessage = {
                     enabled: false,
                     channelName: 'verlassen',
                     title: '👋 Tschüss!',
@@ -1650,10 +1696,520 @@ app.get('/api/welcome', (req, res) => {
                 };
             }
             
-            res.json(settings);
-        } else {
-            res.json(welcomeSettings);
+            welcomeSettings = mergedSettings;
+            return mergedSettings;
         }
+        // Fallback wenn keine Datei existiert
+        const defaultSettings = {
+            enabled: true,
+            channelName: 'willkommen',
+            title: '🎉 Willkommen auf dem Server!',
+            description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
+            color: '0x00FF7F',
+            thumbnail: 'user',
+            customThumbnail: '',
+            imageRotation: { enabled: false, mode: 'random' },
+            fields: [
+                { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
+                { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
+                { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
+            ],
+            footer: 'Mitglied #{memberCount} • {server}',
+            autoRole: '',
+            mentionUser: true,
+            deleteAfter: 0,
+            dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
+            leaveMessage: {
+                enabled: false,
+                channelName: 'verlassen',
+                title: '👋 Tschüss!',
+                description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+                color: '0xFF6B6B',
+                mentionUser: false,
+                deleteAfter: 0
+            }
+        };
+        return defaultSettings;
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Welcome Settings aus JSON:', error);
+        // Fallback Default-Settings
+        return {
+            enabled: true,
+            channelName: 'willkommen',
+            title: '🎉 Willkommen auf dem Server!',
+            description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
+            color: '0x00FF7F',
+            thumbnail: 'user',
+            customThumbnail: '',
+            imageRotation: { enabled: false, mode: 'random' },
+            fields: [
+                { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
+                { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
+                { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
+            ],
+            footer: 'Mitglied #{memberCount} • {server}',
+            autoRole: '',
+            mentionUser: true,
+            deleteAfter: 0,
+            dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
+            leaveMessage: {
+                enabled: false,
+                channelName: 'verlassen',
+                title: '👋 Tschüss!',
+                description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
+                color: '0xFF6B6B',
+                mentionUser: false,
+                deleteAfter: 0
+            }
+        };
+    }
+}
+
+// Speichere Welcome Settings in Supabase
+async function saveWelcomeSettingsToSupabase(settings) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, verwende JSON-Fallback');
+            return saveWelcomeSettingsToJSON(settings);
+        }
+        
+        console.log('💾 Speichere Welcome Settings in Supabase...');
+        
+        // Prüfe ob bereits Einstellungen existieren
+        const { data: existingSettings } = await supabase
+            .from('welcome_settings')
+            .select('id')
+            .single();
+        
+        const configData = {
+            config: settings,
+            updated_at: new Date().toISOString()
+        };
+        
+        let result;
+        if (existingSettings) {
+            // Update existierende Einstellungen
+            result = await supabase
+                .from('welcome_settings')
+                .update(configData)
+                .eq('id', existingSettings.id)
+                .select()
+                .single();
+        } else {
+            // Erstelle neue Einstellungen
+            result = await supabase
+                .from('welcome_settings')
+                .insert([configData])
+                .select()
+                .single();
+        }
+        
+        if (result.error) {
+            throw result.error;
+        }
+        
+        // Cache invalidieren
+        welcomeSettingsCache = null;
+        welcomeSettings = settings;
+        
+        console.log('✅ Welcome Settings in Supabase gespeichert');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Welcome Settings in Supabase:', error);
+        return saveWelcomeSettingsToJSON(settings);
+    }
+}
+
+// JSON Fallback für Speichern
+function saveWelcomeSettingsToJSON(settings) {
+    try {
+        fs.writeFileSync('./welcome.json', JSON.stringify(settings, null, 2));
+        welcomeSettings = settings;
+        console.log('✅ Welcome Settings in JSON gespeichert (Fallback)');
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Welcome Settings in JSON:', error);
+        return false;
+    }
+}
+
+// Welcome Images Cache
+let welcomeImagesCache = null;
+let welcomeImagesCacheTime = 0;
+
+// Lade Welcome Images aus Supabase
+async function loadWelcomeImagesFromSupabase() {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, verwende Dateisystem-Fallback');
+            return loadWelcomeImagesFromFileSystem();
+        }
+        
+        // Cache prüfen
+        const now = Date.now();
+        if (welcomeImagesCache && (now - welcomeImagesCacheTime) < WELCOME_CACHE_DURATION) {
+            return welcomeImagesCache;
+        }
+        
+        console.log('🔄 Lade Welcome Images aus Supabase...');
+        
+        const { data: images, error } = await supabase
+            .from('welcome_images')
+            .select('*')
+            .order('folder')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error('❌ Fehler beim Laden der Welcome Images:', error);
+            return loadWelcomeImagesFromFileSystem();
+        }
+        
+        // Organisiere Bilder nach Ordnern
+        const folders = {};
+        const allImages = [];
+        
+        if (images && images.length > 0) {
+            images.forEach(image => {
+                const folder = image.folder || 'general';
+                if (!folders[folder]) {
+                    folders[folder] = [];
+                }
+                
+                const imageData = {
+                    filename: image.filename,
+                    url: image.url,
+                    folder: folder,
+                    size: image.size,
+                    created: new Date(image.created_at),
+                    id: image.id
+                };
+                
+                folders[folder].push(imageData);
+                allImages.push(imageData);
+            });
+        }
+        
+        // Lade auch Ordner-Informationen
+        const { data: folderData } = await supabase
+            .from('welcome_folders')
+            .select('*')
+            .order('name');
+        
+        // Sicherstellen dass alle Ordner existieren, auch leere
+        if (folderData && folderData.length > 0) {
+            folderData.forEach(folder => {
+                if (!folders[folder.name]) {
+                    folders[folder.name] = [];
+                }
+            });
+        }
+        
+        // Sicherstellen dass 'general' Ordner existiert
+        if (!folders['general']) {
+            folders['general'] = [];
+        }
+        
+        const result = {
+            folders,
+            images: allImages.sort((a, b) => b.created - a.created),
+            folderNames: Object.keys(folders),
+            allFolderNames: Object.keys(folders)
+        };
+        
+        // Cache aktualisieren
+        welcomeImagesCache = result;
+        welcomeImagesCacheTime = now;
+        
+        console.log(`✅ ${allImages.length} Welcome Images aus Supabase geladen`);
+        return result;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Welcome Images:', error);
+        return loadWelcomeImagesFromFileSystem();
+    }
+}
+
+// Dateisystem Fallback für Images
+function loadWelcomeImagesFromFileSystem() {
+    try {
+        const welcomeImagesPath = './dashboard/public/images/welcome/';
+        
+        if (!fs.existsSync(welcomeImagesPath)) {
+            return { folders: {}, images: [] };
+        }
+        
+        const folders = {};
+        const allImages = [];
+        
+        const items = fs.readdirSync(welcomeImagesPath);
+        
+        // Zuerst lose Bilder im Hauptverzeichnis (legacy)
+        const looseImages = items
+            .filter(item => {
+                const itemPath = path.join(welcomeImagesPath, item);
+                const isFile = fs.statSync(itemPath).isFile();
+                if (isFile) {
+                    const ext = path.extname(item).toLowerCase();
+                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
+                }
+                return false;
+            })
+            .map(file => {
+                const stats = fs.statSync(path.join(welcomeImagesPath, file));
+                return {
+                    filename: file,
+                    url: `/images/welcome/${file}`,
+                    folder: 'general',
+                    size: stats.size,
+                    created: stats.birthtime
+                };
+            });
+
+        if (looseImages.length > 0) {
+            folders['general'] = looseImages;
+            allImages.push(...looseImages);
+        }
+        
+        // Dann Ordner durchsuchen
+        const folderNames = items.filter(item => {
+            const itemPath = path.join(welcomeImagesPath, item);
+            return fs.statSync(itemPath).isDirectory();
+        });
+        
+        folderNames.forEach(folderName => {
+            const folderPath = path.join(welcomeImagesPath, folderName);
+            const folderFiles = fs.readdirSync(folderPath);
+            
+            const images = folderFiles
+                .filter(file => {
+                    const ext = path.extname(file).toLowerCase();
+                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
+                })
+                .map(file => {
+                    const stats = fs.statSync(path.join(folderPath, file));
+                    return {
+                        filename: file,
+                        url: `/images/welcome/${folderName}/${file}`,
+                        folder: folderName,
+                        size: stats.size,
+                        created: stats.birthtime
+                    };
+                })
+                .sort((a, b) => b.created - a.created);
+            
+            folders[folderName] = images;
+            if (images.length > 0) {
+                allImages.push(...images);
+            }
+        });
+        
+        return { 
+            folders, 
+            images: allImages.sort((a, b) => b.created - a.created),
+            folderNames: Object.keys(folders),
+            allFolderNames: folderNames
+        };
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Images aus Dateisystem:', error);
+        return { folders: {}, images: [] };
+    }
+}
+
+// Speichere Welcome Image in Supabase
+async function saveWelcomeImageToSupabase(imageData) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, nur lokale Speicherung');
+            return true;
+        }
+        
+        const { data, error } = await supabase
+            .from('welcome_images')
+            .insert([{
+                filename: imageData.filename,
+                url: imageData.url,
+                folder: imageData.folder || 'general',
+                size: imageData.size,
+                original_name: imageData.originalname || imageData.filename,
+                created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+        
+        if (error) {
+            throw error;
+        }
+        
+        // Cache invalidieren
+        welcomeImagesCache = null;
+        
+        console.log(`✅ Welcome Image in Supabase gespeichert: ${imageData.folder}/${imageData.filename}`);
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern des Welcome Images in Supabase:', error);
+        return false;
+    }
+}
+
+// Lösche Welcome Image aus Supabase
+async function deleteWelcomeImageFromSupabase(filename, folder) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, nur lokale Löschung');
+            return true;
+        }
+        
+        const { error } = await supabase
+            .from('welcome_images')
+            .delete()
+            .eq('filename', filename)
+            .eq('folder', folder || 'general');
+        
+        if (error) {
+            throw error;
+        }
+        
+        // Cache invalidieren
+        welcomeImagesCache = null;
+        
+        console.log(`✅ Welcome Image aus Supabase gelöscht: ${folder}/${filename}`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen des Welcome Images aus Supabase:', error);
+        return false;
+    }
+}
+
+// Erstelle Welcome Folder in Supabase
+async function createWelcomeFolderInSupabase(folderName) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, nur lokale Erstellung');
+            return true;
+        }
+        
+        const { data, error } = await supabase
+            .from('welcome_folders')
+            .insert([{
+                name: folderName,
+                created_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
+        
+        if (error) {
+            throw error;
+        }
+        
+        // Cache invalidieren
+        welcomeImagesCache = null;
+        
+        console.log(`✅ Welcome Folder in Supabase erstellt: ${folderName}`);
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Erstellen des Welcome Folders in Supabase:', error);
+        return false;
+    }
+}
+
+// Lösche Welcome Folder aus Supabase
+async function deleteWelcomeFolderFromSupabase(folderName) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, nur lokale Löschung');
+            return true;
+        }
+        
+        // Lösche erst alle Bilder im Ordner
+        const { error: imagesError } = await supabase
+            .from('welcome_images')
+            .delete()
+            .eq('folder', folderName);
+        
+        if (imagesError) {
+            console.error('Fehler beim Löschen der Bilder im Ordner:', imagesError);
+        }
+        
+        // Lösche dann den Ordner
+        const { error: folderError } = await supabase
+            .from('welcome_folders')
+            .delete()
+            .eq('name', folderName);
+        
+        if (folderError) {
+            throw folderError;
+        }
+        
+        // Cache invalidieren
+        welcomeImagesCache = null;
+        
+        console.log(`✅ Welcome Folder aus Supabase gelöscht: ${folderName}`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen des Welcome Folders aus Supabase:', error);
+        return false;
+    }
+}
+
+// Verschiebe Image zwischen Ordnern in Supabase
+async function moveWelcomeImageInSupabase(filename, sourceFolder, targetFolder) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht initialisiert, nur lokale Verschiebung');
+            return { newUrl: `/images/welcome/${targetFolder}/${filename}` };
+        }
+        
+        const { data, error } = await supabase
+            .from('welcome_images')
+            .update({ 
+                folder: targetFolder,
+                url: `/images/welcome/${targetFolder}/${filename}`
+            })
+            .eq('filename', filename)
+            .eq('folder', sourceFolder)
+            .select()
+            .single();
+        
+        if (error) {
+            throw error;
+        }
+        
+        // Cache invalidieren
+        welcomeImagesCache = null;
+        
+        console.log(`✅ Welcome Image in Supabase verschoben: ${sourceFolder}/${filename} → ${targetFolder}/${filename}`);
+        return { newUrl: data.url };
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Verschieben des Welcome Images in Supabase:', error);
+        return { newUrl: `/images/welcome/${targetFolder}/${filename}` };
+    }
+}
+
+// Welcome Settings beim Start laden
+async function initializeWelcomeSettings() {
+    try {
+        console.log('🔄 Initialisiere Welcome Settings...');
+        await loadWelcomeSettingsFromSupabase();
+        console.log('✅ Welcome Settings initialisiert');
+    } catch (error) {
+        console.error('❌ Fehler bei Welcome Settings Initialisierung:', error);
+    }
+}
+
+// ================== WELCOME API ENDPOINTS ==================
+
+// Welcome Settings laden
+app.get('/api/welcome', async (req, res) => {
+    try {
+        const settings = await loadWelcomeSettingsFromSupabase();
+        res.json(settings);
     } catch (error) {
         console.error('Fehler beim Laden der Welcome-Einstellungen:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Welcome-Einstellungen' });
@@ -1661,12 +2217,15 @@ app.get('/api/welcome', (req, res) => {
 });
 
 // Welcome Settings speichern
-app.post('/api/welcome', (req, res) => {
+app.post('/api/welcome', async (req, res) => {
     try {
-        fs.writeFileSync('./welcome.json', JSON.stringify(req.body, null, 2));
-        welcomeSettings = req.body;
-        console.log('✅ Welcome-Einstellungen aktualisiert');
-        res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
+        const success = await saveWelcomeSettingsToSupabase(req.body);
+        if (success) {
+            console.log('✅ Welcome-Einstellungen aktualisiert');
+            res.json({ success: true, message: 'Welcome-Einstellungen gespeichert' });
+        } else {
+            res.status(500).json({ error: 'Fehler beim Speichern der Welcome-Einstellungen' });
+        }
     } catch (error) {
         console.error('Fehler beim Speichern der Welcome-Einstellungen:', error);
         res.status(500).json({ error: 'Fehler beim Speichern der Welcome-Einstellungen' });
@@ -1813,8 +2372,8 @@ app.post('/api/welcome/test-leave', async (req, res) => {
     }
 });
 
-// Upload Welcome Image (mit Ordner-Support)
-app.post('/api/welcome/upload', upload.single('welcomeImage'), (req, res) => {
+// Upload Welcome Image (mit Ordner-Support und Supabase)
+app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Keine Datei hochgeladen' });
@@ -1836,6 +2395,17 @@ app.post('/api/welcome/upload', upload.single('welcomeImage'), (req, res) => {
         // Konstruiere die URL für das Frontend
         const imageUrl = `/images/welcome/${folder}/${req.file.filename}`;
         
+        // Speichere auch in Supabase für bessere Verwaltung
+        const imageData = {
+            filename: req.file.filename,
+            url: imageUrl,
+            folder: folder,
+            size: req.file.size,
+            originalname: req.file.originalname
+        };
+        
+        await saveWelcomeImageToSupabase(imageData);
+        
         console.log(`✅ Willkommensbild hochgeladen: ${folder}/${req.file.filename}`);
         
         res.json({ 
@@ -1854,97 +2424,19 @@ app.post('/api/welcome/upload', upload.single('welcomeImage'), (req, res) => {
     }
 });
 
-// Get all welcome images (mit Ordner-Support)
-app.get('/api/welcome/images', (req, res) => {
+// Get all welcome images (mit Ordner-Support und Supabase)
+app.get('/api/welcome/images', async (req, res) => {
     try {
-        const welcomeImagesPath = './dashboard/public/images/welcome/';
-        
-        if (!fs.existsSync(welcomeImagesPath)) {
-            return res.json({ folders: {}, images: [] });
-        }
-        
-        const folders = {};
-        const allImages = [];
-        
-        // Lese Hauptverzeichnis und Unterordner
-        const items = fs.readdirSync(welcomeImagesPath);
-        
-        // Zuerst lose Bilder im Hauptverzeichnis (legacy)
-        const looseImages = items
-            .filter(item => {
-                const itemPath = path.join(welcomeImagesPath, item);
-                const isFile = fs.statSync(itemPath).isFile();
-                if (isFile) {
-                    const ext = path.extname(item).toLowerCase();
-                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
-                }
-                return false;
-            })
-            .map(file => {
-                const stats = fs.statSync(path.join(welcomeImagesPath, file));
-                return {
-                    filename: file,
-                    url: `/images/welcome/${file}`,
-                    folder: null, // Kein Ordner
-                    size: stats.size,
-                    created: stats.birthtime
-                };
-            });
-
-        if (looseImages.length > 0) {
-            folders['general'] = looseImages;
-            allImages.push(...looseImages);
-        }
-        
-        // Dann Ordner durchsuchen
-        const folderNames = items.filter(item => {
-            const itemPath = path.join(welcomeImagesPath, item);
-            return fs.statSync(itemPath).isDirectory();
-        });
-        
-        folderNames.forEach(folderName => {
-            const folderPath = path.join(welcomeImagesPath, folderName);
-            const folderFiles = fs.readdirSync(folderPath);
-            
-            const images = folderFiles
-                .filter(file => {
-                    const ext = path.extname(file).toLowerCase();
-                    return ['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext);
-                })
-                .map(file => {
-                    const stats = fs.statSync(path.join(folderPath, file));
-                    return {
-                        filename: file,
-                        url: `/images/welcome/${folderName}/${file}`,
-                        folder: folderName,
-                        size: stats.size,
-                        created: stats.birthtime
-                    };
-                })
-                .sort((a, b) => b.created - a.created); // Neueste zuerst
-            
-            // Füge alle Ordner hinzu, auch leere (für bessere UX)
-            folders[folderName] = images;
-            if (images.length > 0) {
-                allImages.push(...images);
-            }
-        });
-        
-        res.json({ 
-            folders, 
-            images: allImages.sort((a, b) => b.created - a.created),
-            folderNames: Object.keys(folders),
-            allFolderNames: folderNames // Alle Ordner, auch leere
-        });
-        
+        const result = await loadWelcomeImagesFromSupabase();
+        res.json(result);
     } catch (error) {
         console.error('❌ Fehler beim Laden der Bilder:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Bilder' });
     }
 });
 
-// Delete welcome image (mit Ordner-Support)
-app.delete('/api/welcome/images/:folder/:filename', (req, res) => {
+// Delete welcome image (mit Ordner-Support und Supabase)
+app.delete('/api/welcome/images/:folder/:filename', async (req, res) => {
     try {
         const folder = req.params.folder;
         const filename = req.params.filename;
@@ -1956,13 +2448,16 @@ app.delete('/api/welcome/images/:folder/:filename', (req, res) => {
         
         const imagePath = path.join('./dashboard/public/images/welcome/', folder, filename);
         
+        // Lösche aus Dateisystem
         if (fs.existsSync(imagePath)) {
             fs.unlinkSync(imagePath);
-            console.log(`🗑️ Willkommensbild gelöscht: ${folder}/${filename}`);
-            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
-        } else {
-            res.status(404).json({ error: 'Bild nicht gefunden' });
         }
+        
+        // Lösche auch aus Supabase
+        await deleteWelcomeImageFromSupabase(filename, folder);
+        
+        console.log(`🗑️ Willkommensbild gelöscht: ${folder}/${filename}`);
+        res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
         
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Bildes:', error);
@@ -1971,7 +2466,7 @@ app.delete('/api/welcome/images/:folder/:filename', (req, res) => {
 });
 
 // Legacy: Delete welcome image (ohne Ordner)
-app.delete('/api/welcome/images/:filename', (req, res) => {
+app.delete('/api/welcome/images/:filename', async (req, res) => {
     try {
         const filename = req.params.filename;
         const imagePath = path.join('./dashboard/public/images/welcome/', filename);
@@ -1981,13 +2476,16 @@ app.delete('/api/welcome/images/:filename', (req, res) => {
             return res.status(400).json({ error: 'Ungültiger Dateiname' });
         }
         
+        // Lösche aus Dateisystem
         if (fs.existsSync(imagePath)) {
             fs.unlinkSync(imagePath);
-            console.log(`🗑️ Willkommensbild gelöscht: ${filename}`);
-            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
-        } else {
-            res.status(404).json({ error: 'Bild nicht gefunden' });
         }
+        
+        // Lösche auch aus Supabase (general folder für legacy files)
+        await deleteWelcomeImageFromSupabase(filename, 'general');
+        
+        console.log(`🗑️ Willkommensbild gelöscht: ${filename}`);
+        res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
         
     } catch (error) {
         console.error('❌ Fehler beim Löschen des Bildes:', error);
@@ -1995,8 +2493,8 @@ app.delete('/api/welcome/images/:filename', (req, res) => {
     }
 });
 
-// Create new folder
-app.post('/api/welcome/folders', (req, res) => {
+// Create new folder (mit Supabase)
+app.post('/api/welcome/folders', async (req, res) => {
     try {
         const { folderName } = req.body;
         
@@ -2010,7 +2508,12 @@ app.post('/api/welcome/folders', (req, res) => {
             return res.status(400).json({ error: 'Ordner existiert bereits' });
         }
         
+        // Erstelle Ordner im Dateisystem
         fs.mkdirSync(folderPath, { recursive: true });
+        
+        // Erstelle auch in Supabase
+        await createWelcomeFolderInSupabase(folderName);
+        
         console.log(`📁 Neuer Ordner erstellt: ${folderName}`);
         
         res.json({ success: true, message: 'Ordner erfolgreich erstellt', folderName });
@@ -2021,8 +2524,8 @@ app.post('/api/welcome/folders', (req, res) => {
     }
 });
 
-// Delete folder
-app.delete('/api/welcome/folders/:folderName', (req, res) => {
+// Delete folder (mit Supabase)
+app.delete('/api/welcome/folders/:folderName', async (req, res) => {
     try {
         const folderName = req.params.folderName;
         
@@ -2032,12 +2535,14 @@ app.delete('/api/welcome/folders/:folderName', (req, res) => {
         
         const folderPath = `./dashboard/public/images/welcome/${folderName}`;
         
-        if (!fs.existsSync(folderPath)) {
-            return res.status(404).json({ error: 'Ordner nicht gefunden' });
+        // Lösche Ordner aus Dateisystem
+        if (fs.existsSync(folderPath)) {
+            fs.rmSync(folderPath, { recursive: true, force: true });
         }
         
-        // Lösche Ordner rekursiv
-        fs.rmSync(folderPath, { recursive: true, force: true });
+        // Lösche auch aus Supabase (inkl. aller Bilder)
+        await deleteWelcomeFolderFromSupabase(folderName);
+        
         console.log(`🗑️ Ordner gelöscht: ${folderName}`);
         
         res.json({ success: true, message: 'Ordner erfolgreich gelöscht' });
@@ -2048,8 +2553,8 @@ app.delete('/api/welcome/folders/:folderName', (req, res) => {
     }
 });
 
-// Move image between folders
-app.post('/api/welcome/images/move', (req, res) => {
+// Move image between folders (mit Supabase)
+app.post('/api/welcome/images/move', async (req, res) => {
     try {
         const { filename, sourceFolder, targetFolder } = req.body;
         
@@ -2085,15 +2590,18 @@ app.post('/api/welcome/images/move', (req, res) => {
             return res.status(409).json({ error: 'Datei mit diesem Namen existiert bereits im Zielordner' });
         }
         
-        // Verschiebe Datei
+        // Verschiebe Datei im Dateisystem
         fs.renameSync(sourcePath, targetPath);
+        
+        // Verschiebe auch in Supabase
+        const result = await moveWelcomeImageInSupabase(filename, sourceFolder, targetFolder);
         
         console.log(`📦 Bild verschoben: ${sourceFolder}/${filename} → ${targetFolder}/${filename}`);
         
         res.json({ 
             success: true, 
             message: `Bild erfolgreich von "${sourceFolder}" nach "${targetFolder}" verschoben`,
-            newUrl: `/images/welcome/${targetFolder}/${filename}`
+            newUrl: result.newUrl || `/images/welcome/${targetFolder}/${filename}`
         });
         
     } catch (error) {
@@ -3225,6 +3733,11 @@ try {
     }, 9000);
     
     // Bot-Einstellungen laden und anwenden nach 3 Sekunden
+    // Welcome Settings aus Supabase laden nach 1.5 Sekunden
+    setTimeout(async () => {
+        await initializeWelcomeSettings();
+    }, 1500);
+
     setTimeout(async () => {
         try {
             console.log('🔧 Lade Bot-Einstellungen...');
