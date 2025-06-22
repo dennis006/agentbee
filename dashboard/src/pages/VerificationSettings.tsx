@@ -234,7 +234,7 @@ const VerificationSettings = () => {
   const [newRole, setNewRole] = useState('');
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [platformEmojiPickerOpen, setPlatformEmojiPickerOpen] = useState(false);
-  const [messageEmojiPickerOpen, setMessageEmojiPickerOpen] = useState<'title' | 'button' | 'description' | number | null>(null);
+  const [messageEmojiPickerOpen, setMessageEmojiPickerOpen] = useState<'title' | 'button' | 'description' | 'welcomeMessage' | 'newStep' | number | null>(null);
   const [newStep, setNewStep] = useState('');
 
   // Step Management
