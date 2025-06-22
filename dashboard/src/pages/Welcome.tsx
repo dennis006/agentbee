@@ -75,11 +75,13 @@ const Welcome = () => {
     show: boolean;
     filename: string;
     folder?: string;
+    imageId?: string;
     type: 'single' | 'all';
   }>({
     show: false,
     filename: '',
     folder: undefined,
+    imageId: undefined,
     type: 'single'
   })
   const [draggedImage, setDraggedImage] = useState<{filename: string, folder: string} | null>(null)
@@ -341,25 +343,22 @@ const Welcome = () => {
     fileInputRef.current?.click();
   };
 
-  const deleteImage = async (filename: string, folder?: string) => {
+  const deleteImage = async (imageId: string, filename: string, folder?: string) => {
     setDeleteModal({
       show: true,
       filename: filename,
       folder: folder,
+      imageId: imageId,
       type: 'single'
     });
   };
 
   const confirmDelete = async () => {
-    const { filename, folder, type } = deleteModal;
+    const { filename, imageId, type } = deleteModal;
     
     try {
-      if (type === 'single') {
-        const deleteUrl = folder 
-          ? `/api/welcome/images/${folder}/${filename}`
-          : `/api/welcome/images/${filename}`;
-        
-        const response = await fetch(deleteUrl, {
+      if (type === 'single' && imageId) {
+        const response = await fetch(`/api/welcome/images/${imageId}`, {
           method: 'DELETE',
         });
 
@@ -367,10 +366,12 @@ const Welcome = () => {
           success('🗑️ Bild erfolgreich gelöscht!');
           
           // Wenn das gelöschte Bild gerade ausgewählt ist, zurücksetzen
-          if (welcomeSettings.customThumbnail === `/images/welcome/${filename}`) {
+          const currentImageUrl = welcomeSettings.customThumbnail;
+          const deletedImage = uploadedImages.find(img => img.id === imageId);
+          if (deletedImage && currentImageUrl === deletedImage.url) {
             setWelcomeSettings({
               ...welcomeSettings,
-              thumbnail: 'none',
+              thumbnail: 'custom',
               customThumbnail: ''
             });
           }
@@ -382,8 +383,9 @@ const Welcome = () => {
           showError(`❌ ${errorData.error || 'Fehler beim Löschen'}`);
         }
       } else if (type === 'all') {
+        // Lösche alle Bilder einzeln mit ihren IDs
         const deletePromises = uploadedImages.map(image => 
-          fetch(`/api/welcome/images/${image.filename}`, { method: 'DELETE' })
+          fetch(`/api/welcome/images/${image.id}`, { method: 'DELETE' })
         );
 
         await Promise.all(deletePromises);
@@ -393,7 +395,7 @@ const Welcome = () => {
         // Settings zurücksetzen
         setWelcomeSettings({
           ...welcomeSettings,
-          thumbnail: 'none',
+          thumbnail: 'custom',
           customThumbnail: ''
         });
 
@@ -404,7 +406,7 @@ const Welcome = () => {
       console.error('Lösch-Fehler:', err);
       showError('❌ Fehler beim Löschen');
     } finally {
-      setDeleteModal({ show: false, filename: '', type: 'single' });
+      setDeleteModal({ show: false, filename: '', imageId: undefined, type: 'single' });
     }
   };
 
@@ -914,11 +916,8 @@ const Welcome = () => {
           {/* Thumbnail Type Selection */}
           <div>
             <label className="text-sm font-medium text-dark-text mb-3 block">Bild-Typ</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {[
-                { value: 'none', label: 'Kein Bild', emoji: '🚫' },
-                { value: 'user', label: 'Benutzer Avatar', emoji: '👤' },
-                { value: 'server', label: 'Server Icon', emoji: '🏠' },
                 { value: 'custom', label: 'Eigenes Bild', emoji: '🖼️' }
               ].map((option) => (
                 <button
@@ -938,8 +937,7 @@ const Welcome = () => {
           </div>
 
           {/* Custom Image Gallery mit Ordner-System */}
-          {welcomeSettings.thumbnail === 'custom' && (
-            <div className="animate-fade-in space-y-4">
+          <div className="animate-fade-in space-y-4">
               {/* Accordion Header für Bildergalerie */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -1215,7 +1213,7 @@ const Welcome = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteImage(image.filename, image.folder);
+                        deleteImage(image.id, image.filename, image.folder);
                       }}
                       className="absolute top-2 left-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 z-50 pointer-events-auto shadow-lg"
                       title="Bild löschen"
@@ -1278,7 +1276,6 @@ const Welcome = () => {
               </div>
               </div>
             </div>
-          )}
         </CardContent>
       </Card>
 
@@ -1714,69 +1711,46 @@ const Welcome = () => {
               </h3>
 
               {/* Main Welcome Image - Large Display */}
-              {welcomeSettings.thumbnail === 'custom' && (
-                <div className="mb-4">
-                  <div className="w-full max-w-sm mx-auto rounded-xl overflow-hidden border-2 border-purple-primary/30 bg-dark-bg shadow-purple-glow">
-                    {welcomeSettings.imageRotation?.enabled && uploadedImages.length > 1 ? (
-                      <div className="w-full h-48 bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center text-center p-4">
-                        <div>
-                          <div className="text-4xl mb-2">🎲</div>
-                          <div className="text-white font-bold text-sm mb-1">Zufällige Bilder aktiviert</div>
-                          <div className="text-xs text-dark-muted">
-                            Jedes neue Mitglied bekommt ein<br/>
-                            zufälliges Bild aus {uploadedImages.length} verfügbaren
-                          </div>
+              <div className="mb-4">
+                <div className="w-full max-w-sm mx-auto rounded-xl overflow-hidden border-2 border-purple-primary/30 bg-dark-bg shadow-purple-glow">
+                  {welcomeSettings.imageRotation?.enabled && uploadedImages.length > 1 ? (
+                    <div className="w-full h-48 bg-gradient-to-br from-blue-500/20 to-purple-600/20 flex items-center justify-center text-center p-4">
+                      <div>
+                        <div className="text-4xl mb-2">🎲</div>
+                        <div className="text-white font-bold text-sm mb-1">Zufällige Bilder aktiviert</div>
+                        <div className="text-xs text-dark-muted">
+                          Jedes neue Mitglied bekommt ein<br/>
+                          zufälliges Bild aus {uploadedImages.length} verfügbaren
                         </div>
                       </div>
-                    ) : welcomeSettings.customThumbnail ? (
-                      <img 
-                        src={welcomeSettings.customThumbnail} 
-                        alt="Welcome Image" 
-                        className="w-full h-48 object-contain bg-gradient-to-br from-gray-800/50 to-gray-900/50"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            parent.innerHTML = '<div class="w-full h-48 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white">🖼️ Bild konnte nicht geladen werden</div>';
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white">
-                        🖼️ Kein Bild ausgewählt
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-dark-muted text-center mt-2">
-                    {welcomeSettings.imageRotation?.enabled && uploadedImages.length > 1 
-                      ? "Die Bild-Rotation ist aktiv - jedes Mitglied bekommt ein zufälliges Bild"
-                      : "So wird Ihr Willkommensbild in Discord angezeigt"
-                    }
-                  </p>
+                    </div>
+                  ) : welcomeSettings.customThumbnail ? (
+                    <img 
+                      src={welcomeSettings.customThumbnail} 
+                      alt="Welcome Image" 
+                      className="w-full h-48 object-contain bg-gradient-to-br from-gray-800/50 to-gray-900/50"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<div class="w-full h-48 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white">🖼️ Bild konnte nicht geladen werden</div>';
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white">
+                      🖼️ Kein Bild ausgewählt
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {/* Small Thumbnail Preview für user/server */}
-              {(welcomeSettings.thumbnail === 'user' || welcomeSettings.thumbnail === 'server') && (
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-shrink-0">
-                    {welcomeSettings.thumbnail === 'user' && (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold">
-                        TU
-                      </div>
-                    )}
-                    {welcomeSettings.thumbnail === 'server' && (
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                        🏠
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-dark-muted">
-                    {welcomeSettings.thumbnail === 'user' ? 'Benutzer-Avatar wird als kleines Thumbnail angezeigt' : 'Server-Icon wird als kleines Thumbnail angezeigt'}
-                  </div>
-                </div>
-              )}
+                <p className="text-xs text-dark-muted text-center mt-2">
+                  {welcomeSettings.imageRotation?.enabled && uploadedImages.length > 1 
+                    ? "Die Bild-Rotation ist aktiv - jedes Mitglied bekommt ein zufälliges Bild"
+                    : "So wird Ihr Willkommensbild in Discord angezeigt"
+                  }
+                </p>
+              </div>
               
               <p className="text-dark-text mb-4">
                 {welcomeSettings.description

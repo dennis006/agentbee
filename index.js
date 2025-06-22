@@ -1675,6 +1675,274 @@ app.post('/api/rules/repost', async (req, res) => {
     }
 });
 
+// ==============================================
+// WELCOME SYSTEM API - SUPABASE STORAGE
+// ==============================================
+
+// Multer für Welcome Image-Uploads konfigurieren
+const welcomeUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB wie in Supabase Storage
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Nur Bilddateien sind erlaubt!'), false);
+        }
+    }
+});
+
+// GET: Welcome Settings laden
+app.get('/api/welcome', async (req, res) => {
+    try {
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const settings = await loadWelcomeSettings(guildId);
+        
+        if (!settings) {
+            return res.status(404).json({ error: 'Keine Welcome Settings gefunden' });
+        }
+        
+        res.json(settings);
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Welcome Settings:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// POST: Welcome Settings speichern
+app.post('/api/welcome', async (req, res) => {
+    try {
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const settings = req.body;
+        
+        const result = await saveWelcomeSettings(settings, guildId);
+        
+        if (result.success) {
+            res.json({ success: true, message: 'Welcome Settings gespeichert' });
+        } else {
+            res.status(500).json({ error: result.error || 'Fehler beim Speichern' });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Welcome Settings:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// GET: Welcome Images laden
+app.get('/api/welcome/images', async (req, res) => {
+    try {
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const images = await loadWelcomeImages(guildId);
+        
+        res.json(images);
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Welcome Images:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// POST: Welcome Image hochladen
+app.post('/api/welcome/upload', welcomeUpload.single('welcomeImage'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+        }
+
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const folder = req.body.folder || 'general';
+        
+        // Erstelle einzigartigen Dateinamen
+        const timestamp = Date.now();
+        const extension = req.file.originalname.split('.').pop();
+        const filename = `welcome-${timestamp}-${Math.random().toString(36).substring(7)}.${extension}`;
+        
+        const imageData = {
+            filename,
+            originalName: req.file.originalname,
+            folder,
+            buffer: req.file.buffer,
+            size: req.file.size,
+            mimetype: req.file.mimetype
+        };
+
+        const result = await saveWelcomeImage(imageData, guildId);
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                url: result.url,
+                filename: result.filename,
+                folder: result.folder,
+                message: 'Bild erfolgreich hochgeladen'
+            });
+        } else {
+            res.status(500).json({ error: result.error || 'Fehler beim Upload' });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Upload:', error);
+        res.status(500).json({ error: 'Upload fehlgeschlagen' });
+    }
+});
+
+// DELETE: Welcome Image löschen
+app.delete('/api/welcome/images/:imageId', async (req, res) => {
+    try {
+        const imageId = req.params.imageId;
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        
+        const result = await deleteWelcomeImage(imageId, guildId);
+        
+        if (result.success) {
+            res.json({ success: true, message: 'Bild erfolgreich gelöscht' });
+        } else {
+            res.status(500).json({ error: result.error || 'Fehler beim Löschen' });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen:', error);
+        res.status(500).json({ error: 'Löschen fehlgeschlagen' });
+    }
+});
+
+// POST: Welcome Folder erstellen
+app.post('/api/welcome/folders', async (req, res) => {
+    try {
+        const { folderName } = req.body;
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        
+        if (!folderName) {
+            return res.status(400).json({ error: 'Ordnername ist erforderlich' });
+        }
+        
+        const result = await createWelcomeFolder(folderName, guildId);
+        
+        if (result.success) {
+            res.json({ success: true, folderName: result.folderName, message: 'Ordner erfolgreich erstellt' });
+        } else {
+            res.status(500).json({ error: result.error || 'Fehler beim Erstellen des Ordners' });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Erstellen des Ordners:', error);
+        res.status(500).json({ error: 'Erstellen fehlgeschlagen' });
+    }
+});
+
+// DELETE: Welcome Folder löschen
+app.delete('/api/welcome/folders/:folderName', async (req, res) => {
+    try {
+        const folderName = req.params.folderName;
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        
+        const result = await deleteWelcomeFolder(folderName, guildId);
+        
+        if (result.success) {
+            res.json({ success: true, message: 'Ordner erfolgreich gelöscht' });
+        } else {
+            res.status(500).json({ error: result.error || 'Fehler beim Löschen des Ordners' });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen des Ordners:', error);
+        res.status(500).json({ error: 'Löschen fehlgeschlagen' });
+    }
+});
+
+// POST: Test Welcome Message
+app.post('/api/welcome/test', async (req, res) => {
+    try {
+        if (!client.isReady()) {
+            return res.status(503).json({ error: 'Bot ist nicht online' });
+        }
+
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const settings = req.body;
+        
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+            return res.status(404).json({ error: 'Server nicht gefunden' });
+        }
+
+        // Finde Welcome-Channel
+        const welcomeChannel = guild.channels.cache.find(ch => 
+            ch.name.toLowerCase().includes(settings.channelName?.toLowerCase() || 'willkommen') ||
+            ch.name.toLowerCase().includes('welcome') ||
+            ch.name.toLowerCase().includes('general')
+        );
+
+        if (!welcomeChannel) {
+            return res.status(404).json({ error: `Channel "${settings.channelName || 'willkommen'}" nicht gefunden` });
+        }
+
+        // Erstelle Test-Member (Bot als Beispiel)
+        const testMember = guild.members.cache.get(client.user.id);
+        
+        // Erstelle Welcome-Embed
+        const { embed } = await createWelcomeEmbed(guild, testMember, settings);
+        
+        // Sende Test-Message
+        await welcomeChannel.send({
+            content: '🧪 **TEST-WILLKOMMENSNACHRICHT** 🧪',
+            embeds: [embed]
+        });
+
+        res.json({ success: true, message: 'Test-Willkommensnachricht gesendet' });
+    } catch (error) {
+        console.error('❌ Fehler beim Senden der Test-Nachricht:', error);
+        res.status(500).json({ error: 'Test fehlgeschlagen' });
+    }
+});
+
+// POST: Test Leave Message
+app.post('/api/welcome/test-leave', async (req, res) => {
+    try {
+        if (!client.isReady()) {
+            return res.status(503).json({ error: 'Bot ist nicht online' });
+        }
+
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const settings = req.body;
+        
+        if (!settings.leaveMessage || !settings.leaveMessage.enabled) {
+            return res.status(400).json({ error: 'Leave Messages sind nicht aktiviert' });
+        }
+
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+            return res.status(404).json({ error: 'Server nicht gefunden' });
+        }
+
+        // Finde Leave-Channel
+        const leaveChannel = guild.channels.cache.find(ch => 
+            ch.name.toLowerCase().includes(settings.leaveMessage.channelName?.toLowerCase() || 'verlassen')
+        );
+
+        if (!leaveChannel) {
+            return res.status(404).json({ error: `Channel "${settings.leaveMessage.channelName || 'verlassen'}" nicht gefunden` });
+        }
+
+        // Erstelle Test-Member (Bot als Beispiel)
+        const testMember = guild.members.cache.get(client.user.id);
+        
+        // Erstelle Leave-Embed
+        const leaveEmbed = await createLeaveEmbed(guild, testMember, settings.leaveMessage);
+        
+        // Sende Test-Message
+        await leaveChannel.send({
+            content: '🧪 **TEST-ABSCHIEDSNACHRICHT** 🧪',
+            embeds: [leaveEmbed]
+        });
+
+        res.json({ success: true, message: 'Test-Abschiedsnachricht gesendet' });
+    } catch (error) {
+        console.error('❌ Fehler beim Senden der Test-Leave-Nachricht:', error);
+        res.status(500).json({ error: 'Test fehlgeschlagen' });
+    }
+});
+
+// ==============================================
+// LEGACY RULES SYSTEM
+// ==============================================
+
 // Regeln werden jetzt über Supabase API geladen
 let rulesData = {
     title: "📜 SERVERREGELN",
