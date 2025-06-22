@@ -17,7 +17,7 @@ CREATE TABLE valorant_agents (
     
     -- Agent Basis-Daten
     name TEXT UNIQUE NOT NULL,
-    uuid TEXT UNIQUE NOT NULL,
+    uuid TEXT UNIQUE,
     display_name TEXT NOT NULL,
     role_type TEXT NOT NULL CHECK (role_type IN ('Duelist', 'Sentinel', 'Initiator', 'Controller')),
     role_color TEXT NOT NULL DEFAULT '#FF4655',
@@ -235,14 +235,21 @@ BEGIN
     SELECT uuid INTO agent_uuid
     FROM valorant_agents
     WHERE LOWER(name) = LOWER(agent_name)
-    AND enabled = true;
+    AND enabled = true
+    AND uuid IS NOT NULL;
     
-    -- Fallback zu Sage falls Agent nicht gefunden
+    -- Fallback zu Sage falls Agent nicht gefunden oder UUID NULL
     IF agent_uuid IS NULL THEN
         SELECT uuid INTO agent_uuid
         FROM valorant_agents
         WHERE LOWER(name) = 'sage'
-        AND enabled = true;
+        AND enabled = true
+        AND uuid IS NOT NULL;
+    END IF;
+    
+    -- Hard-coded Fallback falls auch Sage keine UUID hat
+    IF agent_uuid IS NULL THEN
+        agent_uuid := '569fdd95-4d10-43ab-ca70-79becc718b46'; -- Sage UUID
     END IF;
     
     RETURN agent_uuid;
