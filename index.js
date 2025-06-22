@@ -2624,6 +2624,175 @@ async function initializeWelcomeSettings() {
     }
 }
 
+// ================== 📁 DEDICATED FOLDER MANAGEMENT FUNCTIONS ==================
+
+// Lade Ordner-Management Settings aus dedizierter Tabelle
+async function loadFolderSettingsFromSupabase() {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar für Ordner-Settings');
+            // Fallback: Default-Werte
+            return {
+                folderName: null,
+                rotationEnabled: false,
+                rotationMode: 'random'
+            };
+        }
+        
+        console.log('🔍 Lade Ordner-Settings aus welcome_folder_settings...');
+        
+        const { data: folderSettings, error } = await supabase
+            .from('welcome_folder_settings')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single();
+        
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.error('❌ Fehler beim Laden der Ordner-Settings:', error);
+            throw error;
+        }
+        
+        if (!folderSettings) {
+            console.log('📄 Keine Ordner-Settings gefunden, erstelle Default-Entry');
+            
+            // Erstelle Default-Entry in Datenbank
+            const defaultSettings = {
+                folder_name: null,
+                rotation_enabled: false,
+                rotation_mode: 'random'
+            };
+            
+            const { data: newEntry, error: insertError } = await supabase
+                .from('welcome_folder_settings')
+                .insert([defaultSettings])
+                .select()
+                .single();
+                
+            if (insertError) {
+                console.error('❌ Fehler beim Erstellen der Default Ordner-Settings:', insertError);
+                throw insertError;
+            }
+            
+            console.log('✅ Default Ordner-Settings erstellt');
+            return {
+                folderName: null,
+                rotationEnabled: false,
+                rotationMode: 'random'
+            };
+        }
+        
+        console.log('📁 Ordner-Settings geladen:', {
+            folderName: folderSettings.folder_name,
+            rotationEnabled: folderSettings.rotation_enabled,
+            rotationMode: folderSettings.rotation_mode
+        });
+        
+        return {
+            folderName: folderSettings.folder_name,
+            rotationEnabled: folderSettings.rotation_enabled,
+            rotationMode: folderSettings.rotation_mode
+        };
+        
+    } catch (error) {
+        console.error('❌ Kritischer Fehler beim Laden der Ordner-Settings:', error);
+        // Fallback
+        return {
+            folderName: null,
+            rotationEnabled: false,
+            rotationMode: 'random'
+        };
+    }
+}
+
+// Speichere Ordner-Management Settings in dedizierter Tabelle
+async function saveFolderSettingsToSupabase(folderSettings) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar zum Speichern der Ordner-Settings');
+            return false;
+        }
+        
+        console.log('💾 Speichere Ordner-Settings:', {
+            folderName: folderSettings.folderName,
+            rotationEnabled: folderSettings.rotationEnabled,
+            rotationMode: folderSettings.rotationMode
+        });
+        
+        // Prüfe ob bereits ein Eintrag existiert
+        const { data: existingEntry, error: selectError } = await supabase
+            .from('welcome_folder_settings')
+            .select('id')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single();
+        
+        const dataToSave = {
+            folder_name: folderSettings.folderName || null,
+            rotation_enabled: folderSettings.rotationEnabled || false,
+            rotation_mode: folderSettings.rotationMode || 'random',
+            updated_at: new Date().toISOString()
+        };
+        
+        let result;
+        if (existingEntry) {
+            // Update existierenden Eintrag
+            console.log('🔄 UPDATE existierende Ordner-Settings...');
+            result = await supabase
+                .from('welcome_folder_settings')
+                .update(dataToSave)
+                .eq('id', existingEntry.id)
+                .select()
+                .single();
+        } else {
+            // Erstelle neuen Eintrag
+            console.log('➕ INSERT neue Ordner-Settings...');
+            result = await supabase
+                .from('welcome_folder_settings')
+                .insert([dataToSave])
+                .select()
+                .single();
+        }
+        
+        if (result.error) {
+            console.error('💥 Supabase Error beim Speichern der Ordner-Settings:', result.error);
+            throw result.error;
+        }
+        
+        console.log('✅ Ordner-Settings erfolgreich gespeichert in dedizierter Tabelle');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Ordner-Settings:', error);
+        return false;
+    }
+}
+
+// Update getRandomWelcomeImage um Ordner-Settings zu verwenden
+async function getRandomWelcomeImageWithFolderSettings() {
+    try {
+        // Lade aktuelle Ordner-Settings
+        const folderSettings = await loadFolderSettingsFromSupabase();
+        
+        if (!folderSettings.rotationEnabled) {
+            console.log('🔄 Bild-Rotation deaktiviert in Ordner-Settings');
+            return null; // Keine Rotation
+        }
+        
+        console.log('🎲 Verwende Ordner-Settings für Bildauswahl:', {
+            folder: folderSettings.folderName || 'Alle Ordner',
+            mode: folderSettings.rotationMode
+        });
+        
+        // Verwende bestehende getRandomWelcomeImage Funktion mit Ordner-Filter
+        return getRandomWelcomeImage(folderSettings.folderName);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Laden des Bildes mit Ordner-Settings:', error);
+        return null;
+    }
+}
+
 // ================== WELCOME API ENDPOINTS ==================
 
 // Welcome Settings laden
@@ -2737,7 +2906,7 @@ app.post('/api/welcome/test', async (req, res) => {
                     displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/0.png' // Default Discord Avatar
                 };
                 
-                const { embed, attachment } = createWelcomeEmbed(guild, testMember, settings);
+                const { embed, attachment } = await createWelcomeEmbed(guild, testMember, settings);
                 
                 let messageContent = '';
                 if (settings.mentionUser) {
@@ -2848,6 +3017,51 @@ app.post('/api/welcome/test-leave', async (req, res) => {
     } catch (error) {
         console.error('❌ Fehler beim Senden der Test-Leave-Nachricht:', error);
         res.status(500).json({ error: 'Fehler beim Senden der Test-Nachricht' });
+    }
+});
+
+// ================== 📁 FOLDER MANAGEMENT API ENDPOINTS ==================
+
+// Lade Ordner-Management Settings
+app.get('/api/welcome/folder-settings', async (req, res) => {
+    try {
+        console.log('📁 GET /api/welcome/folder-settings - Lade dedizierte Ordner-Settings...');
+        const folderSettings = await loadFolderSettingsFromSupabase();
+        console.log('📁 Ordner-Settings geladen für Frontend:', folderSettings);
+        res.json(folderSettings);
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Ordner-Settings:', error);
+        res.status(500).json({ error: 'Fehler beim Laden der Ordner-Settings' });
+    }
+});
+
+// Speichere Ordner-Management Settings
+app.post('/api/welcome/folder-settings', async (req, res) => {
+    try {
+        console.log('📁 POST /api/welcome/folder-settings - Empfangene Daten:', JSON.stringify(req.body, null, 2));
+        
+        const folderSettings = {
+            folderName: req.body.folderName || null,
+            rotationEnabled: req.body.rotationEnabled || false,
+            rotationMode: req.body.rotationMode || 'random'
+        };
+        
+        console.log('📁 Verarbeite Ordner-Settings:', folderSettings);
+        
+        const success = await saveFolderSettingsToSupabase(folderSettings);
+        if (success) {
+            console.log('✅ Ordner-Settings erfolgreich gespeichert');
+            res.json({ 
+                success: true, 
+                message: 'Ordner-Settings gespeichert',
+                settings: folderSettings
+            });
+        } else {
+            res.status(500).json({ error: 'Fehler beim Speichern der Ordner-Settings' });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Ordner-Settings:', error);
+        res.status(500).json({ error: 'Fehler beim Speichern der Ordner-Settings' });
     }
 });
 
@@ -3651,7 +3865,7 @@ function getRandomWelcomeImage(specificFolder = null) {
 }
 
 // Funktion um Welcome-Embed zu erstellen
-function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
+async function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
     // Fallback für description falls leer oder undefined
     let description = settings.description || 'Willkommen auf dem Server!';
     
@@ -3685,18 +3899,13 @@ function createWelcomeEmbed(guild, member, settings = welcomeSettings) {
     } else if (settings.thumbnail === 'custom') {
         let thumbnailUrl = settings.customThumbnail;
         
-        // Bild-Rotation aktiviert? (überschreibt customThumbnail)
-        if (settings.imageRotation && settings.imageRotation.enabled) {
-            const specificFolder = settings.imageRotation.folder || null;
-            const randomImage = getRandomWelcomeImage(specificFolder);
-            if (randomImage) {
-                thumbnailUrl = randomImage;
-                console.log(`🎲 Zufälliges Welcome-Bild gewählt${specificFolder ? ` aus Ordner "${specificFolder}"` : ' aus allen Ordnern'}: ${thumbnailUrl}`);
-            } else {
-                console.log(`⚠️ Keine Bilder${specificFolder ? ` in Ordner "${specificFolder}"` : ''} für Rotation gefunden, verwende Fallback: ${thumbnailUrl}`);
-            }
+        // 📁 Neue dedizierte Ordner-Settings verwenden (async/await erforderlich!)
+        const randomImage = await getRandomWelcomeImageWithFolderSettings();
+        if (randomImage) {
+            thumbnailUrl = randomImage;
+            console.log(`🎲 Zufälliges Welcome-Bild aus dedizierten Ordner-Settings: ${thumbnailUrl}`);
         } else {
-            console.log(`📌 Spezifisches Bild verwendet: ${thumbnailUrl}`);
+            console.log(`📌 Keine Bild-Rotation oder kein Bild gefunden, verwende Custom Thumbnail: ${thumbnailUrl}`);
         }
         
         // Für lokale URLs, verwende Attachments statt Base64
@@ -5203,7 +5412,7 @@ client.on(Events.GuildMemberAdd, async member => {
     if (welcomeChannel) {
         try {
             // Erstelle Welcome-Embed mit Settings
-            const { embed: welcomeEmbed, attachment } = createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
+            const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(member.guild, member, currentWelcomeSettings);
             
             // Mention User falls aktiviert
             let messageContent = '';
@@ -5454,7 +5663,7 @@ client.on(Events.MessageCreate, async message => {
             console.log('🧪 Test Welcome-Message gestartet...');
             console.log('Settings:', JSON.stringify(currentWelcomeSettings, null, 2));
             
-            const { embed: welcomeEmbed, attachment } = createWelcomeEmbed(message.guild, message.member, currentWelcomeSettings);
+            const { embed: welcomeEmbed, attachment } = await createWelcomeEmbed(message.guild, message.member, currentWelcomeSettings);
             
             const messageOptions = { 
                 content: currentWelcomeSettings.mentionUser ? `<@${message.author.id}>` : '', 
