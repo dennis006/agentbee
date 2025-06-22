@@ -135,20 +135,8 @@ async function createWelcomeFoldersOnGitHub() {
     }
 }
 
-// GitHub-Ordner beim Start erstellen (non-blocking)
-if (supabaseInitialized) {
-    setTimeout(() => {
-        createWelcomeFoldersOnGitHub()
-            .then(success => {
-                if (success) {
-                    console.log('✅ Alle GitHub Welcome-Ordner sind bereit!');
-                } else {
-                    console.log('⚠️ Einige GitHub-Ordner konnten nicht erstellt werden');
-                }
-            })
-            .catch(console.error);
-    }, 2000); // 2 Sekunden warten damit GitHub initialisiert ist
-}
+// GitHub-Ordner werden nur bei Bedarf erstellt (z.B. via Script oder manuell)
+// Automatische Erstellung bei jedem Restart wurde entfernt für bessere Performance
 
 // ================== API KEYS MANAGEMENT ==================
 // Zentrale API-Key-Verwaltung - alle Keys hier konfigurieren
@@ -3204,6 +3192,42 @@ app.post('/api/welcome/images/move', async (req, res) => {
     } catch (error) {
         console.error('❌ Fehler beim Verschieben des Bildes:', error);
         res.status(500).json({ error: 'Fehler beim Verschieben des Bildes' });
+    }
+});
+
+// GitHub Welcome Folders einmalig erstellen (API Endpoint)
+app.post('/api/welcome/create-github-folders', async (req, res) => {
+    try {
+        if (!useGitHubStorage || !githubClient) {
+            return res.status(400).json({ 
+                error: 'GitHub Storage ist nicht aktiviert oder konfiguriert',
+                hint: 'Prüfe GitHub Token und Konfiguration'
+            });
+        }
+
+        console.log('🚀 Starte manuelle GitHub-Ordner-Erstellung...');
+        
+        const success = await createWelcomeFoldersOnGitHub();
+        
+        if (success) {
+            res.json({ 
+                success: true, 
+                message: 'Alle GitHub Welcome-Ordner erfolgreich erstellt!',
+                folders: ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal']
+            });
+        } else {
+            res.status(500).json({ 
+                error: 'Einige Ordner konnten nicht erstellt werden',
+                hint: 'Prüfe Console-Logs für Details'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Fehler bei GitHub-Ordner-Erstellung:', error);
+        res.status(500).json({ 
+            error: 'Fehler beim Erstellen der GitHub-Ordner',
+            details: error.message
+        });
     }
 });
 

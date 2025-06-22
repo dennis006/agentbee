@@ -550,6 +550,31 @@ const Welcome = () => {
     });
   };
 
+  // GitHub-Ordner-Erstellung
+  const createGitHubFolders = async () => {
+    try {
+      const response = await fetch('/api/welcome/create-github-folders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        showSuccess('GitHub-Ordner erstellt', `✅ ${result.message}`);
+        // Lade Bilder neu um die neuen Ordner anzuzeigen
+        await loadUploadedImages();
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        showError('GitHub-Ordner Fehler', `❌ ${errorData.error || 'Fehler beim Erstellen der GitHub-Ordner'}`);
+      }
+    } catch (err) {
+      console.error('Fehler beim Erstellen der GitHub-Ordner:', err);
+      showError('Netzwerkfehler', '❌ Netzwerkfehler beim Erstellen der GitHub-Ordner');
+    }
+  };
+
   // Ordner-Management Funktionen
   const createFolder = async () => {
     if (!newFolderName.trim()) {
@@ -1138,14 +1163,25 @@ const Welcome = () => {
                 <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20 space-y-4">
                 <div className="flex items-center justify-between mb-4">
                   <h5 className="text-sm font-medium text-dark-text">📁 Ordner-Management</h5>
-                  <Button
-                    onClick={() => setShowNewFolderInput(!showNewFolderInput)}
-                    size="sm"
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs"
-                  >
-                    <span className="mr-1">+</span>
-                    Neuer Ordner
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={createGitHubFolders}
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-xs"
+                      title="Erstellt automatisch alle Standard-Ordner auf GitHub"
+                    >
+                      <span className="mr-1">🐙</span>
+                      GitHub-Ordner
+                    </Button>
+                    <Button
+                      onClick={() => setShowNewFolderInput(!showNewFolderInput)}
+                      size="sm"
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs"
+                    >
+                      <span className="mr-1">+</span>
+                      Neuer Ordner
+                    </Button>
+                  </div>
                 </div>
                 
                 {/* Neuer Ordner Input */}
