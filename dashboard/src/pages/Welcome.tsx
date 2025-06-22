@@ -72,6 +72,17 @@ const Welcome = () => {
   const [newFolderName, setNewFolderName] = useState('')
   const [showNewFolderInput, setShowNewFolderInput] = useState(false)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [userModified, setUserModified] = useState(false)
+  
+  // Helper-Funktion für User-Änderungen
+  const updateWelcomeSettings = (newSettings: Partial<WelcomeSettings> | ((prev: WelcomeSettings) => WelcomeSettings)) => {
+    if (typeof newSettings === 'function') {
+      setWelcomeSettings(newSettings);
+    } else {
+      setWelcomeSettings(prev => ({ ...prev, ...newSettings }));
+    }
+    setUserModified(true); // User hat eine Änderung gemacht
+  };
   const [deleteModal, setDeleteModal] = useState<{
     show: boolean;
     filename: string;
@@ -245,6 +256,7 @@ const Welcome = () => {
             return newSettings;
           });
           setSettingsLoaded(true);
+          // NICHT setUserModified(true) hier - das ist das initiale Laden!
           console.log('✅ Settings erfolgreich geladen und gesetzt!');
         } else {
           console.error('❌ Ungültige Datenstruktur von API erhalten:', data);
@@ -718,17 +730,18 @@ const Welcome = () => {
     initializeData();
   }, []);
 
-  // Separater Effect für Auto-Save bei Änderungen
+  // Separater Effect für Auto-Save bei Änderungen (nur bei User-Modifikationen)
   useEffect(() => {
-    // Nur speichern wenn Settings bereits geladen wurden (nicht bei erster Initialisierung)
-    if (settingsLoaded) {
+    // Nur speichern wenn Settings geladen wurden UND der User Änderungen gemacht hat
+    if (settingsLoaded && userModified) {
       const timeoutId = setTimeout(() => {
         saveWelcomeSettings();
+        setUserModified(false); // Reset nach dem Speichern
       }, 1000); // 1 Sekunde Debounce
 
       return () => clearTimeout(timeoutId);
     }
-  }, [welcomeSettings, settingsLoaded]);
+  }, [welcomeSettings, settingsLoaded, userModified]);
 
   // Debug: Track imageRotation folder changes
   useEffect(() => {
@@ -1288,7 +1301,7 @@ const Welcome = () => {
                         type="checkbox"
                         id="imageRotation"
                         checked={welcomeSettings.imageRotation?.enabled || false}
-                        onChange={(e) => setWelcomeSettings({
+                        onChange={(e) => updateWelcomeSettings({
                           ...welcomeSettings, 
                           imageRotation: {
                             ...welcomeSettings.imageRotation,  // ✅ Preserve ALL existing values
@@ -1328,7 +1341,7 @@ const Welcome = () => {
                           const newFolder = e.target.value || undefined;
                           console.log('🎯 SETZE NEUEN FOLDER:', newFolder);
                           
-                          setWelcomeSettings({
+                          updateWelcomeSettings({
                             ...welcomeSettings,
                             imageRotation: {
                               ...welcomeSettings.imageRotation,
