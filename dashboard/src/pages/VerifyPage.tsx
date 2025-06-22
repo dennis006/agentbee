@@ -54,63 +54,52 @@ const VerifyPage = () => {
 
   const [gameOptions, setGameOptions] = useState<{ id: string; label: string; emoji: string; role?: string }[]>([]);
 
-  // 🎯 Valorant Agenten nach Rollen kategorisiert mit Icons
-  const valorantAgentRoles = {
-    'Duelist': {
-      emoji: '⚔️',
-      color: 'from-red-500 to-orange-500',
-      agents: [
-        { name: 'Jett', icon: '💨' },
-        { name: 'Phoenix', icon: '🔥' },
-        { name: 'Reyna', icon: '💜' },
-        { name: 'Raze', icon: '💥' },
-        { name: 'Yoru', icon: '👻' },
-        { name: 'Neon', icon: '⚡' },
-        { name: 'Iso', icon: '🔮' },
-        { name: 'Waylay', icon: '🌪️' }
-      ]
-    },
-    'Sentinel': {
-      emoji: '🛡️',
-      color: 'from-green-500 to-blue-500',
-      agents: [
-        { name: 'Killjoy', icon: '🤖' },
-        { name: 'Cypher', icon: '👁️' },
-        { name: 'Sage', icon: '🌸' },
-        { name: 'Chamber', icon: '🎯' },
-        { name: 'Deadlock', icon: '🔗' },
-        { name: 'Vyse', icon: '🔒' }
-      ]
-    },
-    'Initiator': {
-      emoji: '🔍',
-      color: 'from-purple-500 to-pink-500',
-      agents: [
-        { name: 'Sova', icon: '🏹' },
-        { name: 'Breach', icon: '👊' },
-        { name: 'Skye', icon: '🦅' },
-        { name: 'Fade', icon: '🌙' },
-        { name: 'KAY/O', icon: '🤖' },
-        { name: 'Gekko', icon: '🦎' },
-        { name: 'Tejo', icon: '💎' }
-      ]
-    },
-    'Controller': {
-      emoji: '🌊',
-      color: 'from-blue-500 to-cyan-500',
-      agents: [
-        { name: 'Brimstone', icon: '🚀' },
-        { name: 'Viper', icon: '🐍' },
-        { name: 'Omen', icon: '👤' },
-        { name: 'Astra', icon: '⭐' },
-        { name: 'Harbor', icon: '🌊' },
-        { name: 'Clove', icon: '☘️' }
-      ]
-    }
+  // 🎯 Valorant Agent Interfaces
+  interface ValorantAgent {
+    id: string;
+    name: string;
+    uuid: string;
+    display_name: string;
+    role_type: string;
+    role_color: string;
+    enabled: boolean;
+    sort_order: number;
+  }
+
+  interface AgentWithIcon {
+    name: string;
+    icon: string;
+  }
+
+  interface ValorantRoleData {
+    emoji: string;
+    color: string;
+    agents: AgentWithIcon[];
+  }
+
+  // 🎯 Valorant Agent States
+  const [valorantAgents, setValorantAgents] = useState<ValorantAgent[]>([]);
+  const [valorantAgentRoles, setValorantAgentRoles] = useState<Record<string, ValorantRoleData>>({});
+  const [loadingAgents, setLoadingAgents] = useState(false);
+
+  // 🎯 Default Icons für Agenten (Fallback)
+  const defaultAgentIcons: Record<string, string> = {
+    'Jett': '💨', 'Phoenix': '🔥', 'Reyna': '💜', 'Raze': '💥', 'Yoru': '👻', 'Neon': '⚡', 'Iso': '🔮', 'Waylay': '🌪️',
+    'Killjoy': '🤖', 'Cypher': '👁️', 'Sage': '🌸', 'Chamber': '🎯', 'Deadlock': '🔗', 'Vyse': '🔒',
+    'Sova': '🏹', 'Breach': '👊', 'Skye': '🦅', 'Fade': '🌙', 'KAY/O': '🤖', 'Gekko': '🦎', 'Tejo': '💎',
+    'Brimstone': '🚀', 'Viper': '🐍', 'Omen': '👤', 'Astra': '⭐', 'Harbor': '🌊', 'Clove': '☘️'
+  };
+
+  // 🎯 Default Role Konfiguration
+  const defaultRoleConfig: Record<string, { emoji: string; color: string }> = {
+    'Duelist': { emoji: '⚔️', color: 'from-red-500 to-orange-500' },
+    'Sentinel': { emoji: '🛡️', color: 'from-green-500 to-blue-500' },
+    'Initiator': { emoji: '🔍', color: 'from-purple-500 to-pink-500' },
+    'Controller': { emoji: '🌊', color: 'from-blue-500 to-cyan-500' }
   };
 
   // Legacy Support - alle Agenten in einem Array (nur Namen)
-  const valorantAgents = Object.values(valorantAgentRoles).flatMap(role => role.agents.map(agent => agent.name));
+  const valorantAgentList = Object.values(valorantAgentRoles).flatMap(role => role.agents.map(agent => agent.name));
 
   const [platformOptions, setPlatformOptions] = useState<{ id: string; label: string; emoji: string; role?: string }[]>([]);
 
@@ -129,6 +118,63 @@ const VerifyPage = () => {
   const changeStep = (newStep: number) => {
     setStepAnimationKey(prev => prev + 1);
     setCurrentStep(newStep);
+  };
+
+  // 🎯 Valorant Agents Loading
+  const loadValorantAgents = async () => {
+    try {
+      setLoadingAgents(true);
+      
+      const response = await fetch('/api/valorant/agents');
+      
+      if (response.ok) {
+        const data = await response.json();
+        const agents = data.agents || [];
+        
+        setValorantAgents(agents);
+        
+        // Erstelle Rollen-Struktur aus Agenten
+        const roleStructure: Record<string, ValorantRoleData> = {};
+        
+        agents.filter((agent: ValorantAgent) => agent.enabled).forEach((agent: ValorantAgent) => {
+          const roleType = agent.role_type;
+          
+          if (!roleStructure[roleType]) {
+            const roleConfig = defaultRoleConfig[roleType];
+            roleStructure[roleType] = {
+              emoji: roleConfig?.emoji || '🎮',
+              color: roleConfig?.color || 'from-gray-500 to-gray-600',
+              agents: []
+            };
+          }
+          
+          roleStructure[roleType].agents.push({
+            name: agent.display_name,
+            icon: defaultAgentIcons[agent.name] || '🎮'
+          });
+        });
+        
+        // Sortiere Agenten nach sort_order
+        Object.values(roleStructure).forEach(role => {
+          role.agents.sort((a, b) => {
+            const agentA = agents.find((agent: ValorantAgent) => agent.display_name === a.name);
+            const agentB = agents.find((agent: ValorantAgent) => agent.display_name === b.name);
+            return (agentA?.sort_order || 0) - (agentB?.sort_order || 0);
+          });
+        });
+        
+        setValorantAgentRoles(roleStructure);
+        console.log('✅ Valorant Agenten geladen:', agents.length);
+        
+      } else {
+        console.error('❌ Fehler beim Laden der Valorant Agenten:', response.status);
+      }
+      
+    } catch (error) {
+      console.error('❌ Netzwerkfehler beim Laden der Valorant Agenten:', error);
+    } finally {
+      setLoadingAgents(false);
+    }
   };
 
   // Lade Verification-Konfiguration
@@ -170,6 +216,8 @@ const VerifyPage = () => {
   useEffect(() => {
     // Lade aktuelle Verification-Konfiguration
     loadVerificationConfig();
+    // Lade Valorant Agenten
+    loadValorantAgents();
   }, []);
 
   // Discord OAuth Handling
@@ -404,7 +452,13 @@ const VerifyPage = () => {
                   </h3>
                   
                   <div className="space-y-6">
-                    {Object.entries(valorantAgentRoles).map(([roleName, roleData], roleIndex) => (
+                    {loadingAgents ? (
+                      <div className="text-center py-8">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-primary"></div>
+                        <p className="text-dark-muted mt-2">Lade Valorant Agenten...</p>
+                      </div>
+                    ) : (
+                      Object.entries(valorantAgentRoles).map(([roleName, roleData], roleIndex) => (
                       <div key={roleName} className="cyber-card p-4 border border-purple-primary/30 animate-fade-in-up" style={{ animationDelay: `${0.4 + roleIndex * 0.1}s` }}>
                         <h4 className={cn(
                           "text-md font-bold mb-3 flex items-center gap-2 bg-gradient-to-r bg-clip-text text-transparent",
@@ -442,7 +496,8 @@ const VerifyPage = () => {
                           ))}
                         </div>
                       </div>
-                    ))}
+                    ))
+                    )}
                   </div>
                   
                   {/* Ausgewählte Agenten Anzeige */}

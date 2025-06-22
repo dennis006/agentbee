@@ -62,6 +62,26 @@ interface VerifiedUsersData {
   lastUpdated: string;
 }
 
+interface ValorantAgent {
+  id: string;
+  name: string;
+  uuid: string;
+  display_name: string;
+  role_type: string;
+  role_color: string;
+  enabled: boolean;
+  sort_order: number;
+}
+
+interface ValorantAgentRole {
+  id: string;
+  role_name: string;
+  display_name: string;
+  color: string;
+  enabled: boolean;
+  sort_order: number;
+}
+
 // Matrix Blocks Komponente
 // Custom Refresh SVG Component
 const RefreshIcon = ({ className = "w-5 h-5", animate = false }: { className?: string; animate?: boolean }) => (
@@ -171,6 +191,11 @@ const VerificationSettings = () => {
   const [creatingRoles, setCreatingRoles] = useState(false);
   const [postingVerification, setPostingVerification] = useState(false);
   const [activeTab, setActiveTab] = useState<'settings' | 'statistics' | 'users'>('settings');
+  
+  // 🎯 Valorant Agents States
+  const [valorantAgents, setValorantAgents] = useState<ValorantAgent[]>([]);
+  const [valorantAgentRoles, setValorantAgentRoles] = useState<ValorantAgentRole[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<VerifiedUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -232,11 +257,45 @@ const VerificationSettings = () => {
     }));
   };
 
+  // 🎯 Valorant Agents Loading
+  const loadValorantAgents = async () => {
+    try {
+      setLoadingAgents(true);
+      
+      const [agentsResponse, rolesResponse] = await Promise.all([
+        fetch('/api/valorant/agents'),
+        fetch('/api/valorant/agent-roles')
+      ]);
+      
+      if (agentsResponse.ok) {
+        const agentsData = await agentsResponse.json();
+        setValorantAgents(agentsData.agents || []);
+        console.log('✅ Valorant Agenten geladen:', agentsData.agents?.length || 0);
+      } else {
+        console.error('❌ Fehler beim Laden der Valorant Agenten');
+      }
+      
+      if (rolesResponse.ok) {
+        const rolesData = await rolesResponse.json();
+        setValorantAgentRoles(rolesData.roles || []);
+        console.log('✅ Valorant Agent-Rollen geladen:', rolesData.roles?.length || 0);
+      } else {
+        console.error('❌ Fehler beim Laden der Valorant Agent-Rollen');
+      }
+      
+    } catch (error) {
+      console.error('❌ Fehler beim Laden der Valorant Daten:', error);
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
   useEffect(() => {
     // Lade Konfiguration vom Server
     loadConfig();
     loadStats();
     loadUsers();
+    loadValorantAgents();
   }, []);
 
   const loadConfig = async () => {
@@ -485,22 +544,24 @@ const VerificationSettings = () => {
       
 
       
-      // 🎯 Valorant-Rollen hinzufügen (Basis + Agenten-Rollen + Individuelle Agenten)
-      const valorantBaseRoles = ['Valorant', 'Duelist', 'Sentinel', 'Initiator', 'Controller'];
+      // 🎯 Valorant-Rollen hinzufügen (dynamisch aus Supabase)
+      const valorantBaseRoles = ['Valorant'];
       
-      // Alle individuellen Agenten-Rollen
-      const valorantAgents = [
-        // Duelist
-        'Jett', 'Phoenix', 'Reyna', 'Raze', 'Yoru', 'Neon', 'Iso', 'Waylay',
-        // Sentinel  
-        'Killjoy', 'Cypher', 'Sage', 'Chamber', 'Deadlock', 'Vyse',
-        // Initiator
-        'Sova', 'Breach', 'Skye', 'Fade', 'KAY/O', 'Gekko', 'Tejo',
-        // Controller
-        'Brimstone', 'Viper', 'Omen', 'Astra', 'Harbor', 'Clove'
-      ];
+      // Agent-Rollen (Duelist, Sentinel, etc.)
+      const dynamicAgentRoles = valorantAgentRoles
+        .filter(role => role.enabled)
+        .map(role => role.display_name);
       
-      allRoles.push(...valorantBaseRoles, ...valorantAgents);
+      // Individuelle Agenten-Rollen (aus Supabase)
+      const dynamicValorantAgents = valorantAgents
+        .filter(agent => agent.enabled)
+        .map(agent => agent.display_name);
+      
+      allRoles.push(
+        ...valorantBaseRoles, 
+        ...dynamicAgentRoles, 
+        ...dynamicValorantAgents
+      );
 
       const response = await fetch('/api/verification/create-roles', {
         method: 'POST',
