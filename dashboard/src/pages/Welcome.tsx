@@ -141,6 +141,8 @@ const Welcome = () => {
   // API-Funktionen
   const saveWelcomeSettings = async () => {
     try {
+      console.log('📡 Sende Welcome Settings...', welcomeSettings);
+      
       const response = await fetch('/api/welcome', {
         method: 'POST',
         headers: {
@@ -149,14 +151,20 @@ const Welcome = () => {
         body: JSON.stringify(welcomeSettings),
       });
 
+      console.log('📡 Response Status:', response.status);
+      
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Response Data:', data);
         success('🎉 Willkommensnachrichten-Einstellungen gespeichert!');
       } else {
-        showError('❌ Fehler beim Speichern der Einstellungen');
+        const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
+        console.error('❌ Server Error:', errorData);
+        showError(`❌ Server-Fehler: ${errorData.error || 'Unbekannter Fehler'}`);
       }
     } catch (err) {
-      console.error('Fehler beim Speichern:', err);
-      showError('❌ Netzwerkfehler beim Speichern');
+      console.error('❌ Fehler beim Speichern:', err);
+      showError(`❌ Netzwerkfehler: ${err.message}`);
     }
   };
 
