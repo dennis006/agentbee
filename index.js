@@ -2010,19 +2010,34 @@ async function saveWelcomeSettingsToSupabase(settings) {
         console.log('💾 Speichere Welcome Settings in Supabase...');
         
         // Prüfe ob bereits Einstellungen existieren
-        const { data: existingSettings } = await supabase
+        console.log('🔍 Prüfe existierende Settings...');
+        const { data: existingSettings, error: selectError } = await supabase
             .from('welcome_settings')
             .select('id')
             .single();
+        
+        if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = No rows found
+            console.log('⚠️ Fehler beim Prüfen existierender Settings:', selectError);
+        }
+        
+        console.log('📋 Existierende Settings:', existingSettings ? `ID: ${existingSettings.id}` : 'Keine gefunden');
         
         const configData = {
             config: settings,
             updated_at: new Date().toISOString()
         };
         
+        console.log('📦 Sende an Supabase:', {
+            hasConfig: !!configData.config,
+            configKeys: configData.config ? Object.keys(configData.config) : null,
+            imageRotation: configData.config?.imageRotation,
+            operation: existingSettings ? 'UPDATE' : 'INSERT'
+        });
+        
         let result;
         if (existingSettings) {
             // Update existierende Einstellungen
+            console.log('🔄 UPDATE existierende Settings...');
             result = await supabase
                 .from('welcome_settings')
                 .update(configData)
@@ -2031,6 +2046,7 @@ async function saveWelcomeSettingsToSupabase(settings) {
                 .single();
         } else {
             // Erstelle neue Einstellungen
+            console.log('➕ INSERT neue Settings...');
             result = await supabase
                 .from('welcome_settings')
                 .insert([configData])
@@ -2038,7 +2054,15 @@ async function saveWelcomeSettingsToSupabase(settings) {
                 .single();
         }
         
+        console.log('📤 Supabase Antwort:', {
+            success: !result.error,
+            error: result.error,
+            dataReceived: !!result.data,
+            dataId: result.data?.id
+        });
+        
         if (result.error) {
+            console.error('💥 Supabase Error Details:', result.error);
             throw result.error;
         }
         
