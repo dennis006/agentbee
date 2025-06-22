@@ -2578,77 +2578,114 @@ app.post('/api/welcome/test-leave', async (req, res) => {
     }
 });
 
-// Upload Welcome Image (GitHub Integration mit Fallback)
-app.post('/api/welcome/upload', upload.single('welcomeImage'), async (req, res) => {
+// Upload Welcome Images - Multi-Upload Support (GitHub Integration mit Fallback)
+app.post('/api/welcome/upload', upload.array('welcomeImage', 10), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'Keine Datei hochgeladen' });
+        const files = req.files;
+        if (!files || files.length === 0) {
+            return res.status(400).json({ error: 'Keine Dateien hochgeladen' });
         }
 
         const folder = req.body.folder || 'general'; // Default-Ordner
+        const results = [];
+        let successCount = 0;
         
-        // Generiere einen einzigartigen Dateinamen
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = path.extname(req.file.originalname);
-        const filename = 'welcome-' + uniqueSuffix + extension;
+        console.log(`📤 Multi-Upload gestartet: ${files.length} Datei(en) nach "${folder}"`);
         
-        let imageUrl;
-        let uploadSuccess = false;
-        
-        // Versuche GitHub Upload zuerst
-        if (useGitHubStorage && githubClient) {
+        // Verarbeite alle Dateien parallel
+        const uploadPromises = files.map(async (file) => {
             try {
-                const githubResult = await uploadImageToGitHub(req.file.buffer, filename, folder);
-                imageUrl = githubResult.url;
-                uploadSuccess = true;
+                // Generiere einen einzigartigen Dateinamen
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                const extension = path.extname(file.originalname);
+                const filename = 'welcome-' + uniqueSuffix + extension;
                 
-                console.log(`✅ Willkommensbild zu GitHub hochgeladen: ${folder}/${filename}`);
-                console.log(`🌐 GitHub CDN URL: ${imageUrl}`);
+                let imageUrl;
+                let uploadSuccess = false;
                 
-            } catch (githubError) {
-                console.error('❌ GitHub Upload fehlgeschlagen, verwende lokalen Fallback:', githubError);
+                // Versuche GitHub Upload zuerst
+                if (useGitHubStorage && githubClient) {
+                    try {
+                        const githubResult = await uploadImageToGitHub(file.buffer, filename, folder);
+                        imageUrl = githubResult.url;
+                        uploadSuccess = true;
+                        
+                        console.log(`✅ ${file.originalname} zu GitHub hochgeladen: ${folder}/${filename}`);
+                        
+                    } catch (githubError) {
+                        console.error(`❌ GitHub Upload für ${file.originalname} fehlgeschlagen:`, githubError);
+                    }
+                }
+                
+                // Fallback: Lokaler Upload
+                if (!uploadSuccess) {
+                    const uploadPath = `./dashboard/public/images/welcome/${folder}/`;
+                    
+                    // Stelle sicher, dass der Ordner existiert
+                    if (!fs.existsSync(uploadPath)) {
+                        fs.mkdirSync(uploadPath, { recursive: true });
+                    }
+                    
+                    const localPath = path.join(uploadPath, filename);
+                    fs.writeFileSync(localPath, file.buffer);
+                    imageUrl = `/images/welcome/${folder}/${filename}`;
+                    
+                    console.log(`✅ ${file.originalname} lokal hochgeladen: ${folder}/${filename}`);
+                }
+                
+                // Speichere Metadaten in Supabase
+                const imageData = {
+                    filename: filename,
+                    url: imageUrl,
+                    folder: folder,
+                    size: file.size,
+                    originalname: file.originalname,
+                    uploadedAt: new Date().toISOString(),
+                    storageType: uploadSuccess ? 'github' : 'local'
+                };
+                
+                await saveWelcomeImageToSupabase(imageData);
+                successCount++;
+                
+                return {
+                    success: true,
+                    filename: filename,
+                    folder: folder,
+                    url: imageUrl,
+                    originalName: file.originalname,
+                    size: file.size,
+                    storageType: uploadSuccess ? 'github' : 'local'
+                };
+                
+            } catch (fileError) {
+                console.error(`❌ Fehler beim Upload von ${file.originalname}:`, fileError);
+                return {
+                    success: false,
+                    originalName: file.originalname,
+                    error: fileError.message
+                };
             }
-        }
+        });
         
-        // Fallback: Lokaler Upload
-        if (!uploadSuccess) {
-            const uploadPath = `./dashboard/public/images/welcome/${folder}/`;
-            
-            // Stelle sicher, dass der Ordner existiert
-            if (!fs.existsSync(uploadPath)) {
-                fs.mkdirSync(uploadPath, { recursive: true });
-            }
-            
-            const localPath = path.join(uploadPath, filename);
-            fs.writeFileSync(localPath, req.file.buffer);
-            imageUrl = `/images/welcome/${folder}/${filename}`;
-            
-            console.log(`✅ Willkommensbild lokal hochgeladen: ${folder}/${filename}`);
-            console.log(`📂 Lokaler Pfad: ${localPath}`);
-        }
+        const uploadResults = await Promise.all(uploadPromises);
         
-        // Speichere Metadaten in Supabase
-        const imageData = {
-            filename: filename,
-            url: imageUrl,
-            folder: folder,
-            size: req.file.size,
-            originalname: req.file.originalname,
-            uploadedAt: new Date().toISOString(),
-            storageType: uploadSuccess ? 'github' : 'local'
-        };
+        const successfulUploads = uploadResults.filter(result => result.success);
+        const failedUploads = uploadResults.filter(result => !result.success);
         
-        await saveWelcomeImageToSupabase(imageData);
+        console.log(`📊 Multi-Upload Ergebnis: ${successfulUploads.length}/${files.length} erfolgreich`);
         
         res.json({ 
-            success: true, 
-            message: `Bild erfolgreich hochgeladen! (${uploadSuccess ? 'GitHub' : 'Lokal'})`,
-            filename: filename,
-            folder: folder,
-            url: imageUrl,
-            originalName: req.file.originalname,
-            size: req.file.size,
-            storageType: uploadSuccess ? 'github' : 'local'
+            success: successfulUploads.length > 0,
+            message: successfulUploads.length === files.length 
+                ? `Alle ${files.length} Bilder erfolgreich hochgeladen!`
+                : `${successfulUploads.length}/${files.length} Bilder erfolgreich hochgeladen`,
+            totalFiles: files.length,
+            successCount: successfulUploads.length,
+            failedCount: failedUploads.length,
+            results: uploadResults,
+            // Für Backward-Kompatibilität mit Single-Upload
+            url: successfulUploads.length > 0 ? successfulUploads[successfulUploads.length - 1].url : null,
+            folder: folder
         });
         
     } catch (error) {

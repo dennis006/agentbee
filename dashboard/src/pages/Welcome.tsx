@@ -71,6 +71,7 @@ const Welcome = () => {
   const [selectedFolder, setSelectedFolder] = useState<string>('general')
   const [newFolderName, setNewFolderName] = useState('')
   const [showNewFolderInput, setShowNewFolderInput] = useState(false)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [deleteModal, setDeleteModal] = useState<{
     show: boolean;
     filename: string;
@@ -192,6 +193,7 @@ const Welcome = () => {
         }
         
         setWelcomeSettings(data);
+        setSettingsLoaded(true);
           console.log('Einstellungen geladen:', data);
         } else {
           console.error('Ungültige Datenstruktur von API erhalten:', data);
@@ -324,25 +326,34 @@ const Welcome = () => {
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    // Validierung
-    if (file.size > 5 * 1024 * 1024) {
-      showError('Datei zu groß', '❌ Datei ist zu groß! Maximum: 5MB');
-      return;
-    }
+    const fileArray = Array.from(files);
+    
+    // Validierung aller Dateien
+    for (const file of fileArray) {
+      if (file.size > 5 * 1024 * 1024) {
+        showError('Datei zu groß', `❌ ${file.name} ist zu groß! Maximum: 5MB`);
+        return;
+      }
 
-    if (!file.type.startsWith('image/')) {
-              showError('Falscher Dateityp', '❌ Nur Bilddateien sind erlaubt!');
-      return;
+      if (!file.type.startsWith('image/')) {
+        showError('Falscher Dateityp', `❌ ${file.name} ist keine Bilddatei!`);
+        return;
+      }
     }
 
     setUploading(true);
+    let successCount = 0;
+    let lastUploadedUrl = '';
 
     try {
+      // Multi-Upload: Alle Dateien in einem Request
       const formData = new FormData();
-      formData.append('welcomeImage', file);
+      fileArray.forEach(file => {
+        formData.append('welcomeImage', file);
+      });
       formData.append('folder', selectedFolder);
 
       const response = await fetch('/api/welcome/upload', {
@@ -352,35 +363,53 @@ const Welcome = () => {
 
       if (response.ok) {
         const data = await response.json();
-        
-        if (data && data.success && data.url) {
-          showSuccess('Upload erfolgreich', '🎉 Bild erfolgreich hochgeladen!');
-        
-        // Automatisch das neue Bild auswählen
-        setWelcomeSettings({
-          ...welcomeSettings,
-          thumbnail: 'custom',
-          customThumbnail: data.url
-        });
-
-        // Bilderliste neu laden
-          try {
-        await loadUploadedImages();
-          } catch (loadError) {
-            console.error('Fehler beim Neuladen der Bilder:', loadError);
+        if (data && data.success) {
+          successCount = data.successCount || 0;
+          
+          // Finde die letzte erfolgreiche URL für Auto-Auswahl
+          if (data.results && Array.isArray(data.results)) {
+            const successfulResults = data.results.filter((r: any) => r.success);
+            if (successfulResults.length > 0) {
+              lastUploadedUrl = successfulResults[successfulResults.length - 1].url;
+            }
+          } else if (data.url) {
+            // Fallback für Single-Upload Kompatibilität
+            lastUploadedUrl = data.url;
           }
-      } else {
-          console.error('Ungültige Upload-Response:', data);
-          showError('Upload fehlgeschlagen', '❌ Ungültige Server-Antwort');
+        } else {
+          throw new Error(data.message || 'Upload fehlgeschlagen');
         }
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unbekannter Fehler' }));
-        console.error('Upload API Error:', response.status, errorData);
-        showError('Upload fehlgeschlagen', `❌ ${errorData.error || 'Upload fehlgeschlagen'}`);
+        throw new Error(errorData.error || 'Upload fehlgeschlagen');
       }
+      
+      // Erfolgs-Meldung
+      if (successCount === 1) {
+        showSuccess('Upload erfolgreich', '🎉 Bild erfolgreich hochgeladen!');
+      } else {
+        showSuccess('Uploads erfolgreich', `🎉 ${successCount} Bilder erfolgreich hochgeladen!`);
+      }
+      
+      // Automatisch das letzte Bild auswählen
+      if (lastUploadedUrl) {
+        setWelcomeSettings({
+          ...welcomeSettings,
+          thumbnail: 'custom',
+          customThumbnail: lastUploadedUrl
+        });
+      }
+
+      // Bilderliste neu laden
+      try {
+        await loadUploadedImages();
+      } catch (loadError) {
+        console.error('Fehler beim Neuladen der Bilder:', loadError);
+      }
+      
     } catch (err) {
       console.error('Upload Fehler:', err);
-      showError('Upload Netzwerkfehler', '❌ Netzwerkfehler beim Upload');
+      showError('Upload fehlgeschlagen', `❌ ${successCount}/${fileArray.length} Bilder hochgeladen`);
     } finally {
       setUploading(false);
       // Reset file input
@@ -601,10 +630,9 @@ const Welcome = () => {
   useEffect(() => {
     const initializeData = async () => {
       try {
-        await Promise.allSettled([
-          loadWelcomeSettings(),
-          loadUploadedImages()
-        ]);
+        // Erst Settings laden, dann Images
+        await loadWelcomeSettings();
+        await loadUploadedImages();
       } catch (error) {
         console.error('Fehler bei der Initialisierung:', error);
       }
@@ -612,6 +640,18 @@ const Welcome = () => {
     
     initializeData();
   }, []);
+
+  // Separater Effect für Auto-Save bei Änderungen
+  useEffect(() => {
+    // Nur speichern wenn Settings bereits geladen wurden (nicht bei erster Initialisierung)
+    if (settingsLoaded) {
+      const timeoutId = setTimeout(() => {
+        saveWelcomeSettings();
+      }, 1000); // 1 Sekunde Debounce
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [welcomeSettings, settingsLoaded]);
 
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
@@ -1225,14 +1265,16 @@ const Welcome = () => {
                   ) : (
                     <div className="text-center text-dark-muted group-hover:text-pink-400 transition-colors duration-300">
                       <Upload className="w-10 h-10 mx-auto mb-2" />
-                      <div className="text-sm font-medium">Neues Bild</div>
+                      <div className="text-sm font-medium">Bilder hochladen</div>
                       <div className="text-xs">Nach "{selectedFolder}"</div>
+                      <div className="text-xs opacity-70 mt-1">📸 Multi-Upload möglich</div>
                     </div>
                   )}
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
+                    multiple
                     onChange={handleFileUpload}
                     className="hidden"
                   />
