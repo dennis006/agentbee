@@ -5487,9 +5487,20 @@ async function loadVerificationConfig() {
                 ],
                 defaultRoles: ['Member', 'verify'],
                 welcomeMessage: 'Willkommen auf dem Server! Du hast die Verifizierung erfolgreich abgeschlossen.',
+                embedColor: '0x00FF7F',
                 logChannel: 'verify-logs',
                 autoAssignRoles: true,
                 verificationChannel: 'verify',
+                verificationMessage: {
+                    title: '🛡️ Server Verifizierung',
+                    description: 'Willkommen auf dem Server! Um Zugang zu allen Channels zu erhalten, musst du dich verifizieren.',
+                    buttonText: '🚀 Jetzt verifizieren',
+                    steps: [
+                        '✅ Wähle deine Lieblingsspiele',
+                        '💻 Gib deine Gaming-Plattform an',
+                        '🎯 Erhalte passende Rollen automatisch'
+                    ]
+                },
                 botUpdates: {
                     enabled: true,
                     optInText: '📢 Ich möchte Bot-Updates und Neuigkeiten erhalten',
@@ -8646,40 +8657,31 @@ app.post('/api/valorant/agents', async (req, res) => {
             });
         }
         
-        // Vorbereitung der Daten mit Fallback für Icon-Feld
-        const insertData = {
-            name,
-            uuid: uuid || null,
-            display_name: display_name || name,
-            role_type,
-            role_color: role_color || '#FF4655',
-            role_config: role_config || {
-                hoist: false,
-                mentionable: true,
-                permissions: [],
-                position: 7
-            },
-            enabled: true
-        };
-
-        // Icon nur hinzufügen wenn verfügbar (für Rückwärtskompatibilität)
-        if (icon !== undefined) {
-            insertData.icon = icon || '🎯';
-        }
-
         const { data: agent, error } = await supabase
             .from('valorant_agents')
-            .insert(insertData)
+            .insert({
+                name,
+                uuid: uuid || null,
+                display_name: display_name || name,
+                role_type,
+                role_color: role_color || '#FF4655',
+                role_config: role_config || {
+                    hoist: false,
+                    mentionable: true,
+                    permissions: [],
+                    position: 7
+                },
+                enabled: true,
+                icon: icon || '🎯'
+            })
             .select()
             .single();
         
         if (error) {
             console.error('❌ Fehler beim Hinzufügen des Agenten:', error);
-            console.error('📝 Versuchte Daten:', insertData);
             return res.status(500).json({ 
                 success: false, 
-                error: `Fehler beim Hinzufügen des Agenten: ${error.message || error}`,
-                details: error
+                error: 'Fehler beim Hinzufügen des Agenten' 
             });
         }
         
@@ -8724,11 +8726,7 @@ app.put('/api/valorant/agents/:agentId', async (req, res) => {
         if (role_config !== undefined) updateData.role_config = role_config;
         if (enabled !== undefined) updateData.enabled = enabled;
         if (sort_order !== undefined) updateData.sort_order = sort_order;
-        
-        // Icon nur hinzufügen wenn verfügbar (für Rückwärtskompatibilität)
-        if (icon !== undefined) {
-            updateData.icon = icon;
-        }
+        if (icon !== undefined) updateData.icon = icon;
         
         const { data: agent, error } = await supabase
             .from('valorant_agents')
@@ -8739,11 +8737,9 @@ app.put('/api/valorant/agents/:agentId', async (req, res) => {
         
         if (error) {
             console.error('❌ Fehler beim Aktualisieren des Agenten:', error);
-            console.error('📝 Versuchte Update-Daten:', updateData);
             return res.status(500).json({ 
                 success: false, 
-                error: `Fehler beim Aktualisieren des Agenten: ${error.message || error}`,
-                details: error
+                error: 'Fehler beim Aktualisieren des Agenten' 
             });
         }
         
