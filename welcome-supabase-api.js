@@ -205,7 +205,7 @@ async function createDefaultWelcomeSettings(guildId) {
 async function loadWelcomeImages(guildId = process.env.GUILD_ID || '1203994020779532348') {
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Welcome Images nicht verfügbar!');
-        return { folders: {}, images: [], folderNames: [] };
+        return { folders: {}, images: [], folderNames: [], allFolderNames: [] };
     }
 
     // Prüfe Cache
@@ -216,28 +216,66 @@ async function loadWelcomeImages(guildId = process.env.GUILD_ID || '120399402077
     }
 
     try {
-        console.log(`🔄 Lade Welcome Images für Guild ${guildId}...`);
+        console.log(`🔄 Lade Welcome Images & Folders für Guild ${guildId}...`);
 
-        // Lade Bilder aus der Datenbank
-        const { data: images, error } = await supabaseClient
+        // 1. Lade ALLE verfügbaren Ordner aus welcome_folders
+        const { data: folderDefinitions, error: folderError } = await supabaseClient
+            .from('welcome_folders')
+            .select('folder_name, display_name, emoji')
+            .eq('guild_id', guildId)
+            .order('folder_name');
+
+        if (folderError) throw folderError;
+
+        // Auto-create Standard-Ordner falls keine existieren
+        if (!folderDefinitions || folderDefinitions.length === 0) {
+            console.log('📁 Keine Ordner gefunden - erstelle Standard-Ordner...');
+            await autoCreateGameFolders(guildId);
+            
+            // Lade Ordner nach Erstellung erneut
+            const { data: newFolderDefinitions, error: newFolderError } = await supabaseClient
+                .from('welcome_folders')
+                .select('folder_name, display_name, emoji')
+                .eq('guild_id', guildId)
+                .order('folder_name');
+
+            if (newFolderError) throw newFolderError;
+            folderDefinitions = newFolderDefinitions || [];
+        }
+
+        // 2. Lade Bilder aus der Datenbank
+        const { data: images, error: imageError } = await supabaseClient
             .from('welcome_images')
             .select('*')
             .eq('guild_id', guildId)
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (imageError) throw imageError;
 
-        // Organisiere Bilder nach Ordnern
+        // 3. Erstelle alle verfügbaren Ordner (auch leere)
         const folders = {};
-        const allImages = [];
-        const folderNames = new Set();
+        const allFolderNames = [];
+        const folderNamesWithImages = new Set();
 
+        // Initialisiere alle definierten Ordner
+        folderDefinitions.forEach(folder => {
+            const folderName = folder.folder_name;
+            allFolderNames.push(folderName);
+            folders[folderName] = [];
+        });
+
+        // 4. Organisiere Bilder in Ordner
+        const allImages = [];
         images.forEach(image => {
             const folderName = image.folder_name || 'general';
-            folderNames.add(folderName);
+            folderNamesWithImages.add(folderName);
 
+            // Erstelle Ordner falls er nicht in der Definition existiert
             if (!folders[folderName]) {
                 folders[folderName] = [];
+                if (!allFolderNames.includes(folderName)) {
+                    allFolderNames.push(folderName);
+                }
             }
 
             const imageData = {
@@ -257,7 +295,9 @@ async function loadWelcomeImages(guildId = process.env.GUILD_ID || '120399402077
         const result = {
             folders,
             images: allImages,
-            folderNames: Array.from(folderNames)
+            folderNames: Array.from(folderNamesWithImages), // Nur Ordner mit Bildern
+            allFolderNames: allFolderNames, // ALLE verfügbaren Ordner
+            folderDefinitions: folderDefinitions // Ordner-Metadaten
         };
 
         // Cache aktualisieren
@@ -266,12 +306,12 @@ async function loadWelcomeImages(guildId = process.env.GUILD_ID || '120399402077
             timestamp: Date.now()
         });
 
-        console.log(`✅ ${allImages.length} Welcome Images aus Supabase geladen`);
+        console.log(`✅ ${allImages.length} Welcome Images aus ${allFolderNames.length} Ordnern geladen`);
         return result;
 
     } catch (error) {
         console.error('❌ Fehler beim Laden der Welcome Images:', error);
-        return { folders: {}, images: [], folderNames: [] };
+        return { folders: {}, images: [], folderNames: [], allFolderNames: [] };
     }
 }
 
@@ -388,7 +428,7 @@ async function deleteWelcomeImage(imageId, guildId = process.env.GUILD_ID || '12
 // ==============================================
 
 // Erstelle neuen Ordner in Supabase
-async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID || '1203994020779532348', displayName = null, emoji = null) {
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Ordner kann nicht erstellt werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
@@ -402,7 +442,8 @@ async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID ||
             .insert({
                 guild_id: guildId,
                 folder_name: folderName,
-                emoji: getFolderEmoji(folderName),
+                display_name: displayName || folderName.charAt(0).toUpperCase() + folderName.slice(1),
+                emoji: emoji || getFolderEmoji(folderName),
                 description: `Folder für ${folderName} Bilder`
             });
 
@@ -415,6 +456,7 @@ async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID ||
 
         // Cache invalidieren
         welcomeFoldersCache.delete(`folders_${guildId}`);
+        welcomeImagesCache.delete(`images_${guildId}`);
 
         console.log('✅ Welcome Folder in Supabase erstellt');
         return { success: true, folderName };
@@ -481,17 +523,28 @@ async function deleteWelcomeFolder(folderName, guildId = process.env.GUILD_ID ||
 // Erstelle Standard-Ordner automatisch
 async function autoCreateGameFolders(guildId = process.env.GUILD_ID || '1203994020779532348') {
     const standardFolders = [
-        'general', 'valorant', 'minecraft', 'beellgrounds', 
-        'gaming', 'anime', 'memes', 'seasonal'
+        { name: 'general', display: 'Allgemein', emoji: '📁' },
+        { name: 'valorant', display: 'Valorant', emoji: '🎯' },
+        { name: 'minecraft', display: 'Minecraft', emoji: '⛏️' },
+        { name: 'beellgrounds', display: 'Beellgrounds', emoji: '🐝' },
+        { name: 'gaming', display: 'Gaming', emoji: '🎮' },
+        { name: 'anime', display: 'Anime', emoji: '🎌' },
+        { name: 'memes', display: 'Memes', emoji: '😂' },
+        { name: 'seasonal', display: 'Seasonal', emoji: '🎄' }
     ];
 
     console.log('🎮 Erstelle Standard Game Folders...');
 
     for (const folder of standardFolders) {
-        await createWelcomeFolder(folder, guildId);
+        const result = await createWelcomeFolder(folder.name, guildId, folder.display, folder.emoji);
+        if (result.success) {
+            console.log(`✅ Ordner "${folder.name}" erstellt`);
+        } else if (result.error && !result.error.includes('already exists') && !result.error.includes('existiert bereits')) {
+            console.error(`❌ Fehler bei Ordner "${folder.name}":`, result.error);
+        }
     }
 
-    console.log('✅ Standard Folders erstellt');
+    console.log('✅ Standard Folders Initialisierung abgeschlossen');
 }
 
 // Hole Emoji für Ordner-Typ

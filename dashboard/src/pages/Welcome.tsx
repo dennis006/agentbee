@@ -68,6 +68,7 @@ const Welcome = () => {
   const [uploadedImages, setUploadedImages] = useState<any[]>([])
   const [uploading, setUploading] = useState(false)
   const [folders, setFolders] = useState<{[key: string]: any[]}>({})
+  const [availableFolders, setAvailableFolders] = useState<string[]>([])
   const [selectedFolder, setSelectedFolder] = useState<string>('general')
   const [newFolderName, setNewFolderName] = useState('')
   const [showNewFolderInput, setShowNewFolderInput] = useState(false)
@@ -280,11 +281,17 @@ const Welcome = () => {
         setUploadedImages(data.images || []);
         setFolders(data.folders || {});
         
-        // Setze ersten verfügbaren Ordner als Standard falls selectedFolder nicht existiert
+        // WICHTIG: Verwende allFolderNames für vollständige Ordner-Liste
         const availableFolders = data.allFolderNames || data.folderNames || [];
+        setAvailableFolders(availableFolders);
+        
         if (availableFolders.length > 0 && !availableFolders.includes(selectedFolder)) {
           setSelectedFolder(availableFolders[0]);
         }
+        
+        console.log('📁 Verfügbare Ordner:', availableFolders);
+        console.log('🖼️ Ordner mit Bildern:', data.folderNames);
+        console.log('📊 Ordner-Daten:', data.folders);
       }
     } catch (err) {
       console.error('Fehler beim Laden der Bilder:', err);
@@ -1022,7 +1029,7 @@ const Welcome = () => {
                 
                 {/* Ordner-Tabs */}
                 <div className="flex flex-wrap gap-2">
-                  {Object.keys(folders).map((folderName) => (
+                  {availableFolders.map((folderName) => (
                     <div
                       key={folderName}
                       className="relative group"
@@ -1131,7 +1138,7 @@ const Welcome = () => {
                         className="w-full bg-dark-bg border border-purple-primary/30 text-dark-text rounded-lg px-3 py-1 focus:border-pink-400 text-xs"
                       >
                         <option value="">Alle Ordner (Standard)</option>
-                        {Object.keys(folders).map(folderName => (
+                        {availableFolders.map(folderName => (
                           <option key={folderName} value={folderName}>
                             {folderName} ({folders[folderName]?.length || 0} Bilder)
                           </option>
