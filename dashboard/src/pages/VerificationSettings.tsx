@@ -431,10 +431,10 @@ const VerificationSettings = () => {
         success(`🗑️ Verifizierung von "${username}" erfolgreich gelöscht!`);
       } else {
         const error = await response.json();
-        showError(`❌ Fehler: ${error.message || 'Löschen fehlgeschlagen'}`);
+        error(`❌ Fehler: ${error.message || 'Löschen fehlgeschlagen'}`);
       }
     } catch (error) {
-      showError('❌ Fehler beim Löschen der Verifizierung');
+      error('❌ Fehler beim Löschen der Verifizierung');
     } finally {
       setDeleting(null);
       setDeleteModal({ show: false, userId: '', username: '' });
@@ -443,7 +443,7 @@ const VerificationSettings = () => {
 
   const postVerificationMessage = async () => {
     if (!config.verificationChannel?.trim()) {
-      showError('❌ Bitte gib einen Channel-Namen ein');
+      error('❌ Bitte gib einen Channel-Namen ein');
       return;
     }
 
@@ -465,10 +465,10 @@ const VerificationSettings = () => {
         success(`✅ Verifizierungsnachricht erfolgreich in #${config.verificationChannel} gepostet!`);
       } else {
         const error = await response.json();
-        showError(`❌ Fehler beim Posten: ${error.error || 'Unbekannter Fehler'}`);
+        error(`❌ Fehler beim Posten: ${error.error || 'Unbekannter Fehler'}`);
       }
     } catch (error) {
-      showError('❌ Netzwerkfehler beim Posten der Nachricht');
+      error('❌ Netzwerkfehler beim Posten der Nachricht');
     } finally {
       setPostingVerification(false);
     }
@@ -517,14 +517,14 @@ const VerificationSettings = () => {
         }
         
         if (result.failedRoles.length > 0) {
-          showError(`⚠️ Fehler bei ${result.failedRoles.length} Rollen: ${result.failedRoles.join(', ')}`);
+          error(`⚠️ Fehler bei ${result.failedRoles.length} Rollen: ${result.failedRoles.join(', ')}`);
         }
       } else {
         const errorData = await response.json();
-        showError(`❌ ${errorData.error || 'Fehler beim Erstellen der Rollen'}`);
+        error(`❌ ${errorData.error || 'Fehler beim Erstellen der Rollen'}`);
       }
     } catch (error) {
-      showError('❌ Fehler beim Erstellen der Verification-Rollen');
+      error('❌ Fehler beim Erstellen der Verification-Rollen');
     } finally {
       setCreatingRoles(false);
     }
