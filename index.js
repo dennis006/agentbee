@@ -72,10 +72,23 @@ console.log('🔍 Supabase Initialisierung Ergebnis:', supabaseInitialized);
 
 // GitHub Welcome-Ordner vorab erstellen (OHNE Upload)
 async function createWelcomeFoldersOnGitHub() {
-    if (!apiKeys.github.token || !apiKeys.github.username || !apiKeys.github.repository) {
-        console.log('⚠️ GitHub Credentials unvollständig - Ordner werden bei Upload erstellt');
+    console.log('🚀 createWelcomeFoldersOnGitHub gestartet...');
+    
+    // Prüfe GitHub-Konfiguration
+    if (!apiKeys.github?.token || !apiKeys.github?.username || !apiKeys.github?.repository) {
+        console.error('❌ GitHub Credentials unvollständig:', {
+            hasToken: !!apiKeys.github?.token,
+            hasUsername: !!apiKeys.github?.username,
+            hasRepository: !!apiKeys.github?.repository
+        });
         return false;
     }
+    
+    console.log('🔧 GitHub Config:', {
+        username: apiKeys.github.username,
+        repository: apiKeys.github.repository,
+        hasToken: !!apiKeys.github.token
+    });
     
     const WELCOME_FOLDERS = [
         { name: 'general', desc: 'Allgemeine Welcome Bilder' },
@@ -92,8 +105,16 @@ async function createWelcomeFoldersOnGitHub() {
     try {
         console.log('📁 Erstelle Welcome-Ordner auf GitHub vorab...');
         
+        // Dynamischer Import für ES Module
+        const { Octokit } = await import('@octokit/rest');
+        const octokit = new Octokit({ auth: apiKeys.github.token });
+        
+        console.log('🐙 Octokit Client initialisiert');
+        
         for (const folder of WELCOME_FOLDERS) {
             try {
+                console.log(`📁 Erstelle Ordner: ${folder.name}`);
+                
                 const path = `public/images/welcome/${folder.name}/.gitkeep`;
                 const content = `# Welcome Images Folder: ${folder.name}\n` +
                               `# ${folder.desc}\n` +
@@ -101,10 +122,7 @@ async function createWelcomeFoldersOnGitHub() {
                               `# This file ensures the folder exists on GitHub\n` +
                               `# Images will be uploaded here by the Discord Bot\n`;
                 
-                const { Octokit } = require('@octokit/rest');
-                const octokit = new Octokit({ auth: apiKeys.github.token });
-                
-                await octokit.repos.createOrUpdateFileContents({
+                await octokit.rest.repos.createOrUpdateFileContents({
                     owner: apiKeys.github.username,
                     repo: apiKeys.github.repository,
                     path: path,
@@ -117,20 +135,29 @@ async function createWelcomeFoldersOnGitHub() {
                 successCount++;
                 
             } catch (error) {
-                if (error.status === 422 && error.message.includes('same')) {
+                if (error.status === 422 && (error.message.includes('same') || error.message.includes('no changes'))) {
                     console.log(`📁 Ordner ${folder.name} existiert bereits (unverändert)`);
                     successCount++;
                 } else {
-                    console.error(`❌ Fehler bei ${folder.name}: ${error.message}`);
+                    console.error(`❌ Fehler bei ${folder.name}:`, {
+                        status: error.status,
+                        message: error.message,
+                        url: error.request?.url
+                    });
                 }
             }
         }
         
-        console.log(`🎉 GitHub Welcome-Ordner Setup: ${successCount}/${WELCOME_FOLDERS.length} erfolgreich!`);
-        return successCount === WELCOME_FOLDERS.length;
+        const allSuccess = successCount === WELCOME_FOLDERS.length;
+        console.log(`🎉 GitHub Welcome-Ordner Setup: ${successCount}/${WELCOME_FOLDERS.length} erfolgreich! Alle erfolgreich: ${allSuccess}`);
+        return allSuccess;
         
     } catch (error) {
-        console.error('❌ GitHub Ordner-Setup fehlgeschlagen:', error.message);
+        console.error('❌ GitHub Ordner-Setup fehlgeschlagen:', {
+            message: error.message,
+            status: error.status,
+            stack: error.stack
+        });
         return false;
     }
 }
@@ -3198,11 +3225,36 @@ app.post('/api/welcome/images/move', async (req, res) => {
 // GitHub Welcome Folders einmalig erstellen (API Endpoint)
 app.post('/api/welcome/create-github-folders', async (req, res) => {
     try {
-        if (!useGitHubStorage || !githubClient) {
-            return res.status(400).json({ 
-                error: 'GitHub Storage ist nicht aktiviert oder konfiguriert',
-                hint: 'Prüfe GitHub Token und Konfiguration'
+        console.log('🚀 GitHub-Ordner-Erstellung angefordert...');
+        
+        // Prüfe GitHub-Konfiguration direkt
+        if (!apiKeys.github?.token || !apiKeys.github?.username || !apiKeys.github?.repository) {
+            console.error('❌ GitHub-Konfiguration unvollständig:', {
+                hasToken: !!apiKeys.github?.token,
+                hasUsername: !!apiKeys.github?.username,
+                hasRepository: !!apiKeys.github?.repository
             });
+            return res.status(400).json({ 
+                error: 'GitHub ist nicht vollständig konfiguriert',
+                hint: 'GitHub Token, Username oder Repository fehlt',
+                config: {
+                    hasToken: !!apiKeys.github?.token,
+                    hasUsername: !!apiKeys.github?.username,
+                    hasRepository: !!apiKeys.github?.repository
+                }
+            });
+        }
+
+        // GitHub-Client bei Bedarf re-initialisieren
+        if (!githubClient) {
+            console.log('🔄 Re-initialisiere GitHub Client...');
+            const initResult = await initializeGitHub();
+            if (!initResult) {
+                return res.status(500).json({ 
+                    error: 'GitHub-Client konnte nicht initialisiert werden',
+                    hint: 'Prüfe GitHub Token und Netzwerkverbindung'
+                });
+            }
         }
 
         console.log('🚀 Starte manuelle GitHub-Ordner-Erstellung...');
@@ -3210,12 +3262,14 @@ app.post('/api/welcome/create-github-folders', async (req, res) => {
         const success = await createWelcomeFoldersOnGitHub();
         
         if (success) {
+            console.log('✅ GitHub-Ordner erfolgreich erstellt');
             res.json({ 
                 success: true, 
                 message: 'Alle GitHub Welcome-Ordner erfolgreich erstellt!',
                 folders: ['general', 'valorant', 'minecraft', 'gaming', 'anime', 'memes', 'seasonal']
             });
         } else {
+            console.log('⚠️ Nicht alle Ordner konnten erstellt werden');
             res.status(500).json({ 
                 error: 'Einige Ordner konnten nicht erstellt werden',
                 hint: 'Prüfe Console-Logs für Details'
@@ -3226,7 +3280,8 @@ app.post('/api/welcome/create-github-folders', async (req, res) => {
         console.error('❌ Fehler bei GitHub-Ordner-Erstellung:', error);
         res.status(500).json({ 
             error: 'Fehler beim Erstellen der GitHub-Ordner',
-            details: error.message
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
