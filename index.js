@@ -1818,45 +1818,23 @@ async function loadWelcomeSettingsFromSupabase() {
             return loadWelcomeSettingsFromJSON();
         }
         
-        if (!settings) {
-            console.log('📄 Keine Welcome Settings in Supabase gefunden, verwende Standard-Einstellungen');
-            // Fallback für den Fall dass die Migration noch nicht ausgeführt wurde
-            const defaultSettings = {
-                enabled: true,
-                channelName: 'willkommen',
-                title: '🎉 Willkommen auf dem Server!',
-                description: 'Hey **{user}**! Schön dass du zu **{server}** gefunden hast! 🎊',
-                color: '0x00FF7F',
-                thumbnail: 'user',
-                customThumbnail: '',
-                imageRotation: { enabled: false, mode: 'random' },
-                fields: [
-                    { name: '📋 Erste Schritte', value: 'Schaue dir unsere Regeln an und werde Teil der Community!', inline: false },
-                    { name: '💬 Support', value: 'Bei Fragen wende dich an unsere Moderatoren!', inline: true },
-                    { name: '🎮 Viel Spaß', value: 'Wir freuen uns auf dich!', inline: true }
-                ],
-                footer: 'Mitglied #{memberCount} • {server}',
-                autoRole: '',
-                mentionUser: true,
-                deleteAfter: 0,
-                dmMessage: { enabled: false, message: 'Willkommen! Schau gerne im Server vorbei! 😊' },
-                leaveMessage: {
-                    enabled: false,
-                    channelName: 'verlassen',
-                    title: '👋 Tschüss!',
-                    description: '**{user}** hat den Server verlassen. Auf Wiedersehen! 😢',
-                    color: '0xFF6B6B',
-                    mentionUser: false,
-                    deleteAfter: 0
-                }
-            };
+        if (!settings || !settings.config) {
+            console.log('📄 Keine Welcome Settings in Supabase gefunden, verwende JSON-Fallback');
+            console.log('🔍 Supabase Status:', { 
+                hasSettings: !!settings, 
+                hasConfig: !!(settings && settings.config),
+                settingsKeys: settings ? Object.keys(settings) : 'null'
+            });
             
-            // Speichere die Standard-Einstellungen in Supabase für das nächste Mal
-            console.log('💾 Erstelle Standard-Einstellungen in Supabase...');
-            await saveWelcomeSettingsToSupabase(defaultSettings);
+            // Versuche zuerst JSON-Fallback
+            const jsonSettings = loadWelcomeSettingsFromJSON();
             
-            welcomeSettings = defaultSettings; // Globale Variable setzen
-            return defaultSettings;
+            // Speichere JSON-Settings in Supabase für das nächste Mal
+            console.log('💾 Speichere JSON-Settings in Supabase...');
+            await saveWelcomeSettingsToSupabase(jsonSettings);
+            
+            welcomeSettings = jsonSettings; // Globale Variable setzen
+            return jsonSettings;
         }
         
         // Grundlegende Struktur sicherstellen
