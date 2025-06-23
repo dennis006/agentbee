@@ -91,8 +91,12 @@ function registerGiveawayAPI(app, client) {
     // Neues Giveaway erstellen
     app.post('/api/giveaway/create', async (req, res) => {
         try {
+            console.log('🎯 Giveaway-Erstellung gestartet:', new Date().toLocaleString('de-DE'));
+            console.log('📥 Request Body:', JSON.stringify(req.body, null, 2));
+            
             const giveawaySystem = client.giveawaySystem;
             if (!giveawaySystem) {
+                console.error('❌ Giveaway-System nicht initialisiert');
                 return res.status(503).json({ error: 'Giveaway-System noch nicht initialisiert' });
             }
 
@@ -110,16 +114,21 @@ function registerGiveawayAPI(app, client) {
             // Channel finden
             const guild = client.guilds.cache.first();
             if (!guild) {
+                console.error('❌ Kein Server gefunden');
                 return res.status(400).json({ error: 'Server nicht gefunden' });
             }
+            console.log('✅ Server gefunden:', guild.name);
 
             const channel = guild.channels.cache.find(c => 
                 c.name === channelName && c.type === 0
             );
             
             if (!channel) {
-                return res.status(400).json({ error: 'Channel nicht gefunden' });
+                console.error('❌ Channel nicht gefunden:', channelName);
+                console.log('📋 Verfügbare Channels:', guild.channels.cache.filter(c => c.type === 0).map(c => c.name).join(', '));
+                return res.status(400).json({ error: `Channel "${channelName}" nicht gefunden` });
             }
+            console.log('✅ Channel gefunden:', channel.name);
 
             // Host-Info (für Demo verwenden wir Bot-Info)
             const host = {
@@ -172,7 +181,8 @@ function registerGiveawayAPI(app, client) {
             });
 
         } catch (error) {
-            console.error('Fehler beim Erstellen des Giveaways:', error);
+            console.error('❌ Fehler beim Erstellen des Giveaways:', error);
+            console.error('📋 Error Stack:', error.stack);
             res.status(500).json({ error: error.message || 'Fehler beim Erstellen des Giveaways' });
         }
     });
