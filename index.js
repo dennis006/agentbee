@@ -8777,17 +8777,17 @@ app.get('/api/xp/settings', (req, res) => {
     }
 });
 
-// XP-Einstellungen speichern
-app.post('/api/xp/settings', (req, res) => {
+// XP-Einstellungen speichern - MIGRIERT ZU SUPABASE
+app.post('/api/xp/settings', async (req, res) => {
     try {
         if (!xpSystem) {
             return res.status(503).json({ error: 'XP-System nicht initialisiert' });
         }
 
         const newSettings = req.body;
-        xpSystem.updateSettings(newSettings);
+        await xpSystem.updateSettings(newSettings);
         
-        console.log('✅ XP-Einstellungen aktualisiert');
+        console.log('✅ XP-Einstellungen aktualisiert in Supabase');
         res.json({ success: true, message: 'XP-Einstellungen gespeichert' });
     } catch (error) {
         console.error('❌ Fehler beim Speichern der XP-Einstellungen:', error);
@@ -8902,7 +8902,7 @@ app.post('/api/xp/user/:userId/set', async (req, res) => {
         }
         
         // XP setzen
-        xpSystem.setUserXP(userId, xp);
+        await xpSystem.setUserXP(userId, xp);
         const userData = xpSystem.getUserData(userId);
         const newLevel = userData.level;
         
@@ -9015,18 +9015,18 @@ app.post('/api/xp/user/:userId/add', async (req, res) => {
     }
 });
 
-// User-XP zurücksetzen (Admin)
-app.delete('/api/xp/user/:userId', (req, res) => {
+// User-XP zurücksetzen (Admin) - MIGRIERT ZU SUPABASE
+app.delete('/api/xp/user/:userId', async (req, res) => {
     try {
         if (!xpSystem) {
             return res.status(503).json({ error: 'XP-System nicht initialisiert' });
         }
 
         const { userId } = req.params;
-        const success = xpSystem.resetUser(userId);
+        const success = await xpSystem.resetUser(userId);
         
         if (success) {
-            console.log(`🔧 Admin resetete XP für User ${userId}`);
+            console.log(`🔧 Admin resetete XP für User ${userId} in Supabase`);
             res.json({ success: true, message: 'User-XP zurückgesetzt' });
         } else {
             res.status(404).json({ error: 'User nicht gefunden' });
@@ -9037,8 +9037,8 @@ app.delete('/api/xp/user/:userId', (req, res) => {
     }
 });
 
-// Alle XP zurücksetzen (Admin)
-app.post('/api/xp/reset-all', (req, res) => {
+// Alle XP zurücksetzen (Admin) - MIGRIERT ZU SUPABASE
+app.post('/api/xp/reset-all', async (req, res) => {
     try {
         if (!xpSystem) {
             return res.status(503).json({ error: 'XP-System nicht initialisiert' });
@@ -9050,9 +9050,9 @@ app.post('/api/xp/reset-all', (req, res) => {
             return res.status(400).json({ error: 'Reset-Bestätigung erforderlich' });
         }
 
-        xpSystem.resetAll();
+        await xpSystem.resetAll();
         
-        console.log('🔧 Admin resetete alle XP-Daten');
+        console.log('🔧 Admin resetete alle XP-Daten in Supabase');
         res.json({ success: true, message: 'Alle XP-Daten zurückgesetzt' });
     } catch (error) {
         console.error('❌ Fehler beim Zurücksetzen aller XP:', error);

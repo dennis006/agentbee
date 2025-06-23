@@ -1,11 +1,13 @@
 const fs = require('fs');
 const { EmbedBuilder } = require('discord.js');
+const XPSupabaseAPI = require('./xp-supabase-api');
 
 class XPSystem {
     constructor(client) {
         this.client = client;
         this.userXP = new Map(); // userId -> { xp, level, totalXP, lastMessage, voiceJoinTime }
         this.voiceUsers = new Map(); // userId -> { joinTime, channelId }
+        this.supabaseAPI = new XPSupabaseAPI();
         this.settings = {
             enabled: true,
             messageXP: {
@@ -89,14 +91,65 @@ class XPSystem {
         this.startVoiceXPTimer();
     }
 
-    // Daten laden
-    loadData() {
+    // Daten laden - MIGRIERT ZU SUPABASE
+    async loadData() {
+        try {
+            console.log('🔄 Loading XP data from Supabase...');
+            
+            // Einstellungen laden
+            const loadedSettings = await this.supabaseAPI.getSettings();
+            if (loadedSettings) {
+                this.settings = { ...this.settings, ...loadedSettings };
+                
+                // Channel Blacklists laden
+                const blacklists = await this.supabaseAPI.getChannelBlacklists();
+                this.settings.channels.xpBlacklist = blacklists.xpBlacklist;
+                this.settings.channels.voiceBlacklist = blacklists.voiceBlacklist;
+                
+                // Level Roles laden
+                const levelRoles = await this.supabaseAPI.getLevelRoles();
+                this.settings.rewards.levelRoles = levelRoles;
+                
+                // Milestone Rewards laden
+                const milestoneRewards = await this.supabaseAPI.getMilestoneRewards();
+                this.settings.rewards.milestoneRewards = milestoneRewards;
+                
+                console.log('✅ XP settings loaded from Supabase');
+            }
+
+            // User-XP-Daten laden
+            const users = await this.supabaseAPI.getAllUsers();
+            if (users && users.length > 0) {
+                users.forEach(user => {
+                    this.userXP.set(user.userId, {
+                        xp: user.xp || 0,
+                        level: user.level || 1,
+                        totalXP: user.totalXP || 0,
+                        lastMessage: user.lastMessage || 0,
+                        voiceJoinTime: 0,
+                        messageCount: user.messageCount || 0,
+                        voiceTime: user.voiceTime || 0, // in Minuten
+                        username: user.username || 'Unbekannt',
+                        avatar: user.avatar || null
+                    });
+                });
+                console.log(`✅ XP data loaded for ${users.length} users from Supabase`);
+            }
+        } catch (error) {
+            console.error('❌ Error loading XP data from Supabase:', error);
+            console.log('⚠️ Falling back to local JSON files if available...');
+            this.loadDataFromJSON(); // Fallback für Migration
+        }
+    }
+
+    // Fallback-Methode für Migration von JSON zu Supabase
+    loadDataFromJSON() {
         try {
             // XP-Einstellungen laden
             if (fs.existsSync('./xp-settings.json')) {
                 const loadedSettings = JSON.parse(fs.readFileSync('./xp-settings.json', 'utf8'));
                 this.settings = { ...this.settings, ...loadedSettings };
-                console.log('✅ XP-Einstellungen geladen');
+                console.log('✅ XP-Einstellungen von JSON geladen (Fallback)');
             }
 
             // User-XP-Daten laden
@@ -115,15 +168,40 @@ class XPSystem {
                         avatar: user.avatar || null
                     });
                 });
-                console.log(`✅ XP-Daten für ${xpData.length} User geladen`);
+                console.log(`✅ XP-Daten für ${xpData.length} User von JSON geladen (Fallback)`);
             }
         } catch (error) {
-            console.error('❌ Fehler beim Laden der XP-Daten:', error);
+            console.error('❌ Fehler beim Laden der XP-Daten von JSON:', error);
         }
     }
 
-    // Daten speichern
-    saveData() {
+    // Daten speichern - MIGRIERT ZU SUPABASE
+    async saveData() {
+        try {
+            // Einstellungen in Supabase speichern
+            await this.supabaseAPI.updateSettings(this.settings);
+            
+            // Channel Blacklists speichern
+            await this.supabaseAPI.updateChannelBlacklists(
+                this.settings.channels.xpBlacklist,
+                this.settings.channels.voiceBlacklist
+            );
+
+            // User-Daten in Supabase speichern
+            for (const [userId, userData] of this.userXP.entries()) {
+                await this.supabaseAPI.updateUser(userId, userData);
+            }
+            
+            console.log('✅ XP data saved to Supabase');
+        } catch (error) {
+            console.error('❌ Error saving XP data to Supabase:', error);
+            // Fallback zu JSON nur während der Migration
+            this.saveDataToJSON();
+        }
+    }
+
+    // Fallback-Methode für JSON-Speicherung
+    saveDataToJSON() {
         try {
             // Einstellungen speichern
             fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
@@ -134,8 +212,9 @@ class XPSystem {
                 ...data
             }));
             fs.writeFileSync('./xp-data.json', JSON.stringify(xpData, null, 2));
+            console.log('✅ XP data saved to JSON (fallback)');
         } catch (error) {
-            console.error('❌ Fehler beim Speichern der XP-Daten:', error);
+            console.error('❌ Error saving XP data to JSON:', error);
         }
     }
 
@@ -169,6 +248,13 @@ class XPSystem {
         if (newLevel > oldLevel) {
             await this.handleLevelUp(message.guild, message.author, oldLevel, newLevel);
         }
+
+        // Speichere User-Daten in Supabase
+        try {
+            await this.supabaseAPI.updateUser(userId, userData);
+        } catch (error) {
+            console.error('❌ Error updating user XP in Supabase:', error);
+        }
     }
 
     // Voice-XP hinzufügen
@@ -198,71 +284,83 @@ class XPSystem {
                 console.log(`🎤 ${newState.member.user.username} left voice after ${timeSpent.toFixed(1)} minutes`);
             }
         }
-        // User moved between Voice Channels
+        // User switched channels
         else if (oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) {
             if (this.voiceUsers.has(userId)) {
                 const voiceData = this.voiceUsers.get(userId);
-                const timeSpent = (Date.now() - voiceData.joinTime) / 1000 / 60;
+                const timeSpent = (Date.now() - voiceData.joinTime) / 1000 / 60; // Minuten
                 
                 this.addVoiceXP(userId, timeSpent, oldState.channel, newState.member.user);
                 
-                // Update für neuen Channel
+                // Neue Session starten
                 this.voiceUsers.set(userId, {
                     joinTime: Date.now(),
                     channelId: newState.channel.id,
                     channelName: newState.channel.name
                 });
-                console.log(`🎤 ${newState.member.user.username} moved voice: ${oldState.channel.name} -> ${newState.channel.name}`);
+                console.log(`🎤 ${newState.member.user.username} switched from ${oldState.channel.name} to ${newState.channel.name} (${timeSpent.toFixed(1)} min)`);
             }
         }
     }
 
     // Voice-XP hinzufügen
-    addVoiceXP(userId, minutes, channel, user) {
-        if (minutes < 0.5) return; // Mindestens 30 Sekunden
+    async addVoiceXP(userId, minutes, channel, user) {
+        if (!this.settings.enabled) return;
         if (this.settings.channels.voiceBlacklist.includes(channel.name)) return;
+        if (minutes < 0.1) return; // Mindestens 6 Sekunden
 
+        const userData = this.getUserData(userId);
         let xpMultiplier = 1;
-        
+
         // AFK Channel Check
         if (channel.name.toLowerCase().includes('afk')) {
-            xpMultiplier = this.settings.voiceXP.afkChannelXP;
+            xpMultiplier = this.settings.voiceXP.afkChannelXP / this.settings.voiceXP.baseXP;
         }
-        // Solo Channel Check (nur 1 Person im Channel)
-        else if (channel.members.size === 1) {
-            xpMultiplier = this.settings.voiceXP.soloChannelXP;
+        // Solo Channel Check (nur ein User)
+        else if (channel.members.size <= 1) {
+            xpMultiplier = this.settings.voiceXP.soloChannelXP / this.settings.voiceXP.baseXP;
         }
 
         const xpGain = Math.floor(minutes * this.settings.voiceXP.baseXP * xpMultiplier);
+        if (xpGain <= 0) return;
+
+        // Update User-Daten
+        userData.voiceTime += minutes;
+        const oldLevel = userData.level;
         
-        if (xpGain > 0) {
-            const userData = this.getUserData(userId);
-            userData.voiceTime += minutes;
-            this.addXP(userId, xpGain, user);
-            
-            console.log(`🎤 Voice XP: ${user.username} +${xpGain} XP (${minutes.toFixed(1)}min in ${channel.name})`);
+        this.addXP(userId, xpGain, user);
+        
+        // Level-Up Check
+        const newLevel = userData.level;
+        if (newLevel > oldLevel && this.client.guilds.cache.size > 0) {
+            await this.handleLevelUp(this.client.guilds.cache.first(), user, oldLevel, newLevel);
+        }
+
+        // Speichere User-Daten in Supabase
+        try {
+            await this.supabaseAPI.updateUser(userId, userData);
+        } catch (error) {
+            console.error('❌ Error updating user voice XP in Supabase:', error);
         }
     }
 
-    // Timer für kontinuierliche Voice-XP
+    // Voice-XP Timer
     startVoiceXPTimer() {
-        setInterval(() => {
-            this.voiceUsers.forEach((voiceData, userId) => {
-                const user = this.client.users.cache.get(userId);
-                if (user) {
-                    const channel = this.client.channels.cache.get(voiceData.channelId);
-                    if (channel) {
-                        const timeSpent = (Date.now() - voiceData.joinTime) / 1000 / 60;
-                        
-                        if (timeSpent >= this.settings.voiceXP.intervalMinutes) {
-                            this.addVoiceXP(userId, this.settings.voiceXP.intervalMinutes, channel, user);
-                            // Reset join time für kontinuierliche XP
-                            voiceData.joinTime = Date.now();
-                        }
+        setInterval(async () => {
+            if (!this.settings.enabled) return;
+
+            for (const [userId, voiceData] of this.voiceUsers.entries()) {
+                const timeSpent = this.settings.voiceXP.intervalMinutes; // Minuten
+                const channel = this.client.channels.cache.get(voiceData.channelId);
+                
+                if (channel && channel.members) {
+                    const user = channel.members.get(userId)?.user;
+                    if (user) {
+                        await this.addVoiceXP(userId, timeSpent, channel, user);
                     }
                 }
-            });
-        }, this.settings.voiceXP.cooldown);
+            }
+        }, this.settings.voiceXP.intervalMinutes * 60 * 1000);
     }
 
     // User-Daten abrufen oder erstellen
@@ -283,34 +381,32 @@ class XPSystem {
         return this.userXP.get(userId);
     }
 
-    // XP hinzufügen
+    // XP zu User hinzufügen
     addXP(userId, amount, user) {
         const userData = this.getUserData(userId);
-        const oldTotalXP = userData.totalXP;
         const oldLevel = userData.level;
-        const oldMaxLevel = this.getStats().maxLevel;
+        const oldTotalXP = userData.totalXP;
         
-        userData.xp += amount;
-        userData.totalXP += amount;
-        userData.username = user.username;
-        userData.avatar = user.avatar;
-
-        // Level berechnen
-        const newLevel = this.calculateLevel(userData.totalXP);
-        if (newLevel !== userData.level) {
-            userData.level = newLevel;
+        // Update Benutzerinformationen
+        if (user) {
+            userData.username = user.username || user.displayName || 'Unbekannt';
+            userData.avatar = user.avatar;
         }
 
-        this.userXP.set(userId, userData);
-        this.saveData();
+        userData.xp += amount;
+        userData.totalXP += amount;
+        userData.level = this.calculateLevel(userData.totalXP);
 
         // Meilenstein-Check
         this.checkMilestones(userId, oldTotalXP, userData.totalXP, user);
-        
-        // Rekord-Check (nur wenn Client verfügbar ist)
-        if (this.client) {
-            this.checkNewRecords(userId, oldLevel, newLevel, oldMaxLevel, user);
+
+        // Rekord-Check
+        if (userData.level > oldLevel) {
+            const oldMaxLevel = this.getStats().maxLevel;
+            this.checkNewRecords(userId, oldLevel, userData.level, oldMaxLevel, user);
         }
+
+        console.log(`📈 ${userData.username}: +${amount} XP (Level ${userData.level}, Total: ${userData.totalXP})`);
     }
 
     // Level berechnen
@@ -1018,8 +1114,8 @@ class XPSystem {
         return '█'.repeat(filled) + '░'.repeat(empty);
     }
 
-    // Einstellungen aktualisieren
-    updateSettings(newSettings) {
+    // Einstellungen aktualisieren - MIGRIERT ZU SUPABASE
+    async updateSettings(newSettings) {
         // Deep merge für nested objects (besonders autoLeaderboard)
         this.settings = this.deepMerge(this.settings, newSettings);
         
@@ -1042,7 +1138,22 @@ class XPSystem {
         console.log('  - Typen:', this.settings.autoLeaderboard.types);
         console.log('  - Gespeicherte Message-IDs:', this.settings.autoLeaderboard.lastMessageIds?.length || 0);
         
-        this.saveData();
+        try {
+            // Einstellungen in Supabase speichern
+            await this.supabaseAPI.updateSettings(this.settings);
+            
+            // Channel Blacklists separat speichern
+            await this.supabaseAPI.updateChannelBlacklists(
+                this.settings.channels.xpBlacklist,
+                this.settings.channels.voiceBlacklist
+            );
+            
+            console.log('✅ Settings updated in Supabase');
+        } catch (error) {
+            console.error('❌ Error updating settings in Supabase:', error);
+            // Fallback
+            this.saveDataToJSON();
+        }
     }
     
     // Helper für deep merge
@@ -1060,30 +1171,52 @@ class XPSystem {
         return result;
     }
 
-    // User XP setzen (Admin-Funktion)
-    setUserXP(userId, xp) {
+    // User XP setzen (Admin-Funktion) - MIGRIERT ZU SUPABASE
+    async setUserXP(userId, xp) {
         const userData = this.getUserData(userId);
         userData.xp = xp;
         userData.totalXP = xp;
         userData.level = this.calculateLevel(xp);
         this.userXP.set(userId, userData);
-        this.saveData();
+        
+        try {
+            await this.supabaseAPI.updateUser(userId, userData);
+            console.log(`✅ User ${userId} XP set to ${xp} in Supabase`);
+        } catch (error) {
+            console.error('❌ Error setting user XP in Supabase:', error);
+            this.saveDataToJSON(); // Fallback
+        }
     }
 
-    // User XP zurücksetzen
-    resetUser(userId) {
+    // User XP zurücksetzen - MIGRIERT ZU SUPABASE
+    async resetUser(userId) {
         if (this.userXP.has(userId)) {
             this.userXP.delete(userId);
-            this.saveData();
-            return true;
+            
+            try {
+                await this.supabaseAPI.deleteUser(userId);
+                console.log(`✅ User ${userId} reset in Supabase`);
+                return true;
+            } catch (error) {
+                console.error('❌ Error resetting user in Supabase:', error);
+                this.saveDataToJSON(); // Fallback
+                return false;
+            }
         }
         return false;
     }
 
-    // Alle XP zurücksetzen
-    resetAll() {
+    // Alle XP zurücksetzen - MIGRIERT ZU SUPABASE
+    async resetAll() {
         this.userXP.clear();
-        this.saveData();
+        
+        try {
+            await this.supabaseAPI.deleteAllUsers();
+            console.log('✅ All users reset in Supabase');
+        } catch (error) {
+            console.error('❌ Error resetting all users in Supabase:', error);
+            this.saveDataToJSON(); // Fallback
+        }
     }
 
     // Automatisches Leaderboard erstellen und posten (Verbessertes Design)
