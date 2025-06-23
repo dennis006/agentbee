@@ -1035,7 +1035,7 @@ async function handleMusicMP3SongSelect(interaction) {
         try {
             // Simuliere Dashboard API-Call
             const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 3001}`;
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
             console.log(`🔄 API Call: POST ${API_URL}/api/music/play/${guildId}`);
             console.log(`📦 Body: { songId: "${songId}" }`);
