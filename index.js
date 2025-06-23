@@ -16,7 +16,7 @@ const setupTwitchAPI = require('./twitch-api');
 const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
 const aiMusicRecommendations = require('./ai-music-recommendations');
 const { OpenAI } = require('openai');
-const { makeValorantCard } = require('./src/utils/valorantCard');
+const { createAdvancedValorantCard } = require('./src/utils/valorantCardSVGAdvanced');
 const TicketSystem = require('./ticket-system');
 const ServerStats = require('./server-stats-api');
 const settingsAPI = require('./settings-api');
@@ -951,19 +951,22 @@ async function handleValorantModalSubmission(interaction) {
                 });
             }
 
-            // Bereite Daten für die Karte vor mit Fallback-Werten
+            // Bereite Daten für die erweiterte Karte vor mit Fallback-Werten
             const cardStats = {
                 name: playerData?.account?.name || 'Unknown',
                 tag: playerData?.account?.tag || '0000',
                 level: accountInfo?.account_level || 1,
                 currentRank: currentTier?.name || 'Unranked',
+                currentTierId: currentTier?.id || 0, // Für echte Rang-Icons
                 rr: playerData?.current?.rr || 0,
                 peakRank: peakTier?.name || 'Unranked',
+                peakTierId: peakTier?.id || 0, // Für echte Peak-Rang-Icons
                 kills: matchStats?.kills || 0,
                 deaths: matchStats?.deaths || 0,
                 assists: matchStats?.assists || 0,
                 adr: Math.round(matchStats?.adr || 0),
                 hsRate: Math.round((matchStats?.headshotRate || 0) * 10) / 10,
+                mostPlayedAgent: mostPlayedAgent || 'Verschiedene', // Agenten-Name
                 agentIconUrl: mostPlayedAgent ? `https://media.valorant-api.com/agents/${await getAgentUUID(mostPlayedAgent)}/displayicon.png` : null,
                 // Zusätzliche Daten für das neue Design
                 totalMatches: matchStats?.totalMatches || 0,
@@ -987,20 +990,21 @@ async function handleValorantModalSubmission(interaction) {
                 totalMatches: cardStats.totalMatches
             });
             
-            // Erstelle die Karte
-            const cardResult = await makeValorantCard(cardStats);
+            // Erstelle die erweiterte Karte mit echten Icons und Agenten-Bildern
+            const cardResult = await createAdvancedValorantCard(cardStats);
             
-            // Prüfe ob Canvas verfügbar ist oder Text-Fallback verwendet wird
+            // Prüfe ob SVG-Erstellung erfolgreich war oder Text-Fallback verwendet wird
             if (typeof cardResult === 'string') {
-                // Canvas nicht verfügbar - verwende Text-basierte Statistiken
-                console.log('📝 Canvas nicht verfügbar - verwende Text-Statistiken');
+                // SVG-Erstellung fehlgeschlagen - verwende Text-basierte Statistiken
+                console.log('📝 SVG-Bildgenerierung fehlgeschlagen - verwende Text-Statistiken');
                 textFallback = cardResult;
                 cardAttachment = null;
             } else {
-                // Canvas verfügbar - erstelle Discord-Attachment
+                // SVG erfolgreich zu PNG konvertiert - erstelle Discord-Attachment
                 cardAttachment = new AttachmentBuilder(cardResult, { 
                     name: `valorant-stats-${playerName}-${playerTag}.png` 
                 });
+                console.log('🎨 Erweiterte Valorant-Karte mit echten Icons erfolgreich generiert!');
             }
             
             console.log('✅ Valorant-Karte erfolgreich erstellt');
