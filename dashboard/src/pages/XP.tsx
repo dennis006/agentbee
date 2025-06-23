@@ -1,3 +1,14 @@
+/*
+ * XP System Dashboard - Supabase Version
+ * 
+ * Dieses Dashboard wurde für die Supabase-Integration des XP-Systems optimiert.
+ * Features:
+ * - Robuste API-Response-Behandlung für verschiedene Datenstrukturen
+ * - Unterstützung für lastMessageIds Auto-Delete-Feature
+ * - Rückwärtskompatibilität mit JSON-basiertem System
+ * - Erweiterte Error-Behandlung für Supabase-Fehler
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -143,6 +154,7 @@ interface XPSettings {
     types: string[];
     limit: number;
     lastPosted: number;
+    lastMessageIds?: string[]; // Supabase: Optional für Rückwärtskompatibilität
     autoDeleteOld: boolean;
   };
   rewards: {
@@ -198,6 +210,9 @@ interface LeaderboardUser {
   messageCount: number;
   voiceTime: number;
   xp: number;
+  // Supabase: Optional fields for enhanced compatibility
+  lastActive?: string;
+  joinedAt?: string;
 }
 
 interface XPStats {
@@ -303,12 +318,18 @@ const XP: React.FC = () => {
 
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
+        // Supabase: Ensure lastMessageIds exists for backward compatibility
+        if (settingsData.autoLeaderboard && !settingsData.autoLeaderboard.lastMessageIds) {
+          settingsData.autoLeaderboard.lastMessageIds = [];
+        }
         setSettings(settingsData);
       }
 
       if (leaderboardRes.ok) {
         const leaderboardData = await leaderboardRes.json();
-        setLeaderboard(leaderboardData.leaderboard);
+        // Supabase: Handle different response structures
+        const leaderboard = leaderboardData.leaderboard || leaderboardData.data || leaderboardData;
+        setLeaderboard(Array.isArray(leaderboard) ? leaderboard : []);
       }
 
       if (statsRes.ok) {
@@ -318,7 +339,9 @@ const XP: React.FC = () => {
 
       if (rolesRes.ok) {
         const rolesData = await rolesRes.json();
-        setRoles(rolesData.roles);
+        // Supabase: Handle different response structures
+        const roles = rolesData.roles || rolesData.data || rolesData;
+        setRoles(Array.isArray(roles) ? roles : []);
       }
 
       if (channelsRes.ok) {
@@ -328,7 +351,11 @@ const XP: React.FC = () => {
 
     } catch (error) {
       console.error('Fehler beim Laden der XP-Daten:', error);
-      showMessage('error', 'Fehler beim Laden der Daten');
+      // Supabase: More specific error messages
+      const errorMessage = error instanceof Error 
+        ? `Fehler beim Laden der Daten: ${error.message}`
+        : 'Fehler beim Laden der Daten. Prüfe die Supabase-Verbindung.';
+      showMessage('error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -1669,6 +1696,12 @@ const XP: React.FC = () => {
                           }
                         </span>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-dark-muted">Message IDs gespeichert:</span>
+                        <span className="text-purple-300">
+                          {settings.autoLeaderboard.lastMessageIds?.length || 0}
+                        </span>
+                      </div>
                     </div>
                     
                     {!settings.autoLeaderboard.autoDeleteOld && (
@@ -2448,30 +2481,32 @@ const XP: React.FC = () => {
             <CardContent>
               <div className="space-y-2">
                 {leaderboard
+                  // Supabase: Filter out invalid entries
+                  .filter(user => user && user.userId && user.username)
                   .sort((a, b) => {
                     switch (leaderboardType) {
                       case 'total': 
-                        return b.totalXP - a.totalXP;
+                        return (b.totalXP || 0) - (a.totalXP || 0);
                       case 'level': 
                         // Erst nach Level sortieren, dann bei gleichem Level nach totalXP
-                        if (b.level !== a.level) {
-                          return b.level - a.level;
+                        if ((b.level || 0) !== (a.level || 0)) {
+                          return (b.level || 0) - (a.level || 0);
                         }
-                        return b.totalXP - a.totalXP;
+                        return (b.totalXP || 0) - (a.totalXP || 0);
                       case 'messages': 
                         // Erst nach Messages, dann bei gleichen Messages nach totalXP
-                        if (b.messageCount !== a.messageCount) {
-                          return b.messageCount - a.messageCount;
+                        if ((b.messageCount || 0) !== (a.messageCount || 0)) {
+                          return (b.messageCount || 0) - (a.messageCount || 0);
                         }
-                        return b.totalXP - a.totalXP;
+                        return (b.totalXP || 0) - (a.totalXP || 0);
                       case 'voice': 
                         // Erst nach Voice-Zeit, dann bei gleicher Zeit nach totalXP
-                        if (b.voiceTime !== a.voiceTime) {
-                          return b.voiceTime - a.voiceTime;
+                        if ((b.voiceTime || 0) !== (a.voiceTime || 0)) {
+                          return (b.voiceTime || 0) - (a.voiceTime || 0);
                         }
-                        return b.totalXP - a.totalXP;
+                        return (b.totalXP || 0) - (a.totalXP || 0);
                       default: 
-                        return b.totalXP - a.totalXP;
+                        return (b.totalXP || 0) - (a.totalXP || 0);
                     }
                   })
                   .slice(0, 25)
@@ -2481,22 +2516,23 @@ const XP: React.FC = () => {
                     let primaryValue = '';
                     let secondaryValue = '';
                     
+                    // Supabase: Safe data access with fallbacks
                     switch (leaderboardType) {
                       case 'total':
-                        primaryValue = `${user.totalXP.toLocaleString()} XP`;
-                        secondaryValue = `Level ${user.level}`;
+                        primaryValue = `${(user.totalXP || 0).toLocaleString()} XP`;
+                        secondaryValue = `Level ${user.level || 0}`;
                         break;
                       case 'level':
-                        primaryValue = `Level ${user.level}`;
-                        secondaryValue = `${user.totalXP.toLocaleString()} XP`;
+                        primaryValue = `Level ${user.level || 0}`;
+                        secondaryValue = `${(user.totalXP || 0).toLocaleString()} XP`;
                         break;
                       case 'messages':
-                        primaryValue = `${user.messageCount.toLocaleString()} Nachrichten`;
-                        secondaryValue = `Level ${user.level}`;
+                        primaryValue = `${(user.messageCount || 0).toLocaleString()} Nachrichten`;
+                        secondaryValue = `Level ${user.level || 0}`;
                         break;
                       case 'voice':
-                        primaryValue = `${user.voiceTime.toFixed(1)} min`;
-                        secondaryValue = `Level ${user.level}`;
+                        primaryValue = `${(user.voiceTime || 0).toFixed(1)} min`;
+                        secondaryValue = `Level ${user.level || 0}`;
                         break;
                     }
 
@@ -2512,7 +2548,7 @@ const XP: React.FC = () => {
                         <div className="text-right">
                           <div className="font-bold text-neon-purple">{primaryValue}</div>
                           <div className="text-sm text-dark-muted">
-                            {user.messageCount} Nachrichten • {user.voiceTime.toFixed(1)}min Voice
+                            {(user.messageCount || 0)} Nachrichten • {(user.voiceTime || 0).toFixed(1)}min Voice
                           </div>
                         </div>
                       </div>
