@@ -1031,16 +1031,16 @@ async function handleMusicMP3SongSelect(interaction) {
             console.error(`❌ Song "${songId}" nicht in verfügbaren Songs gefunden`);
             console.log(`📋 Verfügbare Songs: ${availableSongs.map(s => s.id).join(', ')}`);
             
-            await interaction.reply({
-                content: `❌ **Song nicht gefunden!**\n\nSong-ID: \`${songId}\`\n\nVerfügbare Songs: ${availableSongs.length}`,
-                ephemeral: true
-            });
+                    await interaction.reply({
+            content: `❌ **Song nicht gefunden!**\n\nSong-ID: \`${songId}\`\n\nVerfügbare Songs: ${availableSongs.length}`,
+            flags: 64 // MessageFlags.Ephemeral
+        });
             return;
         }
 
         await interaction.reply({
             content: `🎵 **MP3 wird gestartet...**\n\n**Song:** ${song.title}\n**Künstler:** ${song.artist || 'Unbekannt'}\n\nEinen Moment bitte...`,
-            ephemeral: true
+            flags: 64 // MessageFlags.Ephemeral
         });
 
         // Spiele MP3-Song
@@ -1049,16 +1049,14 @@ async function handleMusicMP3SongSelect(interaction) {
             
             // Update Reply mit Erfolg
             await interaction.editReply({
-                content: `✅ **MP3 gestartet!**\n\n🎵 **${song.title}**\n🎤 ${song.artist || 'Unbekannt'}`,
-                ephemeral: true
+                content: `✅ **MP3 gestartet!**\n\n🎵 **${song.title}**\n🎤 ${song.artist || 'Unbekannt'}`
             });
             
         } catch (playError) {
             console.error('❌ Fehler beim Abspielen:', playError);
             
             await interaction.editReply({
-                content: `❌ **Fehler beim Abspielen**\n\n🎵 **Song:** ${song.title}\n❌ **Fehler:** ${playError.message}`,
-                ephemeral: true
+                content: `❌ **Fehler beim Abspielen**\n\n🎵 **Song:** ${song.title}\n❌ **Fehler:** ${playError.message}`
             });
             return;
         }
@@ -1074,13 +1072,12 @@ async function handleMusicMP3SongSelect(interaction) {
         try {
             if (interaction.replied || interaction.deferred) {
                 await interaction.editReply({
-                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\``,
-                    ephemeral: true
+                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\``
                 });
             } else {
                 await interaction.reply({
                     content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\``,
-                    ephemeral: true
+                    flags: 64 // MessageFlags.Ephemeral
                 });
             }
         } catch (replyError) {
@@ -1665,6 +1662,67 @@ function registerMusicAPI(app) {
     // Beide URL-Formate für Kompatibilität
     app.post('/api/music/interactive-panel/update/:guildId', handlePanelUpdate);
     app.post('/api/music/interactive-panel/:guildId/update', handlePanelUpdate);
+
+    // Force refresh panel with new song IDs
+    app.post('/api/music/interactive-panel/:guildId/refresh', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            console.log(`🔄 Force Refresh Panel für Guild: ${guildId}`);
+            
+            // Scanne Musik-Verzeichnis neu für aktuelle Song-IDs
+            const freshSongs = scanMusicDirectory();
+            console.log(`🎵 Frische Songs gefunden: ${freshSongs.length}`);
+            freshSongs.forEach(song => {
+                console.log(`- ${song.id} (${song.title})`);
+            });
+            
+            // Lösche alte Message und erstelle neue
+            if (musicSettings.interactivePanel?.messageId) {
+                try {
+                    const guild = global.client?.guilds.cache.get(guildId);
+                    const channel = guild?.channels.cache.get(musicSettings.interactivePanel.channelId);
+                    if (channel) {
+                        const oldMessage = await channel.messages.fetch(musicSettings.interactivePanel.messageId).catch(() => null);
+                        if (oldMessage) {
+                            await oldMessage.delete();
+                            console.log('🗑️ Alte Panel-Message gelöscht');
+                        }
+                    }
+                } catch (deleteError) {
+                    console.log('⚠️ Alte Message konnte nicht gelöscht werden:', deleteError.message);
+                }
+                
+                // Reset Message ID
+                musicSettings.interactivePanel.messageId = "";
+                await saveMusicSettings(guildId);
+            }
+            
+            // Erstelle neues Panel mit frischen Song-IDs
+            const success = await postInteractiveMusicPanel(guildId);
+            
+            if (success) {
+                res.json({
+                    success: true,
+                    message: 'Panel mit neuen Song-IDs aktualisiert!',
+                    songCount: freshSongs.length,
+                    songs: freshSongs.map(s => ({ id: s.id, title: s.title }))
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Aktualisieren des Panels'
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Panel Refresh:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
 
     // Get available channels for configuration
     app.get('/api/music/channels/:guildId', (req, res) => {
