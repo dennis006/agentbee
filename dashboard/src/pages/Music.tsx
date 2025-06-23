@@ -500,7 +500,7 @@ const Music: React.FC = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'local' | 'settings'>('settings');
+  const [activeTab, setActiveTab] = useState<'local' | 'settings' | 'simplepanel'>('settings');
   const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
   
   // State
@@ -586,6 +586,15 @@ const Music: React.FC = () => {
     text: Array<{ id: string; name: string; position: number }>;
     voice: Array<{ id: string; name: string; position: number; members: number; joinable: boolean }>;
   }>({ text: [], voice: [] });
+
+  // Simple Panel State
+  const [simplePanelChannelId, setSimplePanelChannelId] = useState<string>('');
+  const [simplePanelStatus, setSimplePanelStatus] = useState<{
+    isActive: boolean;
+    messageId: string | null;
+    songsCount: number;
+  }>({ isActive: false, messageId: null, songsCount: 0 });
+  const [simplePanelLoading, setSimplePanelLoading] = useState(false);
   
 
   // Hilfsfunktion: Prüft ob ein Song in Playlists ist
@@ -1484,6 +1493,131 @@ const Music: React.FC = () => {
     });
   };
 
+  // Simple Music Panel Functions
+  const loadSimplePanelStatus = async () => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/simple-music/status/${guildId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSimplePanelStatus(data);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden des Simple Panel Status:', error);
+    }
+  };
+
+  const createSimplePanel = async () => {
+    if (!guildId || !simplePanelChannelId) {
+      showError('Fehler', 'Guild ID oder Channel ID fehlt');
+      return;
+    }
+
+    setSimplePanelLoading(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/simple-music/panel/${guildId}/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: simplePanelChannelId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('✅ Panel erstellt!', `Simple Music Panel wurde in ${data.channelName} erstellt`);
+        await loadSimplePanelStatus();
+      } else {
+        const error = await response.json();
+        showError('Fehler beim Erstellen', error.error || 'Unbekannter Fehler');
+      }
+    } catch (error) {
+      console.error('Fehler beim Erstellen des Panels:', error);
+      showError('Verbindungsfehler', 'Konnte Panel nicht erstellen');
+    } finally {
+      setSimplePanelLoading(false);
+    }
+  };
+
+  const clearSimplePanel = async () => {
+    if (!guildId) {
+      showError('Fehler', 'Guild ID fehlt');
+      return;
+    }
+
+    setSimplePanelLoading(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/simple-music/panel/${guildId}/clear`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        showSuccess('🗑️ Panels gelöscht!', 'Alle Simple Music Panels wurden entfernt');
+        await loadSimplePanelStatus();
+      } else {
+        const error = await response.json();
+        showError('Fehler beim Löschen', error.error || 'Unbekannter Fehler');
+      }
+    } catch (error) {
+      console.error('Fehler beim Löschen der Panels:', error);
+      showError('Verbindungsfehler', 'Konnte Panels nicht löschen');
+    } finally {
+      setSimplePanelLoading(false);
+    }
+  };
+
+  const playSimplePanelSong = async (songName: string) => {
+    if (!guildId) {
+      showError('Fehler', 'Guild ID fehlt');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/api/simple-music/play`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guildId, songName })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('🎵 Song gestartet!', `Spiele: ${data.songTitle}`);
+        await loadMusicStatus(guildId);
+      } else {
+        const error = await response.json();
+        showError('Fehler beim Abspielen', error.error || 'Unbekannter Fehler');
+      }
+    } catch (error) {
+      console.error('Fehler beim Abspielen:', error);
+      showError('Verbindungsfehler', 'Konnte Song nicht abspielen');
+    }
+  };
+
+  const stopSimplePanelMusic = async () => {
+    if (!guildId) {
+      showError('Fehler', 'Guild ID fehlt');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/api/simple-music/stop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guildId })
+      });
+
+      if (response.ok) {
+        showSuccess('⏹️ Musik gestoppt!', 'Wiedergabe wurde beendet');
+        await loadMusicStatus(guildId);
+      } else {
+        const error = await response.json();
+        showError('Fehler beim Stoppen', error.error || 'Unbekannter Fehler');
+      }
+    } catch (error) {
+      console.error('Fehler beim Stoppen:', error);
+      showError('Verbindungsfehler', 'Konnte Musik nicht stoppen');
+    }
+  };
+
   // Auto-Save Effect
   useEffect(() => {
     if (autoSaveTimer) {
@@ -1504,6 +1638,13 @@ const Music: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Load Simple Panel Status when guildId changes
+  useEffect(() => {
+    if (guildId) {
+      loadSimplePanelStatus();
+    }
+  }, [guildId]);
 
   if (loading) {
     return (
@@ -1547,6 +1688,14 @@ const Music: React.FC = () => {
           >
             <MusicIcon className="w-4 h-4" />
             Lokale MP3s
+          </Button>
+          <Button
+            onClick={() => setActiveTab('simplepanel')}
+            variant={activeTab === 'simplepanel' ? 'default' : 'ghost'}
+            className="flex items-center gap-2"
+          >
+            <Bot className="w-4 h-4" />
+            Simple Panel
           </Button>
           <Button
             onClick={() => setActiveTab('settings')}
@@ -2089,6 +2238,292 @@ const Music: React.FC = () => {
                   Lautstärke wird angepasst...
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : activeTab === 'simplepanel' ? (
+        /* Simple Music Panel Tab Content */
+        <div className="space-y-6">
+          {/* Panel Control */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-purple-400" />
+                Simple Music Panel
+                <div className="ml-auto flex items-center gap-2">
+                  <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${
+                    simplePanelStatus.isActive 
+                      ? 'bg-green-500/20 text-green-400 border-green-500/30' 
+                      : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${simplePanelStatus.isActive ? 'bg-green-400 animate-pulse' : 'bg-gray-500'}`}></div>
+                    <span className="text-xs font-medium">
+                      {simplePanelStatus.isActive ? 'Aktiv' : 'Inaktiv'}
+                    </span>
+                  </div>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                Direktes Musik Panel für Discord - keine Commands nötig! Einfach Buttons klicken.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Status Info */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-dark-surface/50 rounded-lg p-4 border border-purple-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MusicIcon className="w-4 h-4 text-purple-400" />
+                    <span className="text-sm font-medium text-white">Songs verfügbar</span>
+                  </div>
+                  <div className="text-2xl font-bold text-purple-400">
+                    {simplePanelStatus.songsCount || availableSongs.length}
+                  </div>
+                  <div className="text-xs text-gray-400">MP3 Dateien erkannt</div>
+                </div>
+                
+                <div className="bg-dark-surface/50 rounded-lg p-4 border border-blue-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-medium text-white">Panel Status</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-400">
+                    {simplePanelStatus.isActive ? '✅' : '❌'}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {simplePanelStatus.isActive ? 'Panel ist aktiv' : 'Kein Panel aktiv'}
+                  </div>
+                </div>
+                
+                <div className="bg-dark-surface/50 rounded-lg p-4 border border-green-primary/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-white">System Status</span>
+                  </div>
+                  <div className="text-2xl font-bold text-green-400">
+                    {settings.enabled ? '🟢' : '🔴'}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {settings.enabled ? 'System bereit' : 'System deaktiviert'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Channel Selection */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Panel Konfiguration
+                </h4>
+                
+                <div>
+                  <label className="text-sm font-medium text-dark-text mb-2 block">
+                    📋 Text-Channel für Panel
+                  </label>
+                  <Select
+                    value={simplePanelChannelId}
+                    onChange={setSimplePanelChannelId}
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
+                  >
+                    <option value="">Channel auswählen...</option>
+                    {channels.text.map(channel => (
+                      <option key={channel.id} value={channel.id}>
+                        # {channel.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    In diesem Channel wird das Simple Music Panel erstellt
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4">
+                <Button
+                  onClick={createSimplePanel}
+                  disabled={simplePanelLoading || !simplePanelChannelId || !settings.enabled}
+                  className="flex items-center gap-2"
+                >
+                  {simplePanelLoading ? (
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  Panel erstellen
+                </Button>
+
+                <Button
+                  onClick={clearSimplePanel}
+                  disabled={simplePanelLoading || !simplePanelStatus.isActive}
+                  variant="destructive"
+                  className="flex items-center gap-2"
+                >
+                  {simplePanelLoading ? (
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  Panels löschen
+                </Button>
+              </div>
+
+              {!settings.enabled && (
+                <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-400">⚠️</span>
+                    <span className="text-yellow-300 font-medium">System deaktiviert</span>
+                  </div>
+                  <p className="text-yellow-200 text-sm mt-1">
+                    Das Musik-System muss in den Einstellungen aktiviert werden, bevor Panels erstellt werden können.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Songs Preview & Direct Play */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MusicIcon className="w-5 h-5 text-green-400" />
+                Verfügbare Songs
+                <Badge variant="outline" className="ml-auto">
+                  {availableSongs.length} Songs
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                Songs direkt vom Dashboard abspielen (zum Testen)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {availableSongs.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {availableSongs.slice(0, 6).map((song) => (
+                    <div
+                      key={song.id}
+                      className="flex items-center gap-3 p-3 bg-dark-surface/50 rounded-lg border border-gray-600/30 hover:border-purple-primary/50 transition-all"
+                    >
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
+                        <MusicIcon className="w-5 h-5 text-white" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{song.title}</p>
+                        <p className="text-xs text-gray-400 truncate">{song.artist}</p>
+                      </div>
+                      
+                      <Button
+                        onClick={() => playSimplePanelSong(song.filename)}
+                        disabled={musicStatus.currentSong?.id === song.id}
+                        className="px-3 py-2 text-xs"
+                      >
+                        {musicStatus.currentSong?.id === song.id ? (
+                          <Pause className="w-4 h-4" />
+                        ) : (
+                          <Play className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-400">Keine MP3-Dateien gefunden</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Lade MP3-Dateien in den /music Ordner hoch
+                  </p>
+                </div>
+              )}
+
+              {availableSongs.length > 6 && (
+                <div className="mt-4 text-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveTab('local')}
+                    className="flex items-center gap-2"
+                  >
+                    <MusicIcon className="w-4 h-4" />
+                    Alle {availableSongs.length} Songs anzeigen
+                  </Button>
+                </div>
+              )}
+
+              {/* Music Control */}
+              {musicStatus.isPlaying && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg border border-purple-primary/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
+                        <Waves className="w-6 h-6 text-white animate-pulse" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          Spielt gerade: {musicStatus.currentSong?.title || 'Unbekannt'}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {musicStatus.currentStation?.name || 'Einzelner Song'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={stopSimplePanelMusic}
+                      variant="destructive"
+                      className="flex items-center gap-2"
+                    >
+                      <StopCircle className="w-4 h-4" />
+                      Stoppen
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Info Box */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-yellow-400" />
+                Wie funktioniert das Simple Panel?
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-sm text-gray-300">
+                <div className="flex gap-3">
+                  <span className="text-blue-400 font-bold">1.</span>
+                  <div>
+                    <p className="text-white font-medium">Channel auswählen</p>
+                    <p>Wähle einen Text-Channel aus, in dem das Panel erstellt werden soll.</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3">
+                  <span className="text-blue-400 font-bold">2.</span>
+                  <div>
+                    <p className="text-white font-medium">Panel erstellen</p>
+                    <p>Klicke auf "Panel erstellen" - es wird automatisch ein interaktives Musik-Panel mit Buttons gepostet.</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3">
+                  <span className="text-blue-400 font-bold">3.</span>
+                  <div>
+                    <p className="text-white font-medium">Musik abspielen</p>
+                    <p>Nutzer können direkt auf die Song-Buttons im Discord-Panel klicken - keine Commands nötig!</p>
+                  </div>
+                </div>
+                
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 mt-4">
+                  <p className="text-green-300 font-medium">✨ Vorteile:</p>
+                  <ul className="text-green-200 text-sm mt-1 space-y-1">
+                    <li>• Keine Discord Commands erforderlich</li>
+                    <li>• Einfache Button-Bedienung</li>
+                    <li>• Automatische Pagination bei vielen Songs</li>
+                    <li>• Sofortige Verfügbarkeit (keine 15min Wartezeit)</li>
+                  </ul>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
