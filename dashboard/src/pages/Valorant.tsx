@@ -1630,7 +1630,7 @@ const Valorant: React.FC = () => {
                   </div>
                   <Target className="w-6 h-6 text-purple-accent mx-auto mb-2" />
                   <h4 className="font-semibold text-dark-text mb-1">Valorant Card</h4>
-                  <p className="text-xs text-dark-muted">Generiertes Bild im Valorant-Design</p>
+                  <p className="text-xs text-dark-muted">SVG-basiertes Bild mit echten Rang-Icons & Agenten</p>
                 </div>
               </div>
 
@@ -1678,10 +1678,10 @@ const Valorant: React.FC = () => {
                 <span>📝 Nur Discord Embed wird gesendet</span>
               )}
               {settings.outputFormat?.mode === 'card' && (
-                <span>🖼️ Nur Valorant Card wird gesendet</span>
+                <span>🖼️ Nur Valorant Card (SVG-basiert mit echten Icons) wird gesendet</span>
               )}
               {settings.outputFormat?.mode === 'both' && (
-                <span>📝🖼️ Sowohl Discord Embed als auch Valorant Card werden gesendet</span>
+                <span>📝🖼️ Sowohl Discord Embed als auch Valorant Card (SVG-basiert) werden gesendet</span>
               )}
             </div>
           </div>
