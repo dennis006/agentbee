@@ -1063,6 +1063,26 @@ async function handleMusicPlaylistStationSelect(interaction) {
 }
 
 // Kompatibilitätsfunktion für alte Radio-Select Buttons
+async function handleMusicRadioSelectButton(interaction) {
+    try {
+        await interaction.reply({
+            content: '📻 **Radio-System nicht verfügbar**\n\n' +
+                    'Das Radio-System wurde durch das lokale MP3-System ersetzt.\n\n' +
+                    '🎵 **Verfügbare Optionen:**\n' +
+                    '• MP3-Dateien aus der lokalen Bibliothek\n' +
+                    '• Custom Playlists\n\n' +
+                    '💡 Nutze die MP3 oder Playlist Buttons!',
+            ephemeral: true
+        });
+    } catch (error) {
+        console.error('❌ Fehler bei Radio Select Button:', error);
+        await interaction.reply({
+            content: '❌ Radio-System nicht verfügbar. Nutze die MP3-Bibliothek.',
+            ephemeral: true
+        });
+    }
+}
+
 // Volume-Control Handler
 async function handleMusicVolumeUpButton(interaction) {
     try {
@@ -1742,6 +1762,7 @@ module.exports = {
     decreaseVolume,
     postInteractiveMusicPanel,
     updateInteractiveMusicPanel,
+    handleMusicRadioSelectButton,
     handleMusicMP3SelectButton,
     handleMusicPlaylistSelectButton,
     handleMusicStopAllButton,
