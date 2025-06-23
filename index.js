@@ -4279,16 +4279,20 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
 
-    // Vollständiges Musik-System Button Handlers
+    // Vollständiges Musik-System Button Handlers (OLD SYSTEM - DEPRECATED)
     if (interaction.customId === 'music_radio_select') {
-        const { handleMusicRadioSelectButton } = require('./music-api');
-        await handleMusicRadioSelectButton(interaction);
+        await interaction.reply({
+            content: `🆕 **Altes Panel erkannt!**\n\n⚠️ Das alte System wurde ersetzt!\n\n🎵 **Nutze das neue Simple Music Panel:**\n• \`/musicpanel\` Command\n• Dashboard → Simple Music Panel\n\n✨ Einfache Buttons statt Dropdowns!`,
+            ephemeral: true
+        });
         return;
     }
 
     if (interaction.customId === 'music_mp3_select') {
-        const { handleMusicMP3SelectButton } = require('./music-api');
-        await handleMusicMP3SelectButton(interaction);
+        await interaction.reply({
+            content: `🆕 **Altes Panel erkannt!**\n\n⚠️ Das alte System wurde ersetzt!\n\n🎵 **Nutze das neue Simple Music Panel:**\n• \`/musicpanel\` Command\n• Dashboard → Simple Music Panel\n\n✨ Einfache Buttons statt Dropdowns!`,
+            ephemeral: true
+        });
         return;
     }
 
@@ -4335,35 +4339,17 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
 
-    // Vollständiges Musik-System Select Menu Handlers
+    // Vollständiges Musik-System Select Menu Handlers (OLD SYSTEM - DEPRECATED)
     if (interaction.customId === 'music_mp3_song_select') {
-        console.log('🔍 INTERACTION DEBUG: music_mp3_song_select received!');
-        console.log('🔍 User:', interaction.user.tag);
-        console.log('🔍 Guild:', interaction.guild?.name);
-        console.log('🔍 Values:', interaction.values);
+        console.log('🔍 OLD SYSTEM: music_mp3_song_select received! Redirecting to new system...');
         
         try {
-            // Immediate response to prevent timeout
             await interaction.reply({
-                content: `🎵 **Test Response**\n\nUser: ${interaction.user.tag}\nSong-ID: \`${interaction.values[0]}\`\n\n✅ Interaction Handler funktioniert!\n\n*Starte Musik...*`,
+                content: `🆕 **Altes Panel erkannt!**\n\n⚠️ Das alte Dropdown-System wurde ersetzt!\n\n🎵 **Nutze das neue Simple Music Panel:**\n• Verwende \`/musicpanel\` Command\n• Oder erstelle über das Dashboard ein neues Panel\n\n✨ Einfache Buttons statt Dropdowns!`,
                 ephemeral: true
             });
-            
-            // Now try the actual handler
-            const { handleMusicMP3SongSelect } = require('./music-api');
-            await handleMusicMP3SongSelect(interaction);
         } catch (error) {
-            console.error('❌ INTERACTION ERROR:', error);
-            try {
-                if (!interaction.replied) {
-                    await interaction.reply({
-                        content: `❌ **Interaction Fehler**\n\n\`\`\`${error.message}\`\`\``,
-                        ephemeral: true
-                    });
-                }
-            } catch (replyError) {
-                console.error('❌ Reply Error:', replyError);
-            }
+            console.error('❌ Old System Redirect Error:', error);
         }
         return;
     }
