@@ -7,451 +7,126 @@ const { createClient } = require('@supabase/supabase-js');
 
 class XPSupabaseAPI {
     constructor() {
-        this.supabase = null;
-        this.initialized = false;
-        this.initializeSupabase();
+        // Supabase Client initialisieren
+        this.supabase = createClient(
+            process.env.SUPABASE_URL || '',
+            process.env.SUPABASE_ANON_KEY || ''
+        );
+        
+        // Cache für Settings um häufige DB-Zugriffe zu vermeiden
+        this.settingsCache = new Map();
+        this.cacheExpiry = 5 * 60 * 1000; // 5 Minuten Cache
+        this.lastCacheUpdate = 0;
+        
+        console.log('✅ XP Supabase API initialisiert');
     }
 
-    initializeSupabase() {
-        try {
-            const supabaseUrl = process.env.SUPABASE_URL;
-            const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    // =============================================
+    // SETTINGS MANAGEMENT
+    // =============================================
 
-            if (!supabaseUrl || !supabaseKey) {
-                console.error('❌ Supabase credentials not found in environment variables');
-                return;
+    async loadSettings() {
+        try {
+            // Cache prüfen
+            const now = Date.now();
+            if (now - this.lastCacheUpdate < this.cacheExpiry && this.settingsCache.size > 0) {
+                return this.buildSettingsObject();
             }
 
-            this.supabase = createClient(supabaseUrl, supabaseKey);
-            this.initialized = true;
-            console.log('✅ XP Supabase API initialized');
-        } catch (error) {
-            console.error('❌ Failed to initialize XP Supabase API:', error);
-        }
-    }
-
-    // ==================== SETTINGS METHODS ====================
-
-    async getSettings() {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
+            // Settings aus DB laden
             const { data, error } = await this.supabase
                 .from('xp_settings')
-                .select('*')
-                .eq('id', 1)
-                .single();
+                .select('setting_key, setting_value');
 
             if (error) {
-                console.error('❌ Error fetching XP settings:', error);
+                console.error('❌ Fehler beim Laden der XP-Settings:', error);
                 return this.getDefaultSettings();
             }
 
-            return this.transformSettingsFromDB(data);
+            // Cache aktualisieren
+            this.settingsCache.clear();
+            data.forEach(setting => {
+                this.settingsCache.set(setting.setting_key, setting.setting_value);
+            });
+            this.lastCacheUpdate = now;
+
+            return this.buildSettingsObject();
         } catch (error) {
-            console.error('❌ Error in getSettings:', error);
+            console.error('❌ Fehler beim Laden der Settings:', error);
             return this.getDefaultSettings();
         }
     }
 
-    async updateSettings(settings) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
+    buildSettingsObject() {
+        const settings = {
+            enabled: this.settingsCache.get('system')?.enabled || true,
+            messageXP: this.settingsCache.get('messageXP') || { min: 5, max: 15, cooldown: 60000 },
+            voiceXP: this.settingsCache.get('voiceXP') || { baseXP: 2, afkChannelXP: 0, soloChannelXP: 1, cooldown: 60000, intervalMinutes: 1 },
+            levelSystem: this.settingsCache.get('levelSystem') || { baseXP: 100, multiplier: 1.5, maxLevel: 100 },
+            channels: this.settingsCache.get('channels') || { levelUpChannel: 'level-up', leaderboardChannel: 'leaderboard' },
+            autoLeaderboard: this.settingsCache.get('autoLeaderboard') || { enabled: true, time: '20:00', timezone: 'Europe/Berlin', channelName: 'leaderboard', types: ['total'], limit: 10, lastPosted: 0, autoDeleteOld: true },
+            announcements: this.settingsCache.get('announcements') || { levelUp: true, milestones: true, newRecord: true },
+            display: this.settingsCache.get('display') || { showRank: true, showProgress: true, embedColor: '0x00FF7F', leaderboardSize: 10 },
+            levelUpEmbed: this.settingsCache.get('levelUpEmbed') || { enabled: true, title: '🎉 Level Up!', color: '0x00FF7F', animation: { enabled: true, style: 'celebration', duration: 5000 }, fields: { showStats: true, showNextLevel: true, showRank: true, customMessage: '' }, footer: { enabled: true, text: '🎉 Herzlichen Glückwunsch!' } },
+            rewards: {
+                levelRoles: [],
+                milestoneRewards: []
             }
+        };
 
-            const dbSettings = this.transformSettingsToDB(settings);
-            
-            const { data, error } = await this.supabase
-                .from('xp_settings')
-                .upsert({ ...dbSettings, id: 1 })
-                .select()
-                .single();
-
-            if (error) {
-                console.error('❌ Error updating XP settings:', error);
-                throw error;
-            }
-
-            console.log('✅ XP settings updated successfully');
-            return this.transformSettingsFromDB(data);
-        } catch (error) {
-            console.error('❌ Error in updateSettings:', error);
-            throw error;
-        }
+        return settings;
     }
 
-    // ==================== USER METHODS ====================
-
-    async getAllUsers() {
+    async saveSettings(newSettings) {
         try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
+            // Cache invalidieren
+            this.settingsCache.clear();
+            this.lastCacheUpdate = 0;
 
-            const { data, error } = await this.supabase
-                .from('xp_users')
-                .select('*')
-                .order('total_xp', { ascending: false });
+            // Verschiedene Settings-Bereiche separat speichern
+            const updates = [
+                { key: 'system', value: { enabled: newSettings.enabled } },
+                { key: 'messageXP', value: newSettings.messageXP },
+                { key: 'voiceXP', value: newSettings.voiceXP },
+                { key: 'levelSystem', value: newSettings.levelSystem },
+                { key: 'channels', value: newSettings.channels },
+                { key: 'autoLeaderboard', value: newSettings.autoLeaderboard },
+                { key: 'announcements', value: newSettings.announcements },
+                { key: 'display', value: newSettings.display },
+                { key: 'levelUpEmbed', value: newSettings.levelUpEmbed }
+            ];
 
-            if (error) {
-                console.error('❌ Error fetching XP users:', error);
-                return [];
-            }
-
-            return data.map(user => this.transformUserFromDB(user));
-        } catch (error) {
-            console.error('❌ Error in getAllUsers:', error);
-            return [];
-        }
-    }
-
-    async getUser(userId) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { data, error } = await this.supabase
-                .from('xp_users')
-                .select('*')
-                .eq('user_id', userId)
-                .single();
-
-            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-                console.error('❌ Error fetching user XP data:', error);
-                return null;
-            }
-
-            return data ? this.transformUserFromDB(data) : null;
-        } catch (error) {
-            console.error('❌ Error in getUser:', error);
-            return null;
-        }
-    }
-
-    async updateUser(userId, userData) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const dbUserData = this.transformUserToDB(userData);
-            dbUserData.user_id = userId;
-
-            const { data, error } = await this.supabase
-                .from('xp_users')
-                .upsert(dbUserData)
-                .select()
-                .single();
-
-            if (error) {
-                console.error('❌ Error updating user XP data:', error);
-                throw error;
-            }
-
-            return this.transformUserFromDB(data);
-        } catch (error) {
-            console.error('❌ Error in updateUser:', error);
-            throw error;
-        }
-    }
-
-    async deleteUser(userId) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { error } = await this.supabase
-                .from('xp_users')
-                .delete()
-                .eq('user_id', userId);
-
-            if (error) {
-                console.error('❌ Error deleting user XP data:', error);
-                throw error;
-            }
-
-            console.log(`✅ User ${userId} XP data deleted`);
-            return true;
-        } catch (error) {
-            console.error('❌ Error in deleteUser:', error);
-            throw error;
-        }
-    }
-
-    async deleteAllUsers() {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { error } = await this.supabase
-                .from('xp_users')
-                .delete()
-                .neq('user_id', ''); // Delete all rows
-
-            if (error) {
-                console.error('❌ Error deleting all users:', error);
-                throw error;
-            }
-
-            console.log('✅ All user XP data deleted');
-            return true;
-        } catch (error) {
-            console.error('❌ Error in deleteAllUsers:', error);
-            throw error;
-        }
-    }
-
-    // ==================== LEVEL ROLES METHODS ====================
-
-    async getLevelRoles() {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { data, error } = await this.supabase
-                .from('xp_level_roles')
-                .select('*')
-                .order('level', { ascending: true });
-
-            if (error) {
-                console.error('❌ Error fetching level roles:', error);
-                return [];
-            }
-
-            return data.map(role => ({
-                level: role.level,
-                roleId: role.role_id,
-                roleName: role.role_name
-            }));
-        } catch (error) {
-            console.error('❌ Error in getLevelRoles:', error);
-            return [];
-        }
-    }
-
-    async addLevelRole(level, roleId, roleName) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { data, error } = await this.supabase
-                .from('xp_level_roles')
-                .insert({
-                    level: level,
-                    role_id: roleId,
-                    role_name: roleName
-                })
-                .select()
-                .single();
-
-            if (error) {
-                console.error('❌ Error adding level role:', error);
-                throw error;
-            }
-
-            return {
-                level: data.level,
-                roleId: data.role_id,
-                roleName: data.role_name
-            };
-        } catch (error) {
-            console.error('❌ Error in addLevelRole:', error);
-            throw error;
-        }
-    }
-
-    async deleteLevelRole(level, roleId) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { error } = await this.supabase
-                .from('xp_level_roles')
-                .delete()
-                .eq('level', level)
-                .eq('role_id', roleId);
-
-            if (error) {
-                console.error('❌ Error deleting level role:', error);
-                throw error;
-            }
-
-            return true;
-        } catch (error) {
-            console.error('❌ Error in deleteLevelRole:', error);
-            throw error;
-        }
-    }
-
-    // ==================== MILESTONE REWARDS METHODS ====================
-
-    async getMilestoneRewards() {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { data, error } = await this.supabase
-                .from('xp_milestone_rewards')
-                .select('*')
-                .order('xp_required', { ascending: true });
-
-            if (error) {
-                console.error('❌ Error fetching milestone rewards:', error);
-                return [];
-            }
-
-            return data.map(milestone => ({
-                xp: milestone.xp_required,
-                reward: milestone.reward
-            }));
-        } catch (error) {
-            console.error('❌ Error in getMilestoneRewards:', error);
-            return [];
-        }
-    }
-
-    async addMilestoneReward(xp, reward) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { data, error } = await this.supabase
-                .from('xp_milestone_rewards')
-                .insert({
-                    xp_required: xp,
-                    reward: reward
-                })
-                .select()
-                .single();
-
-            if (error) {
-                console.error('❌ Error adding milestone reward:', error);
-                throw error;
-            }
-
-            return {
-                xp: data.xp_required,
-                reward: data.reward
-            };
-        } catch (error) {
-            console.error('❌ Error in addMilestoneReward:', error);
-            throw error;
-        }
-    }
-
-    async deleteMilestoneReward(xp) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { error } = await this.supabase
-                .from('xp_milestone_rewards')
-                .delete()
-                .eq('xp_required', xp);
-
-            if (error) {
-                console.error('❌ Error deleting milestone reward:', error);
-                throw error;
-            }
-
-            return true;
-        } catch (error) {
-            console.error('❌ Error in deleteMilestoneReward:', error);
-            throw error;
-        }
-    }
-
-    // ==================== CHANNEL BLACKLIST METHODS ====================
-
-    async getChannelBlacklists() {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            const { data, error } = await this.supabase
-                .from('xp_channel_blacklists')
-                .select('*');
-
-            if (error) {
-                console.error('❌ Error fetching channel blacklists:', error);
-                return { xpBlacklist: [], voiceBlacklist: [] };
-            }
-
-            const xpBlacklist = data.filter(item => item.channel_type === 'text').map(item => item.channel_name);
-            const voiceBlacklist = data.filter(item => item.channel_type === 'voice').map(item => item.channel_name);
-
-            return { xpBlacklist, voiceBlacklist };
-        } catch (error) {
-            console.error('❌ Error in getChannelBlacklists:', error);
-            return { xpBlacklist: [], voiceBlacklist: [] };
-        }
-    }
-
-    async updateChannelBlacklists(xpBlacklist, voiceBlacklist) {
-        try {
-            if (!this.initialized) {
-                throw new Error('Supabase not initialized');
-            }
-
-            // Lösche alle bestehenden Blacklist-Einträge
-            await this.supabase
-                .from('xp_channel_blacklists')
-                .delete()
-                .neq('id', 0);
-
-            // Füge neue Einträge hinzu
-            const newEntries = [];
-            
-            for (const channelName of xpBlacklist) {
-                if (channelName && channelName.trim()) {
-                    newEntries.push({
-                        channel_name: channelName.trim(),
-                        channel_type: 'text'
-                    });
-                }
-            }
-
-            for (const channelName of voiceBlacklist) {
-                if (channelName && channelName.trim()) {
-                    newEntries.push({
-                        channel_name: channelName.trim(),
-                        channel_type: 'voice'
-                    });
-                }
-            }
-
-            if (newEntries.length > 0) {
+            // Batch-Update für bessere Performance
+            for (const update of updates) {
                 const { error } = await this.supabase
-                    .from('xp_channel_blacklists')
-                    .insert(newEntries);
+                    .from('xp_settings')
+                    .upsert({
+                        setting_key: update.key,
+                        setting_value: update.value,
+                        updated_at: new Date().toISOString()
+                    });
 
                 if (error) {
-                    console.error('❌ Error updating channel blacklists:', error);
-                    throw error;
+                    console.error(`❌ Fehler beim Speichern von ${update.key}:`, error);
                 }
             }
 
-            return true;
+            // Channel-Blacklists separat behandeln
+            await this.updateChannelBlacklists(newSettings.channels);
+
+            // Level-Rollen und Meilensteine separat behandeln
+            if (newSettings.rewards) {
+                await this.updateLevelRoles(newSettings.rewards.levelRoles);
+                await this.updateMilestoneRewards(newSettings.rewards.milestoneRewards);
+            }
+
+            console.log('✅ XP-Settings erfolgreich gespeichert');
+            return { success: true };
         } catch (error) {
-            console.error('❌ Error in updateChannelBlacklists:', error);
-            throw error;
+            console.error('❌ Fehler beim Speichern der Settings:', error);
+            return { success: false, error: error.message };
         }
     }
-
-    // ==================== UTILITY METHODS ====================
 
     getDefaultSettings() {
         return {
@@ -460,200 +135,691 @@ class XPSupabaseAPI {
             voiceXP: { baseXP: 2, afkChannelXP: 0, soloChannelXP: 1, cooldown: 60000, intervalMinutes: 1 },
             levelSystem: { baseXP: 100, multiplier: 1.5, maxLevel: 100 },
             channels: { levelUpChannel: 'level-up', leaderboardChannel: 'leaderboard', xpBlacklist: [], voiceBlacklist: [] },
-            autoLeaderboard: { 
-                enabled: true, 
-                time: '20:00', 
-                timezone: 'Europe/Berlin', 
-                channelName: 'leaderboard', 
-                types: ['total'], 
-                limit: 10, 
-                lastPosted: 0, 
-                lastMessageIds: [], 
-                autoDeleteOld: true 
-            },
+            autoLeaderboard: { enabled: true, time: '20:00', timezone: 'Europe/Berlin', channelName: 'leaderboard', types: ['total'], limit: 10, lastPosted: 0, autoDeleteOld: true },
             rewards: { levelRoles: [], milestoneRewards: [] },
             announcements: { levelUp: true, milestones: true, newRecord: true },
             display: { showRank: true, showProgress: true, embedColor: '0x00FF7F', leaderboardSize: 10 },
-            levelUpEmbed: {
-                enabled: true,
-                title: '🎉 Level Up!',
-                color: '0x00FF7F',
-                animation: { enabled: true, style: 'celebration', duration: 5000 },
-                fields: { showStats: true, showNextLevel: true, showRank: true, customMessage: '' },
-                footer: { enabled: true, text: '🎉 Herzlichen Glückwunsch!' }
-            }
+            levelUpEmbed: { enabled: true, title: '🎉 Level Up!', color: '0x00FF7F', animation: { enabled: true, style: 'celebration', duration: 5000 }, fields: { showStats: true, showNextLevel: true, showRank: true, customMessage: '' }, footer: { enabled: true, text: '🎉 Herzlichen Glückwunsch!' } }
         };
     }
 
-    transformSettingsFromDB(dbData) {
-        if (!dbData) return this.getDefaultSettings();
+    // =============================================
+    // USER DATA MANAGEMENT
+    // =============================================
 
+    async getUserData(userId) {
+        try {
+            const { data, error } = await this.supabase
+                .from('xp_users')
+                .select('*')
+                .eq('user_id', userId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+                console.error('❌ Fehler beim Laden der User-Daten:', error);
+                return this.createDefaultUserData(userId);
+            }
+
+            if (!data) {
+                return this.createDefaultUserData(userId);
+            }
+
+            return {
+                xp: parseInt(data.xp || 0),
+                level: parseInt(data.level || 1),
+                totalXP: parseInt(data.total_xp || 0),
+                lastMessage: parseInt(data.last_message_time || 0),
+                voiceJoinTime: parseInt(data.voice_join_time || 0),
+                messageCount: parseInt(data.message_count || 0),
+                voiceTime: parseFloat(data.voice_time || 0),
+                username: data.username || 'Unbekannt',
+                avatar: data.avatar || null
+            };
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der User-Daten:', error);
+            return this.createDefaultUserData(userId);
+        }
+    }
+
+    createDefaultUserData(userId) {
         return {
-            enabled: dbData.enabled,
-            messageXP: {
-                min: dbData.message_xp_min,
-                max: dbData.message_xp_max,
-                cooldown: dbData.message_xp_cooldown
-            },
-            voiceXP: {
-                baseXP: dbData.voice_xp_base,
-                afkChannelXP: dbData.voice_xp_afk,
-                soloChannelXP: dbData.voice_xp_solo,
-                cooldown: dbData.voice_xp_cooldown,
-                intervalMinutes: dbData.voice_xp_interval_minutes
-            },
-            levelSystem: {
-                baseXP: dbData.level_system_base_xp,
-                multiplier: parseFloat(dbData.level_system_multiplier),
-                maxLevel: dbData.level_system_max_level
-            },
-            channels: {
-                levelUpChannel: dbData.level_up_channel,
-                leaderboardChannel: dbData.leaderboard_channel,
-                xpBlacklist: [], // Wird separat geladen
-                voiceBlacklist: [] // Wird separat geladen
-            },
-            autoLeaderboard: {
-                enabled: dbData.auto_leaderboard_enabled,
-                time: dbData.auto_leaderboard_time,
-                timezone: dbData.auto_leaderboard_timezone,
-                channelName: dbData.auto_leaderboard_channel,
-                types: dbData.auto_leaderboard_types || ['total'],
-                limit: dbData.auto_leaderboard_limit,
-                lastPosted: dbData.auto_leaderboard_last_posted,
-                lastMessageIds: dbData.auto_leaderboard_last_message_ids || [],
-                autoDeleteOld: dbData.auto_leaderboard_auto_delete_old
-            },
-            rewards: {
-                levelRoles: [], // Wird separat geladen
-                milestoneRewards: [] // Wird separat geladen
-            },
-            announcements: {
-                levelUp: dbData.announcements_level_up,
-                milestones: dbData.announcements_milestones,
-                newRecord: dbData.announcements_new_record
-            },
-            display: {
-                showRank: dbData.display_show_rank,
-                showProgress: dbData.display_show_progress,
-                embedColor: dbData.display_embed_color,
-                leaderboardSize: dbData.display_leaderboard_size
-            },
-            levelUpEmbed: {
-                enabled: dbData.level_up_embed_enabled,
-                title: dbData.level_up_embed_title,
-                color: dbData.level_up_embed_color,
-                animation: {
-                    enabled: dbData.level_up_embed_animation_enabled,
-                    style: dbData.level_up_embed_animation_style,
-                    duration: dbData.level_up_embed_animation_duration
-                },
-                fields: {
-                    showStats: dbData.level_up_embed_fields_show_stats,
-                    showNextLevel: dbData.level_up_embed_fields_show_next_level,
-                    showRank: dbData.level_up_embed_fields_show_rank,
-                    customMessage: dbData.level_up_embed_fields_custom_message
-                },
-                footer: {
-                    enabled: dbData.level_up_embed_footer_enabled,
-                    text: dbData.level_up_embed_footer_text
+            xp: 0,
+            level: 1,
+            totalXP: 0,
+            lastMessage: 0,
+            voiceJoinTime: 0,
+            messageCount: 0,
+            voiceTime: 0,
+            username: 'Unbekannt',
+            avatar: null
+        };
+    }
+
+    async saveUserData(userId, userData) {
+        try {
+            const { error } = await this.supabase
+                .from('xp_users')
+                .upsert({
+                    user_id: userId,
+                    username: userData.username || 'Unbekannt',
+                    avatar: userData.avatar || null,
+                    level: userData.level || 1,
+                    total_xp: userData.totalXP || userData.xp || 0,
+                    xp: userData.xp || 0,
+                    message_count: userData.messageCount || 0,
+                    voice_time: userData.voiceTime || 0,
+                    last_message_time: userData.lastMessage || 0,
+                    voice_join_time: userData.voiceJoinTime || 0,
+                    last_voice_xp: userData.lastVoiceXP || 0,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (error) {
+                console.error(`❌ Fehler beim Speichern der User-Daten für ${userId}:`, error);
+                return { success: false, error: error.message };
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error(`❌ Fehler beim Speichern der User-Daten für ${userId}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async getAllUsers() {
+        try {
+            const { data, error } = await this.supabase
+                .from('xp_users')
+                .select('*')
+                .order('total_xp', { ascending: false });
+
+            if (error) {
+                console.error('❌ Fehler beim Laden aller User:', error);
+                return [];
+            }
+
+            return data.map(user => ({
+                userId: user.user_id,
+                xp: parseInt(user.xp || 0),
+                level: parseInt(user.level || 1),
+                totalXP: parseInt(user.total_xp || 0),
+                lastMessage: parseInt(user.last_message_time || 0),
+                voiceJoinTime: parseInt(user.voice_join_time || 0),
+                messageCount: parseInt(user.message_count || 0),
+                voiceTime: parseFloat(user.voice_time || 0),
+                username: user.username || 'Unbekannt',
+                avatar: user.avatar || null
+            }));
+        } catch (error) {
+            console.error('❌ Fehler beim Laden aller User:', error);
+            return [];
+        }
+    }
+
+    async setUserXP(userId, xp) {
+        try {
+            const { error } = await this.supabase
+                .from('xp_users')
+                .upsert({
+                    user_id: userId,
+                    total_xp: xp,
+                    xp: xp,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (error) {
+                console.error(`❌ Fehler beim Setzen der XP für ${userId}:`, error);
+                return { success: false, error: error.message };
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error(`❌ Fehler beim Setzen der XP für ${userId}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async resetUser(userId) {
+        try {
+            const { error } = await this.supabase
+                .from('xp_users')
+                .delete()
+                .eq('user_id', userId);
+
+            if (error) {
+                console.error(`❌ Fehler beim Zurücksetzen von User ${userId}:`, error);
+                return { success: false, error: error.message };
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error(`❌ Fehler beim Zurücksetzen von User ${userId}:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async resetAllUsers() {
+        try {
+            const { error } = await this.supabase
+                .from('xp_users')
+                .delete()
+                .not('user_id', 'is', null); // Löscht alle Einträge
+
+            if (error) {
+                console.error('❌ Fehler beim Zurücksetzen aller User:', error);
+                return { success: false, error: error.message };
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Fehler beim Zurücksetzen aller User:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // =============================================
+    // LEADERBOARD & STATISTICS
+    // =============================================
+
+    async getLeaderboard(limit = 10, type = 'total') {
+        try {
+            let orderBy;
+            switch (type) {
+                case 'level':
+                    orderBy = [{ column: 'level', ascending: false }, { column: 'total_xp', ascending: false }];
+                    break;
+                case 'messages':
+                    orderBy = [{ column: 'message_count', ascending: false }, { column: 'total_xp', ascending: false }];
+                    break;
+                case 'voice':
+                    orderBy = [{ column: 'voice_time', ascending: false }, { column: 'total_xp', ascending: false }];
+                    break;
+                default: // 'total'
+                    orderBy = [{ column: 'total_xp', ascending: false }];
+            }
+
+            const { data, error } = await this.supabase
+                .from('xp_users')
+                .select('*')
+                .gt('total_xp', 0)
+                .order(orderBy[0].column, { ascending: orderBy[0].ascending })
+                .limit(limit);
+
+            if (error) {
+                console.error('❌ Fehler beim Laden des Leaderboards:', error);
+                return [];
+            }
+
+            return data.map((user, index) => ({
+                rank: index + 1,
+                userId: user.user_id,
+                username: user.username || 'Unbekannt',
+                level: parseInt(user.level || 1),
+                totalXP: parseInt(user.total_xp || 0),
+                messageCount: parseInt(user.message_count || 0),
+                voiceTime: parseFloat(user.voice_time || 0),
+                xp: parseInt(user.xp || 0)
+            }));
+        } catch (error) {
+            console.error('❌ Fehler beim Laden des Leaderboards:', error);
+            return [];
+        }
+    }
+
+    async getUserRank(userId) {
+        try {
+            // Verwende die xp_leaderboard View für bessere Performance
+            const { data, error } = await this.supabase
+                .from('xp_leaderboard')
+                .select('rank, user_id')
+                .eq('user_id', userId)
+                .single();
+
+            if (error) {
+                console.error(`❌ Fehler beim Laden des Rangs für ${userId}:`, error);
+                return null;
+            }
+
+            return data ? data.rank : null;
+        } catch (error) {
+            console.error(`❌ Fehler beim Laden des Rangs für ${userId}:`, error);
+            return null;
+        }
+    }
+
+    async getStats() {
+        try {
+            const { data, error } = await this.supabase
+                .from('xp_users')
+                .select('level, total_xp, message_count, voice_time')
+                .gt('total_xp', 0);
+
+            if (error) {
+                console.error('❌ Fehler beim Laden der Statistiken:', error);
+                return {
+                    totalUsers: 0,
+                    totalXP: 0,
+                    totalMessages: 0,
+                    totalVoiceTime: 0,
+                    averageLevel: 0,
+                    maxLevel: 0,
+                    activeUsers: 0
+                };
+            }
+
+            const totalUsers = data.length;
+            const activeUsers = data.filter(user => user.total_xp > 100).length;
+            const totalXP = data.reduce((sum, user) => sum + parseInt(user.total_xp || 0), 0);
+            const totalMessages = data.reduce((sum, user) => sum + parseInt(user.message_count || 0), 0);
+            const totalVoiceTime = data.reduce((sum, user) => sum + parseFloat(user.voice_time || 0), 0);
+            const averageLevel = totalUsers > 0 ? data.reduce((sum, user) => sum + parseInt(user.level || 0), 0) / totalUsers : 0;
+            const maxLevel = data.length > 0 ? Math.max(...data.map(user => parseInt(user.level || 0))) : 0;
+
+            return {
+                totalUsers,
+                totalXP,
+                totalMessages,
+                totalVoiceTime,
+                averageLevel,
+                maxLevel,
+                activeUsers
+            };
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Statistiken:', error);
+            return {
+                totalUsers: 0,
+                totalXP: 0,
+                totalMessages: 0,
+                totalVoiceTime: 0,
+                averageLevel: 0,
+                maxLevel: 0,
+                activeUsers: 0
+            };
+        }
+    }
+
+    // =============================================
+    // LEVEL ROLES MANAGEMENT
+    // =============================================
+
+    async updateLevelRoles(levelRoles, guildId = 'default') {
+        try {
+            // Zuerst alle custom Level-Rollen für diese Guild löschen
+            await this.supabase
+                .from('xp_level_roles')
+                .delete()
+                .eq('guild_id', guildId)
+                .eq('is_auto_role', false);
+
+            // Neue Level-Rollen einfügen
+            if (levelRoles && levelRoles.length > 0) {
+                const insertData = levelRoles.map(role => ({
+                    level: role.level,
+                    role_id: role.roleId,
+                    role_name: role.roleName,
+                    guild_id: guildId,
+                    is_auto_role: false
+                }));
+
+                const { error } = await this.supabase
+                    .from('xp_level_roles')
+                    .insert(insertData);
+
+                if (error) {
+                    console.error('❌ Fehler beim Speichern der Level-Rollen:', error);
                 }
             }
-        };
+
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Fehler beim Aktualisieren der Level-Rollen:', error);
+            return { success: false, error: error.message };
+        }
     }
 
-    transformSettingsToDB(settings) {
-        return {
-            enabled: settings.enabled,
-            
-            // Message XP
-            message_xp_min: settings.messageXP.min,
-            message_xp_max: settings.messageXP.max,
-            message_xp_cooldown: settings.messageXP.cooldown,
-            
-            // Voice XP
-            voice_xp_base: settings.voiceXP.baseXP,
-            voice_xp_afk: settings.voiceXP.afkChannelXP,
-            voice_xp_solo: settings.voiceXP.soloChannelXP,
-            voice_xp_cooldown: settings.voiceXP.cooldown,
-            voice_xp_interval_minutes: settings.voiceXP.intervalMinutes,
-            
-            // Level System
-            level_system_base_xp: settings.levelSystem.baseXP,
-            level_system_multiplier: settings.levelSystem.multiplier,
-            level_system_max_level: settings.levelSystem.maxLevel,
-            
-            // Channels
-            level_up_channel: settings.channels.levelUpChannel,
-            leaderboard_channel: settings.channels.leaderboardChannel,
-            
-            // Auto Leaderboard
-            auto_leaderboard_enabled: settings.autoLeaderboard.enabled,
-            auto_leaderboard_time: settings.autoLeaderboard.time,
-            auto_leaderboard_timezone: settings.autoLeaderboard.timezone,
-            auto_leaderboard_channel: settings.autoLeaderboard.channelName,
-            auto_leaderboard_types: settings.autoLeaderboard.types,
-            auto_leaderboard_limit: settings.autoLeaderboard.limit,
-            auto_leaderboard_last_posted: settings.autoLeaderboard.lastPosted,
-            auto_leaderboard_last_message_ids: settings.autoLeaderboard.lastMessageIds,
-            auto_leaderboard_auto_delete_old: settings.autoLeaderboard.autoDeleteOld,
-            
-            // Announcements
-            announcements_level_up: settings.announcements.levelUp,
-            announcements_milestones: settings.announcements.milestones,
-            announcements_new_record: settings.announcements.newRecord,
-            
-            // Display
-            display_show_rank: settings.display.showRank,
-            display_show_progress: settings.display.showProgress,
-            display_embed_color: settings.display.embedColor,
-            display_leaderboard_size: settings.display.leaderboardSize,
-            
-            // Level Up Embed
-            level_up_embed_enabled: settings.levelUpEmbed.enabled,
-            level_up_embed_title: settings.levelUpEmbed.title,
-            level_up_embed_color: settings.levelUpEmbed.color,
-            level_up_embed_animation_enabled: settings.levelUpEmbed.animation.enabled,
-            level_up_embed_animation_style: settings.levelUpEmbed.animation.style,
-            level_up_embed_animation_duration: settings.levelUpEmbed.animation.duration,
-            level_up_embed_fields_show_stats: settings.levelUpEmbed.fields.showStats,
-            level_up_embed_fields_show_next_level: settings.levelUpEmbed.fields.showNextLevel,
-            level_up_embed_fields_show_rank: settings.levelUpEmbed.fields.showRank,
-            level_up_embed_fields_custom_message: settings.levelUpEmbed.fields.customMessage,
-            level_up_embed_footer_enabled: settings.levelUpEmbed.footer.enabled,
-            level_up_embed_footer_text: settings.levelUpEmbed.footer.text
-        };
+    async getLevelRoles(guildId = 'default') {
+        try {
+            const { data, error } = await this.supabase
+                .from('xp_level_roles')
+                .select('*')
+                .eq('guild_id', guildId)
+                .order('level', { ascending: true });
+
+            if (error) {
+                console.error('❌ Fehler beim Laden der Level-Rollen:', error);
+                return [];
+            }
+
+            return data.map(role => ({
+                level: role.level,
+                roleId: role.role_id,
+                roleName: role.role_name,
+                isAutoRole: role.is_auto_role
+            }));
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Level-Rollen:', error);
+            return [];
+        }
     }
 
-    transformUserFromDB(dbUser) {
-        return {
-            userId: dbUser.user_id,
-            xp: dbUser.xp,
-            level: dbUser.level,
-            totalXP: dbUser.total_xp,
-            messageCount: dbUser.message_count,
-            voiceTime: parseFloat(dbUser.voice_time),
-            lastMessage: dbUser.last_message,
-            lastVoiceXP: dbUser.last_voice_xp,
-            voiceJoinTime: dbUser.voice_join_time,
-            username: dbUser.username,
-            avatar: dbUser.avatar
-        };
+    // =============================================
+    // MILESTONE REWARDS MANAGEMENT
+    // =============================================
+
+    async updateMilestoneRewards(milestoneRewards, guildId = 'default') {
+        try {
+            // Zuerst alle custom Meilensteine für diese Guild löschen
+            await this.supabase
+                .from('xp_milestone_rewards')
+                .delete()
+                .eq('guild_id', guildId)
+                .eq('is_auto_milestone', false);
+
+            // Neue Meilensteine einfügen
+            if (milestoneRewards && milestoneRewards.length > 0) {
+                const insertData = milestoneRewards.map(milestone => ({
+                    xp_required: milestone.xp,
+                    reward_title: milestone.reward,
+                    reward_description: milestone.reward,
+                    guild_id: guildId,
+                    is_auto_milestone: false
+                }));
+
+                const { error } = await this.supabase
+                    .from('xp_milestone_rewards')
+                    .insert(insertData);
+
+                if (error) {
+                    console.error('❌ Fehler beim Speichern der Meilenstein-Belohnungen:', error);
+                }
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Fehler beim Aktualisieren der Meilenstein-Belohnungen:', error);
+            return { success: false, error: error.message };
+        }
     }
 
-    transformUserToDB(userData) {
-        return {
-            xp: userData.xp || 0,
-            level: userData.level || 1,
-            total_xp: userData.totalXP || userData.xp || 0,
-            message_count: userData.messageCount || 0,
-            voice_time: userData.voiceTime || 0,
-            last_message: userData.lastMessage || 0,
-            last_voice_xp: userData.lastVoiceXP || 0,
-            voice_join_time: userData.voiceJoinTime || 0,
-            username: userData.username,
-            avatar: userData.avatar
-        };
+    async getMilestoneRewards(guildId = 'default') {
+        try {
+            const { data, error } = await this.supabase
+                .from('xp_milestone_rewards')
+                .select('*')
+                .eq('guild_id', guildId)
+                .order('xp_required', { ascending: true });
+
+            if (error) {
+                console.error('❌ Fehler beim Laden der Meilenstein-Belohnungen:', error);
+                return [];
+            }
+
+            return data.map(milestone => ({
+                xp: milestone.xp_required,
+                reward: milestone.reward_title,
+                isAutoMilestone: milestone.is_auto_milestone
+            }));
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Meilenstein-Belohnungen:', error);
+            return [];
+        }
+    }
+
+    // =============================================
+    // CHANNEL BLACKLIST MANAGEMENT
+    // =============================================
+
+    async updateChannelBlacklists(channels, guildId = 'default') {
+        try {
+            // Alle Blacklists für diese Guild löschen
+            await this.supabase
+                .from('xp_channel_blacklist')
+                .delete()
+                .eq('guild_id', guildId);
+
+            // Neue Blacklists einfügen
+            const insertData = [];
+            
+            if (channels.xpBlacklist && channels.xpBlacklist.length > 0) {
+                channels.xpBlacklist.forEach(channelName => {
+                    if (channelName.trim()) {
+                        insertData.push({
+                            channel_name: channelName.trim(),
+                            channel_type: 'text',
+                            guild_id: guildId
+                        });
+                    }
+                });
+            }
+
+            if (channels.voiceBlacklist && channels.voiceBlacklist.length > 0) {
+                channels.voiceBlacklist.forEach(channelName => {
+                    if (channelName.trim()) {
+                        insertData.push({
+                            channel_name: channelName.trim(),
+                            channel_type: 'voice',
+                            guild_id: guildId
+                        });
+                    }
+                });
+            }
+
+            if (insertData.length > 0) {
+                const { error } = await this.supabase
+                    .from('xp_channel_blacklist')
+                    .insert(insertData);
+
+                if (error) {
+                    console.error('❌ Fehler beim Speichern der Channel-Blacklists:', error);
+                }
+            }
+
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Fehler beim Aktualisieren der Channel-Blacklists:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async getChannelBlacklists(guildId = 'default') {
+        try {
+            const { data, error } = await this.supabase
+                .from('xp_channel_blacklist')
+                .select('*')
+                .eq('guild_id', guildId);
+
+            if (error) {
+                console.error('❌ Fehler beim Laden der Channel-Blacklists:', error);
+                return { xpBlacklist: [], voiceBlacklist: [] };
+            }
+
+            const xpBlacklist = data
+                .filter(item => item.channel_type === 'text')
+                .map(item => item.channel_name);
+
+            const voiceBlacklist = data
+                .filter(item => item.channel_type === 'voice')
+                .map(item => item.channel_name);
+
+            return { xpBlacklist, voiceBlacklist };
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Channel-Blacklists:', error);
+            return { xpBlacklist: [], voiceBlacklist: [] };
+        }
+    }
+
+    // =============================================
+    // AUTO LEADERBOARD MANAGEMENT
+    // =============================================
+
+    async saveAutoLeaderboardMessage(messageId, channelId, guildId, leaderboardType) {
+        try {
+            const { error } = await this.supabase
+                .from('xp_auto_leaderboard_messages')
+                .insert({
+                    message_id: messageId,
+                    channel_id: channelId,
+                    guild_id: guildId,
+                    leaderboard_type: leaderboardType
+                });
+
+            if (error) {
+                console.error('❌ Fehler beim Speichern der Auto-Leaderboard Message:', error);
+            }
+
+            return { success: !error };
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern der Auto-Leaderboard Message:', error);
+            return { success: false };
+        }
+    }
+
+    async getAutoLeaderboardMessages(guildId, olderThanHours = 24) {
+        try {
+            const cutoffTime = new Date(Date.now() - (olderThanHours * 60 * 60 * 1000));
+
+            const { data, error } = await this.supabase
+                .from('xp_auto_leaderboard_messages')
+                .select('*')
+                .eq('guild_id', guildId)
+                .lt('posted_at', cutoffTime.toISOString());
+
+            if (error) {
+                console.error('❌ Fehler beim Laden der Auto-Leaderboard Messages:', error);
+                return [];
+            }
+
+            return data;
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Auto-Leaderboard Messages:', error);
+            return [];
+        }
+    }
+
+    async deleteAutoLeaderboardMessage(messageId) {
+        try {
+            const { error } = await this.supabase
+                .from('xp_auto_leaderboard_messages')
+                .delete()
+                .eq('message_id', messageId);
+
+            if (error) {
+                console.error('❌ Fehler beim Löschen der Auto-Leaderboard Message:', error);
+            }
+
+            return { success: !error };
+        } catch (error) {
+            console.error('❌ Fehler beim Löschen der Auto-Leaderboard Message:', error);
+            return { success: false };
+        }
+    }
+
+    // =============================================
+    // VOICE SESSION TRACKING (Optional)
+    // =============================================
+
+    async startVoiceSession(userId, channelId, channelName, guildId) {
+        try {
+            const { error } = await this.supabase
+                .from('xp_voice_sessions')
+                .insert({
+                    user_id: userId,
+                    channel_id: channelId,
+                    channel_name: channelName,
+                    guild_id: guildId,
+                    join_time: Date.now()
+                });
+
+            if (error) {
+                console.error('❌ Fehler beim Starten der Voice-Session:', error);
+            }
+
+            return { success: !error };
+        } catch (error) {
+            console.error('❌ Fehler beim Starten der Voice-Session:', error);
+            return { success: false };
+        }
+    }
+
+    async endVoiceSession(userId, xpGained = 0) {
+        try {
+            const now = Date.now();
+
+            // Aktive Session finden und beenden
+            const { data: sessions, error: selectError } = await this.supabase
+                .from('xp_voice_sessions')
+                .select('*')
+                .eq('user_id', userId)
+                .is('leave_time', null)
+                .order('join_time', { ascending: false })
+                .limit(1);
+
+            if (selectError || !sessions || sessions.length === 0) {
+                return { success: false };
+            }
+
+            const session = sessions[0];
+            const durationMinutes = (now - session.join_time) / 1000 / 60;
+
+            const { error } = await this.supabase
+                .from('xp_voice_sessions')
+                .update({
+                    leave_time: now,
+                    duration_minutes: durationMinutes,
+                    xp_gained: xpGained,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', session.id);
+
+            if (error) {
+                console.error('❌ Fehler beim Beenden der Voice-Session:', error);
+            }
+
+            return { success: !error, duration: durationMinutes };
+        } catch (error) {
+            console.error('❌ Fehler beim Beenden der Voice-Session:', error);
+            return { success: false };
+        }
+    }
+
+    // =============================================
+    // MIGRATION HELPER METHODS
+    // =============================================
+
+    async migrateFromJSON(xpData, xpSettings) {
+        try {
+            console.log('🚀 Starte Migration von JSON zu Supabase...');
+
+            // 1. Settings migrieren
+            if (xpSettings) {
+                await this.saveSettings(xpSettings);
+                console.log('✅ Settings migriert');
+            }
+
+            // 2. User-Daten migrieren
+            if (xpData && Array.isArray(xpData)) {
+                for (const user of xpData) {
+                    await this.saveUserData(user.userId, {
+                        xp: user.xp || 0,
+                        level: user.level || 1,
+                        totalXP: user.totalXP || user.xp || 0,
+                        lastMessage: user.lastMessage || 0,
+                        voiceJoinTime: user.voiceJoinTime || 0,
+                        messageCount: user.messageCount || 0,
+                        voiceTime: user.voiceTime || 0,
+                        username: user.username || 'Unbekannt',
+                        avatar: user.avatar || null
+                    });
+                }
+                console.log(`✅ ${xpData.length} User migriert`);
+            }
+
+            console.log('🎉 Migration erfolgreich abgeschlossen!');
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Fehler bei der Migration:', error);
+            return { success: false, error: error.message };
+        }
     }
 }
 
