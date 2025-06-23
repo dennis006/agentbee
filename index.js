@@ -9133,6 +9133,201 @@ app.get('/api/xp/channels', (req, res) => {
     }
 });
 
+// XP-System Migration von JSON zu Supabase (Admin-Endpoint)
+app.post('/api/xp/migrate', async (req, res) => {
+    try {
+        console.log('🔄 Starting XP migration from JSON to Supabase via API...');
+        
+        // Import das Migrationsskript
+        const fs = require('fs');
+        const path = require('path');
+        const XPSupabaseAPI = require('./xp-supabase-api');
+
+        const supabaseAPI = new XPSupabaseAPI();
+        
+        if (!supabaseAPI.initialized) {
+            return res.status(500).json({ 
+                error: 'Supabase API not initialized. Please check your environment variables.',
+                success: false 
+            });
+        }
+
+        const migrationResults = {
+            settingsMigrated: false,
+            usersMigrated: 0,
+            totalUsers: 0,
+            levelRolesMigrated: 0,
+            milestonesMigrated: 0,
+            backupsCreated: [],
+            errors: []
+        };
+
+        // 1. Create Backups
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        
+        if (fs.existsSync('./xp-data.json')) {
+            const backupPath = `./backup/xp-data-backup-${timestamp}.json`;
+            fs.mkdirSync(path.dirname(backupPath), { recursive: true });
+            fs.copyFileSync('./xp-data.json', backupPath);
+            migrationResults.backupsCreated.push(backupPath);
+            console.log(`✅ Backed up xp-data.json to ${backupPath}`);
+        }
+        
+        if (fs.existsSync('./xp-settings.json')) {
+            const backupPath = `./backup/xp-settings-backup-${timestamp}.json`;
+            fs.mkdirSync(path.dirname(backupPath), { recursive: true });
+            fs.copyFileSync('./xp-settings.json', backupPath);
+            migrationResults.backupsCreated.push(backupPath);
+            console.log(`✅ Backed up xp-settings.json to ${backupPath}`);
+        }
+
+        // 2. Migrate Settings
+        if (fs.existsSync('./xp-settings.json')) {
+            try {
+                const settingsData = JSON.parse(fs.readFileSync('./xp-settings.json', 'utf8'));
+                await supabaseAPI.updateSettings(settingsData);
+                
+                // Migrate channel blacklists
+                if (settingsData.channels && settingsData.channels.xpBlacklist && settingsData.channels.voiceBlacklist) {
+                    await supabaseAPI.updateChannelBlacklists(
+                        settingsData.channels.xpBlacklist,
+                        settingsData.channels.voiceBlacklist
+                    );
+                }
+                
+                // Migrate level roles
+                if (settingsData.rewards && settingsData.rewards.levelRoles) {
+                    for (const role of settingsData.rewards.levelRoles) {
+                        try {
+                            await supabaseAPI.addLevelRole(role.level, role.roleId, role.roleName);
+                            migrationResults.levelRolesMigrated++;
+                        } catch (error) {
+                            if (!error.message.includes('duplicate')) {
+                                migrationResults.errors.push(`Level role: ${role.roleName} (Level ${role.level})`);
+                            }
+                        }
+                    }
+                }
+                
+                // Migrate milestone rewards
+                if (settingsData.rewards && settingsData.rewards.milestoneRewards) {
+                    for (const milestone of settingsData.rewards.milestoneRewards) {
+                        try {
+                            await supabaseAPI.addMilestoneReward(milestone.xp, milestone.reward);
+                            migrationResults.milestonesMigrated++;
+                        } catch (error) {
+                            if (!error.message.includes('duplicate')) {
+                                migrationResults.errors.push(`Milestone: ${milestone.reward} (${milestone.xp} XP)`);
+                            }
+                        }
+                    }
+                }
+                
+                migrationResults.settingsMigrated = true;
+                console.log('✅ Settings migration completed');
+            } catch (error) {
+                migrationResults.errors.push(`Settings migration failed: ${error.message}`);
+                console.error('❌ Settings migration failed:', error);
+            }
+        }
+
+        // 3. Migrate User Data
+        if (fs.existsSync('./xp-data.json')) {
+            try {
+                const userData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                migrationResults.totalUsers = userData.length;
+                
+                for (const user of userData) {
+                    try {
+                        const userDataToMigrate = {
+                            xp: user.xp || 0,
+                            level: user.level || 1,
+                            totalXP: user.totalXP || user.xp || 0,
+                            messageCount: user.messageCount || 0,
+                            voiceTime: user.voiceTime || 0,
+                            lastMessage: user.lastMessage || 0,
+                            lastVoiceXP: user.lastVoiceXP || 0,
+                            voiceJoinTime: user.voiceJoinTime || 0,
+                            username: user.username || 'Unknown',
+                            avatar: user.avatar || null
+                        };
+                        
+                        await supabaseAPI.updateUser(user.userId, userDataToMigrate);
+                        migrationResults.usersMigrated++;
+                    } catch (error) {
+                        migrationResults.errors.push(`User ${user.userId}: ${error.message}`);
+                    }
+                }
+                
+                console.log(`✅ User data migration completed: ${migrationResults.usersMigrated}/${migrationResults.totalUsers} users migrated`);
+            } catch (error) {
+                migrationResults.errors.push(`User data migration failed: ${error.message}`);
+                console.error('❌ User data migration failed:', error);
+            }
+        }
+
+        // 4. Verification
+        try {
+            const migratedSettings = await supabaseAPI.getSettings();
+            const migratedUsers = await supabaseAPI.getAllUsers();
+            const levelRoles = await supabaseAPI.getLevelRoles();
+            const milestoneRewards = await supabaseAPI.getMilestoneRewards();
+            const blacklists = await supabaseAPI.getChannelBlacklists();
+            
+            const verification = {
+                settings: !!migratedSettings,
+                users: migratedUsers.length,
+                levelRoles: levelRoles.length,
+                milestoneRewards: milestoneRewards.length,
+                xpBlacklist: blacklists.xpBlacklist.length,
+                voiceBlacklist: blacklists.voiceBlacklist.length
+            };
+
+            console.log('🎉 Migration completed successfully!');
+            
+            // Reload XP system data from Supabase
+            if (xpSystem) {
+                await xpSystem.loadData();
+                console.log('✅ XP System reloaded with new Supabase data');
+            }
+
+            res.json({
+                success: true,
+                message: 'XP Migration completed successfully!',
+                results: migrationResults,
+                verification: verification,
+                nextSteps: [
+                    'Restart your Discord bot (automatic on Railway)',
+                    'Test XP system functionality',
+                    'Optionally delete JSON files after verification'
+                ]
+            });
+
+        } catch (error) {
+            migrationResults.errors.push(`Verification failed: ${error.message}`);
+            res.json({
+                success: false,
+                message: 'Migration completed with verification errors',
+                results: migrationResults,
+                error: error.message
+            });
+        }
+
+    } catch (error) {
+        console.error('❌ Migration failed:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Migration failed',
+            message: error.message,
+            troubleshooting: [
+                'Check your Supabase credentials in environment variables',
+                'Ensure the Supabase tables are created (run the SQL migration first)',
+                'Check network connectivity to Supabase'
+            ]
+        });
+    }
+});
+
 // ================== ALLGEMEINE API ENDPUNKTE ==================
 
 // Verfügbare Server-Rollen für alle Systeme abrufen
