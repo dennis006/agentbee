@@ -629,7 +629,7 @@ async function createInteractiveMusicPanel(guildId) {
         });
 
         // Erstelle Buttons
-        const { ButtonBuilder, ActionRowBuilder } = require('discord.js');
+        const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
         
         // Erste Reihe: Hauptfunktionen
         const mainButtons = new ActionRowBuilder()
@@ -1508,18 +1508,30 @@ function registerMusicAPI(app) {
         try {
             const { guildId } = req.params;
             
+            // Debug logging
+            console.log(`🔍 API Post Request für Guild: ${guildId}`);
+            console.log(`🔍 Channel-Konfiguration: ${musicSettings.interactivePanel?.channelId}`);
+            
             const success = await postInteractiveMusicPanel(guildId);
             
             if (success) {
                 res.json({
                     success: true,
                     message: 'Musik Panel erfolgreich gepostet!',
-                    guildId: guildId
+                    guildId: guildId,
+                    channelId: musicSettings.interactivePanel?.channelId,
+                    messageId: musicSettings.interactivePanel?.messageId
                 });
             } else {
                 res.status(500).json({
                     success: false,
-                    error: 'Fehler beim Posten des Musik Panels'
+                    error: 'Fehler beim Posten des Musik Panels',
+                    debug: {
+                        channelConfigured: !!musicSettings.interactivePanel?.channelId,
+                        channelId: musicSettings.interactivePanel?.channelId,
+                        guildId: guildId,
+                        clientAvailable: !!global.client?.guilds
+                    }
                 });
             }
 
@@ -1527,7 +1539,12 @@ function registerMusicAPI(app) {
             console.error('❌ Fehler beim Musik Panel Post:', error);
             res.status(500).json({
                 success: false,
-                error: error.message
+                error: error.message,
+                debug: {
+                    channelConfigured: !!musicSettings.interactivePanel?.channelId,
+                    channelId: musicSettings.interactivePanel?.channelId,
+                    guildId: guildId
+                }
             });
         }
     };
@@ -1568,6 +1585,118 @@ function registerMusicAPI(app) {
     // Beide URL-Formate für Kompatibilität
     app.post('/api/music/interactive-panel/update/:guildId', handlePanelUpdate);
     app.post('/api/music/interactive-panel/:guildId/update', handlePanelUpdate);
+
+    // Get available channels for configuration
+    app.get('/api/music/channels/:guildId', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            if (!global.client?.guilds) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Discord Client nicht verfügbar'
+                });
+            }
+            
+            const guild = global.client.guilds.cache.get(guildId);
+            if (!guild) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Guild nicht gefunden'
+                });
+            }
+
+            const textChannels = guild.channels.cache
+                .filter(channel => channel.type === 0) // Text channels
+                .map(channel => ({
+                    id: channel.id,
+                    name: channel.name,
+                    topic: channel.topic || '',
+                    position: channel.position
+                }))
+                .sort((a, b) => a.position - b.position);
+
+            res.json({
+                success: true,
+                channels: textChannels,
+                currentChannelId: musicSettings.interactivePanel?.channelId || null
+            });
+
+        } catch (error) {
+            console.error('❌ Fehler beim Abrufen der Channels:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Set channel for interactive panel
+    app.post('/api/music/channels/:guildId/set', (req, res) => {
+        try {
+            const { guildId } = req.params;
+            const { channelId } = req.body;
+            
+            if (!channelId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Channel ID erforderlich'
+                });
+            }
+            
+            // Verify channel exists
+            if (!global.client?.guilds) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Discord Client nicht verfügbar'
+                });
+            }
+            
+            const guild = global.client.guilds.cache.get(guildId);
+            if (!guild) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Guild nicht gefunden'
+                });
+            }
+
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || channel.type !== 0) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Text-Channel nicht gefunden'
+                });
+            }
+
+            // Update settings
+            musicSettings.interactivePanel.channelId = channelId;
+            musicSettings.interactivePanel.messageId = ""; // Reset message ID
+            
+            const saveSuccess = saveMusicSettings();
+            
+            if (saveSuccess) {
+                res.json({
+                    success: true,
+                    message: `Channel #${channel.name} für Musik Panel konfiguriert`,
+                    channelId: channelId,
+                    channelName: channel.name,
+                    guildId: guildId
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Speichern der Einstellungen'
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Fehler beim Setzen des Channels:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
 
     // Voice Channel Management
     app.post('/api/music/voice/:guildId/:action', async (req, res) => {
