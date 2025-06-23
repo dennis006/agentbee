@@ -56,7 +56,7 @@ const Logs = () => {
   const [supabaseLoading, setSupabaseLoading] = useState(false);
   
   // API Base URL
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   

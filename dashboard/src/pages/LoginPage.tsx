@@ -83,7 +83,7 @@ const LoginPage = () => {
 
   const checkAdminStatus = async (userId: string) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       // Check admin status for user
       
       const response = await fetch(`${apiUrl}/api/auth/check-admin`, {

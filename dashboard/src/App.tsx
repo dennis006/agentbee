@@ -326,7 +326,7 @@ const DashboardLayout = () => {
 
   // Bot Status laden
   useEffect(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
     
     const fetchBotStatus = async () => {
       try {

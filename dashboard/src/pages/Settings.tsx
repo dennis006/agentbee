@@ -53,7 +53,7 @@ interface BotSettings {
 
 const Settings = () => {
   // API Base URL
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
   
   const { toasts, success, error: showError, removeToast } = useToast();
   const [loading, setLoading] = useState(false);

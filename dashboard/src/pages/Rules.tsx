@@ -48,7 +48,7 @@ const Rules = () => {
   const [currentRuleIndex, setCurrentRuleIndex] = useState<number | null>(null)
   
   // API Base URL
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
   
   const [rules, setRules] = useState<Rules>({
     title: "📜 SERVERREGELN",

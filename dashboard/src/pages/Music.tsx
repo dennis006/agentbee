@@ -495,7 +495,7 @@ interface MusicStatus {
 
 const Music: React.FC = () => {
   // API Base URL
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
   
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
