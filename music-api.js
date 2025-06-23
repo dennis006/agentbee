@@ -1738,6 +1738,96 @@ function registerMusicAPI(app) {
         }
     });
 
+    // RECREATE Panel - komplett neues Panel erstellen
+    app.post('/api/music/interactive-panel/:guildId/recreate', async (req, res) => {
+        try {
+            const { guildId } = req.params;
+            
+            console.log(`🆕 RECREATE Panel für Guild: ${guildId}`);
+            
+            // 1. Lösche alle alten Messages im Kanal (falls vorhanden)
+            if (musicSettings.interactivePanel?.channelId) {
+                try {
+                    const guild = global.client?.guilds.cache.get(guildId);
+                    const channel = guild?.channels.cache.get(musicSettings.interactivePanel.channelId);
+                    
+                    if (channel) {
+                        console.log(`🧹 Bereinige Kanal: #${channel.name}`);
+                        
+                        // Lösche alle Bot-Messages in dem Kanal
+                        const messages = await channel.messages.fetch({ limit: 50 });
+                        const botMessages = messages.filter(msg => msg.author.id === global.client?.user.id);
+                        
+                        for (const [messageId, message] of botMessages) {
+                            try {
+                                await message.delete();
+                                console.log(`🗑️ Message ${messageId} gelöscht`);
+                            } catch (deleteError) {
+                                console.log(`⚠️ Konnte Message ${messageId} nicht löschen:`, deleteError.message);
+                            }
+                        }
+                        
+                        console.log(`✅ ${botMessages.size} alte Messages gelöscht`);
+                    }
+                } catch (channelError) {
+                    console.log('⚠️ Kanal-Bereinigung fehlgeschlagen:', channelError.message);
+                }
+            }
+            
+            // 2. Komplett zurücksetzen
+            console.log('🔄 Setze Panel-Settings zurück...');
+            musicSettings.interactivePanel = {
+                ...musicSettings.interactivePanel,
+                messageId: "",
+                enabled: true
+            };
+            await saveMusicSettings(guildId);
+            
+            // 3. Scanne Musik-Verzeichnis frisch
+            const freshSongs = scanMusicDirectory();
+            console.log(`🎵 Frische Songs gescannt: ${freshSongs.length}`);
+            freshSongs.forEach((song, index) => {
+                console.log(`${index + 1}. ${song.id} → ${song.title} (${song.artist || 'Unbekannt'})`);
+            });
+            
+            // 4. Erstelle komplett neues Panel
+            console.log('🆕 Erstelle komplett neues Panel...');
+            const success = await postInteractiveMusicPanel(guildId);
+            
+            if (success) {
+                console.log('✅ Neues Panel erfolgreich erstellt!');
+                
+                res.json({
+                    success: true,
+                    message: `🆕 Panel komplett neu erstellt!`,
+                    details: {
+                        songsFound: freshSongs.length,
+                        channelId: musicSettings.interactivePanel.channelId,
+                        messageId: musicSettings.interactivePanel.messageId,
+                        songs: freshSongs.map(s => ({
+                            id: s.id,
+                            title: s.title,
+                            artist: s.artist || 'Unbekannt',
+                            filename: s.filename
+                        }))
+                    }
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    error: 'Fehler beim Erstellen des neuen Panels'
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Panel Recreate:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     // Get available channels for configuration
     app.get('/api/music/channels/:guildId', (req, res) => {
         try {

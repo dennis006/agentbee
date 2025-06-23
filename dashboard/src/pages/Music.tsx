@@ -1342,6 +1342,30 @@ const Music: React.FC = () => {
     }
   };
 
+  // Recreate Panel - komplett neues Panel (löscht alle alten Messages)
+  const recreatePanel = async () => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/recreate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Panel Recreate', `🆕 ${data.message}\n\nSongs: ${data.details?.songsFound || 0}\nKanal bereinigt und neues Panel erstellt!`);
+        // Reload data to get fresh panel info
+        loadData();
+      } else {
+        const data = await response.json();
+        showError('Panel Fehler', data.error || 'Fehler beim Recreate des Interactive Panels');
+      }
+    } catch (error) {
+      showError('Panel Fehler', 'Verbindungsfehler beim Recreate des Interactive Panels');
+    }
+  };
+
   // AI Funktionen
   const checkAiStatus = async () => {
     try {
@@ -1843,8 +1867,17 @@ const Music: React.FC = () => {
                       🔄 Panel Force Refresh (Fix Interaktionen)
                     </Button>
                     
-                    <div className="text-xs text-gray-400 p-2 bg-orange-500/10 border border-orange-500/20 rounded">
-                      ⚡ Force Refresh löscht das alte Panel und erstellt ein neues mit frischen Song-IDs
+                    <Button
+                      onClick={recreatePanel}
+                      disabled={!settings.interactivePanel.enabled || !guildId}
+                      className="w-full bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      🆕 Panel komplett neu erstellen
+                    </Button>
+                    
+                    <div className="text-xs text-gray-400 p-2 bg-red-500/10 border border-red-500/20 rounded">
+                      🆕 <strong>Recreate</strong> löscht ALLE Bot-Messages im Kanal und erstellt ein komplett neues Panel
                     </div>
                   </div>
                 )}
