@@ -181,18 +181,19 @@ class SimpleMusicPanel {
             return;
         }
 
-        // Verwende dieselbe API wie Dashboard
+        // Verwende Simple Music Panel API
         try {
             const fetch = require('node-fetch');
             const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
-            // Konvertiere zu altem System-Format
-            const actualSongId = `mp3_${songs.indexOf(song)}_${song.filename.replace(/\.mp3$/i, '').replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_').toLowerCase()}`;
-            
-            const response = await fetch(`${API_URL}/api/music/play/${interaction.guild.id}`, {
+            // Verwende Dateiname direkt (wie Simple Panel API erwartet)
+            const response = await fetch(`${API_URL}/api/simple-music/play`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ songId: actualSongId })
+                body: JSON.stringify({ 
+                    guildId: interaction.guild.id,
+                    songName: song.filename 
+                })
             });
 
             if (response.ok) {
@@ -229,8 +230,10 @@ class SimpleMusicPanel {
             const fetch = require('node-fetch');
             const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
-            const response = await fetch(`${API_URL}/api/music/stop/${interaction.guild.id}`, {
-                method: 'POST'
+            const response = await fetch(`${API_URL}/api/simple-music/stop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guildId: interaction.guild.id })
             });
 
             if (response.ok) {
@@ -336,17 +339,18 @@ class SimpleMusicPanel {
             return;
         }
 
-        // API Call
+        // API Call mit Simple Music Panel API
         try {
             const fetch = require('node-fetch');
             const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
-            const actualSongId = `mp3_${songs.indexOf(matchingSong)}_${matchingSong.filename.replace(/\.mp3$/i, '').replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_').toLowerCase()}`;
-            
-            const response = await fetch(`${API_URL}/api/music/play/${interaction.guild.id}`, {
+            const response = await fetch(`${API_URL}/api/simple-music/play`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ songId: actualSongId })
+                body: JSON.stringify({ 
+                    guildId: interaction.guild.id,
+                    songName: matchingSong.filename 
+                })
             });
 
             if (response.ok) {
@@ -374,8 +378,10 @@ class SimpleMusicPanel {
             const fetch = require('node-fetch');
             const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
-            const response = await fetch(`${API_URL}/api/music/stop/${interaction.guild.id}`, {
-                method: 'POST'
+            const response = await fetch(`${API_URL}/api/simple-music/stop`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ guildId: interaction.guild.id })
             });
 
             if (response.ok) {

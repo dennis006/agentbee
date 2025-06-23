@@ -244,6 +244,122 @@ function registerSimpleMusicPanelAPI(app, client) {
         }
     });
 
+    // POST: Spiele Song ab (Simple Music Panel Play)
+    app.post('/api/simple-music/play', async (req, res) => {
+        try {
+            const { guildId, songName } = req.body;
+
+            if (!guildId || !songName) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'guildId und songName sind erforderlich'
+                });
+            }
+
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Guild nicht gefunden'
+                });
+            }
+
+            // Finde Song-Datei
+            const musicDir = path.join(__dirname, 'music');
+            const songPath = path.join(musicDir, songName);
+            
+            if (!fs.existsSync(songPath)) {
+                return res.status(404).json({
+                    success: false,
+                    error: `Song "${songName}" nicht gefunden`
+                });
+            }
+
+            // Verwende das bestehende Musik-System zur Wiedergabe
+            const musicApi = require('./music-api');
+            if (musicApi && typeof musicApi.playLocalSong === 'function') {
+                // Erzeuge Song-ID im Format, das das Musik-System erwartet
+                const songs = musicApi.getAvailableSongs();
+                const matchingSong = songs.find(song => song.filename === songName);
+                
+                if (matchingSong) {
+                    const result = await musicApi.playLocalSong(guildId, matchingSong.id);
+                    
+                    res.json({
+                        success: true,
+                        message: `Song "${songName}" wird abgespielt`,
+                        songName,
+                        songId: matchingSong.id,
+                        guildId
+                    });
+                } else {
+                    res.status(404).json({
+                        success: false,
+                        error: `Song "${songName}" nicht im Musik-System gefunden`
+                    });
+                }
+            } else {
+                res.status(501).json({
+                    success: false,
+                    error: 'Musik-System nicht verfügbar'
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Simple Music Play API Error:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // POST: Stoppe Musik (Simple Music Panel Stop)
+    app.post('/api/simple-music/stop', async (req, res) => {
+        try {
+            const { guildId } = req.body;
+
+            if (!guildId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'guildId ist erforderlich'
+                });
+            }
+
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Guild nicht gefunden'
+                });
+            }
+
+            // Verwende das bestehende Musik-System zum Stoppen
+            const musicApi = require('./music-api');
+            if (musicApi && typeof musicApi.stopMusic === 'function') {
+                await musicApi.stopMusic(guildId);
+                
+                res.json({
+                    success: true,
+                    message: 'Musik gestoppt',
+                    guildId
+                });
+            } else {
+                res.status(501).json({
+                    success: false,
+                    error: 'Musik-System nicht verfügbar'
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Simple Music Stop API Error:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     // GET: Simple Music Panel Info
     app.get('/api/simple-music/info', (req, res) => {
         try {
