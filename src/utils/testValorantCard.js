@@ -1,49 +1,94 @@
 const { makeValorantCard } = require('./valorantCard');
 const fs = require('fs');
-const path = require('path');
 
-// Test-Daten für die Valorant-Karte
-const testStats = {
-  name: 'TestPlayer',
-  tag: '1234',
-  level: 87,
-  currentRank: 'Gold 2',
-  rr: 42,
-  peakRank: 'Platinum 1',
-  kills: 18,
-  deaths: 12,
-  assists: 7,
-  adr: 156,
-  hsRate: 23.5,
-  agentIconUrl: 'https://media.valorant-api.com/agents/5f8d3a7f-467b-97f3-062c-13acf203c006/displayicon.png' // Breach
-};
-
+/**
+ * Test der Ultra-sicheren Valorant-Karte
+ */
 async function testValorantCard() {
-  try {
-    console.log('🎯 Erstelle Valorant-Karte...');
-    
-    const startTime = Date.now();
-    const imageBuffer = await makeValorantCard(testStats);
-    const endTime = Date.now();
-    
-    console.log(`✅ Karte erfolgreich erstellt in ${endTime - startTime}ms`);
-    console.log(`📊 Bildgröße: ${imageBuffer.length} bytes`);
-    
-    // Speichere das Bild zum Testen
-    const outputPath = path.join(__dirname, '../../test-valorant-card.png');
-    fs.writeFileSync(outputPath, imageBuffer);
-    
-    console.log(`💾 Testbild gespeichert: ${outputPath}`);
-    console.log('🎨 Du kannst das Bild jetzt öffnen und das Design überprüfen!');
-    
-  } catch (error) {
-    console.error('❌ Fehler beim Testen der Valorant-Karte:', error);
+  console.log('🧪 Teste Valorant-Karte Generation...\n');
+
+  // Test-Daten mit verschiedenen Szenarien
+  const testCases = [
+    {
+      name: 'Standard Test',
+      stats: {
+        name: 'TestPlayer',
+        tag: '1234',
+        level: 42,
+        currentRank: 'Diamond 2',
+        rr: 67,
+        peakRank: 'Immortal 1',
+        kills: 245,
+        deaths: 198,
+        assists: 156,
+        hsRate: 24.3,
+        adr: 168,
+        totalMatches: 127,
+        winRate: 64.2,
+        wins: 81
+      }
+    },
+    {
+      name: 'Unicode Test (sollte bereinigt werden)',
+      stats: {
+        name: 'Player测试',
+        tag: '№123',
+        level: 25,
+        currentRank: 'Gold 🥇',
+        rr: 45,
+        peakRank: 'Platinum ⭐',
+        kills: 150,
+        deaths: 140,
+        assists: 89,
+        hsRate: 18.7,
+        adr: 142,
+        totalMatches: 85,
+        winRate: 52.9,
+        wins: 45
+      }
+    },
+    {
+      name: 'Minimal Data Test',
+      stats: {
+        name: 'MinimalUser',
+        tag: '0001',
+        level: 1
+      }
+    }
+  ];
+
+  for (const testCase of testCases) {
+    console.log(`\n📋 Test: ${testCase.name}`);
+    console.log('Stats:', JSON.stringify(testCase.stats, null, 2));
+
+    try {
+      const result = await makeValorantCard(testCase.stats);
+      
+      // Prüfe ob Text oder Buffer returniert wurde
+      if (typeof result === 'string') {
+        console.log('✅ Text-basierte Statistiken generiert:');
+        console.log(result);
+      } else if (Buffer.isBuffer(result)) {
+        console.log('✅ Canvas-Bild erfolgreich generiert!');
+        
+        // Speichere Test-Bild
+        const filename = `test-valorant-card-${testCase.name.toLowerCase().replace(/\s+/g, '-')}.png`;
+        fs.writeFileSync(filename, result);
+        console.log(`💾 Bild gespeichert als: ${filename}`);
+      } else {
+        console.log('⚠️  Unbekannter Return-Type:', typeof result);
+      }
+    } catch (error) {
+      console.error(`❌ Fehler bei ${testCase.name}:`, error.message);
+    }
   }
+
+  console.log('\n✅ Alle Tests abgeschlossen!');
 }
 
-// Test ausführen
+// Führe Tests aus
 if (require.main === module) {
-  testValorantCard();
+  testValorantCard().catch(console.error);
 }
 
 module.exports = { testValorantCard }; 
