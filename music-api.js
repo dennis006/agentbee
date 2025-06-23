@@ -1010,18 +1010,10 @@ async function handleMusicRefreshButton(interaction) {
     }
 }
 
-// Handler für MP3-Song Auswahl
+// Handler für MP3-Song Auswahl - VEREINFACHT: Verwendet dieselbe API wie Dashboard
 async function handleMusicMP3SongSelect(interaction) {
-    console.log('🔍 DEBUG: handleMusicMP3SongSelect called');
-    console.log('🔍 DEBUG: interaction.values:', interaction.values);
-    console.log('🔍 DEBUG: interaction.customId:', interaction.customId);
-    console.log('🔍 DEBUG: interaction.guild?.id:', interaction.guild?.id);
-    
     try {
-        // Sofort antworten um Timeout zu vermeiden
-        console.log('🔍 DEBUG: About to defer reply...');
         await interaction.deferReply({ ephemeral: true });
-        console.log('✅ DEBUG: Deferred reply successful');
 
         const songId = interaction.values[0];
         const guildId = interaction.guild?.id;
@@ -1029,90 +1021,81 @@ async function handleMusicMP3SongSelect(interaction) {
         console.log(`🎵 MP3 Song Select: ${songId} in Guild: ${guildId}`);
 
         if (!guildId) {
-            console.error('❌ Keine Guild-ID gefunden');
             await interaction.editReply({
                 content: '❌ **Server-Fehler:** Keine Guild-ID gefunden'
             });
             return;
         }
 
-        // Prüfe ob Song existiert
-        console.log('🔍 DEBUG: Getting available songs...');
-        const availableSongs = getAvailableSongs();
-        console.log(`🔍 DEBUG: Found ${availableSongs.length} available songs`);
-        console.log(`🔍 DEBUG: Available song IDs: ${availableSongs.map(s => s.id).join(', ')}`);
-        
-        const song = availableSongs.find(s => s.id === songId || s.filename === songId);
-        console.log(`🔍 DEBUG: Looking for song with ID: ${songId}`);
-        console.log(`🔍 DEBUG: Found song:`, song ? { id: song.id, title: song.title } : 'null');
-        
-        if (!song) {
-            console.error(`❌ Song "${songId}" nicht in verfügbaren Songs gefunden`);
-            console.log(`📋 Verfügbare Songs: ${availableSongs.map(s => s.id).join(', ')}`);
-            
-            await interaction.editReply({
-                content: `❌ **Song nicht gefunden!**\n\nSong-ID: \`${songId}\`\n\nVerfügbare Songs: ${availableSongs.length}\n\n**Debug Info:**\n\`\`\`\nSuchte: ${songId}\nVerfügbar: ${availableSongs.map(s => s.id).slice(0, 3).join(', ')}...\`\`\``
-            });
-            return;
-        }
-
-        console.log('🔍 DEBUG: About to edit reply with loading message...');
         await interaction.editReply({
-            content: `🎵 **MP3 wird gestartet...**\n\n**Song:** ${song.title}\n**Künstler:** ${song.artist || 'Unbekannt'}\n\nEinen Moment bitte...`
+            content: `🎵 **MP3 wird gestartet...**\n\nSong-ID: \`${songId}\`\n\nEinen Moment bitte...`
         });
-        console.log('✅ DEBUG: Edit reply successful');
 
-        // Spiele MP3-Song
+        // 🎯 NEUE METHODE: Verwende dieselbe API wie das Dashboard
         try {
-            console.log('🔍 DEBUG: About to play local song...');
+            // Simuliere Dashboard API-Call
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 3001}`;
+            
+            console.log(`🔄 API Call: POST ${API_URL}/api/music/play/${guildId}`);
+            console.log(`📦 Body: { songId: "${songId}" }`);
+            
+            const response = await fetch(`${API_URL}/api/music/play/${guildId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ songId })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`✅ API Success:`, data);
+                
+                await interaction.editReply({
+                    content: `✅ **MP3 gestartet!**\n\n🎵 **${data.song?.title || 'Song'}**\n🎤 ${data.song?.artist || 'Unbekannt'}\n\n💡 *Verwendet Dashboard-API*`
+                });
+            } else {
+                const errorData = await response.json();
+                console.error(`❌ API Error:`, errorData);
+                
+                await interaction.editReply({
+                    content: `❌ **Fehler beim Abspielen**\n\n❌ **API-Fehler:** ${errorData.error || 'Unbekannter Fehler'}\n\n**Status:** ${response.status}`
+                });
+            }
+        } catch (apiError) {
+            console.error('❌ API Call Fehler:', apiError);
+            
+            await interaction.editReply({
+                content: `❌ **API-Verbindungsfehler**\n\n\`\`\`${apiError.message}\`\`\`\n\n💡 Fallback zum direkten Handler...`
+            });
+            
+            // Fallback zur alten Methode
             await playLocalSong(guildId, songId);
-            console.log('✅ DEBUG: Play local song successful');
-            
-            // Update Reply mit Erfolg
-            console.log('🔍 DEBUG: About to edit reply with success message...');
             await interaction.editReply({
-                content: `✅ **MP3 gestartet!**\n\n🎵 **${song.title}**\n🎤 ${song.artist || 'Unbekannt'}`
+                content: `✅ **MP3 gestartet (Fallback)**\n\nSong-ID: \`${songId}\``
             });
-            console.log('✅ DEBUG: Final edit reply successful');
-            
-        } catch (playError) {
-            console.error('❌ Fehler beim Abspielen:', playError);
-            
-            console.log('🔍 DEBUG: About to edit reply with error message...');
-            await interaction.editReply({
-                content: `❌ **Fehler beim Abspielen**\n\n🎵 **Song:** ${song.title}\n❌ **Fehler:** ${playError.message}`
-            });
-            return;
         }
 
-        // Update Panel nach kurzer Verzögerung
+        // Update Panel
         setTimeout(() => {
             updateInteractiveMusicPanel(guildId, true);
         }, 2000);
 
     } catch (error) {
         console.error('❌ Fehler beim MP3 Song Select:', error);
-        console.error('❌ Error Stack:', error.stack);
         
         try {
-            console.log('🔍 DEBUG: About to send error reply...');
-            console.log('🔍 DEBUG: interaction.replied:', interaction.replied);
-            console.log('🔍 DEBUG: interaction.deferred:', interaction.deferred);
-            
             if (interaction.replied || interaction.deferred) {
                 await interaction.editReply({
-                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\`\n\n**Debug Info:**\nReplied: ${interaction.replied}\nDeferred: ${interaction.deferred}`
+                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\``
                 });
             } else {
                 await interaction.reply({
-                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\`\n\n**Debug Info:** Nicht deferred`,
-                    flags: 64 // MessageFlags.Ephemeral
+                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\``,
+                    flags: 64
                 });
             }
-            console.log('✅ DEBUG: Error reply sent successfully');
         } catch (replyError) {
             console.error('❌ Fehler beim Senden der Fehler-Antwort:', replyError);
-            console.error('❌ Reply Error Stack:', replyError.stack);
         }
     }
 }
