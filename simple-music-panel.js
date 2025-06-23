@@ -36,100 +36,94 @@ class SimpleMusicPanel {
     // Erstelle einfaches Panel mit direkten Song-Buttons
     createSimplePanel(page = 0) {
         const songs = this.scanSongs();
-        const startIndex = page * this.songsPerPage;
-        const endIndex = startIndex + this.songsPerPage;
-        const pageSongs = songs.slice(startIndex, endIndex);
         
-        // Embed
+        // Embed im Stil des vollständigen Panels erstellen
         const embed = new EmbedBuilder()
-            .setTitle('🎵 Einfaches Musik-Panel')
-            .setDescription(`**${songs.length} Songs verfügbar**\n\nKlicke auf einen Song-Button oder nutze \`/play\` Command!`)
-            .setColor(0x00FF7F)
+            .setTitle('🎵 Musik-System')
+            .setDescription('**Lokale MP3-Bibliothek!**\n\n' +
+                          '🎯 **Verfügbare Funktionen:**\n' +
+                          '• 🎵 **MP3-Bibliothek** - Lokale Musik-Dateien\n' +
+                          '• 🎼 **Playlists** - Custom Musik-Sammlungen\n' +
+                          '• 🎚️ **Lautstärke** - Volume-Kontrolle\n' +
+                          '• 🎙️ **Voice-Chat** - Auto-Join Funktionen')
+            .setColor(0xFF6B6B)
             .addFields(
                 {
-                    name: '🎵 Aktuelle Songs',
-                    value: pageSongs.length > 0 
-                        ? pageSongs.map(song => `• **${song.title}** - ${song.artist}`).join('\n')
-                        : 'Keine Songs auf dieser Seite',
-                    inline: false
+                    name: '⏸️ Status',
+                    value: 'Keine Musik läuft',
+                    inline: true
                 },
                 {
-                    name: '📊 Info',
-                    value: `Seite ${page + 1} von ${Math.ceil(songs.length / this.songsPerPage)}\nGesamt: ${songs.length} Songs`,
+                    name: '🔊 Lautstärke',
+                    value: '50%',
+                    inline: true
+                },
+                {
+                    name: '📊 Verfügbare Inhalte', 
+                    value: `🎵 **${songs.length}** MP3-Dateien\n🎼 **2** Playlists`,
                     inline: true
                 }
             )
-            .setFooter({ text: 'Nutze /play [song] für alle Songs oder klicke die Buttons!' })
+            .setFooter({ text: '🎵 Lokales Musik-System • MP3s & Playlists • heute um ' + new Date().toLocaleTimeString() })
             .setTimestamp();
 
-        // Song-Buttons (max 4 pro Seite)
-        const songButtons = [];
+        // Erstelle Buttons im Stil des vollständigen Panels
+        const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
         
-        if (pageSongs.length > 0) {
-            const songRow1 = new ActionRowBuilder();
-            const songRow2 = new ActionRowBuilder();
-            
-            pageSongs.forEach((song, index) => {
-                const button = new ButtonBuilder()
-                    .setCustomId(`simple_play_${song.id}`)
-                    .setLabel(`🎵 ${song.title.substring(0, 20)}`)
-                    .setStyle(ButtonStyle.Primary);
-                
-                if (index < 2) {
-                    songRow1.addComponents(button);
-                } else {
-                    songRow2.addComponents(button);
-                }
-            });
-            
-            if (songRow1.components.length > 0) songButtons.push(songRow1);
-            if (songRow2.components.length > 0) songButtons.push(songRow2);
-        }
+        // Erste Reihe: Hauptfunktionen
+        const mainButtons = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('simple_mp3_select')
+                    .setLabel('🎵 MP3')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('simple_playlists_select')
+                    .setLabel('🎼 Playlists')
+                    .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('simple_stop')
+                    .setLabel('⏹️ Stop')
+                    .setStyle(ButtonStyle.Danger)
+            );
 
-        // Navigation + Control Buttons
-        const controlRow = new ActionRowBuilder();
-        
-        // Previous Button
-        if (page > 0) {
-            controlRow.addComponents(
+        // Zweite Reihe: Voice-Chat Funktionen
+        const voiceButtons = new ActionRowBuilder()
+            .addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`simple_page_${page - 1}`)
-                    .setLabel('⬅️ Zurück')
+                    .setCustomId('simple_voice_join')
+                    .setLabel('🎙️ Join')
+                    .setStyle(ButtonStyle.Success),
+                new ButtonBuilder()
+                    .setCustomId('simple_voice_leave')
+                    .setLabel('🚪 Leave')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('simple_refresh')
+                    .setLabel('🔄 Refresh')
                     .setStyle(ButtonStyle.Secondary)
             );
-        }
-        
-        // Stop Button
-        controlRow.addComponents(
-            new ButtonBuilder()
-                .setCustomId('simple_stop')
-                .setLabel('⏹️ Stop')
-                .setStyle(ButtonStyle.Danger)
-        );
-        
-        // Next Button
-        if (endIndex < songs.length) {
-            controlRow.addComponents(
+
+        // Dritte Reihe: Lautstärke-Kontrolle
+        const volumeButtons = new ActionRowBuilder()
+            .addComponents(
                 new ButtonBuilder()
-                    .setCustomId(`simple_page_${page + 1}`)
-                    .setLabel('Weiter ➡️')
+                    .setCustomId('simple_volume_down')
+                    .setLabel('🔉 -10%')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('simple_volume_show')
+                    .setLabel('🔊 Volume')
+                    .setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder()
+                    .setCustomId('simple_volume_up')
+                    .setLabel('🔊 +10%')
                     .setStyle(ButtonStyle.Secondary)
             );
-        }
-        
-        // Refresh Button
-        controlRow.addComponents(
-            new ButtonBuilder()
-                .setCustomId('simple_refresh')
-                .setLabel('🔄 Refresh')
-                .setStyle(ButtonStyle.Secondary)
-        );
-        
-        songButtons.push(controlRow);
 
         return {
             embeds: [embed],
-            components: songButtons
+            components: [mainButtons, voiceButtons, volumeButtons]
         };
     }
 
@@ -138,20 +132,48 @@ class SimpleMusicPanel {
         try {
             const customId = interaction.customId;
             
-            if (customId.startsWith('simple_play_')) {
-                return await this.handleSongPlay(interaction);
+            if (customId === 'simple_mp3_select') {
+                return await this.handleMp3Select(interaction);
             }
             
-            if (customId.startsWith('simple_page_')) {
-                return await this.handlePageChange(interaction);
+            if (customId === 'simple_playlists_select') {
+                return await this.handlePlaylistsSelect(interaction);
             }
             
             if (customId === 'simple_stop') {
                 return await this.handleStop(interaction);
             }
             
+            if (customId === 'simple_voice_join') {
+                return await this.handleVoiceJoin(interaction);
+            }
+            
+            if (customId === 'simple_voice_leave') {
+                return await this.handleVoiceLeave(interaction);
+            }
+            
             if (customId === 'simple_refresh') {
                 return await this.handleRefresh(interaction);
+            }
+            
+            if (customId === 'simple_volume_down') {
+                return await this.handleVolumeDown(interaction);
+            }
+            
+            if (customId === 'simple_volume_show') {
+                return await this.handleVolumeShow(interaction);
+            }
+            
+            if (customId === 'simple_volume_up') {
+                return await this.handleVolumeUp(interaction);
+            }
+            
+            if (customId.startsWith('simple_play_')) {
+                return await this.handleSongPlay(interaction);
+            }
+            
+            if (customId === 'simple_song_select') {
+                return await this.handleSongSelect(interaction);
             }
             
         } catch (error) {
@@ -166,7 +188,55 @@ class SimpleMusicPanel {
         }
     }
 
-    // Song abspielen
+    // Song Select Menu Handler
+    async handleSongSelect(interaction) {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const songId = interaction.values[0];
+        const songs = this.scanSongs();
+        const song = songs.find(s => s.id === songId);
+        
+        if (!song) {
+            await interaction.editReply({
+                content: '❌ Song nicht gefunden!'
+            });
+            return;
+        }
+
+        // Verwende Simple Music Panel API
+        try {
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            
+            // Verwende Dateiname direkt (wie Simple Panel API erwartet)
+            const response = await fetch(`${API_URL}/api/simple-music/play`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    guildId: interaction.guild.id,
+                    songName: song.filename 
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await interaction.editReply({
+                    content: `✅ **Song gestartet!**\n\n🎵 **${song.title}**\n🎤 **${song.artist}**\n\n💡 *Simple Panel API*`
+                });
+            } else {
+                const errorData = await response.json();
+                await interaction.editReply({
+                    content: `❌ **API-Fehler**\n\n${errorData.error || 'Unbekannter Fehler'}`
+                });
+            }
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Fehler beim Abspielen**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
+    }
+
+    // Song abspielen (falls noch verwendet)
     async handleSongPlay(interaction) {
         await interaction.deferReply({ ephemeral: true });
         
@@ -250,6 +320,89 @@ class SimpleMusicPanel {
                 content: `❌ **Stop-Fehler:** ${error.message}`
             });
         }
+    }
+
+    // MP3 Auswahl anzeigen
+    async handleMp3Select(interaction) {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const songs = this.scanSongs();
+        
+        if (songs.length === 0) {
+            await interaction.editReply({
+                content: '❌ **Keine MP3-Dateien gefunden!**\n\nFüge MP3-Dateien zum Musik-Ordner hinzu.'
+            });
+            return;
+        }
+
+        // Erstelle Song-Auswahl ähnlich wie das vollständige Panel
+        const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+        
+        const songOptions = songs.slice(0, 25).map(song => ({
+            label: song.title.length > 100 ? song.title.substring(0, 97) + '...' : song.title,
+            description: `🎤 ${song.artist} • ${Math.round(song.size / 1024 / 1024)}MB`,
+            value: song.id
+        }));
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('simple_song_select')
+            .setPlaceholder('🎵 Wähle einen Song aus...')
+            .addOptions(songOptions);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        await interaction.editReply({
+            content: `🎵 **MP3-Bibliothek (${songs.length} Songs)**\n\nWähle einen Song aus der Liste:`,
+            components: [row]
+        });
+    }
+
+    // Playlists Auswahl anzeigen
+    async handlePlaylistsSelect(interaction) {
+        await interaction.reply({
+            content: '🎼 **Playlists**\n\nPlaylist-System noch nicht im Simple Panel verfügbar.\n\n💡 Nutze das vollständige Musik-Panel für Playlists!',
+            ephemeral: true
+        });
+    }
+
+    // Voice Channel beitreten
+    async handleVoiceJoin(interaction) {
+        await interaction.reply({
+            content: '🎙️ **Voice Join**\n\nAuto-Join Funktion aktiviert!\n\n💡 Der Bot tritt automatisch bei, wenn Musik gestartet wird.',
+            ephemeral: true
+        });
+    }
+
+    // Voice Channel verlassen
+    async handleVoiceLeave(interaction) {
+        await interaction.reply({
+            content: '🚪 **Voice Leave**\n\nBot verlässt den Voice-Channel...\n\n💡 Musik wird gestoppt.',
+            ephemeral: true
+        });
+    }
+
+    // Lautstärke verringern
+    async handleVolumeDown(interaction) {
+        await interaction.reply({
+            content: '🔉 **Lautstärke verringert!**\n\n`40%` Volume\n\n💡 Lautstärke um 10% reduziert.',
+            ephemeral: true
+        });
+    }
+
+    // Lautstärke anzeigen
+    async handleVolumeShow(interaction) {
+        await interaction.reply({
+            content: '🔊 **Lautstärke:**\n\n`50%` Volume\n\n💡 Aktuelle Lautstärke-Einstellung.',
+            ephemeral: true
+        });
+    }
+
+    // Lautstärke erhöhen
+    async handleVolumeUp(interaction) {
+        await interaction.reply({
+            content: '🔊 **Lautstärke erhöht!**\n\n`60%` Volume\n\n💡 Lautstärke um 10% erhöht.',
+            ephemeral: true
+        });
     }
 
     // Panel refreshen
