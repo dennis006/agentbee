@@ -922,6 +922,7 @@ async function handleValorantModalSubmission(interaction) {
 
         // Erstelle Valorant-Karte
         let cardAttachment = null;
+        let textFallback = null;
         try {
             console.log('🎨 Erstelle Valorant-Statistik-Karte...');
             
@@ -987,12 +988,20 @@ async function handleValorantModalSubmission(interaction) {
             });
             
             // Erstelle die Karte
-            const cardBuffer = await makeValorantCard(cardStats);
+            const cardResult = await makeValorantCard(cardStats);
             
-            // Erstelle Discord-Attachment
-            cardAttachment = new AttachmentBuilder(cardBuffer, { 
-                name: `valorant-stats-${playerName}-${playerTag}.png` 
-            });
+            // Prüfe ob Canvas verfügbar ist oder Text-Fallback verwendet wird
+            if (typeof cardResult === 'string') {
+                // Canvas nicht verfügbar - verwende Text-basierte Statistiken
+                console.log('📝 Canvas nicht verfügbar - verwende Text-Statistiken');
+                textFallback = cardResult;
+                cardAttachment = null;
+            } else {
+                // Canvas verfügbar - erstelle Discord-Attachment
+                cardAttachment = new AttachmentBuilder(cardResult, { 
+                    name: `valorant-stats-${playerName}-${playerTag}.png` 
+                });
+            }
             
             console.log('✅ Valorant-Karte erfolgreich erstellt');
             
@@ -1031,8 +1040,13 @@ async function handleValorantModalSubmission(interaction) {
             replyOptions.content += `\n📝 **Discord Embed Format**`;
         }
 
+        // Text-Fallback wenn Canvas nicht verfügbar ist
+        if (textFallback && outputFormat.cardEnabled && (outputFormat.mode === 'card' || outputFormat.mode === 'both')) {
+            replyOptions.content += `\n\n📝 **Text-basierte Statistiken:**\n\`\`\`\n${textFallback}\n\`\`\``;
+        }
+
         // Fallback falls weder Embed noch Karte verfügbar
-        if (!replyOptions.embeds && !replyOptions.files) {
+        if (!replyOptions.embeds && !replyOptions.files && !textFallback) {
             replyOptions.content = `❌ **Fehler:** Weder Discord Embed noch Valorant Card konnten erstellt werden.\n\n**Konfiguration:** ${outputFormat.mode}\n**Embed aktiviert:** ${outputFormat.embedEnabled}\n**Card aktiviert:** ${outputFormat.cardEnabled}`;
         }
 

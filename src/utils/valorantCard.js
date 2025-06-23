@@ -1,4 +1,16 @@
-const { createCanvas, loadImage } = require('canvas');
+// Canvas-Kompatibilitätsprüfung für Railway
+let canvasAvailable = true;
+let createCanvas, loadImage;
+
+try {
+  const canvasModule = require('canvas');
+  createCanvas = canvasModule.createCanvas;
+  loadImage = canvasModule.loadImage;
+} catch (error) {
+  console.warn('⚠️ Canvas nicht verfügbar - verwende Text-Fallback:', error.message);
+  canvasAvailable = false;
+}
+
 const https = require('https');
 const http = require('http');
 
@@ -108,9 +120,39 @@ function roundedRect(ctx, x, y, width, height, radius) {
 }
 
 /**
+ * Text-basierte Valorant-Statistiken (Fallback für Server ohne Canvas)
+ */
+function createTextBasedStats(stats) {
+  const lines = [
+    `🎮 **${stats.name || 'Unknown'}#${stats.tag || '0000'}** (Level ${stats.level || 1})`,
+    '',
+    `🏆 **Rang:** ${stats.currentRank || 'Unranked'} (${stats.rr || 0} RR)`,
+    `⭐ **Peak:** ${stats.peakRank || 'Unranked'}`,
+    '',
+    `⚔️ **K/D/A:** ${stats.kills || 0}/${stats.deaths || 0}/${stats.assists || 0}`,
+    `🎯 **Headshot-Rate:** ${(stats.hsRate || 0).toFixed(1)}%`,
+    `💥 **ADR:** ${Math.round(stats.adr || 0)}`,
+    '',
+    `📊 **Matches:** ${stats.totalMatches || 0} (${(stats.winRate || 0).toFixed(1)}% Win-Rate)`,
+    `🏆 **Season:** ${stats.wins || 0} Wins`,
+    '',
+    `*Powered by AgentBee*`
+  ];
+  
+  return lines.join('\n');
+}
+
+/**
  * Erstellt eine ULTRA-SICHERE Valorant-Karte mit minimalem Text
  */
 async function makeValorantCard(stats) {
+  // Fallback für Server ohne Canvas-Support
+  if (!canvasAvailable || !createCanvas) {
+    console.log('📝 Canvas nicht verfügbar - verwende Text-Statistiken');
+    // Returniere Text-basierte Statistiken als String
+    return createTextBasedStats(stats);
+  }
+
   const canvas = createCanvas(900, 600);
   const ctx = canvas.getContext('2d');
 
