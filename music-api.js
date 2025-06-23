@@ -88,12 +88,20 @@ function scanMusicDirectory() {
 
         console.log(`🎵 ${mp3Files.length} Audio-Dateien gefunden:`, mp3Files);
         
-        return mp3Files.map(filename => {
+        return mp3Files.map((filename, index) => {
             const filePath = path.join(musicDir, filename);
             const stats = fs.statSync(filePath);
             
+            // Sichere ID-Generierung: Index + sanitized filename
+            const safeName = filename.replace(/\.[^/.]+$/, "")
+                .replace(/[^a-zA-Z0-9\-_]/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '');
+            
+            const safeId = `mp3_${index}_${safeName}`.substring(0, 100); // Discord max 100 chars
+            
             return {
-                id: filename.replace(/\.[^/.]+$/, ""), // Dateiname ohne Erweiterung
+                id: safeId,
                 filename: filename,
                 title: filename.replace(/\.[^/.]+$/, ""), // Fallback title
                 artist: "Unbekannt",
@@ -1008,15 +1016,52 @@ async function handleMusicMP3SongSelect(interaction) {
         const songId = interaction.values[0];
         const guildId = interaction.guild?.id;
 
-        if (!guildId) return;
+        console.log(`🎵 MP3 Song Select: ${songId} in Guild: ${guildId}`);
+
+        if (!guildId) {
+            console.error('❌ Keine Guild-ID gefunden');
+            return;
+        }
+
+        // Prüfe ob Song existiert
+        const availableSongs = getAvailableSongs();
+        const song = availableSongs.find(s => s.id === songId || s.filename === songId);
+        
+        if (!song) {
+            console.error(`❌ Song "${songId}" nicht in verfügbaren Songs gefunden`);
+            console.log(`📋 Verfügbare Songs: ${availableSongs.map(s => s.id).join(', ')}`);
+            
+            await interaction.reply({
+                content: `❌ **Song nicht gefunden!**\n\nSong-ID: \`${songId}\`\n\nVerfügbare Songs: ${availableSongs.length}`,
+                ephemeral: true
+            });
+            return;
+        }
 
         await interaction.reply({
-            content: '🎵 **MP3 wird gestartet...**\n\nEinen Moment bitte...',
+            content: `🎵 **MP3 wird gestartet...**\n\n**Song:** ${song.title}\n**Künstler:** ${song.artist || 'Unbekannt'}\n\nEinen Moment bitte...`,
             ephemeral: true
         });
 
         // Spiele MP3-Song
-        await playLocalSong(guildId, songId);
+        try {
+            await playLocalSong(guildId, songId);
+            
+            // Update Reply mit Erfolg
+            await interaction.editReply({
+                content: `✅ **MP3 gestartet!**\n\n🎵 **${song.title}**\n🎤 ${song.artist || 'Unbekannt'}`,
+                ephemeral: true
+            });
+            
+        } catch (playError) {
+            console.error('❌ Fehler beim Abspielen:', playError);
+            
+            await interaction.editReply({
+                content: `❌ **Fehler beim Abspielen**\n\n🎵 **Song:** ${song.title}\n❌ **Fehler:** ${playError.message}`,
+                ephemeral: true
+            });
+            return;
+        }
 
         // Update Panel nach kurzer Verzögerung
         setTimeout(() => {
@@ -1024,11 +1069,23 @@ async function handleMusicMP3SongSelect(interaction) {
         }, 2000);
 
     } catch (error) {
-        console.error('❌ Fehler beim Abspielen des MP3-Songs:', error);
-        await interaction.followUp({
-            content: '❌ Fehler beim Abspielen der MP3-Datei.',
-            ephemeral: true
-        });
+        console.error('❌ Fehler beim MP3 Song Select:', error);
+        
+        try {
+            if (interaction.replied || interaction.deferred) {
+                await interaction.editReply({
+                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\``,
+                    ephemeral: true
+                });
+            } else {
+                await interaction.reply({
+                    content: `❌ **Unerwarteter Fehler**\n\n\`\`\`${error.message}\`\`\``,
+                    ephemeral: true
+                });
+            }
+        } catch (replyError) {
+            console.error('❌ Fehler beim Senden der Fehler-Antwort:', replyError);
+        }
     }
 }
 
