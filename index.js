@@ -2148,16 +2148,25 @@ async function createRulesEmbed(guildName) {
 async function autoPostRules() {
     console.log('🔍 Suche nach Rules-Kanälen...');
     
-    // Lade Regeln aus Supabase
-    const { loadRulesFromSupabase } = require('./rules-supabase-api');
-    let rules = await loadRulesFromSupabase(process.env.GUILD_ID || '1203994020779532348');
+    let rules;
+    
+    try {
+        // Lade Regeln aus Supabase
+        const { loadRulesFromSupabase } = require('./rules-supabase-api');
+        rules = await loadRulesFromSupabase(process.env.GUILD_ID || '1203994020779532348');
+        
+        if (rules) {
+            console.log('✅ Regeln aus Supabase für Auto-Post geladen');
+        }
+    } catch (error) {
+        console.log('⚠️ Supabase nicht verfügbar für Rules, verwende Fallback:', error.message);
+        rules = null;
+    }
     
     // Fallback zu Standard-Regeln falls Supabase nicht verfügbar
     if (!rules) {
         rules = rulesData;
         console.log('⚠️ Verwende Fallback-Regeln für Auto-Post');
-    } else {
-        console.log('✅ Regeln aus Supabase für Auto-Post geladen');
     }
     
     // Durchlaufe alle Server (Guilds) in denen der Bot ist
