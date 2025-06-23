@@ -1469,12 +1469,14 @@ function registerMusicAPI(app) {
             const currentSong = getCurrentSong(guildId);
             const currentStation = getCurrentStation(guildId);
             const isPlaying = isPlayingMusic(guildId);
+            const volume = getVolumeForGuild(guildId);
             
             res.json({
                 success: true,
                 isPlaying: isPlaying,
                 currentSong: currentSong,
-                currentStation: currentStation
+                currentStation: currentStation,
+                volume: volume
             });
         } catch (error) {
             res.status(500).json({

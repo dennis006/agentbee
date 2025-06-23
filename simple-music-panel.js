@@ -41,17 +41,23 @@ class SimpleMusicPanel {
         let currentStatus = 'Keine Musik läuft';
         let currentVolume = '50%';
         
+        console.log(`🔍 Simple Panel: createSimplePanel aufgerufen mit guildId: ${guildId}, page: ${page}`);
+        
         if (guildId) {
             try {
+                console.log('🎯 Simple Panel: Versuche Live-Status zu laden...');
                 const musicStatus = await this.getMusicStatus(guildId);
                 currentStatus = musicStatus.status;
                 currentVolume = musicStatus.volume + '%';
+                console.log('✅ Simple Panel: Live-Status erfolgreich geladen!');
             } catch (error) {
                 console.log('⚠️ Konnte Musik-Status nicht abrufen:', error.message);
                 // Fallback auf Standard-Werte bei API-Fehler
                 currentStatus = 'Status wird geladen...';
                 currentVolume = '50%';
             }
+        } else {
+            console.log('⚠️ Simple Panel: Keine guildId - verwende statische Werte');
         }
         
         // Embed im Stil des vollständigen Panels erstellen
@@ -647,10 +653,12 @@ class SimpleMusicPanel {
         const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
         
         try {
+            console.log(`🔍 Simple Panel: Lade Status für Guild ${guildId} von ${API_URL}/api/music/status/${guildId}`);
             const response = await fetch(`${API_URL}/api/music/status/${guildId}`);
             
             if (response.ok) {
                 const data = await response.json();
+                console.log('🎵 Simple Panel: Status-API Response:', JSON.stringify(data, null, 2));
                 
                 let status = 'Keine Musik läuft';
                 if (data.isPlaying) {
@@ -663,15 +671,20 @@ class SimpleMusicPanel {
                     }
                 }
                 
-                return {
+                const result = {
                     status: status,
                     volume: data.volume || 50,
                     isPlaying: data.isPlaying || false
                 };
+                
+                console.log('🎯 Simple Panel: Finaler Status:', result);
+                return result;
             } else {
+                console.warn('⚠️ Simple Panel: Status-API Response nicht OK:', response.status, response.statusText);
                 return { status: 'Status unbekannt', volume: 50, isPlaying: false };
             }
         } catch (error) {
+            console.error('❌ Simple Panel: getMusicStatus Error:', error);
             throw new Error(`API-Fehler: ${error.message}`);
         }
     }
