@@ -2,14 +2,18 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <!-- Multiple Favicon Formats für bessere Kompatibilität -->
+    <!-- Inline SVG Favicon - 100% garantiert -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><defs><linearGradient id='botGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%238B5CF6;stop-opacity:1' /><stop offset='50%25' style='stop-color:%23A78BFA;stop-opacity:1' /><stop offset='100%25' style='stop-color:%23C4B5FD;stop-opacity:1' /></linearGradient><linearGradient id='eyeGradient' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%2306FFA5;stop-opacity:1' /><stop offset='100%25' style='stop-color:%2300D9FF;stop-opacity:1' /></linearGradient></defs><rect x='4' y='8' width='24' height='20' rx='6' fill='url(%23botGradient)' stroke='%235B21B6' stroke-width='1'/><rect x='8' y='4' width='16' height='12' rx='4' fill='url(%23botGradient)' stroke='%235B21B6' stroke-width='1'/><circle cx='12' cy='2' r='1.5' fill='%2306FFA5'/><line x1='12' y1='4' x2='12' y2='2' stroke='%235B21B6' stroke-width='1'/><circle cx='20' cy='2' r='1.5' fill='%2306FFA5'/><line x1='20' y1='4' x2='20' y2='2' stroke='%235B21B6' stroke-width='1'/><circle cx='12' cy='9' r='2' fill='url(%23eyeGradient)'/><circle cx='20' cy='9' r='2' fill='url(%23eyeGradient)'/><circle cx='12' cy='9' r='1' fill='%23FFFFFF'/><circle cx='20' cy='9' r='1' fill='%23FFFFFF'/><rect x='13' y='12' width='6' height='2' rx='1' fill='%235B21B6'/><rect x='10' y='16' width='12' height='8' rx='2' fill='%231F2937' stroke='%23374151' stroke-width='1'/><circle cx='16' cy='18' r='1.5' fill='%2306FFA5'/><circle cx='13' cy='22' r='1' fill='%234B5563'/><circle cx='16' cy='22' r='1' fill='%234B5563'/><circle cx='19' cy='22' r='1' fill='%234B5563'/><ellipse cx='6' cy='12' rx='2' ry='4' fill='%23FBBF24' opacity='0.3' transform='rotate(-20 6 12)'/><ellipse cx='26' cy='12' rx='2' ry='4' fill='%23FBBF24' opacity='0.3' transform='rotate(20 26 12)'/></svg>" />
+    <!-- Fallback für ältere Browser -->
     <link rel="icon" type="image/svg+xml" href="/bot-icon.svg?v=2025" />
-    <link rel="icon" type="image/png" href="/bot-icon.svg?v=2025" />
     <link rel="shortcut icon" href="/bot-icon.svg?v=2025" />
-    <link rel="apple-touch-icon" href="/bot-icon.svg?v=2025" />
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="AgentBee Discord Bot Dashboard - Verwalte deinen Discord Server" />
     <meta name="theme-color" content="#8B5CF6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>AgentBee Bot Dashboard</title>
   </head>
   <body>
