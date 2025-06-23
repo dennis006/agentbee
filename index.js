@@ -4987,6 +4987,31 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
+// Event: StringSelectMenu-Interaktionen behandeln
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isStringSelectMenu()) return;
+
+    // 🎵 SIMPLE MUSIC PANEL SELECT MENU HANDLERS
+    if (interaction.customId.startsWith('simple_')) {
+        try {
+            console.log(`🎵 Simple Music Panel Select: ${interaction.customId}`);
+            await simpleMusicPanel.handleButtonInteraction(interaction);
+        } catch (error) {
+            console.error('❌ Simple Music Panel Select Error:', error);
+            
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: `❌ **Simple Panel Select Fehler:** ${error.message}`,
+                    ephemeral: true
+                });
+            }
+        }
+        return;
+    }
+
+    // Andere Select Menu Handler hier...
+});
+
 // Funktion um Bot-Status an API Server zu senden
 function sendStatusToAPI() {
     if (!client.isReady()) return;
