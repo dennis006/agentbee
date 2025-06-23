@@ -73,7 +73,17 @@ class SimpleMusicPanel {
             console.log('⚠️ Simple Panel: Keine guildId - verwende statische Werte');
         }
         
-        // Embed im Stil des vollständigen Panels erstellen
+        // Lade Musik-Einstellungen für Embed-Farbe (wie vollständiges Panel)
+        const { loadMusicSettings } = require('./music-api');
+        let musicSettings;
+        try {
+            musicSettings = require('./music-settings.json');
+        } catch (error) {
+            console.log('⚠️ Konnte music-settings.json nicht laden, verwende Defaults');
+            musicSettings = { localMusic: { embedColor: "#FF6B6B" } };
+        }
+        
+        // Embed im Stil des vollständigen Panels erstellen (mit Dashboard-Farbe)
         const embed = new EmbedBuilder()
             .setTitle('🎵 Musik-System')
             .setDescription('**Lokale MP3-Bibliothek!**\n\n' +
@@ -82,7 +92,7 @@ class SimpleMusicPanel {
                           '• 🎼 **Playlists** - Custom Musik-Sammlungen\n' +
                           '• 🎚️ **Lautstärke** - Volume-Kontrolle\n' +
                           '• 🎙️ **Voice-Chat** - Auto-Join Funktionen')
-            .setColor(0xFF6B6B)
+            .setColor(parseInt(musicSettings.localMusic?.embedColor?.replace('#', '') || 'FF6B6B', 16))
             .addFields(
                 {
                     name: '⏸️ Status',
@@ -96,11 +106,19 @@ class SimpleMusicPanel {
                 },
                 {
                     name: '📊 Verfügbare Inhalte', 
-                    value: `🎵 **${songs.length}** MP3-Dateien\n🎼 **2** Playlists`,
+                    value: (() => {
+                        try {
+                            const { getMusicStations } = require('./music-api');
+                            const stations = getMusicStations();
+                            return `🎵 **${songs.length}** MP3-Dateien\n🎼 **${stations.length}** Playlists`;
+                        } catch (error) {
+                            return `🎵 **${songs.length}** MP3-Dateien\n🎼 **?** Playlists`;
+                        }
+                    })(),
                     inline: true
                 }
             )
-            .setFooter({ text: '🎵 Lokales Musik-System • MP3s & Playlists • heute um ' + new Date().toLocaleTimeString() })
+            .setFooter({ text: '🎵 Lokales Musik-System • MP3s & Playlists' })
             .setTimestamp();
 
         // Erstelle Buttons im Stil des vollständigen Panels
@@ -667,6 +685,14 @@ class SimpleMusicPanel {
             const { getCurrentSong, getCurrentStation, getVolumeForGuild, isPlayingMusic } = require('./music-api');
             const guildId = interaction.guild.id;
             
+            // Lade Musik-Einstellungen für Embed-Farbe
+            let musicSettings;
+            try {
+                musicSettings = require('./music-settings.json');
+            } catch (error) {
+                musicSettings = { localMusic: { embedColor: "#FF6B6B" } };
+            }
+            
             const currentSong = getCurrentSong(guildId);
             const currentStation = getCurrentStation(guildId);
             const volume = getVolumeForGuild(guildId);
@@ -680,9 +706,13 @@ class SimpleMusicPanel {
                 statusText = `🎼 **${currentStation.name}**\n📻 Playlist aktiv`;
             }
             
+            // Verwende Dashboard-Farbe für Status (grün wenn spielt, sonst Dashboard-Farbe)
+            const baseColor = parseInt(musicSettings.localMusic?.embedColor?.replace('#', '') || 'FF6B6B', 16);
+            const statusColor = isPlaying ? 0x00FF7F : baseColor;
+            
             const embed = new EmbedBuilder()
                 .setTitle('⏸️ **Aktueller Musik-Status**')
-                .setColor(isPlaying ? 0x00FF7F : 0xFF6B6B)
+                .setColor(statusColor)
                 .addFields(
                     {
                         name: '🎵 Aktuelle Wiedergabe',
