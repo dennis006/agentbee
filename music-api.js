@@ -1248,6 +1248,7 @@ function registerMusicAPI(app) {
             if (newSettings.interactivePanel) {
                 musicSettings.interactivePanel = { ...musicSettings.interactivePanel, ...newSettings.interactivePanel };
                 console.log('✅ InteractivePanel Settings aktualisiert');
+                console.log(`🔍 Channel-ID nach Update: ${musicSettings.interactivePanel.channelId}`);
             }
             
             // Guild-ID aus Request extrahieren oder Default verwenden
@@ -1270,6 +1271,28 @@ function registerMusicAPI(app) {
                 success: false,
                 error: error.message,
                 savedToDatabase: false
+            });
+        }
+    });
+
+    // Reload Settings from file (for manual updates)
+    app.post('/api/music/settings/reload', async (req, res) => {
+        try {
+            console.log('🔄 Lade Musik-Einstellungen neu...');
+            await loadMusicSettings();
+            
+            res.json({
+                success: true,
+                message: 'Musik-Einstellungen erfolgreich neu geladen',
+                settings: musicSettings,
+                channelId: musicSettings.interactivePanel?.channelId
+            });
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Neuladen der Musik-Einstellungen:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
             });
         }
     });
