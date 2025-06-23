@@ -1,6 +1,39 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
+const path = require('path');
 const https = require('https');
 const http = require('http');
+
+// Fallback-Schriftarten für bessere Kompatibilität
+const FONT_FAMILIES = [
+  'DejaVu Sans',
+  'Noto Sans',
+  'Arial Unicode MS',
+  'Arial',
+  'Helvetica',
+  'sans-serif'
+];
+
+// Sichere Textdarstellung ohne korrupte Zeichen
+function sanitizeText(text) {
+  if (!text) return '';
+  
+  // Entferne problematische Unicode-Zeichen und ersetze sie durch sichere Alternativen
+  return text
+    .toString()
+    .replace(/[^\x20-\x7E\u00A0-\u017F\u0100-\u024F]/g, '') // Nur sichere ASCII und Latin-Zeichen
+    .trim();
+}
+
+// Sichere Emoji-Alternativen ohne Unicode-Probleme
+const SAFE_EMOJIS = {
+  trophy: '[Rank]',
+  star: '[Peak]',
+  crosshairs: '[Combat]',
+  target: '[Precision]',
+  fire: '[Damage]',
+  chart: '[Stats]',
+  shield: '[Matches]'
+};
 
 /**
  * Lädt ein Bild von einer URL
@@ -56,7 +89,7 @@ function roundedRect(ctx, x, y, width, height, radius) {
 }
 
 /**
- * Zeichnet Text mit Schatten
+ * Zeichnet Text mit Schatten und sicherer Kodierung
  * @param {CanvasRenderingContext2D} ctx 
  * @param {string} text 
  * @param {number} x 
@@ -65,15 +98,19 @@ function roundedRect(ctx, x, y, width, height, radius) {
  * @param {string} font 
  */
 function drawTextWithShadow(ctx, text, x, y, color = '#FFFFFF', font = '24px Arial') {
+  // Sichere Text-Kodierung
+  const safeText = sanitizeText(text);
+  
   // Schatten
   ctx.save();
-  ctx.font = font;
+  ctx.font = font.includes('Arial') ? font : font.replace(/\w+/g, 'Arial'); // Fallback zu Arial
+  ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-  ctx.fillText(text, x + 2, y + 2);
+  ctx.fillText(safeText, x + 2, y + 2);
   
   // Haupttext
   ctx.fillStyle = color;
-  ctx.fillText(text, x, y);
+  ctx.fillText(safeText, x, y);
   ctx.restore();
 }
 
@@ -297,7 +334,7 @@ async function makeValorantCard(stats) {
       console.warn('Konnte Rang-Icon nicht laden:', error.message);
     }
     
-    drawTextWithShadow(ctx, '🏆 Aktueller Rang', 120, rankY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[RANK] Aktueller Rang', 120, rankY + 25, colors.textSecondary, '14px Arial');
     drawTextWithShadow(ctx, currentRank, 120, rankY + 45, colors.textPrimary, 'bold 18px Arial');
     drawTextWithShadow(ctx, `${currentRR} RR`, 120, rankY + 70, colors.text, '16px Arial');
 
@@ -324,7 +361,7 @@ async function makeValorantCard(stats) {
       console.warn('Konnte Peak-Rang-Icon nicht laden:', error.message);
     }
     
-    drawTextWithShadow(ctx, '⭐ Peak Rang', 340, rankY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[PEAK] Peak Rang', 340, rankY + 25, colors.textSecondary, '14px Arial');
     drawTextWithShadow(ctx, peakRank, 340, rankY + 45, colors.textPrimary, 'bold 18px Arial');
     drawTextWithShadow(ctx, 'Season e4a2', 340, rankY + 70, colors.text, '14px Arial');
 
@@ -343,7 +380,7 @@ async function makeValorantCard(stats) {
     ctx.stroke();
     ctx.restore();
 
-    drawTextWithShadow(ctx, '⚔️ Match-Statistiken', 500, matchStatsY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[COMBAT] Match-Statistiken', 500, matchStatsY + 25, colors.textSecondary, '14px Arial');
     drawTextWithShadow(ctx, `Matches: ${stats.totalMatches || 0}`, 500, matchStatsY + 45, colors.text, '16px Arial');
     drawTextWithShadow(ctx, `Win-Rate: ${(stats.winRate || 0).toFixed(1)}%`, 500, matchStatsY + 70, colors.text, '16px Arial');
 
@@ -363,7 +400,7 @@ async function makeValorantCard(stats) {
     const changePrefix = lastChange > 0 ? '+' : '';
     const changeColor = lastChange > 0 ? '#00FF88' : lastChange < 0 ? '#FF4655' : colors.text;
     
-    drawTextWithShadow(ctx, '📊 Letzte Änderung', 700, matchStatsY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[CHANGE] Letzte Änderung', 700, matchStatsY + 25, colors.textSecondary, '14px Arial');
     drawTextWithShadow(ctx, `${changePrefix}${lastChange} RR`, 700, matchStatsY + 55, changeColor, 'bold 20px Arial');
 
     // K/D/A Bereich (zweite Reihe)
@@ -381,7 +418,7 @@ async function makeValorantCard(stats) {
     ctx.stroke();
     ctx.restore();
 
-    drawTextWithShadow(ctx, '⚔️ K/D/A', 60, kdaY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[KDA] K/D/A', 60, kdaY + 25, colors.textSecondary, '14px Arial');
     
     const kdaText = `${stats.kills || 0} / ${stats.deaths || 0} / ${stats.assists || 0}`;
     drawTextWithShadow(ctx, kdaText, 60, kdaY + 55, colors.primary, 'bold 24px Arial');
@@ -401,7 +438,7 @@ async function makeValorantCard(stats) {
     ctx.stroke();
     ctx.restore();
 
-    drawTextWithShadow(ctx, '🎯 Präzision', 360, kdaY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[AIM] Präzision', 360, kdaY + 25, colors.textSecondary, '14px Arial');
     drawTextWithShadow(ctx, `Headshot-Rate: ${(stats.hsRate || 0).toFixed(1)}%`, 360, kdaY + 45, colors.text, '16px Arial');
     
     const totalShots = (stats.headshots || 0) + (stats.bodyshots || 0) + (stats.legshots || 0);
@@ -422,7 +459,7 @@ async function makeValorantCard(stats) {
     ctx.stroke();
     ctx.restore();
 
-    drawTextWithShadow(ctx, '💥 Damage & Score', 640, kdaY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[DMG] Damage & Score', 640, kdaY + 25, colors.textSecondary, '14px Arial');
     drawTextWithShadow(ctx, `ADR: ${Math.round(stats.adr || 0)}`, 640, kdaY + 45, colors.text, '16px Arial');
     drawTextWithShadow(ctx, `Total Damage: ${(stats.totalDamage || 0).toLocaleString()}`, 640, kdaY + 65, colors.text, '14px Arial');
     drawTextWithShadow(ctx, `Avg Score: ${Math.round(stats.averageScore || 0)}`, 640, kdaY + 80, colors.textSecondary, '12px Arial');
@@ -441,7 +478,7 @@ async function makeValorantCard(stats) {
     ctx.stroke();
     ctx.restore();
 
-    drawTextWithShadow(ctx, '🏆 Season-Statistiken', 60, seasonY + 25, colors.textSecondary, '14px Arial');
+    drawTextWithShadow(ctx, '[SEASON] Season-Statistiken', 60, seasonY + 25, colors.textSecondary, '14px Arial');
     
     const seasonWins = stats.wins || 0;
     const seasonGames = stats.totalMatches || 0;
