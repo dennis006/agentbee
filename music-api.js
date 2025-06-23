@@ -1503,8 +1503,8 @@ function registerMusicAPI(app) {
         }
     });
 
-    // Post Interactive Panel
-    app.post('/api/music/interactive-panel/post/:guildId', async (req, res) => {
+    // Post Interactive Panel (beide URL-Formate unterstützen)
+    const handlePanelPost = async (req, res) => {
         try {
             const { guildId } = req.params;
             
@@ -1530,10 +1530,14 @@ function registerMusicAPI(app) {
                 error: error.message
             });
         }
-    });
+    };
+    
+    // Beide URL-Formate für Kompatibilität
+    app.post('/api/music/interactive-panel/post/:guildId', handlePanelPost);
+    app.post('/api/music/interactive-panel/:guildId/post', handlePanelPost);
 
-    // Update Interactive Panel
-    app.post('/api/music/interactive-panel/update/:guildId', async (req, res) => {
+    // Update Interactive Panel (beide URL-Formate unterstützen)
+    const handlePanelUpdate = async (req, res) => {
         try {
             const { guildId } = req.params;
             
@@ -1559,7 +1563,11 @@ function registerMusicAPI(app) {
                 error: error.message
             });
         }
-    });
+    };
+    
+    // Beide URL-Formate für Kompatibilität
+    app.post('/api/music/interactive-panel/update/:guildId', handlePanelUpdate);
+    app.post('/api/music/interactive-panel/:guildId/update', handlePanelUpdate);
 
     // Voice Channel Management
     app.post('/api/music/voice/:guildId/:action', async (req, res) => {
