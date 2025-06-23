@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star, Bot, Sparkles, Zap, Copy, Database } from 'lucide-react';
+import { Play, Pause, Settings, Save, Mic, Users, Plus, Trash2, Edit, GripVertical, Upload, Music as MusicIcon, Waves, StopCircle, X, CheckCircle, Star, Bot, Sparkles, Zap, Copy, Database, RotateCcw } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
 // Matrix Blocks Komponente
@@ -1318,6 +1318,30 @@ const Music: React.FC = () => {
     }
   };
 
+  // Force Refresh Panel - erstellt neues Panel mit frischen Song-IDs
+  const forceRefreshPanel = async () => {
+    if (!guildId) return;
+    
+    try {
+      const response = await fetch(`${apiUrl}/api/music/interactive-panel/${guildId}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showSuccess('Panel Force Refresh', `🎵 Panel neu erstellt mit ${data.songCount || 0} frischen Song-IDs!`);
+        // Reload data to get fresh panel info
+        loadData();
+      } else {
+        const data = await response.json();
+        showError('Panel Fehler', data.error || 'Fehler beim Force Refresh des Interactive Panels');
+      }
+    } catch (error) {
+      showError('Panel Fehler', 'Verbindungsfehler beim Force Refresh des Interactive Panels');
+    }
+  };
+
   // AI Funktionen
   const checkAiStatus = async () => {
     try {
@@ -1800,14 +1824,29 @@ const Music: React.FC = () => {
                 </Button>
                 
                 {settings.interactivePanel.messageId && (
-                  <Button
-                    onClick={updateInteractivePanel}
-                    disabled={!settings.interactivePanel.enabled || !guildId}
-                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Panel aktualisieren
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      onClick={updateInteractivePanel}
+                      disabled={!settings.interactivePanel.enabled || !guildId}
+                      className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Panel aktualisieren
+                    </Button>
+                    
+                    <Button
+                      onClick={forceRefreshPanel}
+                      disabled={!settings.interactivePanel.enabled || !guildId}
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      🔄 Panel Force Refresh (Fix Interaktionen)
+                    </Button>
+                    
+                    <div className="text-xs text-gray-400 p-2 bg-orange-500/10 border border-orange-500/20 rounded">
+                      ⚡ Force Refresh löscht das alte Panel und erstellt ein neues mit frischen Song-IDs
+                    </div>
+                  </div>
                 )}
               </div>
             </CardContent>
