@@ -1,0 +1,74 @@
+{
+  "enabled": true,
+  "updateInterval": 300000,
+  "channels": {
+    "memberCount": {
+      "enabled": true,
+      "channelId": "1386764425322696864",
+      "name": "👥 Mitglieder: {count}",
+      "position": 0
+    },
+    "onlineCount": {
+      "enabled": true,
+      "channelId": "1386764430804783146",
+      "name": "🟢 Online: {count}",
+      "position": 1
+    },
+    "boostCount": {
+      "enabled": true,
+      "channelId": "1386764437020741662",
+      "name": "🚀 Boosts: {count}",
+      "position": 2
+    },
+    "channelCount": {
+      "enabled": false,
+      "channelId": "",
+      "name": "📺 Kanäle: {count}",
+      "position": 3
+    },
+    "roleCount": {
+      "enabled": false,
+      "channelId": "",
+      "name": "🎭 Rollen: {count}",
+      "position": 4
+    },
+    "serverLevel": {
+      "enabled": false,
+      "channelId": "",
+      "name": "⭐ Level: {count}",
+      "position": 5
+    },
+    "createdDate": {
+      "enabled": false,
+      "channelId": "",
+      "name": "📅 Erstellt: {date}",
+      "position": 6
+    },
+    "botCount": {
+      "enabled": false,
+      "channelId": "",
+      "name": "🤖 Bots: {count}",
+      "position": 7
+    },
+    "valorantSeason": {
+      "enabled": true,
+      "channelId": "1386764443131580526",
+      "name": "🎮 Valorant Season Start: {countdown}",
+      "position": 8
+    }
+  },
+  "categoryId": "1386764423875661854",
+  "categoryName": "📊 Server Statistiken",
+  "permissions": {
+    "viewChannel": true,
+    "connect": false,
+    "speak": false,
+    "useVAD": false
+  },
+  "design": {
+    "emoji": "📊",
+    "color": "0x00FF7F",
+    "separator": " • ",
+    "format": "modern"
+  }
+}

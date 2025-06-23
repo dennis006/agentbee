@@ -15,6 +15,9 @@ const setupTwitchAPI = require('./twitch-api');
 // 🎵 YOUTUBE RADIO-SYSTEM
 const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
 const aiMusicRecommendations = require('./ai-music-recommendations');
+
+// 🆕 SIMPLE MUSIC PANEL SYSTEM
+const { SimpleMusicPanel } = require('./simple-music-panel');
 const { OpenAI } = require('openai');
 const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
@@ -131,6 +134,11 @@ function saveAPIKeys() {
 
 // API-Keys beim Start laden
 loadAPIKeys();
+
+// ================== SIMPLE MUSIC PANEL SYSTEM ==================
+// Erstelle globale Instanz des Simple Music Panel Systems
+const simpleMusicPanel = new SimpleMusicPanel();
+console.log('🎵 Simple Music Panel System initialisiert');
 
 // ================== VALORANT SYSTEM ==================
 
@@ -2840,6 +2848,12 @@ try {
                 console.error('❌ Fehler bei XP-Commands:', error);
             });
             
+            registerSimpleMusicCommands().then(() => {
+                console.log('✅ Simple Music Commands registriert');
+            }).catch(error => {
+                console.error('❌ Fehler bei Simple Music Commands:', error);
+            });
+            
         } catch (error) {
             console.error('❌ Fehler beim Bot-Setup:', error);
         }
@@ -4161,6 +4175,24 @@ client.on(Events.InteractionCreate, async interaction => {
                 break;
         }
         
+        // 🆕 Simple Music Panel Slash Commands
+        if (['play', 'stop', 'songs', 'musicpanel'].includes(commandName)) {
+            try {
+                console.log(`🎵 Simple Music Command: ${commandName}`);
+                await simpleMusicPanel.handleSlashCommand(interaction);
+            } catch (error) {
+                console.error('❌ Simple Music Command Error:', error);
+                
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: `❌ **Music Command Fehler:** ${error.message}`,
+                        ephemeral: true
+                    });
+                }
+            }
+            return;
+        }
+        
         return;
     }
     
@@ -4339,6 +4371,24 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.customId === 'music_playlist_station_select') {
         const { handleMusicPlaylistStationSelect } = require('./music-api');
         await handleMusicPlaylistStationSelect(interaction);
+        return;
+    }
+
+    // 🆕 SIMPLE MUSIC PANEL HANDLERS
+    if (interaction.customId.startsWith('simple_')) {
+        try {
+            console.log(`🎵 Simple Music Panel: ${interaction.customId}`);
+            await simpleMusicPanel.handleButtonInteraction(interaction);
+        } catch (error) {
+            console.error('❌ Simple Music Panel Error:', error);
+            
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: `❌ **Simple Panel Fehler:** ${error.message}`,
+                    ephemeral: true
+                });
+            }
+        }
         return;
     }
 
@@ -6735,6 +6785,24 @@ async function registerXPCommands() {
     }
 }
 
+// Registriere Simple Music Slash Commands
+async function registerSimpleMusicCommands() {
+    try {
+        const musicCommands = simpleMusicPanel.getSlashCommands();
+        
+        // Konvertiere SlashCommandBuilder zu JSON für Discord API
+        const commandsJSON = musicCommands.map(cmd => cmd.toJSON());
+        
+        for (const guild of client.guilds.cache.values()) {
+            await guild.commands.set(commandsJSON);
+        }
+        
+        console.log('✅ Simple Music Slash Commands registriert:', commandsJSON.map(c => c.name).join(', '));
+    } catch (error) {
+        console.error('❌ Fehler beim Registrieren der Simple Music Commands:', error);
+    }
+}
+
 // Lade und wende Bot-Einstellungen beim Start an
 async function loadAndApplyBotSettings() {
     try {
@@ -7231,6 +7299,11 @@ app.listen(API_PORT, HOST, () => {
         // AI Musik-Empfehlungen API registrieren
         app.use('/api/music', aiMusicRecommendations);
         console.log('🎵 YouTube Radio-API erfolgreich registriert!');
+        
+        // 🆕 Simple Music Panel API registrieren
+        const { registerSimpleMusicPanelAPI } = require('./simple-music-panel-api');
+        registerSimpleMusicPanelAPI(app, client);
+        console.log('🎵 Simple Music Panel API erfolgreich registriert!');
     } catch (error) {
         console.error('❌ Fehler beim Registrieren der Musik-API:', error);
     }
