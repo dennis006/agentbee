@@ -78,7 +78,16 @@ function registerSimpleMusicPanelAPI(app, client) {
             // Simple Music Panel erstellen
             const { SimpleMusicPanel } = require('./simple-music-panel');
             const simpleMusicPanel = new SimpleMusicPanel();
-            const panelData = simpleMusicPanel.createSimplePanel(page);
+            
+            let panelData;
+            try {
+                // Versuche Panel mit Live-Status zu erstellen
+                panelData = await simpleMusicPanel.createSimplePanel(page, guildId);
+            } catch (statusError) {
+                console.warn('⚠️ Fallback: Erstelle Panel ohne Live-Status:', statusError.message);
+                // Fallback: Panel ohne Guild-ID (statische Werte)
+                panelData = await simpleMusicPanel.createSimplePanel(page, null);
+            }
 
             // Panel senden
             const message = await channel.send(panelData);
@@ -93,9 +102,11 @@ function registerSimpleMusicPanelAPI(app, client) {
 
         } catch (error) {
             console.error('❌ Simple Music Panel Create API Error:', error);
+            console.error('Error Stack:', error.stack);
             res.status(500).json({
                 success: false,
-                error: error.message
+                error: error.message,
+                details: error.stack?.split('\n')[0] || 'Unbekannter Fehler'
             });
         }
     });

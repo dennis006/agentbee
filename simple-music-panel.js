@@ -48,6 +48,9 @@ class SimpleMusicPanel {
                 currentVolume = musicStatus.volume + '%';
             } catch (error) {
                 console.log('⚠️ Konnte Musik-Status nicht abrufen:', error.message);
+                // Fallback auf Standard-Werte bei API-Fehler
+                currentStatus = 'Status wird geladen...';
+                currentVolume = '50%';
             }
         }
         
