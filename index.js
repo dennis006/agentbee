@@ -6780,7 +6780,28 @@ async function registerSimpleMusicCommands() {
         const commandsJSON = musicCommands.map(cmd => cmd.toJSON());
         
         for (const guild of client.guilds.cache.values()) {
-            await guild.commands.set(commandsJSON);
+            // Hole bestehende Commands und füge Music Commands hinzu
+            const existingCommands = await guild.commands.fetch();
+            
+            // Erstelle Music Commands einzeln
+            for (const commandData of commandsJSON) {
+                try {
+                    // Prüfe ob Command bereits existiert
+                    const existing = existingCommands.find(cmd => cmd.name === commandData.name);
+                    
+                    if (existing) {
+                        // Aktualisiere existierenden Command
+                        await existing.edit(commandData);
+                        console.log(`🔄 Updated command: ${commandData.name}`);
+                    } else {
+                        // Erstelle neuen Command
+                        await guild.commands.create(commandData);
+                        console.log(`✅ Created command: ${commandData.name}`);
+                    }
+                } catch (cmdError) {
+                    console.error(`❌ Fehler bei Command ${commandData.name}:`, cmdError.message);
+                }
+            }
         }
         
         console.log('✅ Simple Music Slash Commands registriert:', commandsJSON.map(c => c.name).join(', '));
