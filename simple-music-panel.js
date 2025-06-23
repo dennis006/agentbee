@@ -34,8 +34,22 @@ class SimpleMusicPanel {
     }
 
     // Erstelle einfaches Panel mit direkten Song-Buttons
-    createSimplePanel(page = 0) {
+    async createSimplePanel(page = 0, guildId = null) {
         const songs = this.scanSongs();
+        
+        // Status und Volume vom echten Musik-System abrufen
+        let currentStatus = 'Keine Musik läuft';
+        let currentVolume = '50%';
+        
+        if (guildId) {
+            try {
+                const musicStatus = await this.getMusicStatus(guildId);
+                currentStatus = musicStatus.status;
+                currentVolume = musicStatus.volume + '%';
+            } catch (error) {
+                console.log('⚠️ Konnte Musik-Status nicht abrufen:', error.message);
+            }
+        }
         
         // Embed im Stil des vollständigen Panels erstellen
         const embed = new EmbedBuilder()
@@ -50,12 +64,12 @@ class SimpleMusicPanel {
             .addFields(
                 {
                     name: '⏸️ Status',
-                    value: 'Keine Musik läuft',
+                    value: currentStatus,
                     inline: true
                 },
                 {
                     name: '🔊 Lautstärke',
-                    value: '50%',
+                    value: currentVolume,
                     inline: true
                 },
                 {
@@ -81,6 +95,10 @@ class SimpleMusicPanel {
                     .setCustomId('simple_playlists_select')
                     .setLabel('🎼 Playlists')
                     .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                    .setCustomId('simple_status')
+                    .setLabel('⏸️ Status')
+                    .setStyle(ButtonStyle.Secondary),
                 new ButtonBuilder()
                     .setCustomId('simple_stop')
                     .setLabel('⏹️ Stop')
@@ -138,6 +156,10 @@ class SimpleMusicPanel {
             
             if (customId === 'simple_playlists_select') {
                 return await this.handlePlaylistsSelect(interaction);
+            }
+            
+            if (customId === 'simple_status') {
+                return await this.handleStatus(interaction);
             }
             
             if (customId === 'simple_stop') {
@@ -451,48 +473,252 @@ class SimpleMusicPanel {
 
     // Voice Channel beitreten
     async handleVoiceJoin(interaction) {
-        await interaction.reply({
-            content: '🎙️ **Voice Join**\n\nAuto-Join Funktion aktiviert!\n\n💡 Der Bot tritt automatisch bei, wenn Musik gestartet wird.',
-            ephemeral: true
-        });
+        await interaction.deferReply({ ephemeral: true });
+        
+        try {
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            
+            // Finde den Voice Channel des Users
+            const member = interaction.guild.members.cache.get(interaction.user.id);
+            const userVoiceChannel = member?.voice?.channel;
+            
+            if (!userVoiceChannel) {
+                await interaction.editReply({
+                    content: '❌ **Voice Join Fehler**\n\nDu musst dich in einem Voice-Channel befinden!'
+                });
+                return;
+            }
+            
+            const response = await fetch(`${API_URL}/api/music/voice/${interaction.guild.id}/join`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channelId: userVoiceChannel.id })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await interaction.editReply({
+                    content: `🎙️ **Voice-Channel beigetreten!**\n\n${data.message || 'Bot ist jetzt im Voice-Channel.'}`
+                });
+            } else {
+                const errorData = await response.json();
+                await interaction.editReply({
+                    content: `❌ **Voice Join Fehler**\n\n${errorData.error || 'Konnte keinem Voice-Channel beitreten.'}`
+                });
+            }
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Voice Join Fehler**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
     }
 
     // Voice Channel verlassen
     async handleVoiceLeave(interaction) {
-        await interaction.reply({
-            content: '🚪 **Voice Leave**\n\nBot verlässt den Voice-Channel...\n\n💡 Musik wird gestoppt.',
-            ephemeral: true
-        });
+        await interaction.deferReply({ ephemeral: true });
+        
+        try {
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            
+            const response = await fetch(`${API_URL}/api/music/voice/${interaction.guild.id}/leave`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await interaction.editReply({
+                    content: `🚪 **Voice-Channel verlassen**\n\n${data.message || 'Bot hat den Voice-Channel verlassen.'}`
+                });
+            } else {
+                const errorData = await response.json();
+                await interaction.editReply({
+                    content: `❌ **Voice Leave Fehler**\n\n${errorData.error || 'Fehler beim Verlassen des Voice-Channels.'}`
+                });
+            }
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Voice Leave Fehler**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
     }
 
     // Lautstärke verringern
     async handleVolumeDown(interaction) {
-        await interaction.reply({
-            content: '🔉 **Lautstärke verringert!**\n\n`40%` Volume\n\n💡 Lautstärke um 10% reduziert.',
-            ephemeral: true
-        });
+        await interaction.deferReply({ ephemeral: true });
+        
+        try {
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            
+            const response = await fetch(`${API_URL}/api/music/volume/${interaction.guild.id}/decrease`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: 10 })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await interaction.editReply({
+                    content: `🔉 **Lautstärke verringert**\n\n📊 Neue Lautstärke: ${data.volume}%`
+                });
+            } else {
+                const errorData = await response.json();
+                await interaction.editReply({
+                    content: `❌ **Lautstärke Fehler**\n\n${errorData.error || 'Konnte Lautstärke nicht ändern.'}`
+                });
+            }
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Lautstärke Fehler**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
     }
 
     // Lautstärke anzeigen
     async handleVolumeShow(interaction) {
-        await interaction.reply({
-            content: '🔊 **Lautstärke:**\n\n`50%` Volume\n\n💡 Aktuelle Lautstärke-Einstellung.',
-            ephemeral: true
-        });
+        await interaction.deferReply({ ephemeral: true });
+        
+        try {
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            
+            const response = await fetch(`${API_URL}/api/music/status/${interaction.guild.id}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                const volume = data.volume || 50;
+                await interaction.editReply({
+                    content: `🔊 **Aktuelle Lautstärke**\n\n📊 Volume: ${volume}%\n\n💡 Verwende 🔉 oder 🔊 um die Lautstärke anzupassen.`
+                });
+            } else {
+                await interaction.editReply({
+                    content: `🔊 **Aktuelle Lautstärke**\n\n📊 Volume: 50% (Standard)\n\n💡 Verwende 🔉 oder 🔊 um die Lautstärke anzupassen.`
+                });
+            }
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Lautstärke Fehler**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
     }
 
     // Lautstärke erhöhen
     async handleVolumeUp(interaction) {
-        await interaction.reply({
-            content: '🔊 **Lautstärke erhöht!**\n\n`60%` Volume\n\n💡 Lautstärke um 10% erhöht.',
-            ephemeral: true
-        });
+        await interaction.deferReply({ ephemeral: true });
+        
+        try {
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            
+            const response = await fetch(`${API_URL}/api/music/volume/${interaction.guild.id}/increase`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: 10 })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await interaction.editReply({
+                    content: `🔊 **Lautstärke erhöht**\n\n📊 Neue Lautstärke: ${data.volume}%`
+                });
+            } else {
+                const errorData = await response.json();
+                await interaction.editReply({
+                    content: `❌ **Lautstärke Fehler**\n\n${errorData.error || 'Konnte Lautstärke nicht ändern.'}`
+                });
+            }
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Lautstärke Fehler**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
+    }
+
+    // Musik-Status vom echten System abrufen
+    async getMusicStatus(guildId) {
+        const fetch = require('node-fetch');
+        const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+        
+        try {
+            const response = await fetch(`${API_URL}/api/music/status/${guildId}`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                let status = 'Keine Musik läuft';
+                if (data.isPlaying) {
+                    if (data.currentSong) {
+                        status = `🎵 **${data.currentSong.title || data.currentSong.name}**\n🎤 ${data.currentSong.artist || 'Unbekannt'}`;
+                    } else if (data.currentStation) {
+                        status = `🎼 **${data.currentStation.name}**\n📻 Playlist aktiv`;
+                    } else {
+                        status = '🎵 Musik läuft...';
+                    }
+                }
+                
+                return {
+                    status: status,
+                    volume: data.volume || 50,
+                    isPlaying: data.isPlaying || false
+                };
+            } else {
+                return { status: 'Status unbekannt', volume: 50, isPlaying: false };
+            }
+        } catch (error) {
+            throw new Error(`API-Fehler: ${error.message}`);
+        }
+    }
+
+    // Status anzeigen
+    async handleStatus(interaction) {
+        await interaction.deferReply({ ephemeral: true });
+        
+        try {
+            const musicStatus = await this.getMusicStatus(interaction.guild.id);
+            
+            const embed = new EmbedBuilder()
+                .setTitle('⏸️ **Aktueller Musik-Status**')
+                .setColor(musicStatus.isPlaying ? 0x00FF7F : 0xFF6B6B)
+                .addFields(
+                    {
+                        name: '🎵 Aktuelle Wiedergabe',
+                        value: musicStatus.status,
+                        inline: false
+                    },
+                    {
+                        name: '🔊 Lautstärke',
+                        value: `${musicStatus.volume}%`,
+                        inline: true
+                    },
+                    {
+                        name: '📊 Status',
+                        value: musicStatus.isPlaying ? '▶️ Spielt' : '⏸️ Gestoppt',
+                        inline: true
+                    }
+                )
+                .setFooter({ text: '💡 Drücke 🔄 Refresh um das Panel zu aktualisieren' })
+                .setTimestamp();
+
+            await interaction.editReply({
+                embeds: [embed]
+            });
+            
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Status-Fehler**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
     }
 
     // Panel refreshen
     async handleRefresh(interaction) {
-        const panelData = this.createSimplePanel(0);
-        await interaction.update(panelData);
+        await interaction.deferUpdate();
+        const panelData = await this.createSimplePanel(0, interaction.guild.id);
+        await interaction.editReply(panelData);
     }
 
     // Slash Commands registrieren
@@ -668,12 +894,22 @@ class SimpleMusicPanel {
 
     // /musicpanel Command
     async handleSlashPanel(interaction) {
-        const panelData = this.createSimplePanel(0);
+        await interaction.deferReply();
         
-        await interaction.reply({
-            content: '🆕 **Neues einfaches Musik-Panel erstellt!**',
-            ...panelData
-        });
+        try {
+            const panelData = await this.createSimplePanel(0, interaction.guild.id);
+            
+            await interaction.editReply({
+                content: '🆕 **Neues einfaches Musik-Panel erstellt!**',
+                ...panelData
+            });
+            
+        } catch (error) {
+            console.error('❌ Panel Creation Error:', error);
+            await interaction.editReply({
+                content: `❌ **Panel-Fehler:** ${error.message}`
+            });
+        }
     }
 }
 
