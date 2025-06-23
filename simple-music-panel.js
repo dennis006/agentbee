@@ -37,7 +37,7 @@ class SimpleMusicPanel {
     async createSimplePanel(page = 0, guildId = null) {
         const songs = this.scanSongs();
         
-        // Status und Volume vom echten Musik-System abrufen
+        // Status und Volume direkt vom lokalen Musik-System abrufen (wie vollständiges Panel)
         let currentStatus = 'Keine Musik läuft';
         let currentVolume = '50%';
         
@@ -45,14 +45,27 @@ class SimpleMusicPanel {
         
         if (guildId) {
             try {
-                console.log('🎯 Simple Panel: Versuche Live-Status zu laden...');
-                const musicStatus = await this.getMusicStatus(guildId);
-                currentStatus = musicStatus.status;
-                currentVolume = musicStatus.volume + '%';
-                console.log('✅ Simple Panel: Live-Status erfolgreich geladen!');
+                // Verwende direkte lokale Funktionen (wie vollständiges Panel)
+                const { getCurrentSong, getCurrentStation, getVolumeForGuild } = require('./music-api');
+                
+                const currentSong = getCurrentSong(guildId);
+                const currentStation = getCurrentStation(guildId);
+                const volume = getVolumeForGuild(guildId);
+                
+                // Status-Text erstellen (identisch zum vollständigen Panel)
+                if (currentSong) {
+                    currentStatus = `🎵 **${currentSong.title}**\n🎤 ${currentSong.artist || 'Unbekannt'}`;
+                } else if (currentStation) {
+                    currentStatus = `🎼 **${currentStation.name}**\n📻 Playlist aktiv`;
+                } else {
+                    currentStatus = 'Keine Musik läuft';
+                }
+                
+                currentVolume = volume + '%';
+                console.log(`✅ Simple Panel: Live-Status direkt geladen! Song: ${currentSong?.title}, Station: ${currentStation?.name}, Volume: ${volume}%`);
+                
             } catch (error) {
-                console.log('⚠️ Konnte Musik-Status nicht abrufen:', error.message);
-                // Fallback auf Standard-Werte bei API-Fehler
+                console.log('⚠️ Konnte lokale Musik-Funktionen nicht abrufen:', error.message);
                 currentStatus = 'Status wird geladen...';
                 currentVolume = '50%';
             }
@@ -555,164 +568,135 @@ class SimpleMusicPanel {
         }
     }
 
-    // Lautstärke verringern
+    // Lautstärke verringern (verbesserte Version wie vollständiges Panel)
     async handleVolumeDown(interaction) {
-        await interaction.deferReply({ ephemeral: true });
-        
         try {
-            const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            await interaction.deferReply({ ephemeral: true });
             
-            const response = await fetch(`${API_URL}/api/music/volume/${interaction.guild.id}/decrease`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: 10 })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                await interaction.editReply({
-                    content: `🔉 **Lautstärke verringert**\n\n📊 Neue Lautstärke: ${data.volume}%`
-                });
-            } else {
-                const errorData = await response.json();
-                await interaction.editReply({
-                    content: `❌ **Lautstärke Fehler**\n\n${errorData.error || 'Konnte Lautstärke nicht ändern.'}`
-                });
-            }
-        } catch (error) {
+            const { decreaseVolume } = require('./music-api');
+            const guildId = interaction.guild.id;
+            const newVolume = decreaseVolume(guildId, 10);
+            
             await interaction.editReply({
-                content: `❌ **Lautstärke Fehler**\n\n\`\`\`${error.message}\`\`\``
-            });
-        }
-    }
-
-    // Lautstärke anzeigen
-    async handleVolumeShow(interaction) {
-        await interaction.deferReply({ ephemeral: true });
-        
-        try {
-            const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
-            
-            const response = await fetch(`${API_URL}/api/music/status/${interaction.guild.id}`);
-
-            if (response.ok) {
-                const data = await response.json();
-                const volume = data.volume || 50;
-                await interaction.editReply({
-                    content: `🔊 **Aktuelle Lautstärke**\n\n📊 Volume: ${volume}%\n\n💡 Verwende 🔉 oder 🔊 um die Lautstärke anzupassen.`
-                });
-            } else {
-                await interaction.editReply({
-                    content: `🔊 **Aktuelle Lautstärke**\n\n📊 Volume: 50% (Standard)\n\n💡 Verwende 🔉 oder 🔊 um die Lautstärke anzupassen.`
-                });
-            }
-        } catch (error) {
-            await interaction.editReply({
-                content: `❌ **Lautstärke Fehler**\n\n\`\`\`${error.message}\`\`\``
-            });
-        }
-    }
-
-    // Lautstärke erhöhen
-    async handleVolumeUp(interaction) {
-        await interaction.deferReply({ ephemeral: true });
-        
-        try {
-            const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
-            
-            const response = await fetch(`${API_URL}/api/music/volume/${interaction.guild.id}/increase`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ amount: 10 })
+                content: `🔉 **Lautstärke verringert!**\n\`${newVolume}%\` Volume`
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                await interaction.editReply({
-                    content: `🔊 **Lautstärke erhöht**\n\n📊 Neue Lautstärke: ${data.volume}%`
-                });
-            } else {
-                const errorData = await response.json();
-                await interaction.editReply({
-                    content: `❌ **Lautstärke Fehler**\n\n${errorData.error || 'Konnte Lautstärke nicht ändern.'}`
-                });
-            }
-        } catch (error) {
-            await interaction.editReply({
-                content: `❌ **Lautstärke Fehler**\n\n\`\`\`${error.message}\`\`\``
-            });
-        }
-    }
-
-    // Musik-Status vom echten System abrufen
-    async getMusicStatus(guildId) {
-        const fetch = require('node-fetch');
-        const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
-        
-        try {
-            console.log(`🔍 Simple Panel: Lade Status für Guild ${guildId} von ${API_URL}/api/music/status/${guildId}`);
-            const response = await fetch(`${API_URL}/api/music/status/${guildId}`);
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('🎵 Simple Panel: Status-API Response:', JSON.stringify(data, null, 2));
-                
-                let status = 'Keine Musik läuft';
-                if (data.isPlaying) {
-                    if (data.currentSong) {
-                        status = `🎵 **${data.currentSong.title || data.currentSong.name}**\n🎤 ${data.currentSong.artist || 'Unbekannt'}`;
-                    } else if (data.currentStation) {
-                        status = `🎼 **${data.currentStation.name}**\n📻 Playlist aktiv`;
-                    } else {
-                        status = '🎵 Musik läuft...';
+            // Panel automatisch refreshen (wie vollständiges Panel)
+            setTimeout(async () => {
+                try {
+                    const panelData = await this.createSimplePanel(0, guildId);
+                    const originalMessage = interaction.message;
+                    if (originalMessage) {
+                        await originalMessage.edit(panelData);
                     }
+                } catch (updateError) {
+                    console.log('⚠️ Konnte Panel nicht automatisch refreshen:', updateError.message);
                 }
-                
-                const result = {
-                    status: status,
-                    volume: data.volume || 50,
-                    isPlaying: data.isPlaying || false
-                };
-                
-                console.log('🎯 Simple Panel: Finaler Status:', result);
-                return result;
-            } else {
-                console.warn('⚠️ Simple Panel: Status-API Response nicht OK:', response.status, response.statusText);
-                return { status: 'Status unbekannt', volume: 50, isPlaying: false };
-            }
+            }, 1000);
+
         } catch (error) {
-            console.error('❌ Simple Panel: getMusicStatus Error:', error);
-            throw new Error(`API-Fehler: ${error.message}`);
+            console.error('❌ Fehler beim Volume Down Button:', error);
+            await interaction.editReply({
+                content: '❌ Fehler beim Verringern der Lautstärke!'
+            });
         }
     }
 
-    // Status anzeigen
-    async handleStatus(interaction) {
-        await interaction.deferReply({ ephemeral: true });
-        
+    // Lautstärke anzeigen (verbesserte Version wie vollständiges Panel)
+    async handleVolumeShow(interaction) {
         try {
-            const musicStatus = await this.getMusicStatus(interaction.guild.id);
+            await interaction.deferReply({ ephemeral: true });
+            
+            const { getVolumeForGuild } = require('./music-api');
+            const guildId = interaction.guild.id;
+            const currentVolume = getVolumeForGuild(guildId);
+            
+            await interaction.editReply({
+                content: `🔊 **Lautstärke:**\n\`${currentVolume}%\` Volume`
+            });
+
+        } catch (error) {
+            console.error('❌ Fehler beim Anzeigen der Lautstärke:', error);
+            await interaction.editReply({
+                content: '❌ Fehler beim Anzeigen der Lautstärke!'
+            });
+        }
+    }
+
+    // Lautstärke erhöhen (verbesserte Version wie vollständiges Panel)
+    async handleVolumeUp(interaction) {
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            
+            const { increaseVolume } = require('./music-api');
+            const guildId = interaction.guild.id;
+            const newVolume = increaseVolume(guildId, 10);
+            
+            await interaction.editReply({
+                content: `🔊 **Lautstärke erhöht!**\n\`${newVolume}%\` Volume`
+            });
+
+            // Panel automatisch refreshen (wie vollständiges Panel)
+            setTimeout(async () => {
+                try {
+                    const panelData = await this.createSimplePanel(0, guildId);
+                    const originalMessage = interaction.message;
+                    if (originalMessage) {
+                        await originalMessage.edit(panelData);
+                    }
+                } catch (updateError) {
+                    console.log('⚠️ Konnte Panel nicht automatisch refreshen:', updateError.message);
+                }
+            }, 1000);
+
+        } catch (error) {
+            console.error('❌ Fehler beim Volume Up Button:', error);
+            await interaction.editReply({
+                content: '❌ Fehler beim Erhöhen der Lautstärke!'
+            });
+        }
+    }
+
+    // getMusicStatus Methode entfernt - verwenden jetzt direkte lokale Funktionen wie vollständiges Panel
+
+    // Status anzeigen (verbesserte Version mit direkten Funktionen)
+    async handleStatus(interaction) {
+        try {
+            await interaction.deferReply({ ephemeral: true });
+            
+            const { getCurrentSong, getCurrentStation, getVolumeForGuild, isPlayingMusic } = require('./music-api');
+            const guildId = interaction.guild.id;
+            
+            const currentSong = getCurrentSong(guildId);
+            const currentStation = getCurrentStation(guildId);
+            const volume = getVolumeForGuild(guildId);
+            const isPlaying = isPlayingMusic(guildId);
+            
+            // Status-Text erstellen
+            let statusText = 'Keine Musik läuft';
+            if (currentSong) {
+                statusText = `🎵 **${currentSong.title}**\n🎤 ${currentSong.artist || 'Unbekannt'}`;
+            } else if (currentStation) {
+                statusText = `🎼 **${currentStation.name}**\n📻 Playlist aktiv`;
+            }
             
             const embed = new EmbedBuilder()
                 .setTitle('⏸️ **Aktueller Musik-Status**')
-                .setColor(musicStatus.isPlaying ? 0x00FF7F : 0xFF6B6B)
+                .setColor(isPlaying ? 0x00FF7F : 0xFF6B6B)
                 .addFields(
                     {
                         name: '🎵 Aktuelle Wiedergabe',
-                        value: musicStatus.status,
+                        value: statusText,
                         inline: false
                     },
                     {
                         name: '🔊 Lautstärke',
-                        value: `${musicStatus.volume}%`,
+                        value: `${volume}%`,
                         inline: true
                     },
                     {
                         name: '📊 Status',
-                        value: musicStatus.isPlaying ? '▶️ Spielt' : '⏸️ Gestoppt',
+                        value: isPlaying ? '▶️ Spielt' : '⏸️ Gestoppt',
                         inline: true
                     }
                 )
@@ -724,6 +708,7 @@ class SimpleMusicPanel {
             });
             
         } catch (error) {
+            console.error('❌ Fehler beim Status-Handler:', error);
             await interaction.editReply({
                 content: `❌ **Status-Fehler**\n\n\`\`\`${error.message}\`\`\``
             });
