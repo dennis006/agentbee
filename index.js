@@ -4305,14 +4305,58 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // Vollständiges Musik-System Select Menu Handlers
     if (interaction.customId === 'music_mp3_song_select') {
-        const { handleMusicMP3SongSelect } = require('./music-api');
-        await handleMusicMP3SongSelect(interaction);
+        console.log('🔍 INTERACTION DEBUG: music_mp3_song_select received!');
+        console.log('🔍 User:', interaction.user.tag);
+        console.log('🔍 Guild:', interaction.guild?.name);
+        console.log('🔍 Values:', interaction.values);
+        
+        try {
+            // Immediate response to prevent timeout
+            await interaction.reply({
+                content: `🎵 **Test Response**\n\nUser: ${interaction.user.tag}\nSong-ID: \`${interaction.values[0]}\`\n\n✅ Interaction Handler funktioniert!\n\n*Starte Musik...*`,
+                ephemeral: true
+            });
+            
+            // Now try the actual handler
+            const { handleMusicMP3SongSelect } = require('./music-api');
+            await handleMusicMP3SongSelect(interaction);
+        } catch (error) {
+            console.error('❌ INTERACTION ERROR:', error);
+            try {
+                if (!interaction.replied) {
+                    await interaction.reply({
+                        content: `❌ **Interaction Fehler**\n\n\`\`\`${error.message}\`\`\``,
+                        ephemeral: true
+                    });
+                }
+            } catch (replyError) {
+                console.error('❌ Reply Error:', replyError);
+            }
+        }
         return;
     }
 
     if (interaction.customId === 'music_playlist_station_select') {
         const { handleMusicPlaylistStationSelect } = require('./music-api');
         await handleMusicPlaylistStationSelect(interaction);
+        return;
+    }
+
+    // TEST HANDLER - Simple Button Test
+    if (interaction.customId === 'music_test_button') {
+        console.log('🔍 TEST BUTTON CLICKED!');
+        console.log('🔍 User:', interaction.user.tag);
+        console.log('🔍 Guild:', interaction.guild?.name);
+        
+        try {
+            await interaction.reply({
+                content: `✅ **TEST ERFOLGREICH!**\n\n👤 **User:** ${interaction.user.tag}\n🏰 **Server:** ${interaction.guild?.name}\n⏰ **Zeit:** ${new Date().toLocaleTimeString()}\n\n🎉 Discord Interactions funktionieren grundsätzlich!`,
+                ephemeral: true
+            });
+            console.log('✅ Test Button Response sent successfully');
+        } catch (error) {
+            console.error('❌ Test Button Error:', error);
+        }
         return;
     }
 
