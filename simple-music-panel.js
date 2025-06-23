@@ -184,7 +184,7 @@ class SimpleMusicPanel {
         // Verwende dieselbe API wie Dashboard
         try {
             const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 3001}`;
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
             // Konvertiere zu altem System-Format
             const actualSongId = `mp3_${songs.indexOf(song)}_${song.filename.replace(/\.mp3$/i, '').replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_').toLowerCase()}`;
@@ -227,7 +227,7 @@ class SimpleMusicPanel {
         
         try {
             const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 3001}`;
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
             const response = await fetch(`${API_URL}/api/music/stop/${interaction.guild.id}`, {
                 method: 'POST'
@@ -339,7 +339,7 @@ class SimpleMusicPanel {
         // API Call
         try {
             const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 3001}`;
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
             const actualSongId = `mp3_${songs.indexOf(matchingSong)}_${matchingSong.filename.replace(/\.mp3$/i, '').replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_').toLowerCase()}`;
             
@@ -372,7 +372,7 @@ class SimpleMusicPanel {
         
         try {
             const fetch = require('node-fetch');
-            const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 3001}`;
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
             
             const response = await fetch(`${API_URL}/api/music/stop/${interaction.guild.id}`, {
                 method: 'POST'
