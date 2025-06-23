@@ -176,6 +176,10 @@ class SimpleMusicPanel {
                 return await this.handleSongSelect(interaction);
             }
             
+            if (customId === 'simple_playlist_select') {
+                return await this.handlePlaylistSelect(interaction);
+            }
+            
         } catch (error) {
             console.error('❌ Simple Music Panel Error:', error);
             
@@ -222,6 +226,57 @@ class SimpleMusicPanel {
                 const data = await response.json();
                 await interaction.editReply({
                     content: `✅ **Song gestartet!**\n\n🎵 **${song.title}**\n🎤 **${song.artist}**\n\n💡 *Simple Panel API*`
+                });
+            } else {
+                const errorData = await response.json();
+                await interaction.editReply({
+                    content: `❌ **API-Fehler**\n\n${errorData.error || 'Unbekannter Fehler'}`
+                });
+            }
+        } catch (error) {
+            await interaction.editReply({
+                content: `❌ **Fehler beim Abspielen**\n\n\`\`\`${error.message}\`\`\``
+            });
+        }
+    }
+
+    // Playlist Select Menu Handler
+    async handlePlaylistSelect(interaction) {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const stationId = interaction.values[0];
+        const { getMusicStation } = require('./music-api');
+        const station = getMusicStation(stationId);
+        
+        if (!station) {
+            await interaction.editReply({
+                content: '❌ Playlist nicht gefunden!'
+            });
+            return;
+        }
+
+        if (!station.playlist || station.playlist.length === 0) {
+            await interaction.editReply({
+                content: `❌ **Playlist "${station.name}" ist leer!**\n\nFüge Songs über das Dashboard hinzu.`
+            });
+            return;
+        }
+
+        // Verwende das Musik-System API für Playlist-Wiedergabe
+        try {
+            const fetch = require('node-fetch');
+            const API_URL = process.env.API_URL || 'https://agentbee.up.railway.app';
+            
+            const response = await fetch(`${API_URL}/api/music/station/${interaction.guild.id}/play`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stationId })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await interaction.editReply({
+                    content: `✅ **Playlist gestartet!**\n\n🎼 **${station.name}**\n🎵 **${station.playlist.length} Songs**\n🎭 **${station.genre || 'Custom Playlist'}**\n\n💡 *Musik-System API*`
                 });
             } else {
                 const errorData = await response.json();
@@ -359,9 +414,38 @@ class SimpleMusicPanel {
 
     // Playlists Auswahl anzeigen
     async handlePlaylistsSelect(interaction) {
-        await interaction.reply({
-            content: '🎼 **Playlists**\n\nPlaylist-System noch nicht im Simple Panel verfügbar.\n\n💡 Nutze das vollständige Musik-Panel für Playlists!',
-            ephemeral: true
+        await interaction.deferReply({ ephemeral: true });
+        
+        // Lade verfügbare Playlists vom Musik-System
+        const { getMusicStations } = require('./music-api');
+        const musicStations = getMusicStations();
+        
+        if (musicStations.length === 0) {
+            await interaction.editReply({
+                content: '❌ **Keine Playlists gefunden!**\n\nErstelle zuerst Playlists im Dashboard → Music → Playlists.'
+            });
+            return;
+        }
+
+        // Erstelle Playlist-Auswahl ähnlich wie das vollständige Panel
+        const { StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
+        
+        const playlistOptions = musicStations.slice(0, 25).map(station => ({
+            label: station.name.length > 100 ? station.name.substring(0, 97) + '...' : station.name,
+            description: `🎵 ${station.playlist?.length || 0} Songs • ${station.genre || 'Custom Playlist'}`,
+            value: station.id
+        }));
+
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('simple_playlist_select')
+            .setPlaceholder('🎼 Wähle eine Playlist aus...')
+            .addOptions(playlistOptions);
+
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+
+        await interaction.editReply({
+            content: `🎼 **Playlists (${musicStations.length} verfügbar)**\n\nWähle eine Playlist aus der Liste:`,
+            components: [row]
         });
     }
 
