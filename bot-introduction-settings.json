@@ -16,7 +16,7 @@
     "stell dich vor"
   ],
   "cooldown": {
-    "enabled": true,
+    "enabled": false,
     "duration": 3600000,
     "perChannel": true
   },
