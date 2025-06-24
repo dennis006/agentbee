@@ -1711,7 +1711,7 @@ const welcomeUpload = multer({
 // GET: Welcome Settings laden
 app.get('/api/welcome', async (req, res) => {
     try {
-        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1325050102477488169';
         const settings = await loadWelcomeSettings(guildId);
         
         if (!settings) {
@@ -1728,7 +1728,7 @@ app.get('/api/welcome', async (req, res) => {
 // POST: Welcome Settings speichern
 app.post('/api/welcome', async (req, res) => {
     try {
-        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1325050102477488169';
         const settings = req.body;
         
         const result = await saveWelcomeSettings(settings, guildId);
@@ -1747,7 +1747,7 @@ app.post('/api/welcome', async (req, res) => {
 // GET: Welcome Images laden
 app.get('/api/welcome/images', async (req, res) => {
     try {
-        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1325050102477488169';
         const images = await loadWelcomeImages(guildId);
         
         res.json(images);
@@ -1764,7 +1764,7 @@ app.post('/api/welcome/upload', welcomeUpload.single('welcomeImage'), async (req
             return res.status(400).json({ error: 'Keine Datei hochgeladen' });
         }
 
-        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1325050102477488169';
         const folder = req.body.folder || 'general';
         
         // Erstelle einzigartigen Dateinamen
@@ -1804,7 +1804,7 @@ app.post('/api/welcome/upload', welcomeUpload.single('welcomeImage'), async (req
 app.delete('/api/welcome/images/:imageId', async (req, res) => {
     try {
         const imageId = req.params.imageId;
-        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1325050102477488169';
         
         const result = await deleteWelcomeImage(imageId, guildId);
         
@@ -1823,7 +1823,7 @@ app.delete('/api/welcome/images/:imageId', async (req, res) => {
 app.post('/api/welcome/folders', async (req, res) => {
     try {
         const { folderName } = req.body;
-        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1325050102477488169';
         
         if (!folderName) {
             return res.status(400).json({ error: 'Ordnername ist erforderlich' });
@@ -1846,7 +1846,7 @@ app.post('/api/welcome/folders', async (req, res) => {
 app.delete('/api/welcome/folders/:folderName', async (req, res) => {
     try {
         const folderName = req.params.folderName;
-        const guildId = req.query.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.query.guildId || process.env.GUILD_ID || '1325050102477488169';
         
         const result = await deleteWelcomeFolder(folderName, guildId);
         
@@ -1868,7 +1868,7 @@ app.post('/api/welcome/test', async (req, res) => {
             return res.status(503).json({ error: 'Bot ist nicht online' });
         }
 
-        const guildId = req.body.guildId || process.env.GUILD_ID || '1203994020779532348';
+        const guildId = req.body.guildId || process.env.GUILD_ID || '1325050102477488169';
         const settings = req.body;
         
         const guild = client.guilds.cache.get(guildId);
