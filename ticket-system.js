@@ -483,32 +483,58 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
         console.log(`✅ Ticket-Schließungs-PN erfolgreich an ${ticketOwner.user.tag} gesendet`);
       } catch (error) {
         console.error(`❌ Fehler beim Senden der PN an ${ticketOwner.user.tag}:`, error);
+        console.error(`🔍 Error-Details:`, {
+          code: error.code,
+          message: error.message,
+          name: error.name,
+          stack: error.stack?.split('\n')[0]
+        });
         dmSent = false;
         
-        // Bestimme den Grund des Fehlers für bessere Fehlermeldung
-        if (error.code === 50007) {
+        // Erweiterte Fehlercode-Erkennung
+        if (error.code === 50007 || error.message?.includes('Cannot send messages to this user')) {
           dmError = 'Der User hat private Nachrichten deaktiviert';
-        } else if (error.code === 50013) {
+        } else if (error.code === 50013 || error.message?.includes('Missing Permissions')) {
           dmError = 'Bot hat keine Berechtigung DMs zu senden';
+        } else if (error.code === 50001 || error.message?.includes('Missing Access')) {
+          dmError = 'Bot kann nicht auf den User zugreifen';
+        } else if (error.message?.includes('Unknown User')) {
+          dmError = 'User nicht mehr verfügbar';
+        } else if (error.message?.includes('blocked')) {
+          dmError = 'Bot wurde vom User blockiert';
         } else {
-          dmError = 'Unbekannter Fehler beim Senden der PN';
+          dmError = `Fehler beim Senden der PN: ${error.message || 'Unbekannter Grund'} (Code: ${error.code || 'N/A'})`;
         }
         
         // Versuche alternative Benachrichtigung im Channel zu senden (falls noch offen)
         try {
           if (channel && !channel.deleted) {
             const fallbackEmbed = new EmbedBuilder()
-              .setTitle('📬 PN konnte nicht gesendet werden')
-              .setDescription(`${ticketOwner}, deine PN-Einstellungen verhindern das Senden von Nachrichten.`)
+              .setTitle('📬 PN-Benachrichtigung fehlgeschlagen')
+              .setDescription(`${ticketOwner}, dir konnte keine private Nachricht über die Ticket-Schließung gesendet werden.`)
               .addFields(
                 { name: '📝 Grund der Schließung', value: closeReason, inline: false },
-                { name: '💡 Tipp', value: 'Du kannst private Nachrichten in deinen Discord-Einstellungen aktivieren um künftige Benachrichtigungen zu erhalten.', inline: false }
+                { name: '❌ Problem', value: dmError, inline: false },
+                { name: '💡 Lösungen', value: '• **Discord-Einstellungen** → Privatsphäre & Sicherheit → Direkte Nachrichten aktivieren\n• **Server-Einstellungen** → Nachrichten von Server-Mitgliedern zulassen\n• Prüfe ob du den Bot blockiert hast', inline: false },
+                { name: '🔧 Support', value: 'Bei weiteren Fragen erstelle einfach ein neues Ticket!', inline: false }
               )
               .setColor(parseInt('FFA500', 16))
-              .setTimestamp();
+              .setTimestamp()
+              .setFooter({ text: 'Diese Nachricht wird in 30 Sekunden gelöscht', iconURL: guild.iconURL({ dynamic: true }) });
             
-            await channel.send({ embeds: [fallbackEmbed] });
-            console.log(`📬 Fallback-Benachrichtigung im Channel gesendet für ${ticketOwner.user.tag}`);
+            const fallbackMessage = await channel.send({ embeds: [fallbackEmbed] });
+            console.log(`📬 Erweiterte Fallback-Benachrichtigung im Channel gesendet für ${ticketOwner.user.tag}`);
+            
+            // Lösche Fallback-Nachricht nach 30 Sekunden
+            setTimeout(async () => {
+              try {
+                await fallbackMessage.delete();
+                console.log(`🗑️ Fallback-Nachricht nach 30s gelöscht`);
+              } catch (deleteError) {
+                console.log(`⚠️ Fallback-Nachricht konnte nicht gelöscht werden:`, deleteError.message);
+              }
+            }, 30000);
+            
           }
         } catch (fallbackError) {
           console.error('❌ Auch Fallback-Benachrichtigung fehlgeschlagen:', fallbackError);
