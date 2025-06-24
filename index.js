@@ -9291,6 +9291,77 @@ app.post('/api/xp/reset-all', async (req, res) => {
     }
 });
 
+// Debug: XP-System Status
+app.get('/api/xp/debug-status', (req, res) => {
+    try {
+        if (!xpSystem) {
+            return res.status(503).json({ error: 'XP-System nicht initialisiert' });
+        }
+
+        // Memory-Cache Status
+        const memoryUsers = Array.from(xpSystem.userXP.entries()).map(([userId, data]) => ({
+            userId,
+            username: data.username,
+            level: data.level,
+            totalXP: data.totalXP
+        }));
+
+        // JSON-Datei Status
+        let jsonUsers = [];
+        let jsonError = null;
+        try {
+            if (fs.existsSync('./xp-data.json')) {
+                const jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
+                const parsedData = JSON.parse(jsonContent);
+                jsonUsers = parsedData.map(user => ({
+                    userId: user.userId,
+                    username: user.username,
+                    level: user.level,
+                    totalXP: user.totalXP
+                }));
+            }
+        } catch (error) {
+            jsonError = error.message;
+        }
+
+        // Diskrepanzen finden
+        const memoryUserIds = new Set(memoryUsers.map(u => u.userId));
+        const jsonUserIds = new Set(jsonUsers.map(u => u.userId));
+        
+        const onlyInMemory = memoryUsers.filter(u => !jsonUserIds.has(u.userId));
+        const onlyInJSON = jsonUsers.filter(u => !memoryUserIds.has(u.userId));
+
+        console.log(`🔍 XP-System Debug Status angefordert:`);
+        console.log(`  - Memory: ${memoryUsers.length} User`);
+        console.log(`  - JSON: ${jsonUsers.length} User`);
+        console.log(`  - Nur in Memory: ${onlyInMemory.length}`);
+        console.log(`  - Nur in JSON: ${onlyInJSON.length}`);
+
+        res.json({
+            status: 'ok',
+            memory: {
+                count: memoryUsers.length,
+                users: memoryUsers
+            },
+            json: {
+                count: jsonUsers.length,
+                users: jsonUsers,
+                error: jsonError
+            },
+            discrepancies: {
+                onlyInMemory,
+                onlyInJSON,
+                hasDiscrepancies: onlyInMemory.length > 0 || onlyInJSON.length > 0
+            },
+            lastDebugTime: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Fehler beim XP-Debug Status:', error);
+        res.status(500).json({ error: 'Fehler beim XP-Debug Status' });
+    }
+});
+
 // Debug: DM-Test für spezifischen User
 app.post('/api/debug/test-dm', async (req, res) => {
     try {
@@ -9374,58 +9445,22 @@ app.post('/api/xp/emergency-reset', async (req, res) => {
             });
         }
         
+        if (!xpSystem) {
+            return res.status(503).json({ error: 'XP-System nicht initialisiert' });
+        }
+        
         console.log('🚨 NOTFALL-XP-RESET gestartet...');
         
-        // Backup erstellen
-        const backupFile = `./emergency-backup-${Date.now()}.json`;
-        try {
-            if (fs.existsSync('./xp-data.json')) {
-                const currentData = fs.readFileSync('./xp-data.json', 'utf8');
-                fs.writeFileSync(backupFile, currentData);
-                console.log(`💾 Emergency-Backup erstellt: ${backupFile}`);
-            }
-        } catch (backupError) {
-            console.error('❌ Backup-Fehler:', backupError);
+        // Verwende die verbesserte emergencyReset-Funktion
+        const result = await xpSystem.emergencyReset();
+        
+        if (result.success) {
+            console.log(`✅ NOTFALL-XP-RESET erfolgreich: ${result.usersCleared} User entfernt`);
+            res.json(result);
+        } else {
+            console.error(`❌ NOTFALL-XP-RESET fehlgeschlagen:`, result.error);
+            res.status(500).json(result);
         }
-        
-        let result = { memoryCleared: 0, jsonCleared: 0, rolesRemoved: 0 };
-        
-        // Memory-Cache leeren
-        if (xpSystem) {
-            result.memoryCleared = xpSystem.userXP.size;
-            xpSystem.userXP.clear();
-            console.log(`🗑️ Memory-Cache geleert: ${result.memoryCleared} User`);
-        }
-        
-        // JSON-Datei komplett überschreiben
-        try {
-            if (fs.existsSync('./xp-data.json')) {
-                const oldData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
-                result.jsonCleared = oldData.length;
-            }
-            
-            fs.writeFileSync('./xp-data.json', JSON.stringify([], null, 2));
-            console.log(`🗑️ JSON-Datei geleert: ${result.jsonCleared} User`);
-            
-            // Verifikation
-            const verifyData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
-            if (verifyData.length === 0) {
-                console.log('✅ JSON-Datei erfolgreich geleert');
-            } else {
-                console.error(`❌ JSON-Datei nicht vollständig geleert: ${verifyData.length} User verblieben`);
-            }
-        } catch (jsonError) {
-            console.error('❌ JSON-Datei-Fehler:', jsonError);
-        }
-        
-        console.log(`✅ NOTFALL-XP-RESET abgeschlossen: ${result.memoryCleared} Memory, ${result.jsonCleared} JSON, ${result.rolesRemoved} Rollen`);
-        
-        res.json({
-            success: true,
-            message: 'Notfall-XP-Reset erfolgreich',
-            backup: backupFile,
-            ...result
-        });
         
     } catch (error) {
         console.error('❌ Notfall-XP-Reset Fehler:', error);

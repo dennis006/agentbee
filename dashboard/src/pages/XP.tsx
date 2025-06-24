@@ -768,23 +768,56 @@ const XP: React.FC = () => {
     }
   };
 
-  // User zurücksetzen
+  // User zurücksetzen mit verbesserter Logik
   const resetUser = async () => {
     if (!userManagement.resetUserId) return;
-    if (!confirm(`Möchtest du wirklich alle XP-Daten für User ${userManagement.resetUserId} löschen?`)) return;
+    
+    const confirmed = confirm(
+      `🗑️ User Reset: Möchtest du wirklich alle XP-Daten für User ${userManagement.resetUserId} löschen?\n\n` +
+      'Dies entfernt:\n' +
+      '• Alle XP-Punkte und Level\n' +
+      '• Discord-Rollen (Level & Meilenstein)\n' +
+      '• Statistiken (Nachrichten, Voice-Zeit)\n\n' +
+      'Diese Aktion kann NICHT rückgängig gemacht werden!'
+    );
+    
+    if (!confirmed) return;
 
     try {
       const response = await fetch(`/api/xp/user/${userManagement.resetUserId}`, {
         method: 'DELETE'
       });
 
-      if (response.ok) {
-        showMessage('success', `User ${userManagement.resetUserId} wurde zurückgesetzt!`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showMessage('success', 
+          `✅ User ${userManagement.resetUserId} wurde erfolgreich zurückgesetzt! ` +
+          `${data.rolesRemoved} Discord-Rollen entfernt.`
+        );
         setUserManagement(prev => ({ ...prev, resetUserId: '' }));
+        
+        // Debug-Status prüfen nach Reset
+        setTimeout(async () => {
+          try {
+            const debugResponse = await fetch('/api/xp/debug-status');
+            const debugData = await debugResponse.json();
+            console.log('🔍 Nach User-Reset Debug Status:', debugData);
+            
+            if (debugData.discrepancies.hasDiscrepancies) {
+              showMessage('error', 
+                `⚠️ Warnung: Nach User-Reset wurden Diskrepanzen erkannt! ` +
+                `Bitte Emergency Reset verwenden falls das Problem bestehen bleibt.`
+              );
+            }
+          } catch (debugError) {
+            console.error('Debug-Status nach User-Reset fehlgeschlagen:', debugError);
+          }
+        }, 2000);
+        
         loadData();
       } else {
-        const error = await response.json();
-        showMessage('error', error.error || 'Fehler beim Zurücksetzen des Users');
+        showMessage('error', data.error || 'Fehler beim Zurücksetzen des Users');
       }
     } catch (error) {
       showMessage('error', 'Fehler beim Zurücksetzen des Users');
@@ -2970,12 +3003,107 @@ const XP: React.FC = () => {
                 </AlertDescription>
               </Alert>
               
+              {/* Debug Status Button */}
+              <div className="p-4 bg-blue-600/20 rounded-lg border border-blue-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="text-sm font-semibold text-blue-400 mb-1 flex items-center gap-2">
+                      🔍 System Debug Status
+                    </h5>
+                    <p className="text-xs text-dark-muted">
+                      Prüfe Memory-Cache vs JSON-Datei Unterschiede
+                    </p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/xp/debug-status');
+                        const data = await response.json();
+                        console.log('🔍 XP Debug Status:', data);
+                        
+                        if (data.discrepancies.hasDiscrepancies) {
+                          showMessage('error', 
+                            `⚠️ Diskrepanzen gefunden! Memory: ${data.memory.count}, JSON: ${data.json.count}. ` +
+                            `Nur in Memory: ${data.discrepancies.onlyInMemory.length}, Nur in JSON: ${data.discrepancies.onlyInJSON.length}`
+                          );
+                        } else {
+                          showMessage('success', 
+                            `✅ Keine Diskrepanzen! Memory und JSON sind synchron (${data.memory.count} User)`
+                          );
+                        }
+                      } catch (error) {
+                        showMessage('error', 'Fehler beim Debug-Status abrufen');
+                      }
+                    }}
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Debug Status
+                  </Button>
+                </div>
+              </div>
+
+              {/* Emergency Reset Button */}
+              <div className="p-4 bg-red-600/20 rounded-lg border border-red-500/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="text-sm font-semibold text-red-400 mb-1 flex items-center gap-2">
+                      🚨 Emergency Reset
+                    </h5>
+                    <p className="text-xs text-dark-muted">
+                      Garantierte komplette XP-Daten Löschung mit mehrfacher Verifikation
+                    </p>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      const confirmed = confirm(
+                        '🚨 EMERGENCY RESET: Möchten Sie WIRKLICH alle XP-Daten KOMPLETT löschen?\n\n' +
+                        'Dies verwendet eine verbesserte Lösch-Logik mit mehrfacher Verifikation.\n' +
+                        'Ein Backup wird automatisch erstellt.\n\n' +
+                        'Diese Aktion kann NICHT rückgängig gemacht werden!'
+                      );
+                      
+                      if (confirmed) {
+                        try {
+                          const response = await fetch('/api/xp/emergency-reset', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ confirmEmergency: 'EMERGENCY_RESET_CONFIRMED' })
+                          });
+                          
+                          const data = await response.json();
+                          
+                          if (data.success) {
+                            showMessage('success', 
+                              `✅ Emergency Reset erfolgreich! ${data.usersCleared} User entfernt. ` +
+                              `Backup: ${data.backup}`
+                            );
+                            loadData(); // Neu laden
+                          } else {
+                            showMessage('error', 
+                              `❌ Emergency Reset fehlgeschlagen: ${data.error}`
+                            );
+                          }
+                        } catch (error) {
+                          showMessage('error', 'Fehler beim Emergency Reset');
+                        }
+                      }
+                    }}
+                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2 px-4 rounded-lg"
+                  >
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Emergency Reset
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Normal Reset Button */}
               <Button 
                 onClick={resetAllXP} 
                 className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
               >
                 <RotateCcw className="h-5 w-5" />
-                <span>Alle XP-Daten zurücksetzen</span>
+                <span>Alle XP-Daten zurücksetzen (Normal)</span>
               </Button>
             </CardContent>
           </Card>

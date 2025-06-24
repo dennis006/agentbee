@@ -1179,15 +1179,31 @@ class XPSystem {
                 // Forcierte Speicherung mit mehrfacher Verifikation
                 await this.forceSaveData(userId);
                 
-                // Mehrfache Verifikation: JSON-Datei prüfen
-                setTimeout(async () => {
-                    await this.verifyUserRemoval(userId);
-                }, 100);
+                // Sofortige Verifikation
+                const immediateCheck = await this.verifyUserRemoval(userId);
                 
-                // Zusätzliche Verifikation nach 2 Sekunden
+                if (!immediateCheck) {
+                    console.log(`⚠️ Sofortige Verifikation fehlgeschlagen, versuche aggressive Cleanup...`);
+                    // Direkte JSON-Manipulation als Fallback
+                    try {
+                        if (fs.existsSync('./xp-data.json')) {
+                            const jsonData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                            const filteredData = jsonData.filter(user => user.userId !== userId);
+                            fs.writeFileSync('./xp-data.json', JSON.stringify(filteredData, null, 2), { encoding: 'utf8', flag: 'w' });
+                            console.log(`🧹 Direkte JSON-Manipulation: ${filteredData.length} User verbleibend`);
+                        }
+                    } catch (fallbackError) {
+                        console.error(`❌ Fallback-Cleanup fehlgeschlagen:`, fallbackError);
+                    }
+                }
+                
+                // Verzögerte finale Verifikation
                 setTimeout(async () => {
-                    await this.verifyUserRemoval(userId, true);
-                }, 2000);
+                    const finalResult = await this.verifyUserRemoval(userId, true);
+                    if (!finalResult) {
+                        console.error(`❌ KRITISCH: User ${userId} konnte trotz mehrfacher Versuche nicht entfernt werden!`);
+                    }
+                }, 1000);
                 
                 console.log(`✅ User ${userId} aus XP-System entfernt`);
                 console.log(`✅ ${rolesRemoved} Discord-Rollen entfernt`);
@@ -1584,7 +1600,7 @@ class XPSystem {
         
         console.log(`=== DEBUG INFO ENDE ===\n`);
     }
-    // Forcierte Speicherung mit Backup
+    // Forcierte Speicherung mit Backup und mehrfacher Verifikation
     async forceSaveData(userId = null) {
         try {
             const backupFile = `./xp-data-backup-${Date.now()}.json`;
@@ -1606,25 +1622,45 @@ class XPSystem {
             
             console.log(`💾 Forcierte Speicherung: ${xpData.length} User (${userId ? `ohne ${userId}` : 'alle'})`);
             
-            // Datei überschreiben
-            fs.writeFileSync('./xp-data.json', JSON.stringify(xpData, null, 2));
-            
-            // Sofortige Verifikation
-            const savedData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
-            console.log(`✅ Datei gespeichert und verifiziert: ${savedData.length} User`);
-            
-            if (userId) {
-                const userStillExists = savedData.some(user => user.userId === userId);
-                if (userStillExists) {
-                    console.error(`❌ WARNUNG: User ${userId} immer noch in gespeicherter Datei!`);
-                    // Nochmaliger Versuch
-                    const filteredData = savedData.filter(user => user.userId !== userId);
-                    fs.writeFileSync('./xp-data.json', JSON.stringify(filteredData, null, 2));
-                    console.log(`🔄 Zweiter Speicherversuch: ${filteredData.length} User`);
-                } else {
-                    console.log(`✅ User ${userId} erfolgreich aus JSON entfernt`);
+            // Datei komplett überschreiben (3x für Sicherheit)
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    fs.writeFileSync('./xp-data.json', JSON.stringify(xpData, null, 2), { encoding: 'utf8', flag: 'w' });
+                    
+                    // Sofortige Verifikation nach jedem Versuch
+                    const savedData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                    console.log(`📝 Versuch ${attempt}: ${savedData.length} User gespeichert`);
+                    
+                    if (userId) {
+                        const userStillExists = savedData.some(user => user.userId === userId);
+                        if (!userStillExists) {
+                            console.log(`✅ User ${userId} erfolgreich entfernt (Versuch ${attempt})`);
+                            break;
+                        } else {
+                            console.error(`❌ Versuch ${attempt}: User ${userId} immer noch vorhanden!`);
+                            if (attempt === 3) {
+                                // Letzter Versuch: Manuell filtern und nochmals speichern
+                                const finalFilteredData = savedData.filter(user => user.userId !== userId);
+                                fs.writeFileSync('./xp-data.json', JSON.stringify(finalFilteredData, null, 2), { encoding: 'utf8', flag: 'w' });
+                                console.log(`🔄 Final-Cleanup: ${finalFilteredData.length} User`);
+                            }
+                        }
+                    } else {
+                        break; // Kein spezifischer User zu entfernen
+                    }
+                } catch (writeError) {
+                    console.error(`❌ Schreibfehler Versuch ${attempt}:`, writeError);
+                    if (attempt === 3) throw writeError;
                 }
+                
+                // Kurze Pause zwischen Versuchen
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
+            
+            // Final-Verifikation nach 500ms
+            setTimeout(() => {
+                this.verifyUserRemoval(userId, true);
+            }, 500);
             
         } catch (error) {
             console.error('❌ Fehler bei forcierter Speicherung:', error);
@@ -1632,7 +1668,7 @@ class XPSystem {
         }
     }
     
-    // User-Entfernung verifizieren
+    // User-Entfernung verifizieren mit verbesserter Logik
     async verifyUserRemoval(userId, final = false) {
         try {
             const prefix = final ? '🔍 FINALE VERIFIKATION' : '🔍 Verifikation';
@@ -1642,6 +1678,14 @@ class XPSystem {
             const inMemory = this.userXP.has(userId);
             console.log(`📋 User in Memory: ${inMemory ? '❌ JA' : '✅ NEIN'}`);
             
+            // Falls noch im Memory, nochmals entfernen
+            if (inMemory) {
+                console.log(`🧹 Entferne User ${userId} nochmals aus Memory...`);
+                this.userXP.delete(userId);
+                const stillInMemory = this.userXP.has(userId);
+                console.log(`📋 Nach Löschung in Memory: ${stillInMemory ? '❌ JA' : '✅ NEIN'}`);
+            }
+            
             // JSON-Datei prüfen
             if (fs.existsSync('./xp-data.json')) {
                 const jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
@@ -1650,25 +1694,111 @@ class XPSystem {
                 console.log(`📄 User in JSON: ${inJSON ? '❌ JA' : '✅ NEIN'}`);
                 console.log(`📊 JSON-Datei enthält ${parsedData.length} User insgesamt`);
                 
-                // Bei finaler Verifikation: nochmaliger Cleanup-Versuch
-                if (final && inJSON) {
-                    console.log(`🧹 FINAL CLEANUP: Entferne User ${userId} nochmals...`);
+                // Bei finaler Verifikation oder wenn User noch vorhanden: aggressive Cleanup
+                if (inJSON) {
+                    console.log(`🧹 AGGRESSIVE CLEANUP: Entferne User ${userId} direkt aus JSON...`);
                     const cleanedData = parsedData.filter(user => user.userId !== userId);
-                    fs.writeFileSync('./xp-data.json', JSON.stringify(cleanedData, null, 2));
-                    console.log(`✅ Final cleanup: ${cleanedData.length} User verbleibend`);
+                    
+                    // Mehrfaches Überschreiben für maximale Sicherheit
+                    for (let i = 0; i < 3; i++) {
+                        fs.writeFileSync('./xp-data.json', JSON.stringify(cleanedData, null, 2), { encoding: 'utf8', flag: 'w' });
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                    
+                    // Abschließende Verifikation
+                    const finalCheck = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                    const stillInJSON = finalCheck.some(user => user.userId === userId);
+                    console.log(`✅ Nach aggressive cleanup: ${finalCheck.length} User, User ${userId} noch vorhanden: ${stillInJSON ? '❌ JA' : '✅ NEIN'}`);
                 }
                 
-                if (!inMemory && !inJSON) {
-                    console.log(`✅ ${prefix}: User ${userId} erfolgreich entfernt!`);
+                const finalMemoryCheck = this.userXP.has(userId);
+                const finalJSONCheck = fs.existsSync('./xp-data.json') && JSON.parse(fs.readFileSync('./xp-data.json', 'utf8')).some(user => user.userId === userId);
+                
+                if (!finalMemoryCheck && !finalJSONCheck) {
+                    console.log(`✅ ${prefix}: User ${userId} ERFOLGREICH ENTFERNT!`);
+                    return true;
                 } else {
-                    console.error(`❌ ${prefix}: User ${userId} noch gefunden! Memory: ${inMemory}, JSON: ${inJSON}`);
+                    console.error(`❌ ${prefix}: User ${userId} NOCH GEFUNDEN! Memory: ${finalMemoryCheck}, JSON: ${finalJSONCheck}`);
+                    return false;
                 }
             } else {
                 console.log(`📄 xp-data.json existiert nicht`);
+                return true;
             }
             
         } catch (error) {
             console.error(`❌ Fehler bei Verifikation:`, error);
+            return false;
+        }
+    }
+
+    // Neue Funktion: Komplett-Reset mit garantierter Löschung
+    async emergencyReset() {
+        try {
+            console.log('🚨 EMERGENCY RESET: Komplette XP-Daten Löschung...');
+            
+            // Backup erstellen
+            const backupFile = `./emergency-backup-${Date.now()}.json`;
+            if (fs.existsSync('./xp-data.json')) {
+                const currentData = fs.readFileSync('./xp-data.json', 'utf8');
+                fs.writeFileSync(backupFile, currentData);
+                console.log(`💾 Emergency-Backup erstellt: ${backupFile}`);
+            }
+            
+            const originalUserCount = this.userXP.size;
+            
+            // Memory-Cache komplett leeren
+            this.userXP.clear();
+            console.log(`🗑️ Memory-Cache geleert: ${originalUserCount} User`);
+            
+            // JSON-Datei komplett überschreiben
+            const emptyArray = [];
+            fs.writeFileSync('./xp-data.json', JSON.stringify(emptyArray, null, 2), { encoding: 'utf8', flag: 'w' });
+            
+            // Mehrfache Verifikation
+            for (let i = 0; i < 3; i++) {
+                const verifyData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                if (verifyData.length === 0) {
+                    console.log(`✅ Emergency Reset Verifikation ${i + 1}/3: JSON-Datei ist leer`);
+                } else {
+                    console.error(`❌ Emergency Reset Verifikation ${i + 1}/3: ${verifyData.length} User noch vorhanden!`);
+                    // Nochmals überschreiben
+                    fs.writeFileSync('./xp-data.json', JSON.stringify([], null, 2), { encoding: 'utf8', flag: 'w' });
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            const finalMemoryCheck = this.userXP.size;
+            const finalJSONCheck = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8')).length;
+            
+            console.log(`🔍 Emergency Reset Final Check:`);
+            console.log(`  - Memory-Cache: ${finalMemoryCheck} User`);
+            console.log(`  - JSON-Datei: ${finalJSONCheck} User`);
+            
+            if (finalMemoryCheck === 0 && finalJSONCheck === 0) {
+                console.log(`✅ EMERGENCY RESET ERFOLGREICH: Alle ${originalUserCount} User entfernt`);
+                return {
+                    success: true,
+                    message: 'Emergency Reset erfolgreich',
+                    usersCleared: originalUserCount,
+                    backup: backupFile
+                };
+            } else {
+                console.error(`❌ EMERGENCY RESET FEHLGESCHLAGEN: Memory: ${finalMemoryCheck}, JSON: ${finalJSONCheck}`);
+                return {
+                    success: false,
+                    error: 'Emergency Reset nicht vollständig',
+                    memoryRemaining: finalMemoryCheck,
+                    jsonRemaining: finalJSONCheck
+                };
+            }
+            
+        } catch (error) {
+            console.error('❌ Emergency Reset Fehler:', error);
+            return {
+                success: false,
+                error: error.message
+            };
         }
     }
 }
