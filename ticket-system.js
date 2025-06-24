@@ -456,7 +456,7 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
 
     // Sende PN an Ticket-Ersteller (falls nicht selbst geschlossen)
     let dmSent = false;
-    let dmError = null;
+    let dmError = 'INITIAL_VALUE_NOT_SET'; // Debug-Wert um zu sehen ob Code läuft
     if (ticketOwner && !isTicketOwner) {
       try {
         console.log(`🔍 Versuche PN an ${ticketOwner.user.tag} zu senden...`);
@@ -481,6 +481,7 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
 
         await ticketOwner.send({ embeds: [dmEmbed] });
         dmSent = true;
+        dmError = null; // Reset bei Erfolg
         console.log(`✅ Ticket-Schließungs-PN erfolgreich an ${ticketOwner.user.tag} gesendet`);
       } catch (error) {
         console.error(`❌ Fehler beim Senden der PN an ${ticketOwner.user.tag}:`, error);
@@ -582,6 +583,12 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
     } else if (isTicketOwner) {
       // Ticket-Ersteller schließt selbst - keine PN nötig
       dmSent = true; // Als "erfolgreich" markieren
+      dmError = null; // Kein Fehler bei eigenem Schließen
+    } else {
+      // Kein ticketOwner gefunden
+      dmSent = false;
+      dmError = 'Ticket-Ersteller nicht gefunden oder nicht verfügbar';
+      console.log(`⚠️ Ticket-Ersteller nicht gefunden für Ticket ${ticketId}`);
     }
 
     // Warte kurz und lösche dann den Channel
@@ -601,8 +608,15 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
     // Statistiken aktualisieren
     updateTicketStats('closed');
 
+    // ABSOLUTE SICHERHEIT: dmError darf NIEMALS undefined sein
+    if (dmError === 'INITIAL_VALUE_NOT_SET') {
+      dmError = 'FEHLER: Code-Version nicht aktualisiert oder Bot nicht neugestartet!';
+      console.log(`🚨 CRITICAL: dmError war noch auf INITIAL_VALUE - Bot läuft mit alter Version!`);
+    }
+    
     // Final Debug Log
     console.log(`🔍 Final Return Values:`, { dmSent, dmError });
+    console.log(`🔍 TICKET SYSTEM VERSION CHECK: ${new Date().toISOString()}`);
     
     return { 
       success: true, 
