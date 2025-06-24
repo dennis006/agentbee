@@ -2,11 +2,14 @@ const fs = require('fs');
 const { EmbedBuilder } = require('discord.js');
 
 class XPSystem {
-    constructor(client) {
+    constructor(client, guildId = '1325050102477488169') {
         this.client = client;
+        this.guildId = guildId; // Guild-ID für Multi-Server Support
+        this.supabaseClient = null; // Wird später initialisiert
         this.userXP = new Map(); // userId -> { xp, level, totalXP, lastMessage, voiceJoinTime }
         this.voiceUsers = new Map(); // userId -> { joinTime, channelId }
         this.emergencyResetActive = false; // Flag für Emergency Reset
+        this.useSupabase = false; // Flag um zwischen JSON und Supabase zu wechseln
         this.settings = {
             enabled: true,
             messageXP: {
@@ -90,7 +93,145 @@ class XPSystem {
         this.startVoiceXPTimer();
     }
 
-    // Daten laden
+    // Supabase initialisieren
+    initializeSupabase(supabaseClient) {
+        this.supabaseClient = supabaseClient;
+        this.useSupabase = true;
+        console.log('🔥 XP-System: Supabase aktiviert für User-Daten');
+        
+        // User-Daten aus Supabase laden wenn verfügbar
+        this.loadUserDataFromSupabase();
+    }
+
+    // User-Daten aus Supabase laden
+    async loadUserDataFromSupabase() {
+        if (!this.supabaseClient || !this.useSupabase) {
+            console.log('📄 Supabase nicht verfügbar, verwende JSON-Fallback');
+            return;
+        }
+
+        try {
+            console.log(`🔄 Lade XP-User-Daten aus Supabase für Guild ${this.guildId}...`);
+            
+            const { data, error } = await this.supabaseClient
+                .from('xp_users')
+                .select('*')
+                .eq('guild_id', this.guildId);
+
+            if (error) throw error;
+
+            // Daten in Memory-Cache laden
+            this.userXP.clear();
+            if (data && data.length > 0) {
+                for (const userData of data) {
+                    this.userXP.set(userData.user_id, {
+                        xp: userData.xp || 0,
+                        level: userData.level || 1,
+                        totalXP: userData.total_xp || 0,
+                        lastMessage: userData.last_message || 0,
+                        voiceJoinTime: userData.voice_join_time || 0,
+                        messageCount: userData.message_count || 0,
+                        voiceTime: userData.voice_time || 0,
+                        username: userData.username || 'Unbekannt',
+                        avatar: userData.avatar || null
+                    });
+                }
+                console.log(`✅ ${this.userXP.size} User aus Supabase in Memory-Cache geladen`);
+            } else {
+                console.log('📄 Keine XP-User-Daten in Supabase gefunden für diese Guild');
+            }
+
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Supabase XP-Daten:', error);
+            console.log('📄 Fallback zu JSON-Daten...');
+            this.useSupabase = false;
+        }
+    }
+
+    // User-Daten in Supabase speichern
+    async saveUserDataToSupabase() {
+        if (!this.supabaseClient || !this.useSupabase) {
+            console.log('📄 Supabase nicht verfügbar, speichere in JSON');
+            return false;
+        }
+
+        try {
+            console.log(`💾 Speichere ${this.userXP.size} User in Supabase für Guild ${this.guildId}...`);
+            
+            // Konvertiere Map zu Array für Supabase
+            const userData = Array.from(this.userXP.entries()).map(([userId, data]) => ({
+                guild_id: this.guildId,
+                user_id: userId,
+                xp: data.xp || 0,
+                level: data.level || 1,
+                total_xp: data.totalXP || 0,
+                message_count: data.messageCount || 0,
+                voice_time: data.voiceTime || 0,
+                last_message: data.lastMessage || 0,
+                voice_join_time: data.voiceJoinTime || 0,
+                username: data.username || 'Unbekannt',
+                avatar: data.avatar || null
+            }));
+
+            if (userData.length > 0) {
+                // Verwende upsert für insert-or-update
+                const { error } = await this.supabaseClient
+                    .from('xp_users')
+                    .upsert(userData, {
+                        onConflict: 'guild_id,user_id'
+                    });
+
+                if (error) throw error;
+                console.log(`✅ ${userData.length} User erfolgreich in Supabase gespeichert`);
+            } else {
+                console.log('📄 Keine User-Daten zum Speichern vorhanden');
+            }
+
+            return true;
+
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern in Supabase:', error);
+            console.log('📄 Fallback zu JSON-Speicherung...');
+            this.useSupabase = false;
+            return false;
+        }
+    }
+
+    // Einzelnen User in Supabase speichern (Performance-optimiert)
+    async saveUserToSupabase(userId, userData) {
+        if (!this.supabaseClient || !this.useSupabase) return false;
+
+        try {
+            const userRecord = {
+                guild_id: this.guildId,
+                user_id: userId,
+                xp: userData.xp || 0,
+                level: userData.level || 1,
+                total_xp: userData.totalXP || 0,
+                message_count: userData.messageCount || 0,
+                voice_time: userData.voiceTime || 0,
+                last_message: userData.lastMessage || 0,
+                voice_join_time: userData.voiceJoinTime || 0,
+                username: userData.username || 'Unbekannt',
+                avatar: userData.avatar || null
+            };
+
+            const { error } = await this.supabaseClient
+                .from('xp_users')
+                .upsert([userRecord], {
+                    onConflict: 'guild_id,user_id'
+                });
+
+            if (error) throw error;
+            return true;
+
+        } catch (error) {
+            console.error(`❌ Fehler beim Speichern von User ${userId} in Supabase:`, error);
+            return false;
+        }
+    }
+
+    // Daten laden (Hybrid: Settings aus JSON, User aus Supabase oder JSON-Fallback)
     loadData() {
         try {
             // Verhindere Laden während Emergency Reset
@@ -99,46 +240,52 @@ class XPSystem {
                 return;
             }
             
-            // Einstellungen laden
+            // Einstellungen aus JSON laden (bleibt unverändert)
             if (fs.existsSync('./xp-settings.json')) {
                 const settingsData = fs.readFileSync('./xp-settings.json', 'utf8');
                 const savedSettings = JSON.parse(settingsData);
                 this.settings = this.deepMerge(this.settings, savedSettings);
-                console.log('✅ XP-Einstellungen geladen');
+                console.log('✅ XP-Einstellungen aus JSON geladen');
             }
 
-            // User-Daten laden
-            if (fs.existsSync('./xp-data.json')) {
-                const xpData = fs.readFileSync('./xp-data.json', 'utf8');
-                const parsedData = JSON.parse(xpData);
-                
-                console.log(`📊 Lade XP-Daten: ${parsedData.length} User aus JSON`);
-                
-                this.userXP.clear();
-                for (const userData of parsedData) {
-                    this.userXP.set(userData.userId, {
-                        xp: userData.xp || 0,
-                        level: userData.level || 1,
-                        totalXP: userData.totalXP || userData.xp || 0,
-                        lastMessage: userData.lastMessage || 0,
-                        voiceJoinTime: userData.voiceJoinTime || 0,
-                        messageCount: userData.messageCount || 0,
-                        voiceTime: userData.voiceTime || 0,
-                        username: userData.username || 'Unbekannt',
-                        avatar: userData.avatar || null
-                    });
-                }
-                console.log(`✅ ${this.userXP.size} User in Memory-Cache geladen`);
+            // User-Daten: Versuche zuerst Supabase, dann JSON-Fallback
+            if (this.useSupabase && this.supabaseClient) {
+                this.loadUserDataFromSupabase();
             } else {
-                console.log('📄 Keine XP-Daten gefunden, starte mit leerer Datenbank');
+                // JSON-Fallback für User-Daten
+                if (fs.existsSync('./xp-data.json')) {
+                    const xpData = fs.readFileSync('./xp-data.json', 'utf8');
+                    const parsedData = JSON.parse(xpData);
+                    
+                    console.log(`📊 Lade XP-User-Daten aus JSON: ${parsedData.length} User`);
+                    
+                    this.userXP.clear();
+                    for (const userData of parsedData) {
+                        this.userXP.set(userData.userId, {
+                            xp: userData.xp || 0,
+                            level: userData.level || 1,
+                            totalXP: userData.totalXP || userData.xp || 0,
+                            lastMessage: userData.lastMessage || 0,
+                            voiceJoinTime: userData.voiceJoinTime || 0,
+                            messageCount: userData.messageCount || 0,
+                            voiceTime: userData.voiceTime || 0,
+                            username: userData.username || 'Unbekannt',
+                            avatar: userData.avatar || null
+                        });
+                    }
+                    console.log(`✅ ${this.userXP.size} User aus JSON in Memory-Cache geladen`);
+                } else {
+                    console.log('📄 Keine XP-User-Daten gefunden, starte mit leerer Datenbank');
+                }
             }
+
         } catch (error) {
             console.error('❌ Fehler beim Laden der XP-Daten:', error);
         }
     }
 
-    // Daten speichern
-    saveData() {
+    // Daten speichern (Hybrid: Settings in JSON, User in Supabase oder JSON-Fallback)
+    async saveData() {
         try {
             // Verhindere Speichern während Emergency Reset
             if (this.emergencyResetActive) {
@@ -146,28 +293,40 @@ class XPSystem {
                 return;
             }
             
-            // Einstellungen speichern
+            // Einstellungen in JSON speichern (bleibt unverändert)
             fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
 
-            // User-Daten speichern
+            // User-Daten: Versuche zuerst Supabase, dann JSON-Fallback
+            if (this.useSupabase && this.supabaseClient) {
+                const success = await this.saveUserDataToSupabase();
+                if (!success) {
+                    // Fallback zu JSON wenn Supabase fehlschlägt
+                    this.saveUserDataToJSON();
+                }
+            } else {
+                // JSON-Fallback für User-Daten
+                this.saveUserDataToJSON();
+            }
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern der XP-Daten:', error);
+        }
+    }
+
+    // JSON-Fallback für User-Daten
+    saveUserDataToJSON() {
+        try {
             const xpData = Array.from(this.userXP.entries()).map(([userId, data]) => ({
                 userId,
                 ...data
             }));
             
-            // Detailliertes Logging für Debug
-            console.log(`💾 Speichere XP-Daten: ${xpData.length} User in JSON`);
-            if (xpData.length === 0) {
-                console.log(`🗑️ Leere XP-Datei wird geschrieben`);
-            } else {
-                console.log(`📊 Gespeicherte User-IDs: ${xpData.map(u => u.userId).join(', ')}`);
-            }
-            
+            console.log(`💾 Speichere XP-User-Daten in JSON: ${xpData.length} User`);
             fs.writeFileSync('./xp-data.json', JSON.stringify(xpData, null, 2));
             console.log(`✅ xp-data.json erfolgreich gespeichert`);
             
         } catch (error) {
-            console.error('❌ Fehler beim Speichern der XP-Daten:', error);
+            console.error('❌ Fehler beim JSON-Speichern der User-Daten:', error);
         }
     }
 
@@ -345,7 +504,18 @@ class XPSystem {
 
         // Lokal speichern
         this.userXP.set(userId, userData);
-        this.saveData();
+        
+        // Performance-optimiert: Speichere einzelnen User in Supabase oder Fallback zu komplettem Save
+        if (this.useSupabase && this.supabaseClient) {
+            const success = await this.saveUserToSupabase(userId, userData);
+            if (!success) {
+                // Fallback bei Fehlern
+                await this.saveData();
+            }
+        } else {
+            // JSON-Fallback
+            this.saveUserDataToJSON();
+        }
 
         // Meilenstein-Check
         this.checkMilestones(userId, oldTotalXP, userData.totalXP, user);
@@ -1124,6 +1294,22 @@ class XPSystem {
                 userFound = true;
                 const userData = this.userXP.get(userId);
                 console.log(`🔍 User ${userId} gefunden: Level ${userData.level}, ${userData.totalXP} Total XP`);
+
+                // Aus Supabase entfernen falls aktiviert
+                if (this.useSupabase && this.supabaseClient) {
+                    try {
+                        const { error } = await this.supabaseClient
+                            .from('xp_users')
+                            .delete()
+                            .eq('guild_id', this.guildId)
+                            .eq('user_id', userId);
+                        
+                        if (error) throw error;
+                        console.log(`🗑️ User ${userId} aus Supabase entfernt`);
+                    } catch (supabaseError) {
+                        console.error(`❌ Fehler beim Löschen aus Supabase:`, supabaseError);
+                    }
+                }
 
                 // Discord-Rollen entfernen (falls Client verfügbar)
                 if (this.client) {

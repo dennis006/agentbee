@@ -2597,8 +2597,17 @@ client.once(Events.ClientReady, async readyClient => {
     loadDailyCounter();
     
     // XP System initialisieren
-    xpSystem = new XPSystem(client);
-global.xpSystem = xpSystem; // Als globale Variable verfügbar machen
+    xpSystem = new XPSystem(client, '1325050102477488169');
+    
+    // Supabase für XP-System initialisieren falls verfügbar
+    if (global.supabaseClient) {
+        xpSystem.initializeSupabase(global.supabaseClient);
+        console.log('✅ XP-System mit Supabase initialisiert');
+    } else {
+        console.log('📄 XP-System mit JSON-Fallback initialisiert');
+    }
+    
+    global.xpSystem = xpSystem; // Als globale Variable verfügbar machen
 
 // Giveaway-System initialisieren
 let giveawaySystem = new GiveawaySystem(client);
