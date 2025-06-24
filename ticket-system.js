@@ -454,37 +454,52 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
       await channel.send({ embeds: [closeEmbed] });
     }
 
-    // Sende PN an Ticket-Ersteller (falls nicht selbst geschlossen)
+    // Sende PN an Ticket-Ersteller (falls nicht selbst geschlossen) - GIVEAWAY PATTERN
     let dmSent = false;
-    let dmError = 'INITIAL_VALUE_NOT_SET'; // Debug-Wert um zu sehen ob Code läuft
-    if (ticketOwner && !isTicketOwner) {
+    let dmError = null;
+    
+    if (!isTicketOwner && ticketData.userId) {
       try {
-        console.log(`🔍 Versuche PN an ${ticketOwner.user.tag} zu senden...`);
-        // Finde Button-Konfiguration für bessere Info
-        const buttonConfig = ticketSettings.buttons.find(btn => btn.id === ticketData.type);
-        const ticketCategory = buttonConfig ? buttonConfig.label : 'Support';
+        console.log(`🔍 Versuche PN an Ticket-Ersteller zu senden (ID: ${ticketData.userId})...`);
         
-        const dmEmbed = new EmbedBuilder()
-          .setTitle('🔒 Dein Ticket wurde geschlossen')
-          .setDescription(`Dein Ticket im Server **${guild.name}** wurde vom Support-Team geschlossen.`)
-          .addFields(
-            { name: '🎫 Ticket-Info', value: `**Kategorie:** ${ticketCategory}\n**Betreff:** ${ticketData.subject || 'Nicht angegeben'}`, inline: false },
-            { name: '👤 Geschlossen von', value: `${closedBy.tag}`, inline: true },
-            { name: '📅 Geschlossen am', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
-            { name: '📝 Grund der Schließung', value: closeReason, inline: false },
-            { name: '💬 Weitere Hilfe?', value: 'Falls du weitere Fragen hast, erstelle einfach ein neues Ticket!', inline: false }
-          )
-          .setColor(parseInt(ticketSettings.embed.color.replace('0x', ''), 16))
-          .setTimestamp()
-          .setThumbnail(guild.iconURL({ dynamic: true }))
-          .setFooter({ text: `${guild.name} - Ticket-System`, iconURL: guild.iconURL({ dynamic: true }) });
+        // ROBUSTE Member-Fetch wie im Giveaway-System
+        const targetMember = await guild.members.fetch(ticketData.userId).catch(fetchError => {
+          console.log(`⚠️ Member ${ticketData.userId} nicht im Server gefunden: ${fetchError.message}`);
+          return null;
+        });
+        
+        if (!targetMember) {
+          dmError = 'User ist nicht mehr auf dem Server';
+          dmSent = false;
+          console.log(`❌ Ticket-Ersteller ${ticketData.userId} nicht im Server gefunden`);
+        } else {
+          // Finde Button-Konfiguration für bessere Info
+          const buttonConfig = ticketSettings.buttons.find(btn => btn.id === ticketData.type);
+          const ticketCategory = buttonConfig ? buttonConfig.label : 'Support';
+          
+          const dmEmbed = new EmbedBuilder()
+            .setTitle('🔒 Dein Ticket wurde geschlossen')
+            .setDescription(`Dein Ticket im Server **${guild.name}** wurde vom Support-Team geschlossen.`)
+            .addFields(
+              { name: '🎫 Ticket-Info', value: `**Kategorie:** ${ticketCategory}\n**Betreff:** ${ticketData.subject || 'Nicht angegeben'}`, inline: false },
+              { name: '👤 Geschlossen von', value: `${closedBy.tag}`, inline: true },
+              { name: '📅 Geschlossen am', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: true },
+              { name: '📝 Grund der Schließung', value: closeReason, inline: false },
+              { name: '💬 Weitere Hilfe?', value: 'Falls du weitere Fragen hast, erstelle einfach ein neues Ticket!', inline: false }
+            )
+            .setColor(parseInt(ticketSettings.embed.color.replace('0x', ''), 16))
+            .setTimestamp()
+            .setThumbnail(guild.iconURL({ dynamic: true }))
+            .setFooter({ text: `${guild.name} - Ticket-System`, iconURL: guild.iconURL({ dynamic: true }) });
 
-        await ticketOwner.send({ embeds: [dmEmbed] });
-        dmSent = true;
-        dmError = null; // Reset bei Erfolg
-        console.log(`✅ Ticket-Schließungs-PN erfolgreich an ${ticketOwner.user.tag} gesendet`);
+          // DIREKT an Member senden (Giveaway-Pattern)
+          await targetMember.send({ embeds: [dmEmbed] });
+          dmSent = true;
+          dmError = null;
+          console.log(`✅ Ticket-Schließungs-PN erfolgreich an ${targetMember.user.tag} gesendet`);
+        }
       } catch (error) {
-        console.error(`❌ Fehler beim Senden der PN an ${ticketOwner.user.tag}:`, error);
+        console.error(`❌ Fehler beim Senden der PN an Ticket-Ersteller ${ticketData.userId}:`, error);
         console.error(`🔍 Error-Details:`, {
           code: error.code,
           message: error.message,
@@ -546,49 +561,35 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
         
         console.log(`🔍 Final dmError gesetzt:`, dmError);
         
-        // Versuche alternative Benachrichtigung im Channel zu senden (falls noch offen)
+        // GIVEAWAY-STYLE FALLBACK: Nachricht im Channel wenn DM fehlschlägt
         try {
           if (channel && !channel.deleted) {
-            const fallbackEmbed = new EmbedBuilder()
-              .setTitle('📬 PN-Benachrichtigung fehlgeschlagen')
-              .setDescription(`${ticketOwner}, dir konnte keine private Nachricht über die Ticket-Schließung gesendet werden.`)
-              .addFields(
-                { name: '📝 Grund der Schließung', value: closeReason, inline: false },
-                { name: '❌ Problem', value: dmError, inline: false },
-                { name: '💡 Lösungen', value: '• **Discord-Einstellungen** → Privatsphäre & Sicherheit → Direkte Nachrichten aktivieren\n• **Server-Einstellungen** → Nachrichten von Server-Mitgliedern zulassen\n• Prüfe ob du den Bot blockiert hast', inline: false },
-                { name: '🔧 Support', value: 'Bei weiteren Fragen erstelle einfach ein neues Ticket!', inline: false }
-              )
-              .setColor(parseInt('FFA500', 16))
-              .setTimestamp()
-              .setFooter({ text: 'Diese Nachricht wird in 30 Sekunden gelöscht', iconURL: guild.iconURL({ dynamic: true }) });
-            
-            const fallbackMessage = await channel.send({ embeds: [fallbackEmbed] });
-            console.log(`📬 Erweiterte Fallback-Benachrichtigung im Channel gesendet für ${ticketOwner.user.tag}`);
-            
-            // Lösche Fallback-Nachricht nach 30 Sekunden
-            setTimeout(async () => {
-              try {
-                await fallbackMessage.delete();
-                console.log(`🗑️ Fallback-Nachricht nach 30s gelöscht`);
-              } catch (deleteError) {
-                console.log(`⚠️ Fallback-Nachricht konnte nicht gelöscht werden:`, deleteError.message);
-              }
-            }, 30000);
-            
+            await channel.send(
+              `📨 <@${ticketData.userId}>, ich konnte dir keine private Nachricht senden! Dein Ticket wurde geschlossen! 🔒\n\n` +
+              `**📝 Grund:** ${closeReason}\n` +
+              `**❌ PN-Problem:** ${dmError}\n\n` +
+              `**💡 Lösung:**\n` +
+              `• **Discord-Einstellungen** → Privatsphäre & Sicherheit → Direkte Nachrichten aktivieren\n` +
+              `• **Server-Einstellungen** → Nachrichten von Server-Mitgliedern zulassen\n` +
+              `• Prüfe ob du den Bot blockiert hast\n` +
+              `• Bei weiteren Fragen erstelle einfach ein neues Ticket!`
+            );
+            console.log(`📬 Giveaway-Style Fallback-Benachrichtigung im Channel gesendet für ${ticketData.userId}`);
           }
         } catch (fallbackError) {
           console.error('❌ Auch Fallback-Benachrichtigung fehlgeschlagen:', fallbackError);
         }
       }
     } else if (isTicketOwner) {
-      // Ticket-Ersteller schließt selbst - keine PN nötig
-      dmSent = true; // Als "erfolgreich" markieren
-      dmError = null; // Kein Fehler bei eigenem Schließen
+      // Ticket-Ersteller schließt selbst - keine PN nötig (Giveaway-Pattern)
+      dmSent = true;
+      dmError = null;
+      console.log(`ℹ️ Ticket-Ersteller schließt selbst - keine PN nötig`);
     } else {
-      // Kein ticketOwner gefunden
+      // Kein Ticket-Ersteller gefunden oder andere Probleme
       dmSent = false;
-      dmError = 'Ticket-Ersteller nicht gefunden oder nicht verfügbar';
-      console.log(`⚠️ Ticket-Ersteller nicht gefunden für Ticket ${ticketId}`);
+      dmError = 'Ticket-Ersteller nicht verfügbar oder kein User-ID gefunden';
+      console.log(`⚠️ Ticket-Ersteller nicht verfügbar für Ticket ${ticketId}`);
     }
 
     // Warte kurz und lösche dann den Channel
@@ -608,15 +609,9 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
     // Statistiken aktualisieren
     updateTicketStats('closed');
 
-    // ABSOLUTE SICHERHEIT: dmError darf NIEMALS undefined sein
-    if (dmError === 'INITIAL_VALUE_NOT_SET') {
-      dmError = 'FEHLER: Code-Version nicht aktualisiert oder Bot nicht neugestartet!';
-      console.log(`🚨 CRITICAL: dmError war noch auf INITIAL_VALUE - Bot läuft mit alter Version!`);
-    }
-    
-    // Final Debug Log
-    console.log(`🔍 Final Return Values:`, { dmSent, dmError });
-    console.log(`🔍 TICKET SYSTEM VERSION CHECK: ${new Date().toISOString()}`);
+    // Final Debug Log mit Giveaway-Pattern Check
+    console.log(`🔍 Final Return Values (GIVEAWAY-PATTERN):`, { dmSent, dmError });
+    console.log(`🔍 REWORKED TICKET SYSTEM VERSION: ${new Date().toISOString()}`);
     
     return { 
       success: true, 
