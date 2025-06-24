@@ -6,6 +6,7 @@ class XPSystem {
         this.client = client;
         this.userXP = new Map(); // userId -> { xp, level, totalXP, lastMessage, voiceJoinTime }
         this.voiceUsers = new Map(); // userId -> { joinTime, channelId }
+        this.emergencyResetActive = false; // Flag für Emergency Reset
         this.settings = {
             enabled: true,
             messageXP: {
@@ -92,30 +93,44 @@ class XPSystem {
     // Daten laden
     loadData() {
         try {
-            // XP-Einstellungen laden
+            // Verhindere Laden während Emergency Reset
+            if (this.emergencyResetActive) {
+                console.log('🚫 loadData() blockiert - Emergency Reset aktiv');
+                return;
+            }
+            
+            // Einstellungen laden
             if (fs.existsSync('./xp-settings.json')) {
-                const loadedSettings = JSON.parse(fs.readFileSync('./xp-settings.json', 'utf8'));
-                this.settings = { ...this.settings, ...loadedSettings };
+                const settingsData = fs.readFileSync('./xp-settings.json', 'utf8');
+                const savedSettings = JSON.parse(settingsData);
+                this.settings = this.deepMerge(this.settings, savedSettings);
                 console.log('✅ XP-Einstellungen geladen');
             }
 
-            // User-XP-Daten laden
+            // User-Daten laden
             if (fs.existsSync('./xp-data.json')) {
-                const xpData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
-                xpData.forEach(user => {
-                    this.userXP.set(user.userId, {
-                        xp: user.xp || 0,
-                        level: user.level || 1,
-                        totalXP: user.totalXP || 0,
-                        lastMessage: user.lastMessage || 0,
-                        voiceJoinTime: 0,
-                        messageCount: user.messageCount || 0,
-                        voiceTime: user.voiceTime || 0, // in Minuten
-                        username: user.username || 'Unbekannt',
-                        avatar: user.avatar || null
+                const xpData = fs.readFileSync('./xp-data.json', 'utf8');
+                const parsedData = JSON.parse(xpData);
+                
+                console.log(`📊 Lade XP-Daten: ${parsedData.length} User aus JSON`);
+                
+                this.userXP.clear();
+                for (const userData of parsedData) {
+                    this.userXP.set(userData.userId, {
+                        xp: userData.xp || 0,
+                        level: userData.level || 1,
+                        totalXP: userData.totalXP || userData.xp || 0,
+                        lastMessage: userData.lastMessage || 0,
+                        voiceJoinTime: userData.voiceJoinTime || 0,
+                        messageCount: userData.messageCount || 0,
+                        voiceTime: userData.voiceTime || 0,
+                        username: userData.username || 'Unbekannt',
+                        avatar: userData.avatar || null
                     });
-                });
-                console.log(`✅ XP-Daten für ${xpData.length} User geladen`);
+                }
+                console.log(`✅ ${this.userXP.size} User in Memory-Cache geladen`);
+            } else {
+                console.log('📄 Keine XP-Daten gefunden, starte mit leerer Datenbank');
             }
         } catch (error) {
             console.error('❌ Fehler beim Laden der XP-Daten:', error);
@@ -125,6 +140,12 @@ class XPSystem {
     // Daten speichern
     saveData() {
         try {
+            // Verhindere Speichern während Emergency Reset
+            if (this.emergencyResetActive) {
+                console.log('🚫 saveData() blockiert - Emergency Reset aktiv');
+                return;
+            }
+            
             // Einstellungen speichern
             fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
 
@@ -1737,6 +1758,10 @@ class XPSystem {
         try {
             console.log('🚨 EMERGENCY RESET: Komplette XP-Daten Löschung...');
             
+            // Emergency Reset Flag aktivieren
+            this.emergencyResetActive = true;
+            console.log('🚫 Emergency Reset Flag aktiviert - blockiere loadData/saveData');
+            
             // Backup erstellen
             const backupFile = `./emergency-backup-${Date.now()}.json`;
             if (fs.existsSync('./xp-data.json')) {
@@ -1751,50 +1776,113 @@ class XPSystem {
             this.userXP.clear();
             console.log(`🗑️ Memory-Cache geleert: ${originalUserCount} User`);
             
-            // JSON-Datei komplett überschreiben
+            // JSON-Datei komplett überschreiben (mehrfach für absolute Sicherheit)
             const emptyArray = [];
-            fs.writeFileSync('./xp-data.json', JSON.stringify(emptyArray, null, 2), { encoding: 'utf8', flag: 'w' });
+            const emptyJSON = JSON.stringify(emptyArray, null, 2);
             
-            // Mehrfache Verifikation
-            for (let i = 0; i < 3; i++) {
-                const verifyData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
-                if (verifyData.length === 0) {
-                    console.log(`✅ Emergency Reset Verifikation ${i + 1}/3: JSON-Datei ist leer`);
-                } else {
-                    console.error(`❌ Emergency Reset Verifikation ${i + 1}/3: ${verifyData.length} User noch vorhanden!`);
-                    // Nochmals überschreiben
-                    fs.writeFileSync('./xp-data.json', JSON.stringify([], null, 2), { encoding: 'utf8', flag: 'w' });
+            // 5-faches Überschreiben mit verschiedenen Methoden
+            for (let attempt = 1; attempt <= 5; attempt++) {
+                try {
+                    // Methode 1: Direktes Überschreiben
+                    fs.writeFileSync('./xp-data.json', emptyJSON, { encoding: 'utf8', flag: 'w' });
+                    
+                    // Methode 2: Datei löschen und neu erstellen
+                    if (fs.existsSync('./xp-data.json')) {
+                        fs.unlinkSync('./xp-data.json');
+                    }
+                    fs.writeFileSync('./xp-data.json', emptyJSON, { encoding: 'utf8' });
+                    
+                    // Sofortige Verifikation
+                    const checkData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                    if (checkData.length === 0) {
+                        console.log(`✅ Emergency Reset Versuch ${attempt}/5: JSON-Datei ist leer`);
+                    } else {
+                        console.error(`❌ Emergency Reset Versuch ${attempt}/5: ${checkData.length} User noch vorhanden!`);
+                        // Force nochmaliges Überschreiben
+                        fs.writeFileSync('./xp-data.json', '[]', { encoding: 'utf8', flag: 'w' });
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 200)); // Längere Pause
+                } catch (writeError) {
+                    console.error(`❌ Emergency Reset Schreibfehler Versuch ${attempt}:`, writeError);
                 }
-                await new Promise(resolve => setTimeout(resolve, 100));
             }
             
+            // KRITISCH: Blockiere normale saveData für 10 Sekunden
+            const originalSaveData = this.saveData;
+            this.saveData = () => {
+                console.log('🚫 saveData() temporär blockiert - Emergency Reset aktiv');
+            };
+            
+            // Nach 15 Sekunden wieder aktivieren (länger für Sicherheit)
+            setTimeout(() => {
+                this.saveData = originalSaveData;
+                this.emergencyResetActive = false;
+                console.log('✅ saveData() und loadData() wieder aktiviert');
+            }, 15000);
+            
+            // Finale Verifikation nach 2 Sekunden
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
             const finalMemoryCheck = this.userXP.size;
-            const finalJSONCheck = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8')).length;
+            let finalJSONCheck = 0;
+            let jsonContent = '';
+            
+            try {
+                jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
+                const finalData = JSON.parse(jsonContent);
+                finalJSONCheck = finalData.length;
+            } catch (error) {
+                console.error(`❌ JSON-Verifikation fehlgeschlagen:`, error);
+                // Nochmaliger Force-Write
+                fs.writeFileSync('./xp-data.json', '[]', { encoding: 'utf8', flag: 'w' });
+                finalJSONCheck = 0;
+            }
             
             console.log(`🔍 Emergency Reset Final Check:`);
             console.log(`  - Memory-Cache: ${finalMemoryCheck} User`);
             console.log(`  - JSON-Datei: ${finalJSONCheck} User`);
+            console.log(`  - JSON-Inhalt: ${jsonContent.substring(0, 100)}...`);
+            
+            // ULTIMATE VERIFY: Datei nochmals überschreiben wenn nicht leer
+            if (finalJSONCheck > 0) {
+                console.log(`🧹 ULTIMATE CLEANUP: Nochmaliges Force-Überschreiben...`);
+                for (let i = 0; i < 3; i++) {
+                    fs.writeFileSync('./xp-data.json', '[]', { encoding: 'utf8', flag: 'w' });
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                // Abschließende Verifikation
+                const ultimateCheck = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                finalJSONCheck = ultimateCheck.length;
+                console.log(`  - Nach Ultimate Cleanup: ${finalJSONCheck} User`);
+            }
             
             if (finalMemoryCheck === 0 && finalJSONCheck === 0) {
                 console.log(`✅ EMERGENCY RESET ERFOLGREICH: Alle ${originalUserCount} User entfernt`);
                 return {
                     success: true,
-                    message: 'Emergency Reset erfolgreich',
+                    message: 'Emergency Reset erfolgreich - Ultimate Cleanup ausgeführt',
                     usersCleared: originalUserCount,
-                    backup: backupFile
+                    backup: backupFile,
+                    attempts: 5,
+                    ultimateCleanup: true
                 };
             } else {
                 console.error(`❌ EMERGENCY RESET FEHLGESCHLAGEN: Memory: ${finalMemoryCheck}, JSON: ${finalJSONCheck}`);
                 return {
                     success: false,
-                    error: 'Emergency Reset nicht vollständig',
+                    error: 'Emergency Reset nicht vollständig - Ultimate Cleanup fehlgeschlagen',
                     memoryRemaining: finalMemoryCheck,
-                    jsonRemaining: finalJSONCheck
+                    jsonRemaining: finalJSONCheck,
+                    jsonContent: jsonContent.substring(0, 200)
                 };
             }
             
         } catch (error) {
             console.error('❌ Emergency Reset Fehler:', error);
+            // Flag zurücksetzen bei Fehler
+            this.emergencyResetActive = false;
             return {
                 success: false,
                 error: error.message
