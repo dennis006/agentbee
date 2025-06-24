@@ -9291,6 +9291,77 @@ app.post('/api/xp/reset-all', async (req, res) => {
     }
 });
 
+// Notfall-XP-Reset: Komplett leeren
+app.post('/api/xp/emergency-reset', async (req, res) => {
+    try {
+        const { confirmEmergency } = req.body;
+        
+        if (confirmEmergency !== 'EMERGENCY_RESET_CONFIRMED') {
+            return res.status(400).json({ 
+                error: 'Emergency-Reset-Bestätigung erforderlich',
+                required: 'confirmEmergency: "EMERGENCY_RESET_CONFIRMED"' 
+            });
+        }
+        
+        console.log('🚨 NOTFALL-XP-RESET gestartet...');
+        
+        // Backup erstellen
+        const backupFile = `./emergency-backup-${Date.now()}.json`;
+        try {
+            if (fs.existsSync('./xp-data.json')) {
+                const currentData = fs.readFileSync('./xp-data.json', 'utf8');
+                fs.writeFileSync(backupFile, currentData);
+                console.log(`💾 Emergency-Backup erstellt: ${backupFile}`);
+            }
+        } catch (backupError) {
+            console.error('❌ Backup-Fehler:', backupError);
+        }
+        
+        let result = { memoryCleared: 0, jsonCleared: 0, rolesRemoved: 0 };
+        
+        // Memory-Cache leeren
+        if (xpSystem) {
+            result.memoryCleared = xpSystem.userXP.size;
+            xpSystem.userXP.clear();
+            console.log(`🗑️ Memory-Cache geleert: ${result.memoryCleared} User`);
+        }
+        
+        // JSON-Datei komplett überschreiben
+        try {
+            if (fs.existsSync('./xp-data.json')) {
+                const oldData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+                result.jsonCleared = oldData.length;
+            }
+            
+            fs.writeFileSync('./xp-data.json', JSON.stringify([], null, 2));
+            console.log(`🗑️ JSON-Datei geleert: ${result.jsonCleared} User`);
+            
+            // Verifikation
+            const verifyData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+            if (verifyData.length === 0) {
+                console.log('✅ JSON-Datei erfolgreich geleert');
+            } else {
+                console.error(`❌ JSON-Datei nicht vollständig geleert: ${verifyData.length} User verblieben`);
+            }
+        } catch (jsonError) {
+            console.error('❌ JSON-Datei-Fehler:', jsonError);
+        }
+        
+        console.log(`✅ NOTFALL-XP-RESET abgeschlossen: ${result.memoryCleared} Memory, ${result.jsonCleared} JSON, ${result.rolesRemoved} Rollen`);
+        
+        res.json({
+            success: true,
+            message: 'Notfall-XP-Reset erfolgreich',
+            backup: backupFile,
+            ...result
+        });
+        
+    } catch (error) {
+        console.error('❌ Notfall-XP-Reset Fehler:', error);
+        res.status(500).json({ error: 'Fehler beim Notfall-XP-Reset' });
+    }
+});
+
 // Verfügbare Server-Rollen für Level-Belohnungen abrufen
 app.get('/api/xp/roles', (req, res) => {
     try {

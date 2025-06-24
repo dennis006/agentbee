@@ -1176,24 +1176,18 @@ class XPSystem {
                 console.log(`📋 Nach Löschung: ${this.userXP.size} User im Cache`);
                 
                 console.log(`💾 Speichere aktualisierte Daten in JSON...`);
-                this.saveData();
+                // Forcierte Speicherung mit mehrfacher Verifikation
+                await this.forceSaveData(userId);
                 
-                // Verifikation: JSON-Datei prüfen
-                setTimeout(() => {
-                    try {
-                        const jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
-                        const parsedData = JSON.parse(jsonContent);
-                        const userStillExists = parsedData.some(user => user.userId === userId);
-                        if (userStillExists) {
-                            console.error(`❌ FEHLER: User ${userId} immer noch in JSON-Datei gefunden!`);
-                        } else {
-                            console.log(`✅ Verifikation: User ${userId} erfolgreich aus JSON-Datei entfernt`);
-                        }
-                        console.log(`📊 Aktuelle JSON-Datei enthält ${parsedData.length} User`);
-                    } catch (error) {
-                        console.error(`❌ Fehler bei JSON-Verifikation:`, error);
-                    }
+                // Mehrfache Verifikation: JSON-Datei prüfen
+                setTimeout(async () => {
+                    await this.verifyUserRemoval(userId);
                 }, 100);
+                
+                // Zusätzliche Verifikation nach 2 Sekunden
+                setTimeout(async () => {
+                    await this.verifyUserRemoval(userId, true);
+                }, 2000);
                 
                 console.log(`✅ User ${userId} aus XP-System entfernt`);
                 console.log(`✅ ${rolesRemoved} Discord-Rollen entfernt`);
@@ -1589,6 +1583,93 @@ class XPSystem {
         }
         
         console.log(`=== DEBUG INFO ENDE ===\n`);
+    }
+    // Forcierte Speicherung mit Backup
+    async forceSaveData(userId = null) {
+        try {
+            const backupFile = `./xp-data-backup-${Date.now()}.json`;
+            
+            // Backup der aktuellen Datei erstellen
+            if (fs.existsSync('./xp-data.json')) {
+                const currentData = fs.readFileSync('./xp-data.json', 'utf8');
+                fs.writeFileSync(backupFile, currentData);
+                console.log(`💾 Backup erstellt: ${backupFile}`);
+            }
+            
+            // User-Daten speichern (ohne den zu löschenden User)
+            const xpData = Array.from(this.userXP.entries())
+                .filter(([id]) => !userId || id !== userId)
+                .map(([userId, data]) => ({
+                    userId,
+                    ...data
+                }));
+            
+            console.log(`💾 Forcierte Speicherung: ${xpData.length} User (${userId ? `ohne ${userId}` : 'alle'})`);
+            
+            // Datei überschreiben
+            fs.writeFileSync('./xp-data.json', JSON.stringify(xpData, null, 2));
+            
+            // Sofortige Verifikation
+            const savedData = JSON.parse(fs.readFileSync('./xp-data.json', 'utf8'));
+            console.log(`✅ Datei gespeichert und verifiziert: ${savedData.length} User`);
+            
+            if (userId) {
+                const userStillExists = savedData.some(user => user.userId === userId);
+                if (userStillExists) {
+                    console.error(`❌ WARNUNG: User ${userId} immer noch in gespeicherter Datei!`);
+                    // Nochmaliger Versuch
+                    const filteredData = savedData.filter(user => user.userId !== userId);
+                    fs.writeFileSync('./xp-data.json', JSON.stringify(filteredData, null, 2));
+                    console.log(`🔄 Zweiter Speicherversuch: ${filteredData.length} User`);
+                } else {
+                    console.log(`✅ User ${userId} erfolgreich aus JSON entfernt`);
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ Fehler bei forcierter Speicherung:', error);
+            throw error;
+        }
+    }
+    
+    // User-Entfernung verifizieren
+    async verifyUserRemoval(userId, final = false) {
+        try {
+            const prefix = final ? '🔍 FINALE VERIFIKATION' : '🔍 Verifikation';
+            console.log(`${prefix}: Prüfe ob User ${userId} entfernt wurde...`);
+            
+            // Memory-Cache prüfen
+            const inMemory = this.userXP.has(userId);
+            console.log(`📋 User in Memory: ${inMemory ? '❌ JA' : '✅ NEIN'}`);
+            
+            // JSON-Datei prüfen
+            if (fs.existsSync('./xp-data.json')) {
+                const jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
+                const parsedData = JSON.parse(jsonContent);
+                const inJSON = parsedData.some(user => user.userId === userId);
+                console.log(`📄 User in JSON: ${inJSON ? '❌ JA' : '✅ NEIN'}`);
+                console.log(`📊 JSON-Datei enthält ${parsedData.length} User insgesamt`);
+                
+                // Bei finaler Verifikation: nochmaliger Cleanup-Versuch
+                if (final && inJSON) {
+                    console.log(`🧹 FINAL CLEANUP: Entferne User ${userId} nochmals...`);
+                    const cleanedData = parsedData.filter(user => user.userId !== userId);
+                    fs.writeFileSync('./xp-data.json', JSON.stringify(cleanedData, null, 2));
+                    console.log(`✅ Final cleanup: ${cleanedData.length} User verbleibend`);
+                }
+                
+                if (!inMemory && !inJSON) {
+                    console.log(`✅ ${prefix}: User ${userId} erfolgreich entfernt!`);
+                } else {
+                    console.error(`❌ ${prefix}: User ${userId} noch gefunden! Memory: ${inMemory}, JSON: ${inJSON}`);
+                }
+            } else {
+                console.log(`📄 xp-data.json existiert nicht`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ Fehler bei Verifikation:`, error);
+        }
     }
 }
 
