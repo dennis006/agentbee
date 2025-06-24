@@ -456,6 +456,7 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
 
     // Sende PN an Ticket-Ersteller (falls nicht selbst geschlossen)
     let dmSent = false;
+    let dmError = null;
     if (ticketOwner && !isTicketOwner) {
       try {
         // Finde Button-Konfiguration für bessere Info
@@ -479,9 +480,39 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
 
         await ticketOwner.send({ embeds: [dmEmbed] });
         dmSent = true;
+        console.log(`✅ Ticket-Schließungs-PN erfolgreich an ${ticketOwner.user.tag} gesendet`);
       } catch (error) {
-        console.error('❌ Fehler beim Senden der PN:', error);
+        console.error(`❌ Fehler beim Senden der PN an ${ticketOwner.user.tag}:`, error);
         dmSent = false;
+        
+        // Bestimme den Grund des Fehlers für bessere Fehlermeldung
+        if (error.code === 50007) {
+          dmError = 'Der User hat private Nachrichten deaktiviert';
+        } else if (error.code === 50013) {
+          dmError = 'Bot hat keine Berechtigung DMs zu senden';
+        } else {
+          dmError = 'Unbekannter Fehler beim Senden der PN';
+        }
+        
+        // Versuche alternative Benachrichtigung im Channel zu senden (falls noch offen)
+        try {
+          if (channel && !channel.deleted) {
+            const fallbackEmbed = new EmbedBuilder()
+              .setTitle('📬 PN konnte nicht gesendet werden')
+              .setDescription(`${ticketOwner}, deine PN-Einstellungen verhindern das Senden von Nachrichten.`)
+              .addFields(
+                { name: '📝 Grund der Schließung', value: closeReason, inline: false },
+                { name: '💡 Tipp', value: 'Du kannst private Nachrichten in deinen Discord-Einstellungen aktivieren um künftige Benachrichtigungen zu erhalten.', inline: false }
+              )
+              .setColor(parseInt('FFA500', 16))
+              .setTimestamp();
+            
+            await channel.send({ embeds: [fallbackEmbed] });
+            console.log(`📬 Fallback-Benachrichtigung im Channel gesendet für ${ticketOwner.user.tag}`);
+          }
+        } catch (fallbackError) {
+          console.error('❌ Auch Fallback-Benachrichtigung fehlgeschlagen:', fallbackError);
+        }
       }
     } else if (isTicketOwner) {
       // Ticket-Ersteller schließt selbst - keine PN nötig
@@ -508,6 +539,7 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
     return { 
       success: true, 
       dmSent: dmSent,
+      dmError: dmError,
       message: `Ticket wurde erfolgreich geschlossen. Channel wird in 8 Sekunden gelöscht.`
     };
 

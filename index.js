@@ -4925,8 +4925,18 @@ async function handleTicketCloseModalSubmission(interaction) {
         const result = await ticketSystem.closeTicketWithReason(interaction, ticketId, closeReason, isTicketOwner);
         
         if (result.success) {
+            let statusMessage = `✅ Ticket wurde erfolgreich geschlossen!\n\n**Grund:** ${closeReason}\n\n`;
+            
+            if (result.dmSent) {
+                statusMessage += '📧 Benachrichtigung wurde per PN gesendet.';
+            } else if (result.dmError) {
+                statusMessage += `⚠️ PN konnte nicht gesendet werden: ${result.dmError}\n💡 Eine Benachrichtigung wurde stattdessen im Ticket-Channel hinterlassen.`;
+            } else {
+                statusMessage += '⚠️ PN konnte nicht gesendet werden (unbekannter Grund).';
+            }
+            
             await interaction.editReply({
-                content: `✅ Ticket wurde erfolgreich geschlossen!\n\n**Grund:** ${closeReason}\n\n${result.dmSent ? '📧 Benachrichtigung wurde per PN gesendet.' : '⚠️ PN konnte nicht gesendet werden.'}`
+                content: statusMessage
             });
         } else {
             await interaction.editReply({
