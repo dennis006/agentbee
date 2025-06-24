@@ -27,7 +27,12 @@ function initializeSupabaseForWelcome(supabase) {
 // ==============================================
 
 // Lade Welcome Settings aus Supabase
-async function loadWelcomeSettings(guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function loadWelcomeSettings(guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return null;
+    }
+    
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Welcome System nicht verfügbar!');
         return null;
@@ -93,7 +98,12 @@ async function loadWelcomeSettings(guildId = process.env.GUILD_ID || '1203994020
 }
 
 // Speichere Welcome Settings in Supabase
-async function saveWelcomeSettings(settings, guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function saveWelcomeSettings(settings, guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return { success: false, error: 'Keine Guild-ID übergeben' };
+    }
+    
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Welcome Settings können nicht gespeichert werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
@@ -152,9 +162,9 @@ async function createDefaultWelcomeSettings(guildId) {
         thumbnail: 'custom', // Nur custom - wie gewünscht
         customThumbnail: '',
         imageRotation: {
-            enabled: false,
+            enabled: true, // ✅ Standardmäßig aktiviert
             mode: 'random',
-            folders: []
+            folders: ['general'] // ✅ Standard-Ordner verwenden
         },
         fields: [
             {
@@ -192,6 +202,14 @@ async function createDefaultWelcomeSettings(guildId) {
         }
     };
 
+    // Erstelle automatisch Standard-Ordner für neue Server
+    try {
+        await autoCreateGameFolders(guildId);
+        console.log('✅ Standard-Ordner für neuen Server erstellt');
+    } catch (error) {
+        console.error('❌ Fehler beim Erstellen der Standard-Ordner:', error);
+    }
+
     // Speichere die Standard-Einstellungen
     await saveWelcomeSettings(defaultSettings, guildId);
     return defaultSettings;
@@ -202,7 +220,11 @@ async function createDefaultWelcomeSettings(guildId) {
 // ==============================================
 
 // Lade Welcome Images aus Supabase
-async function loadWelcomeImages(guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function loadWelcomeImages(guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return { folders: {}, images: [], folderNames: [], allFolderNames: [] };
+    }
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Welcome Images nicht verfügbar!');
         return { folders: {}, images: [], folderNames: [], allFolderNames: [] };
@@ -316,7 +338,11 @@ async function loadWelcomeImages(guildId = process.env.GUILD_ID || '120399402077
 }
 
 // Upload Bild zu Supabase Storage
-async function saveWelcomeImage(imageData, guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function saveWelcomeImage(imageData, guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return { success: false, error: 'Keine Guild-ID übergeben' };
+    }
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Bild kann nicht gespeichert werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
@@ -376,7 +402,11 @@ async function saveWelcomeImage(imageData, guildId = process.env.GUILD_ID || '12
 }
 
 // Lösche Bild aus Supabase
-async function deleteWelcomeImage(imageId, guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function deleteWelcomeImage(imageId, guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return { success: false, error: 'Keine Guild-ID übergeben' };
+    }
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Bild kann nicht gelöscht werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
@@ -428,7 +458,11 @@ async function deleteWelcomeImage(imageId, guildId = process.env.GUILD_ID || '12
 // ==============================================
 
 // Erstelle neuen Ordner in Supabase
-async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID || '1203994020779532348', displayName = null, emoji = null) {
+async function createWelcomeFolder(folderName, guildId, displayName = null, emoji = null) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return { success: false, error: 'Keine Guild-ID übergeben' };
+    }
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Ordner kann nicht erstellt werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
@@ -468,7 +502,11 @@ async function createWelcomeFolder(folderName, guildId = process.env.GUILD_ID ||
 }
 
 // Lösche Ordner aus Supabase
-async function deleteWelcomeFolder(folderName, guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function deleteWelcomeFolder(folderName, guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return { success: false, error: 'Keine Guild-ID übergeben' };
+    }
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Ordner kann nicht gelöscht werden!');
         return { success: false, error: 'Supabase nicht verfügbar' };
@@ -521,7 +559,11 @@ async function deleteWelcomeFolder(folderName, guildId = process.env.GUILD_ID ||
 }
 
 // Erstelle Standard-Ordner automatisch
-async function autoCreateGameFolders(guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function autoCreateGameFolders(guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return { success: false, error: 'Keine Guild-ID übergeben' };
+    }
     const standardFolders = [
         { name: 'general', display: 'Allgemein', emoji: '📁' },
         { name: 'valorant', display: 'Valorant', emoji: '🎯' },
@@ -568,7 +610,11 @@ function getFolderEmoji(folderName) {
 // ==============================================
 
 // Hole zufälliges Welcome-Bild aus Supabase (unterstützt mehrere Ordner)
-async function getRandomWelcomeImage(specificFolders = null, guildId = process.env.GUILD_ID || '1203994020779532348') {
+async function getRandomWelcomeImage(specificFolders = null, guildId) {
+    if (!guildId) {
+        console.error('❌ Keine Guild-ID übergeben!');
+        return null;
+    }
     if (!supabaseClient) {
         console.error('❌ Supabase nicht initialisiert - Keine Bilder verfügbar!');
         return null;
