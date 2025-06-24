@@ -1111,14 +1111,10 @@ const corsOptions = {
             ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [])
         ].filter(Boolean); // Entferne undefined Werte
         
-        // CORS Debug für alle Requests
-        console.log(`🌐 CORS Request from origin: ${origin}`);
-        
         // Erlaube Requests ohne Origin (z.B. mobile apps oder Postman)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1) {
-            console.log(`✅ CORS allowed for origin: ${origin}`);
             callback(null, true);
         } else {
             console.log(`❌ CORS blocked origin: ${origin}`);
