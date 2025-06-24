@@ -4930,8 +4930,9 @@ async function handleTicketCloseModalSubmission(interaction) {
             if (result.dmSent) {
                 statusMessage += '📧 Benachrichtigung wurde per PN gesendet.';
             } else if (result.dmError) {
-                statusMessage += `⚠️ PN fehlgeschlagen: ${result.dmError}\n\n💡 **Lösung:** Eine detaillierte Benachrichtigung mit Lösungsvorschlägen wurde im Ticket-Channel hinterlassen.`;
+                statusMessage += `⚠️ **PN fehlgeschlagen:** ${result.dmError}\n\n💡 **Lösung:** Eine detaillierte Benachrichtigung mit Lösungsvorschlägen wurde im Ticket-Channel hinterlassen.`;
             } else {
+                // Dieser Fall sollte eigentlich nicht mehr auftreten
                 statusMessage += '⚠️ PN konnte nicht gesendet werden (unbekannter Grund).';
             }
             

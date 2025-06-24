@@ -459,6 +459,16 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
     let dmError = null;
     if (ticketOwner && !isTicketOwner) {
       try {
+        // Pre-Check: Kann der Bot überhaupt eine DM an den User senden?
+        console.log(`🔍 Versuche PN-Pre-Check für ${ticketOwner.user.tag}...`);
+        const dmChannel = await ticketOwner.createDM().catch(preError => {
+          console.log(`⚠️ Pre-Check fehlgeschlagen: ${preError.message}`);
+          return null;
+        });
+        
+        if (!dmChannel) {
+          throw new Error('DM-Channel konnte nicht erstellt werden');
+        }
         // Finde Button-Konfiguration für bessere Info
         const buttonConfig = ticketSettings.buttons.find(btn => btn.id === ticketData.type);
         const ticketCategory = buttonConfig ? buttonConfig.label : 'Support';
@@ -490,17 +500,21 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
           httpStatus: error.httpStatus,
           method: error.method,
           path: error.path,
-          requestData: error.requestData,
-          rawError: error
+          requestData: error.requestData
         });
         dmSent = false;
         
-        // Noch robustere Fehlercode-Erkennung mit mehreren Ansätzen
+        // Robuste Fehlercode-Erkennung mit mehreren Ansätzen
         const errorCode = error.code || error.status;
         const errorMessage = error.message || error.toString() || '';
         const errorName = error.name || '';
         
         console.log(`🔍 Parsed Error Info:`, { errorCode, errorMessage, errorName });
+        console.log(`🔍 User Privacy Settings Check:`, {
+          userTag: ticketOwner.user.tag,
+          userId: ticketOwner.user.id,
+          isDMChannel: ticketOwner.dmChannel !== null
+        });
         
         if (errorCode === 50007 || 
             errorMessage.toLowerCase().includes('cannot send messages to this user') ||
