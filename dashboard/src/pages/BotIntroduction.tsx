@@ -203,7 +203,7 @@ const BotIntroduction: React.FC = () => {
       color: '0x9333EA',
       thumbnail: 'bot',
       customThumbnail: '',
-      footer: 'Entwickelt mit ❤️ • Version 1.2.0 • {timestamp}',
+      footer: 'Entwickelt mit ❤️ • {version} • {timestamp}',
       author: {
         enabled: true,
         name: '{botName} - Dein Discord Assistent',
@@ -211,18 +211,38 @@ const BotIntroduction: React.FC = () => {
       },
       fields: [
         {
-          name: '🎯 Meine Hauptfunktionen',
-          value: '• **Moderation** - Auto-Filter, Warns & Mutes\n• **XP-System** - Level-Belohnungen & Leaderboards\n• **Musik-Bot** - YouTube, Spotify, Radio & Playlists\n• **Valorant** - Rang-Tracking & Match-History\n• **Giveaways** - Faire Verlosungen mit Anti-Cheat\n• **Twitch-Alerts** - Live-Stream Benachrichtigungen',
+          name: '🎯 Moderation & Verwaltung',
+          value: '• **Moderation** - Auto-Filter, Warns & Mutes mit Supabase\n• **Ticket-System** - Support-Channels mit V2-Integration\n• **Welcome-System** - Personalisierte Begrüßungen\n• **Verifizierung** - Captcha & Game-Authentifizierung\n• **Spam-Schutz** - Intelligente Raid-Erkennung',
           inline: false
         },
         {
-          name: '⚡ Weitere Features',
-          value: '• **Welcome-System** - Personalisierte Begrüßungen\n• **Ticket-System** - Support-Channels\n• **Verifizierung** - Captcha & Game-Check\n• **AI-Integration** - Smart-Responses',
+          name: '📈 Community Features',
+          value: '• **XP-System** - Level-Belohnungen & Leaderboards (Supabase-persistent)\n• **Giveaways** - Faire Verlosungen mit Anti-Cheat\n• **Server-Stats** - Live-Channels & Analytics\n• **Rules-System** - Automatische Regel-Posts',
           inline: true
         },
         {
-          name: '📊 Statistiken',
-          value: '• **Server-Stats** - Live-Channels\n• **Analytics** - Detaillierte Logs\n• **Voice-Tracking** - Activity-Monitoring',
+          name: '🎮 Gaming Integration',
+          value: '• **Valorant** - Rang-Tracking & Match-History mit Cards\n• **Twitch-Alerts** - Live-Stream Benachrichtigungen mit AI\n• **Game-Roles** - Automatische Rollen-Zuweisung',
+          inline: true
+        },
+        {
+          name: '🎵 Musik & Entertainment',
+          value: '• **Simple Music Panel** - Benutzerfreundliche Musik-Steuerung\n• **YouTube Radio** - Streaming-Integration\n• **Song-Requests** - Community-Playlists\n• **Voice-XP** - Belohnungen für Voice-Aktivität',
+          inline: false
+        },
+        {
+          name: '🤖 AI & Technologie',
+          value: '• **OpenAI Integration** - Smart-Responses & Personalisierung\n• **Supabase Backend** - Moderne Datenbank-Persistierung\n• **Web-Dashboard** - Vollständige Bot-Konfiguration\n• **API-Management** - Zentrale Schlüssel-Verwaltung',
+          inline: false
+        },
+        {
+          name: '⚡ Schnellstart',
+          value: 'Nutze `/help` um alle Befehle zu sehen oder besuche das **Web-Dashboard** für erweiterte Konfiguration!',
+          inline: true
+        },
+        {
+          name: '🔧 Dashboard',
+          value: 'Komplette Bot-Verwaltung über das moderne React-Dashboard mit Echtzeit-Updates!',
           inline: true
         }
       ]
@@ -1551,10 +1571,10 @@ const BotIntroduction: React.FC = () => {
                 embed: { ...prev.embed, footer: e.target.value }
               }))}
               className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
-              placeholder="Entwickelt mit ❤️ • Version 1.2.0 • {timestamp}"
+              placeholder="Entwickelt mit ❤️ • {version} • {timestamp}"
             />
             <p className="text-xs text-dark-muted">
-              Verwende <code className="bg-dark-bg px-1 rounded text-blue-300">{'{timestamp}'}</code> für die aktuelle Zeit
+              Verwende <code className="bg-dark-bg px-1 rounded text-blue-300">{'{version}'}</code> für die Version und <code className="bg-dark-bg px-1 rounded text-blue-300">{'{timestamp}'}</code> für die aktuelle Zeit
             </p>
           </div>
 
@@ -1716,7 +1736,7 @@ const BotIntroduction: React.FC = () => {
                                          title: '🤖 Hallo! Ich bin {botName}',
                      description: 'Dein intelligenter Discord-Assistent für Gaming, Moderation und Entertainment! Ich bringe deinen Server auf das nächste Level! 🚀',
                      color: '0x9333EA',
-                    footer: 'Entwickelt mit ❤️ • Version 1.2.0 • {timestamp}',
+                    footer: 'Entwickelt mit ❤️ • {version} • {timestamp}',
                     author: {
                       enabled: true,
                       name: '{botName} - Dein Discord Assistent',
@@ -1724,18 +1744,38 @@ const BotIntroduction: React.FC = () => {
                     },
                     fields: [
                       {
-                        name: '🎯 Meine Hauptfunktionen',
-                        value: '• **Moderation** - Auto-Filter, Warns & Mutes\n• **XP-System** - Level-Belohnungen & Leaderboards\n• **Musik-Bot** - YouTube, Spotify, Radio & Playlists\n• **Valorant** - Rang-Tracking & Match-History\n• **Giveaways** - Faire Verlosungen mit Anti-Cheat\n• **Twitch-Alerts** - Live-Stream Benachrichtigungen',
+                        name: '🎯 Moderation & Verwaltung',
+                        value: '• **Moderation** - Auto-Filter, Warns & Mutes mit Supabase\n• **Ticket-System** - Support-Channels mit V2-Integration\n• **Welcome-System** - Personalisierte Begrüßungen\n• **Verifizierung** - Captcha & Game-Authentifizierung\n• **Spam-Schutz** - Intelligente Raid-Erkennung',
                         inline: false
                       },
                       {
-                        name: '⚡ Weitere Features',
-                        value: '• **Welcome-System** - Personalisierte Begrüßungen\n• **Ticket-System** - Support-Channels\n• **Verifizierung** - Captcha & Game-Check\n• **AI-Integration** - Smart-Responses',
+                        name: '📈 Community Features',
+                        value: '• **XP-System** - Level-Belohnungen & Leaderboards (Supabase-persistent)\n• **Giveaways** - Faire Verlosungen mit Anti-Cheat\n• **Server-Stats** - Live-Channels & Analytics\n• **Rules-System** - Automatische Regel-Posts',
                         inline: true
                       },
                       {
-                        name: '📊 Statistiken',
-                        value: '• **Server-Stats** - Live-Channels\n• **Analytics** - Detaillierte Logs\n• **Voice-Tracking** - Activity-Monitoring',
+                        name: '🎮 Gaming Integration',
+                        value: '• **Valorant** - Rang-Tracking & Match-History mit Cards\n• **Twitch-Alerts** - Live-Stream Benachrichtigungen mit AI\n• **Game-Roles** - Automatische Rollen-Zuweisung',
+                        inline: true
+                      },
+                      {
+                        name: '🎵 Musik & Entertainment',
+                        value: '• **Simple Music Panel** - Benutzerfreundliche Musik-Steuerung\n• **YouTube Radio** - Streaming-Integration\n• **Song-Requests** - Community-Playlists\n• **Voice-XP** - Belohnungen für Voice-Aktivität',
+                        inline: false
+                      },
+                      {
+                        name: '🤖 AI & Technologie',
+                        value: '• **OpenAI Integration** - Smart-Responses & Personalisierung\n• **Supabase Backend** - Moderne Datenbank-Persistierung\n• **Web-Dashboard** - Vollständige Bot-Konfiguration\n• **API-Management** - Zentrale Schlüssel-Verwaltung',
+                        inline: false
+                      },
+                      {
+                        name: '⚡ Schnellstart',
+                        value: 'Nutze `/help` um alle Befehle zu sehen oder besuche das **Web-Dashboard** für erweiterte Konfiguration!',
+                        inline: true
+                      },
+                      {
+                        name: '🔧 Dashboard',
+                        value: 'Komplette Bot-Verwaltung über das moderne React-Dashboard mit Echtzeit-Updates!',
                         inline: true
                       }
                     ]
