@@ -63,19 +63,21 @@ class AIOptimizationAPI {
 
     initializeOpenAI() {
         try {
-            const apiKeysPath = path.join(__dirname, 'api-keys.json');
-            const apiKeys = JSON.parse(fs.readFileSync(apiKeysPath, 'utf8'));
+            // Verwende Environment Variables statt api-keys.json
+            const openaiApiKey = process.env.OPENAI_API_KEY;
             
-            if (apiKeys.openai) {
+            if (openaiApiKey) {
                 this.openai = new OpenAI({
-                    apiKey: apiKeys.openai
+                    apiKey: openaiApiKey
                 });
-                console.log('AI Optimization API initialized with OpenAI');
+                console.log('✅ AI Optimization API initialized with OpenAI');
             } else {
-                console.error('OpenAI API key not found in api-keys.json');
+                console.log('⚠️ OpenAI API key not found in environment variables - AI features disabled');
+                this.openai = null;
             }
         } catch (error) {
-            console.error('Failed to initialize OpenAI:', error);
+            console.error('❌ Failed to initialize OpenAI:', error);
+            this.openai = null;
         }
     }
 

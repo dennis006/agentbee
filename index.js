@@ -107,29 +107,20 @@ let apiKeys = {
     }
 };
 
-// API-Keys aus Datei laden falls vorhanden
+// API-Keys aus Environment Variables laden
 function loadAPIKeys() {
     try {
-        if (fs.existsSync('./api-keys.json')) {
-            const fileKeys = JSON.parse(fs.readFileSync('./api-keys.json', 'utf8'));
-            apiKeys = { ...apiKeys, ...fileKeys };
-            console.log('🔑 API-Keys aus Datei geladen');
-        }
+        // Nicht mehr notwendig - API-Keys werden direkt aus Environment Variables verwendet
+        console.log('🔑 API-Keys werden aus Environment Variables verwendet');
     } catch (error) {
         console.error('❌ Fehler beim Laden der API-Keys:', error);
     }
 }
 
-// API-Keys speichern
+// API-Keys speichern (deaktiviert - Environment Variables werden verwendet)
 function saveAPIKeys() {
-    try {
-        fs.writeFileSync('./api-keys.json', JSON.stringify(apiKeys, null, 2));
-        console.log('🔑 API-Keys gespeichert');
-        return true;
-    } catch (error) {
-        console.error('❌ Fehler beim Speichern der API-Keys:', error);
-        return false;
-    }
+    console.log('⚠️ API-Keys werden als Environment Variables verwendet und nicht in Datei gespeichert');
+    return true;
 }
 
 // API-Keys beim Start laden

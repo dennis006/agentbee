@@ -17,10 +17,10 @@ function getOpenAIClient() {
     if (!openaiClient) {
         try {
             const { OpenAI } = require('openai');
-            const apiKeys = JSON.parse(fs.readFileSync('./api-keys.json', 'utf8'));
-            if (apiKeys.openai) {
+            const openaiApiKey = process.env.OPENAI_API_KEY;
+            if (openaiApiKey) {
                 openaiClient = new OpenAI({
-                    apiKey: apiKeys.openai
+                    apiKey: openaiApiKey
                 });
                 console.log('🤖 OpenAI Client für Mitglieder-Antworten initialisiert');
             } else {
