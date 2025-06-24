@@ -6445,8 +6445,6 @@ app.post('/api/verification/create-roles', async (req, res) => {
     }
 });
 
-// ENTFERNT: Alte JSON-Funktion durch saveVerifiedUserToSupabase ersetzt
-
 // Entferne Verifizierung eines Users (Supabase-Version)
 async function removeVerifiedUser(discordId) {
     try {
@@ -6524,8 +6522,6 @@ async function removeVerifiedUser(discordId) {
         return { success: false, message: 'Fehler beim Entfernen der Verifizierung' };
     }
 }
-
-// ENTFERNT: Alte JSON-Funktion - Statistiken werden jetzt automatisch via Supabase-Trigger aktualisiert
 
 // Bot Settings anwenden
 async function applyBotSettings(settings) {
@@ -9184,6 +9180,59 @@ app.post('/api/xp/user/:userId/add', async (req, res) => {
     } catch (error) {
         console.error('❌ Fehler beim Hinzufügen von User-XP:', error);
         res.status(500).json({ error: 'Fehler beim Hinzufügen von User-XP' });
+    }
+});
+
+// Debug: XP-System Status anzeigen (Admin)
+app.get('/api/xp/debug', (req, res) => {
+    try {
+        if (!xpSystem) {
+            return res.status(503).json({ error: 'XP-System nicht initialisiert' });
+        }
+
+        // Debug-Info in Console ausgeben
+        xpSystem.debugListAllUsers();
+        
+        // Auch als API-Response zurückgeben
+        const memoryUsers = Array.from(xpSystem.userXP.entries()).map(([userId, data]) => ({
+            userId,
+            username: data.username,
+            level: data.level,
+            totalXP: data.totalXP
+        }));
+        
+        let jsonUsers = [];
+        try {
+            const fs = require('fs');
+            if (fs.existsSync('./xp-data.json')) {
+                const jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
+                const parsedData = JSON.parse(jsonContent);
+                jsonUsers = parsedData.map(user => ({
+                    userId: user.userId,
+                    username: user.username,
+                    level: user.level,
+                    totalXP: user.totalXP
+                }));
+            }
+        } catch (error) {
+            console.error('Fehler beim Lesen der JSON-Datei:', error);
+        }
+        
+        res.json({
+            success: true,
+            memoryUsers: {
+                count: memoryUsers.length,
+                users: memoryUsers
+            },
+            jsonUsers: {
+                count: jsonUsers.length,
+                users: jsonUsers
+            },
+            message: 'Debug-Info auch in Console ausgegeben'
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim XP-Debug:', error);
+        res.status(500).json({ error: 'Fehler beim XP-Debug' });
     }
 });
 

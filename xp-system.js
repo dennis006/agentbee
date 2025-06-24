@@ -133,7 +133,18 @@ class XPSystem {
                 userId,
                 ...data
             }));
+            
+            // Detailliertes Logging für Debug
+            console.log(`💾 Speichere XP-Daten: ${xpData.length} User in JSON`);
+            if (xpData.length === 0) {
+                console.log(`🗑️ Leere XP-Datei wird geschrieben`);
+            } else {
+                console.log(`📊 Gespeicherte User-IDs: ${xpData.map(u => u.userId).join(', ')}`);
+            }
+            
             fs.writeFileSync('./xp-data.json', JSON.stringify(xpData, null, 2));
+            console.log(`✅ xp-data.json erfolgreich gespeichert`);
+            
         } catch (error) {
             console.error('❌ Fehler beim Speichern der XP-Daten:', error);
         }
@@ -1159,8 +1170,31 @@ class XPSystem {
                 }
 
                 // Aus lokalem Cache und JSON entfernen
+                console.log(`🗑️ Entferne User ${userId} aus Memory-Cache...`);
+                console.log(`📋 Vor Löschung: ${this.userXP.size} User im Cache`);
                 this.userXP.delete(userId);
+                console.log(`📋 Nach Löschung: ${this.userXP.size} User im Cache`);
+                
+                console.log(`💾 Speichere aktualisierte Daten in JSON...`);
                 this.saveData();
+                
+                // Verifikation: JSON-Datei prüfen
+                setTimeout(() => {
+                    try {
+                        const jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
+                        const parsedData = JSON.parse(jsonContent);
+                        const userStillExists = parsedData.some(user => user.userId === userId);
+                        if (userStillExists) {
+                            console.error(`❌ FEHLER: User ${userId} immer noch in JSON-Datei gefunden!`);
+                        } else {
+                            console.log(`✅ Verifikation: User ${userId} erfolgreich aus JSON-Datei entfernt`);
+                        }
+                        console.log(`📊 Aktuelle JSON-Datei enthält ${parsedData.length} User`);
+                    } catch (error) {
+                        console.error(`❌ Fehler bei JSON-Verifikation:`, error);
+                    }
+                }, 100);
+                
                 console.log(`✅ User ${userId} aus XP-System entfernt`);
                 console.log(`✅ ${rolesRemoved} Discord-Rollen entfernt`);
                 
@@ -1520,6 +1554,41 @@ class XPSystem {
             console.error('❌ Fehler beim automatischen Leaderboard-Posting:', error);
             return false;
         }
+    }
+
+    // Debug: Alle User im System anzeigen
+    debugListAllUsers() {
+        console.log(`\n🔍 === XP-SYSTEM DEBUG INFO ===`);
+        console.log(`📊 Total User im Memory-Cache: ${this.userXP.size}`);
+        
+        if (this.userXP.size > 0) {
+            console.log(`👥 User im Cache:`);
+            for (const [userId, userData] of this.userXP) {
+                console.log(`  - ${userId}: ${userData.username} (Level ${userData.level}, ${userData.totalXP} XP)`);
+            }
+        }
+        
+        // JSON-Datei prüfen
+        try {
+            if (fs.existsSync('./xp-data.json')) {
+                const jsonContent = fs.readFileSync('./xp-data.json', 'utf8');
+                const parsedData = JSON.parse(jsonContent);
+                console.log(`📄 User in JSON-Datei: ${parsedData.length}`);
+                
+                if (parsedData.length > 0) {
+                    console.log(`👥 User in JSON:`);
+                    parsedData.forEach(user => {
+                        console.log(`  - ${user.userId}: ${user.username} (Level ${user.level}, ${user.totalXP} XP)`);
+                    });
+                }
+            } else {
+                console.log(`❌ xp-data.json existiert nicht`);
+            }
+        } catch (error) {
+            console.error(`❌ Fehler beim Lesen der JSON-Datei:`, error);
+        }
+        
+        console.log(`=== DEBUG INFO ENDE ===\n`);
     }
 }
 
