@@ -459,20 +459,7 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
     let dmError = null;
     if (ticketOwner && !isTicketOwner) {
       try {
-        // Pre-Check: Kann der Bot überhaupt eine DM an den User senden?
-        console.log(`🔍 Versuche PN-Pre-Check für ${ticketOwner.user.tag}...`);
-        const dmChannel = await ticketOwner.createDM().catch(preError => {
-          console.log(`⚠️ Pre-Check fehlgeschlagen: ${preError.message}`);
-          dmSent = false;
-          dmError = `Pre-Check Fehler: ${preError.message}`;
-          return null;
-        });
-        
-        if (!dmChannel) {
-          dmSent = false;
-          dmError = 'DM-Channel konnte nicht erstellt werden';
-          throw new Error(dmError);
-        }
+        console.log(`🔍 Versuche PN an ${ticketOwner.user.tag} zu senden...`);
         // Finde Button-Konfiguration für bessere Info
         const buttonConfig = ticketSettings.buttons.find(btn => btn.id === ticketData.type);
         const ticketCategory = buttonConfig ? buttonConfig.label : 'Support';
@@ -548,6 +535,12 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
           // Fallback mit allen verfügbaren Informationen
           dmError = `PN-Fehler: ${errorMessage || errorName || 'Unbekannt'} (Code: ${errorCode || 'Unbekannt'})`;
           console.log(`⚠️ Unbekannter DM-Fehler - alle Error-Properties:`, Object.keys(error));
+        }
+        
+        // Fallback-Sicherheit: Wenn dmError immer noch nicht gesetzt ist
+        if (!dmError) {
+          dmError = 'Unbekannter PN-Fehler aufgetreten';
+          console.log(`⚠️ dmError war undefined, setze Fallback-Wert`);
         }
         
         console.log(`🔍 Final dmError gesetzt:`, dmError);
