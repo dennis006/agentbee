@@ -9291,6 +9291,77 @@ app.post('/api/xp/reset-all', async (req, res) => {
     }
 });
 
+// Debug: DM-Test für spezifischen User
+app.post('/api/debug/test-dm', async (req, res) => {
+    try {
+        const { userId, message } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({ error: 'userId erforderlich' });
+        }
+        
+        if (!client || !client.isReady()) {
+            return res.status(503).json({ error: 'Bot nicht bereit' });
+        }
+        
+        console.log(`🧪 DM-Test für User ${userId}...`);
+        
+        try {
+            // Versuche User zu finden
+            const user = await client.users.fetch(userId);
+            console.log(`✅ User gefunden: ${user.tag}`);
+            
+            // Versuche DM zu senden
+            const testMessage = message || 'Dies ist eine Test-Nachricht vom AgentBee Bot.';
+            await user.send(testMessage);
+            
+            console.log(`✅ DM erfolgreich gesendet an ${user.tag}`);
+            res.json({
+                success: true,
+                message: `DM erfolgreich gesendet an ${user.tag}`,
+                user: {
+                    id: user.id,
+                    tag: user.tag,
+                    username: user.username
+                }
+            });
+            
+        } catch (dmError) {
+            console.error(`❌ DM-Test fehlgeschlagen:`, dmError);
+            
+            // Detaillierte Error-Analyse
+            const errorCode = dmError.code || dmError.status;
+            const errorMessage = dmError.message || dmError.toString() || '';
+            
+            let diagnosis = 'Unbekannter Fehler';
+            if (errorCode === 50007 || errorMessage.toLowerCase().includes('cannot send messages')) {
+                diagnosis = 'User hat private Nachrichten deaktiviert';
+            } else if (errorCode === 50013) {
+                diagnosis = 'Bot hat keine Berechtigung';
+            } else if (errorCode === 10013) {
+                diagnosis = 'User nicht gefunden';
+            } else if (errorMessage.toLowerCase().includes('blocked')) {
+                diagnosis = 'Bot wurde blockiert';
+            }
+            
+            res.json({
+                success: false,
+                error: diagnosis,
+                details: {
+                    code: errorCode,
+                    message: errorMessage,
+                    name: dmError.name,
+                    allProperties: Object.keys(dmError)
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ DM-Test Fehler:', error);
+        res.status(500).json({ error: 'Fehler beim DM-Test' });
+    }
+});
+
 // Notfall-XP-Reset: Komplett leeren
 app.post('/api/xp/emergency-reset', async (req, res) => {
     try {

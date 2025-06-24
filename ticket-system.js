@@ -487,23 +487,49 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
           code: error.code,
           message: error.message,
           name: error.name,
-          stack: error.stack?.split('\n')[0]
+          httpStatus: error.httpStatus,
+          method: error.method,
+          path: error.path,
+          requestData: error.requestData,
+          rawError: error
         });
         dmSent = false;
         
-        // Erweiterte Fehlercode-Erkennung
-        if (error.code === 50007 || error.message?.includes('Cannot send messages to this user')) {
+        // Noch robustere Fehlercode-Erkennung mit mehreren Ansätzen
+        const errorCode = error.code || error.status;
+        const errorMessage = error.message || error.toString() || '';
+        const errorName = error.name || '';
+        
+        console.log(`🔍 Parsed Error Info:`, { errorCode, errorMessage, errorName });
+        
+        if (errorCode === 50007 || 
+            errorMessage.toLowerCase().includes('cannot send messages to this user') ||
+            errorMessage.toLowerCase().includes('cannot send message') ||
+            errorMessage.toLowerCase().includes('dm disabled') ||
+            errorMessage.toLowerCase().includes('direct messages disabled')) {
           dmError = 'Der User hat private Nachrichten deaktiviert';
-        } else if (error.code === 50013 || error.message?.includes('Missing Permissions')) {
+        } else if (errorCode === 50013 || 
+                   errorMessage.toLowerCase().includes('missing permissions') ||
+                   errorMessage.toLowerCase().includes('insufficient permissions')) {
           dmError = 'Bot hat keine Berechtigung DMs zu senden';
-        } else if (error.code === 50001 || error.message?.includes('Missing Access')) {
+        } else if (errorCode === 50001 || 
+                   errorMessage.toLowerCase().includes('missing access') ||
+                   errorMessage.toLowerCase().includes('access denied')) {
           dmError = 'Bot kann nicht auf den User zugreifen';
-        } else if (error.message?.includes('Unknown User')) {
+        } else if (errorCode === 10013 || 
+                   errorMessage.toLowerCase().includes('unknown user') ||
+                   errorMessage.toLowerCase().includes('user not found')) {
           dmError = 'User nicht mehr verfügbar';
-        } else if (error.message?.includes('blocked')) {
+        } else if (errorMessage.toLowerCase().includes('blocked') ||
+                   errorMessage.toLowerCase().includes('relationship')) {
           dmError = 'Bot wurde vom User blockiert';
+        } else if (errorMessage.toLowerCase().includes('rate limit') ||
+                   errorMessage.toLowerCase().includes('too many requests')) {
+          dmError = 'Rate-Limit erreicht - bitte später versuchen';
         } else {
-          dmError = `Fehler beim Senden der PN: ${error.message || 'Unbekannter Grund'} (Code: ${error.code || 'N/A'})`;
+          // Fallback mit allen verfügbaren Informationen
+          dmError = `PN-Fehler: ${errorMessage || errorName || 'Unbekannt'} (Code: ${errorCode || 'Unbekannt'})`;
+          console.log(`⚠️ Unbekannter DM-Fehler - alle Error-Properties:`, Object.keys(error));
         }
         
         // Versuche alternative Benachrichtigung im Channel zu senden (falls noch offen)
