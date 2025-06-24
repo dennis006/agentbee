@@ -1,13 +1,11 @@
 const fs = require('fs');
 const { EmbedBuilder } = require('discord.js');
-const XPSupabaseAPI = require('./xp-supabase-api');
 
 class XPSystem {
     constructor(client) {
         this.client = client;
         this.userXP = new Map(); // userId -> { xp, level, totalXP, lastMessage, voiceJoinTime }
         this.voiceUsers = new Map(); // userId -> { joinTime, channelId }
-        this.xpSupabaseAPI = new XPSupabaseAPI(); // Supabase API Integration
         this.settings = {
             enabled: true,
             messageXP: {
@@ -316,16 +314,6 @@ class XPSystem {
         // Lokal speichern
         this.userXP.set(userId, userData);
         this.saveData();
-
-        // In Supabase speichern (falls verfügbar)
-        if (this.xpSupabaseAPI && this.xpSupabaseAPI.initialized) {
-            try {
-                await this.xpSupabaseAPI.updateUser(userId, userData);
-                console.log(`✅ User ${userId} XP in Supabase aktualisiert (${amount} XP hinzugefügt)`);
-            } catch (error) {
-                console.error(`❌ Fehler beim Speichern in Supabase für User ${userId}:`, error);
-            }
-        }
 
         // Meilenstein-Check
         this.checkMilestones(userId, oldTotalXP, userData.totalXP, user);
@@ -1096,74 +1084,165 @@ class XPSystem {
     // User XP zurücksetzen
     async resetUser(userId) {
         try {
-            let localDeleted = false;
-            let supabaseDeleted = false;
+            let userFound = false;
+            let rolesRemoved = 0;
 
-            // Aus lokalem Cache entfernen
+            // Prüfen ob User existiert
             if (this.userXP.has(userId)) {
+                userFound = true;
+                const userData = this.userXP.get(userId);
+                console.log(`🔍 User ${userId} gefunden: Level ${userData.level}, ${userData.totalXP} Total XP`);
+
+                // Discord-Rollen entfernen (falls Client verfügbar)
+                if (this.client) {
+                    try {
+                        // Über alle Guilds iterieren wo der Bot ist
+                        for (const guild of this.client.guilds.cache.values()) {
+                            try {
+                                const member = await guild.members.fetch(userId).catch(() => null);
+                                if (member) {
+                                    console.log(`👤 User ${userId} gefunden in Guild: ${guild.name}`);
+                                    
+                                    // Level-Rollen entfernen
+                                    const levelRolesToRemove = [];
+                                    for (const reward of this.settings.rewards.levelRoles) {
+                                        if (member.roles.cache.has(reward.roleId)) {
+                                            levelRolesToRemove.push(reward.roleId);
+                                        }
+                                    }
+                                    
+                                    // Auto-Level-Rollen entfernen (falls vorhanden)
+                                    const autoRoles = member.roles.cache.filter(role => 
+                                        role.name.includes('Level') || 
+                                        role.name.includes('XP') ||
+                                        role.name.toLowerCase().includes('level')
+                                    );
+                                    
+                                    // Meilenstein-Rollen finden und entfernen
+                                    const milestoneRolesToRemove = member.roles.cache.filter(role => {
+                                        const milestoneNames = [
+                                            'newcomer', 'aktives mitglied', 'erfahrener user', 
+                                            'server-veteran', 'elite member', 'server-legende', 
+                                            'diamond member', 'level', 'xp'
+                                        ];
+                                        return milestoneNames.some(name => 
+                                            role.name.toLowerCase().includes(name)
+                                        );
+                                    });
+
+                                    // Alle XP-bezogenen Rollen sammeln
+                                    const allRolesToRemove = new Set([
+                                        ...levelRolesToRemove,
+                                        ...autoRoles.map(r => r.id),
+                                        ...milestoneRolesToRemove.map(r => r.id)
+                                    ]);
+
+                                    // Rollen entfernen
+                                    for (const roleId of allRolesToRemove) {
+                                        try {
+                                            await member.roles.remove(roleId);
+                                            const role = guild.roles.cache.get(roleId);
+                                            console.log(`🗑️ Rolle entfernt: ${role?.name || roleId} in ${guild.name}`);
+                                            rolesRemoved++;
+                                        } catch (roleError) {
+                                            console.error(`❌ Fehler beim Entfernen der Rolle ${roleId}:`, roleError.message);
+                                        }
+                                    }
+                                }
+                            } catch (guildError) {
+                                console.log(`⚠️ Konnte User ${userId} nicht in Guild ${guild.name} finden`);
+                            }
+                        }
+                    } catch (clientError) {
+                        console.error(`❌ Fehler beim Discord-Rollen-Reset:`, clientError);
+                    }
+                }
+
+                // Aus lokalem Cache und JSON entfernen
                 this.userXP.delete(userId);
                 this.saveData();
-                localDeleted = true;
-                console.log(`✅ User ${userId} aus lokalem XP-Cache entfernt`);
-            }
-
-            // Aus Supabase Datenbank entfernen (falls verfügbar)
-            if (this.xpSupabaseAPI && this.xpSupabaseAPI.initialized) {
-                try {
-                    await this.xpSupabaseAPI.deleteUser(userId);
-                    supabaseDeleted = true;
-                    console.log(`✅ User ${userId} aus Supabase Datenbank entfernt`);
-                } catch (error) {
-                    console.error(`❌ Fehler beim Löschen aus Supabase für User ${userId}:`, error);
-                }
+                console.log(`✅ User ${userId} aus XP-System entfernt`);
+                console.log(`✅ ${rolesRemoved} Discord-Rollen entfernt`);
+                
+                return { 
+                    success: true, 
+                    message: `User erfolgreich zurückgesetzt. ${rolesRemoved} Rollen entfernt.`,
+                    rolesRemoved 
+                };
             } else {
-                console.log(`⚠️ Supabase API nicht verfügbar für User ${userId} - nur lokaler Reset`);
+                console.log(`⚠️ User ${userId} nicht im XP-System gefunden`);
+                return { success: false, error: 'User nicht im XP-System gefunden' };
             }
-
-            if (localDeleted || supabaseDeleted) {
-                console.log(`🔧 User ${userId} XP erfolgreich zurückgesetzt (lokal: ${localDeleted}, Supabase: ${supabaseDeleted})`);
-                return true;
-            }
-            
-            console.log(`⚠️ User ${userId} nicht gefunden - kein Reset nötig`);
-            return false;
         } catch (error) {
-            console.error(`❌ Fehler beim Zurücksetzen der XP für User ${userId}:`, error);
-            return false;
+            console.error(`❌ Fehler beim Zurücksetzen von User ${userId}:`, error);
+            return { success: false, error: error.message };
         }
     }
 
     // Alle XP zurücksetzen
     async resetAll() {
         try {
-            let localCleared = false;
-            let supabaseCleared = false;
+            const userCount = this.userXP.size;
+            let totalRolesRemoved = 0;
 
-            // Lokalen Cache leeren
-            const localUserCount = this.userXP.size;
-            this.userXP.clear();
-            this.saveData();
-            localCleared = true;
-            console.log(`✅ ${localUserCount} User aus lokalem XP-Cache entfernt`);
-
-            // Alle User aus Supabase entfernen (falls verfügbar)
-            if (this.xpSupabaseAPI && this.xpSupabaseAPI.initialized) {
+            // Alle Discord-Rollen entfernen (falls Client verfügbar)
+            if (this.client) {
                 try {
-                    await this.xpSupabaseAPI.deleteAllUsers();
-                    supabaseCleared = true;
-                    console.log(`✅ Alle User aus Supabase Datenbank entfernt`);
-                } catch (error) {
-                    console.error(`❌ Fehler beim Löschen aller User aus Supabase:`, error);
+                    for (const guild of this.client.guilds.cache.values()) {
+                        console.log(`🔍 Prüfe Guild: ${guild.name}`);
+                        
+                        for (const [userId] of this.userXP) {
+                            try {
+                                const member = await guild.members.fetch(userId).catch(() => null);
+                                if (member) {
+                                    // XP-bezogene Rollen finden und entfernen
+                                    const rolesToRemove = member.roles.cache.filter(role => {
+                                        const xpRoleNames = [
+                                            'level', 'xp', 'newcomer', 'aktives mitglied', 
+                                            'erfahrener user', 'server-veteran', 'elite member', 
+                                            'server-legende', 'diamond member'
+                                        ];
+                                        return xpRoleNames.some(name => 
+                                            role.name.toLowerCase().includes(name)
+                                        );
+                                    });
+
+                                    for (const role of rolesToRemove.values()) {
+                                        try {
+                                            await member.roles.remove(role);
+                                            console.log(`🗑️ Rolle entfernt: ${role.name} von ${member.user.username}`);
+                                            totalRolesRemoved++;
+                                        } catch (roleError) {
+                                            console.error(`❌ Fehler beim Entfernen der Rolle ${role.name}:`, roleError.message);
+                                        }
+                                    }
+                                }
+                            } catch (memberError) {
+                                // User nicht in dieser Guild gefunden - normal
+                            }
+                        }
+                    }
+                } catch (clientError) {
+                    console.error(`❌ Fehler beim Entfernen aller Discord-Rollen:`, clientError);
                 }
-            } else {
-                console.log(`⚠️ Supabase API nicht verfügbar - nur lokaler Reset`);
             }
 
-            console.log(`🔧 Alle XP-Daten erfolgreich zurückgesetzt (lokal: ${localCleared}, Supabase: ${supabaseCleared})`);
-            return { localCleared, supabaseCleared };
+            // Lokalen Cache leeren
+            this.userXP.clear();
+            this.saveData();
+            
+            console.log(`✅ ${userCount} User aus XP-System entfernt`);
+            console.log(`✅ ${totalRolesRemoved} Discord-Rollen entfernt`);
+            
+            return { 
+                success: true, 
+                usersCleared: userCount, 
+                rolesRemoved: totalRolesRemoved,
+                message: `${userCount} User und ${totalRolesRemoved} Rollen erfolgreich entfernt.`
+            };
         } catch (error) {
             console.error(`❌ Fehler beim Zurücksetzen aller XP-Daten:`, error);
-            throw error;
+            return { success: false, error: error.message };
         }
     }
 

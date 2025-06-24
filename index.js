@@ -9195,13 +9195,17 @@ app.delete('/api/xp/user/:userId', async (req, res) => {
         }
 
         const { userId } = req.params;
-        const success = await xpSystem.resetUser(userId);
+        const result = await xpSystem.resetUser(userId);
         
-        if (success) {
-            console.log(`🔧 Admin resetete XP für User ${userId}`);
-            res.json({ success: true, message: 'User-XP zurückgesetzt (lokal + Datenbank)' });
+        if (result.success) {
+            console.log(`🔧 Admin resetete XP für User ${userId} - ${result.rolesRemoved} Rollen entfernt`);
+            res.json({ 
+                success: true, 
+                message: result.message,
+                rolesRemoved: result.rolesRemoved
+            });
         } else {
-            res.status(404).json({ error: 'User nicht gefunden' });
+            res.status(404).json({ error: result.error });
         }
     } catch (error) {
         console.error('❌ Fehler beim Zurücksetzen der User-XP:', error);
@@ -9224,12 +9228,17 @@ app.post('/api/xp/reset-all', async (req, res) => {
 
         const result = await xpSystem.resetAll();
         
-        console.log('🔧 Admin resetete alle XP-Daten');
-        res.json({ 
-            success: true, 
-            message: 'Alle XP-Daten zurückgesetzt (lokal + Datenbank)',
-            details: result
-        });
+        if (result.success) {
+            console.log(`🔧 Admin resetete alle XP-Daten - ${result.usersCleared} User, ${result.rolesRemoved} Rollen`);
+            res.json({ 
+                success: true, 
+                message: result.message,
+                usersCleared: result.usersCleared,
+                rolesRemoved: result.rolesRemoved
+            });
+        } else {
+            res.status(500).json({ error: result.error });
+        }
     } catch (error) {
         console.error('❌ Fehler beim Zurücksetzen aller XP:', error);
         res.status(500).json({ error: 'Fehler beim Zurücksetzen aller XP' });
