@@ -199,7 +199,7 @@ const BotIntroduction: React.FC = () => {
     },
     embed: {
       title: '🤖 Hallo! Ich bin {botName}',
-      description: 'Dein intelligenter Discord-Assistent für Gaming, Moderation und Entertainment! Ich bringe deinen Server auf das nächste Level! 🚀',
+      description: 'Dein intelligenter Discord-Assistent für Gaming, Moderation und Entertainment! 🚀',
       color: '0x9333EA',
       thumbnail: 'bot',
       customThumbnail: '',
@@ -211,39 +211,24 @@ const BotIntroduction: React.FC = () => {
       },
       fields: [
         {
-          name: '🎯 Moderation & Verwaltung',
-          value: '• **Moderation** - Auto-Filter, Warns & Mutes mit Supabase\n• **Ticket-System** - Support-Channels mit V2-Integration\n• **Welcome-System** - Personalisierte Begrüßungen\n• **Verifizierung** - Captcha & Game-Authentifizierung\n• **Spam-Schutz** - Intelligente Raid-Erkennung',
+          name: '🎯 Hauptfunktionen',
+          value: '• **Moderation** - Auto-Filter & Mutes\n• **XP-System** - Level & Belohnungen\n• **Musik** - YouTube & Spotify\n• **Valorant** - Rang-Tracking\n• **Giveaways** - Faire Verlosungen',
           inline: false
         },
         {
-          name: '📈 Community Features',
-          value: '• **XP-System** - Level-Belohnungen & Leaderboards (Supabase-persistent)\n• **Giveaways** - Faire Verlosungen mit Anti-Cheat\n• **Server-Stats** - Live-Channels & Analytics\n• **Rules-System** - Automatische Regel-Posts',
-          inline: true
-        },
-        {
-          name: '🎮 Gaming Integration',
-          value: '• **Valorant** - Rang-Tracking & Match-History mit Cards\n• **Twitch-Alerts** - Live-Stream Benachrichtigungen mit AI\n• **Game-Roles** - Automatische Rollen-Zuweisung',
-          inline: true
-        },
-        {
-          name: '🎵 Musik & Entertainment',
-          value: '• **Simple Music Panel** - Benutzerfreundliche Musik-Steuerung\n• **YouTube Radio** - Streaming-Integration\n• **Song-Requests** - Community-Playlists\n• **Voice-XP** - Belohnungen für Voice-Aktivität',
-          inline: false
-        },
-        {
-          name: '🤖 AI & Technologie',
-          value: '• **OpenAI Integration** - Smart-Responses & Personalisierung\n• **Supabase Backend** - Moderne Datenbank-Persistierung\n• **Web-Dashboard** - Vollständige Bot-Konfiguration\n• **API-Management** - Zentrale Schlüssel-Verwaltung',
-          inline: false
-        },
-        {
-          name: '⚡ Schnellstart',
-          value: 'Nutze `/help` um alle Befehle zu sehen oder besuche das **Web-Dashboard** für erweiterte Konfiguration!',
+          name: '⚡ Features',
+          value: '• Welcome-System\n• Ticket-Support\n• Twitch-Alerts\n• AI-Integration',
           inline: true
         },
         {
           name: '🔧 Dashboard',
-          value: 'Komplette Bot-Verwaltung über das moderne React-Dashboard mit Echtzeit-Updates!',
+          value: '• Web-Interface\n• Live-Config\n• Server-Stats\n• Bot-Kontrolle',
           inline: true
+        },
+        {
+          name: '⚡ Schnellstart',
+          value: 'Nutze `/help` für alle Befehle oder besuche das **Web-Dashboard**!',
+          inline: false
         }
       ]
     },
@@ -1734,7 +1719,7 @@ const BotIntroduction: React.FC = () => {
                   embed: {
                     ...prev.embed,
                                          title: '🤖 Hallo! Ich bin {botName}',
-                     description: 'Dein intelligenter Discord-Assistent für Gaming, Moderation und Entertainment! Ich bringe deinen Server auf das nächste Level! 🚀',
+                     description: 'Dein intelligenter Discord-Assistent für Gaming, Moderation und Entertainment! 🚀',
                      color: '0x9333EA',
                     footer: 'Entwickelt mit ❤️ • {version} • {timestamp}',
                     author: {
@@ -1744,39 +1729,24 @@ const BotIntroduction: React.FC = () => {
                     },
                     fields: [
                       {
-                        name: '🎯 Moderation & Verwaltung',
-                        value: '• **Moderation** - Auto-Filter, Warns & Mutes mit Supabase\n• **Ticket-System** - Support-Channels mit V2-Integration\n• **Welcome-System** - Personalisierte Begrüßungen\n• **Verifizierung** - Captcha & Game-Authentifizierung\n• **Spam-Schutz** - Intelligente Raid-Erkennung',
+                        name: '🎯 Hauptfunktionen',
+                        value: '• **Moderation** - Auto-Filter & Mutes\n• **XP-System** - Level & Belohnungen\n• **Musik** - YouTube & Spotify\n• **Valorant** - Rang-Tracking\n• **Giveaways** - Faire Verlosungen',
                         inline: false
                       },
                       {
-                        name: '📈 Community Features',
-                        value: '• **XP-System** - Level-Belohnungen & Leaderboards (Supabase-persistent)\n• **Giveaways** - Faire Verlosungen mit Anti-Cheat\n• **Server-Stats** - Live-Channels & Analytics\n• **Rules-System** - Automatische Regel-Posts',
-                        inline: true
-                      },
-                      {
-                        name: '🎮 Gaming Integration',
-                        value: '• **Valorant** - Rang-Tracking & Match-History mit Cards\n• **Twitch-Alerts** - Live-Stream Benachrichtigungen mit AI\n• **Game-Roles** - Automatische Rollen-Zuweisung',
-                        inline: true
-                      },
-                      {
-                        name: '🎵 Musik & Entertainment',
-                        value: '• **Simple Music Panel** - Benutzerfreundliche Musik-Steuerung\n• **YouTube Radio** - Streaming-Integration\n• **Song-Requests** - Community-Playlists\n• **Voice-XP** - Belohnungen für Voice-Aktivität',
-                        inline: false
-                      },
-                      {
-                        name: '🤖 AI & Technologie',
-                        value: '• **OpenAI Integration** - Smart-Responses & Personalisierung\n• **Supabase Backend** - Moderne Datenbank-Persistierung\n• **Web-Dashboard** - Vollständige Bot-Konfiguration\n• **API-Management** - Zentrale Schlüssel-Verwaltung',
-                        inline: false
-                      },
-                      {
-                        name: '⚡ Schnellstart',
-                        value: 'Nutze `/help` um alle Befehle zu sehen oder besuche das **Web-Dashboard** für erweiterte Konfiguration!',
+                        name: '⚡ Features',
+                        value: '• Welcome-System\n• Ticket-Support\n• Twitch-Alerts\n• AI-Integration',
                         inline: true
                       },
                       {
                         name: '🔧 Dashboard',
-                        value: 'Komplette Bot-Verwaltung über das moderne React-Dashboard mit Echtzeit-Updates!',
+                        value: '• Web-Interface\n• Live-Config\n• Server-Stats\n• Bot-Kontrolle',
                         inline: true
+                      },
+                      {
+                        name: '⚡ Schnellstart',
+                        value: 'Nutze `/help` für alle Befehle oder besuche das **Web-Dashboard**!',
+                        inline: false
                       }
                     ]
                   }
