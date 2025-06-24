@@ -463,11 +463,15 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
         console.log(`🔍 Versuche PN-Pre-Check für ${ticketOwner.user.tag}...`);
         const dmChannel = await ticketOwner.createDM().catch(preError => {
           console.log(`⚠️ Pre-Check fehlgeschlagen: ${preError.message}`);
+          dmSent = false;
+          dmError = `Pre-Check Fehler: ${preError.message}`;
           return null;
         });
         
         if (!dmChannel) {
-          throw new Error('DM-Channel konnte nicht erstellt werden');
+          dmSent = false;
+          dmError = 'DM-Channel konnte nicht erstellt werden';
+          throw new Error(dmError);
         }
         // Finde Button-Konfiguration für bessere Info
         const buttonConfig = ticketSettings.buttons.find(btn => btn.id === ticketData.type);
@@ -546,6 +550,8 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
           console.log(`⚠️ Unbekannter DM-Fehler - alle Error-Properties:`, Object.keys(error));
         }
         
+        console.log(`🔍 Final dmError gesetzt:`, dmError);
+        
         // Versuche alternative Benachrichtigung im Channel zu senden (falls noch offen)
         try {
           if (channel && !channel.deleted) {
@@ -602,6 +608,9 @@ async function closeTicketWithReason(interaction, ticketId, closeReason, isTicke
     // Statistiken aktualisieren
     updateTicketStats('closed');
 
+    // Final Debug Log
+    console.log(`🔍 Final Return Values:`, { dmSent, dmError });
+    
     return { 
       success: true, 
       dmSent: dmSent,

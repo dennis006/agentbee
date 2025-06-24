@@ -4924,6 +4924,8 @@ async function handleTicketCloseModalSubmission(interaction) {
         // Schließe Ticket mit Grund und PN-Benachrichtigung
         const result = await ticketSystem.closeTicketWithReason(interaction, ticketId, closeReason, isTicketOwner);
         
+        console.log(`🔍 Ticket Close Result:`, { success: result.success, dmSent: result.dmSent, dmError: result.dmError });
+        
         if (result.success) {
             let statusMessage = `✅ Ticket wurde erfolgreich geschlossen!\n\n**Grund:** ${closeReason}\n\n`;
             
