@@ -232,11 +232,20 @@ function replaceTemplateVariables(text, variables) {
 
 // Bot-Statistiken sammeln
 function getBotStatistics(client) {
+    // Version aus package.json lesen
+    let version = 'v1.0.0'; // Fallback
+    try {
+        const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+        version = `v${packageJson.version}`;
+    } catch (error) {
+        console.log('⚠️ Konnte package.json nicht lesen für Versionsnummer');
+    }
+
     const stats = {
         serverCount: client.guilds.cache.size,
         memberCount: client.guilds.cache.reduce((acc, guild) => acc + guild.memberCount, 0),
         uptime: formatUptime(client.uptime),
-        version: 'v1.0.20', // Aus package.json oder statisch
+        version: version,
         commandsExecuted: 0 // Könnte aus einer Statistik-DB kommen
     };
     
