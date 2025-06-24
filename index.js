@@ -4931,11 +4931,39 @@ async function handleTicketCloseModalSubmission(interaction) {
             
             if (result.dmSent) {
                 statusMessage += '📧 Benachrichtigung wurde per PN gesendet.';
-            } else if (result.dmError) {
+            } else if (result.dmError && result.dmError !== null && result.dmError !== undefined) {
                 statusMessage += `⚠️ **PN fehlgeschlagen:** ${result.dmError}\n\n💡 **Lösung:** Eine detaillierte Benachrichtigung mit Lösungsvorschlägen wurde im Ticket-Channel hinterlassen.`;
             } else {
-                // Dieser Fall sollte eigentlich nicht mehr auftreten
-                statusMessage += '⚠️ PN konnte nicht gesendet werden (unbekannter Grund).';
+                // INTELLIGENTE FALLBACK-LÖSUNG: Direkter PN-Fehler-Check
+                console.log(`🔍 FALLBACK AKTIVIERT: Prüfe PN-Problem direkt...`);
+                
+                // Versuche direkten PN-Test
+                let fallbackError = 'Private Nachrichten sind deaktiviert';
+                try {
+                    const ticketUser = await interaction.guild.members.fetch(ticketData.userId).catch(() => null);
+                    if (ticketUser) {
+                        const testDM = await ticketUser.createDM().catch(err => {
+                            console.log(`🔍 DM-Test Fehler: ${err.message}`);
+                            if (err.code === 50007) fallbackError = 'Der User hat private Nachrichten deaktiviert';
+                            else fallbackError = 'Bot kann keine PNs an diesen User senden';
+                            return null;
+                        });
+                        if (!testDM) {
+                            fallbackError = 'DM-Channel konnte nicht erstellt werden';
+                        }
+                    } else {
+                        fallbackError = 'User nicht mehr auf dem Server';
+                    }
+                } catch (testError) {
+                    console.log(`🔍 Fallback-Test Fehler: ${testError.message}`);
+                    fallbackError = 'Unbekannter PN-Fehler';
+                }
+                
+                statusMessage += `⚠️ **PN fehlgeschlagen:** ${fallbackError}\n\n💡 **Lösung:** 
+• **Discord-Einstellungen** → Privatsphäre & Sicherheit → Direkte Nachrichten aktivieren
+• **Server-Einstellungen** → Nachrichten von Server-Mitgliedern zulassen
+• Prüfe ob du den Bot blockiert hast
+• Bei weiteren Fragen erstelle einfach ein neues Ticket!`;
             }
             
             await interaction.editReply({
