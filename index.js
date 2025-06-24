@@ -3750,9 +3750,9 @@ client.on(Events.GuildMemberRemove, async member => {
 });
 
 // Event: Voice State Update (für XP-System)
-client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     if (xpSystem) {
-        xpSystem.handleVoiceStateUpdate(oldState, newState);
+        await xpSystem.handleVoiceStateUpdate(oldState, newState);
     }
 });
 
@@ -9188,18 +9188,18 @@ app.post('/api/xp/user/:userId/add', async (req, res) => {
 });
 
 // User-XP zurücksetzen (Admin)
-app.delete('/api/xp/user/:userId', (req, res) => {
+app.delete('/api/xp/user/:userId', async (req, res) => {
     try {
         if (!xpSystem) {
             return res.status(503).json({ error: 'XP-System nicht initialisiert' });
         }
 
         const { userId } = req.params;
-        const success = xpSystem.resetUser(userId);
+        const success = await xpSystem.resetUser(userId);
         
         if (success) {
             console.log(`🔧 Admin resetete XP für User ${userId}`);
-            res.json({ success: true, message: 'User-XP zurückgesetzt' });
+            res.json({ success: true, message: 'User-XP zurückgesetzt (lokal + Datenbank)' });
         } else {
             res.status(404).json({ error: 'User nicht gefunden' });
         }
@@ -9210,7 +9210,7 @@ app.delete('/api/xp/user/:userId', (req, res) => {
 });
 
 // Alle XP zurücksetzen (Admin)
-app.post('/api/xp/reset-all', (req, res) => {
+app.post('/api/xp/reset-all', async (req, res) => {
     try {
         if (!xpSystem) {
             return res.status(503).json({ error: 'XP-System nicht initialisiert' });
@@ -9222,10 +9222,14 @@ app.post('/api/xp/reset-all', (req, res) => {
             return res.status(400).json({ error: 'Reset-Bestätigung erforderlich' });
         }
 
-        xpSystem.resetAll();
+        const result = await xpSystem.resetAll();
         
         console.log('🔧 Admin resetete alle XP-Daten');
-        res.json({ success: true, message: 'Alle XP-Daten zurückgesetzt' });
+        res.json({ 
+            success: true, 
+            message: 'Alle XP-Daten zurückgesetzt (lokal + Datenbank)',
+            details: result
+        });
     } catch (error) {
         console.error('❌ Fehler beim Zurücksetzen aller XP:', error);
         res.status(500).json({ error: 'Fehler beim Zurücksetzen aller XP' });

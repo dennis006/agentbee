@@ -1,11 +1,13 @@
 const fs = require('fs');
 const { EmbedBuilder } = require('discord.js');
+const XPSupabaseAPI = require('./xp-supabase-api');
 
 class XPSystem {
     constructor(client) {
         this.client = client;
         this.userXP = new Map(); // userId -> { xp, level, totalXP, lastMessage, voiceJoinTime }
         this.voiceUsers = new Map(); // userId -> { joinTime, channelId }
+        this.xpSupabaseAPI = new XPSupabaseAPI(); // Supabase API Integration
         this.settings = {
             enabled: true,
             messageXP: {
@@ -162,7 +164,7 @@ class XPSystem {
         userData.messageCount++;
         const oldLevel = userData.level;
         
-        this.addXP(userId, xpGain, message.author);
+        await this.addXP(userId, xpGain, message.author);
         
         // Level-Up Check
         const newLevel = userData.level;
@@ -172,7 +174,7 @@ class XPSystem {
     }
 
     // Voice-XP hinzufügen
-    handleVoiceStateUpdate(oldState, newState) {
+    async handleVoiceStateUpdate(oldState, newState) {
         if (!this.settings.enabled) return;
         if (newState.member.user.bot) return;
 
@@ -193,7 +195,7 @@ class XPSystem {
                 const voiceData = this.voiceUsers.get(userId);
                 const timeSpent = (Date.now() - voiceData.joinTime) / 1000 / 60; // Minuten
                 
-                this.addVoiceXP(userId, timeSpent, oldState.channel, newState.member.user);
+                await this.addVoiceXP(userId, timeSpent, oldState.channel, newState.member.user);
                 this.voiceUsers.delete(userId);
                 console.log(`🎤 ${newState.member.user.username} left voice after ${timeSpent.toFixed(1)} minutes`);
             }
@@ -218,7 +220,7 @@ class XPSystem {
     }
 
     // Voice-XP hinzufügen
-    addVoiceXP(userId, minutes, channel, user) {
+    async addVoiceXP(userId, minutes, channel, user) {
         if (minutes < 0.5) return; // Mindestens 30 Sekunden
         if (this.settings.channels.voiceBlacklist.includes(channel.name)) return;
 
@@ -238,7 +240,7 @@ class XPSystem {
         if (xpGain > 0) {
             const userData = this.getUserData(userId);
             userData.voiceTime += minutes;
-            this.addXP(userId, xpGain, user);
+            await this.addXP(userId, xpGain, user);
             
             console.log(`🎤 Voice XP: ${user.username} +${xpGain} XP (${minutes.toFixed(1)}min in ${channel.name})`);
         }
@@ -246,7 +248,8 @@ class XPSystem {
 
     // Timer für kontinuierliche Voice-XP
     startVoiceXPTimer() {
-        setInterval(() => {
+        setInterval(async () => {
+            const promises = [];
             this.voiceUsers.forEach((voiceData, userId) => {
                 const user = this.client.users.cache.get(userId);
                 if (user) {
@@ -255,13 +258,22 @@ class XPSystem {
                         const timeSpent = (Date.now() - voiceData.joinTime) / 1000 / 60;
                         
                         if (timeSpent >= this.settings.voiceXP.intervalMinutes) {
-                            this.addVoiceXP(userId, this.settings.voiceXP.intervalMinutes, channel, user);
+                            promises.push(this.addVoiceXP(userId, this.settings.voiceXP.intervalMinutes, channel, user));
                             // Reset join time für kontinuierliche XP
                             voiceData.joinTime = Date.now();
                         }
                     }
                 }
             });
+            
+            // Warte auf alle Voice XP Updates
+            if (promises.length > 0) {
+                try {
+                    await Promise.all(promises);
+                } catch (error) {
+                    console.error('❌ Fehler beim Voice XP Timer:', error);
+                }
+            }
         }, this.settings.voiceXP.cooldown);
     }
 
@@ -284,7 +296,7 @@ class XPSystem {
     }
 
     // XP hinzufügen
-    addXP(userId, amount, user) {
+    async addXP(userId, amount, user) {
         const userData = this.getUserData(userId);
         const oldTotalXP = userData.totalXP;
         const oldLevel = userData.level;
@@ -301,8 +313,19 @@ class XPSystem {
             userData.level = newLevel;
         }
 
+        // Lokal speichern
         this.userXP.set(userId, userData);
         this.saveData();
+
+        // In Supabase speichern (falls verfügbar)
+        if (this.xpSupabaseAPI && this.xpSupabaseAPI.initialized) {
+            try {
+                await this.xpSupabaseAPI.updateUser(userId, userData);
+                console.log(`✅ User ${userId} XP in Supabase aktualisiert (${amount} XP hinzugefügt)`);
+            } catch (error) {
+                console.error(`❌ Fehler beim Speichern in Supabase für User ${userId}:`, error);
+            }
+        }
 
         // Meilenstein-Check
         this.checkMilestones(userId, oldTotalXP, userData.totalXP, user);
@@ -1071,19 +1094,77 @@ class XPSystem {
     }
 
     // User XP zurücksetzen
-    resetUser(userId) {
-        if (this.userXP.has(userId)) {
-            this.userXP.delete(userId);
-            this.saveData();
-            return true;
+    async resetUser(userId) {
+        try {
+            let localDeleted = false;
+            let supabaseDeleted = false;
+
+            // Aus lokalem Cache entfernen
+            if (this.userXP.has(userId)) {
+                this.userXP.delete(userId);
+                this.saveData();
+                localDeleted = true;
+                console.log(`✅ User ${userId} aus lokalem XP-Cache entfernt`);
+            }
+
+            // Aus Supabase Datenbank entfernen (falls verfügbar)
+            if (this.xpSupabaseAPI && this.xpSupabaseAPI.initialized) {
+                try {
+                    await this.xpSupabaseAPI.deleteUser(userId);
+                    supabaseDeleted = true;
+                    console.log(`✅ User ${userId} aus Supabase Datenbank entfernt`);
+                } catch (error) {
+                    console.error(`❌ Fehler beim Löschen aus Supabase für User ${userId}:`, error);
+                }
+            } else {
+                console.log(`⚠️ Supabase API nicht verfügbar für User ${userId} - nur lokaler Reset`);
+            }
+
+            if (localDeleted || supabaseDeleted) {
+                console.log(`🔧 User ${userId} XP erfolgreich zurückgesetzt (lokal: ${localDeleted}, Supabase: ${supabaseDeleted})`);
+                return true;
+            }
+            
+            console.log(`⚠️ User ${userId} nicht gefunden - kein Reset nötig`);
+            return false;
+        } catch (error) {
+            console.error(`❌ Fehler beim Zurücksetzen der XP für User ${userId}:`, error);
+            return false;
         }
-        return false;
     }
 
     // Alle XP zurücksetzen
-    resetAll() {
-        this.userXP.clear();
-        this.saveData();
+    async resetAll() {
+        try {
+            let localCleared = false;
+            let supabaseCleared = false;
+
+            // Lokalen Cache leeren
+            const localUserCount = this.userXP.size;
+            this.userXP.clear();
+            this.saveData();
+            localCleared = true;
+            console.log(`✅ ${localUserCount} User aus lokalem XP-Cache entfernt`);
+
+            // Alle User aus Supabase entfernen (falls verfügbar)
+            if (this.xpSupabaseAPI && this.xpSupabaseAPI.initialized) {
+                try {
+                    await this.xpSupabaseAPI.deleteAllUsers();
+                    supabaseCleared = true;
+                    console.log(`✅ Alle User aus Supabase Datenbank entfernt`);
+                } catch (error) {
+                    console.error(`❌ Fehler beim Löschen aller User aus Supabase:`, error);
+                }
+            } else {
+                console.log(`⚠️ Supabase API nicht verfügbar - nur lokaler Reset`);
+            }
+
+            console.log(`🔧 Alle XP-Daten erfolgreich zurückgesetzt (lokal: ${localCleared}, Supabase: ${supabaseCleared})`);
+            return { localCleared, supabaseCleared };
+        } catch (error) {
+            console.error(`❌ Fehler beim Zurücksetzen aller XP-Daten:`, error);
+            throw error;
+        }
     }
 
     // Automatisches Leaderboard erstellen und posten (Verbessertes Design)
