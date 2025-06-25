@@ -105,6 +105,64 @@ class XPSystem {
         this.loadUserDataFromSupabase();
     }
 
+    // Settings aus Supabase laden
+    async loadSettingsFromSupabase() {
+        if (!this.supabaseClient || !this.useSupabase) {
+            console.log('📄 Supabase nicht verfügbar für Settings, verwende JSON-Fallback');
+            return;
+        }
+
+        try {
+            console.log(`🔄 Lade XP-Settings aus Supabase für Guild ${this.guildId}...`);
+            
+            // Hauptsettings laden
+            const { data: settingsData, error: settingsError } = await this.supabaseClient
+                .from('xp_settings')
+                .select('*')
+                .eq('guild_id', this.guildId)
+                .single();
+
+            // Level-Rollen laden
+            const { data: levelRoles, error: rolesError } = await this.supabaseClient
+                .from('xp_level_roles')
+                .select('*')
+                .eq('guild_id', this.guildId)
+                .order('level');
+
+            // Meilenstein-Belohnungen laden
+            const { data: milestoneRewards, error: milestonesError } = await this.supabaseClient
+                .from('xp_milestone_rewards')
+                .select('*')
+                .eq('guild_id', this.guildId)
+                .order('xp_required');
+
+            if (settingsError && settingsError.code !== 'PGRST116') {
+                throw settingsError;
+            }
+
+            if (settingsData) {
+                // Konvertiere Supabase-Daten zu internem Format
+                this.settings = this.convertSupabaseToSettings(settingsData, levelRoles || [], milestoneRewards || []);
+                console.log('✅ XP-Settings aus Supabase geladen');
+            } else {
+                console.log('📄 Keine XP-Settings in Supabase gefunden, verwende Defaults');
+                // Erstelle Standard-Settings in Supabase
+                await this.createDefaultSettingsInSupabase();
+            }
+
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Supabase XP-Settings:', error);
+            console.log('📄 Fallback zu JSON-Settings...');
+            // Fallback zu JSON
+            if (fs.existsSync('./xp-settings.json')) {
+                const settingsData = fs.readFileSync('./xp-settings.json', 'utf8');
+                const savedSettings = JSON.parse(settingsData);
+                this.settings = this.deepMerge(this.settings, savedSettings);
+                console.log('✅ XP-Einstellungen aus JSON-Fallback geladen');
+            }
+        }
+    }
+
     // User-Daten aus Supabase laden
     async loadUserDataFromSupabase() {
         if (!this.supabaseClient || !this.useSupabase) {
@@ -233,7 +291,108 @@ class XPSystem {
         }
     }
 
-    // Daten laden (Hybrid: Settings aus JSON, User aus Supabase oder JSON-Fallback)
+    // Settings in Supabase speichern
+    async saveSettingsToSupabase() {
+        if (!this.supabaseClient || !this.useSupabase) return false;
+
+        try {
+            console.log(`💾 Speichere XP-Settings in Supabase für Guild ${this.guildId}...`);
+            
+            // Konvertiere interne Settings zu Supabase-Format
+            const supabaseSettings = this.convertSettingsToSupabase(this.settings);
+            
+            // Hauptsettings speichern
+            const { data: settingsData, error: settingsError } = await this.supabaseClient
+                .from('xp_settings')
+                .upsert([supabaseSettings], {
+                    onConflict: 'guild_id'
+                });
+
+            if (settingsError) throw settingsError;
+
+            // Level-Rollen speichern
+            await this.saveLevelRolesToSupabase();
+
+            // Meilenstein-Belohnungen speichern
+            await this.saveMilestoneRewardsToSupabase();
+
+            console.log('✅ XP-Settings erfolgreich in Supabase gespeichert');
+            return true;
+
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern der XP-Settings in Supabase:', error);
+            return false;
+        }
+    }
+
+    // Level-Rollen in Supabase speichern
+    async saveLevelRolesToSupabase() {
+        if (!this.settings.rewards.levelRoles || this.settings.rewards.levelRoles.length === 0) {
+            return;
+        }
+
+        try {
+            // Lösche alte Level-Rollen
+            await this.supabaseClient
+                .from('xp_level_roles')
+                .delete()
+                .eq('guild_id', this.guildId);
+
+            // Füge neue Level-Rollen hinzu
+            const levelRolesData = this.settings.rewards.levelRoles.map(role => ({
+                guild_id: this.guildId,
+                level: role.level,
+                role_id: role.roleId,
+                role_name: role.roleName
+            }));
+
+            const { error } = await this.supabaseClient
+                .from('xp_level_roles')
+                .insert(levelRolesData);
+
+            if (error) throw error;
+            console.log(`✅ ${levelRolesData.length} Level-Rollen in Supabase gespeichert`);
+
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern der Level-Rollen:', error);
+            throw error;
+        }
+    }
+
+    // Meilenstein-Belohnungen in Supabase speichern
+    async saveMilestoneRewardsToSupabase() {
+        if (!this.settings.rewards.milestoneRewards || this.settings.rewards.milestoneRewards.length === 0) {
+            return;
+        }
+
+        try {
+            // Lösche alte Meilenstein-Belohnungen
+            await this.supabaseClient
+                .from('xp_milestone_rewards')
+                .delete()
+                .eq('guild_id', this.guildId);
+
+            // Füge neue Meilenstein-Belohnungen hinzu
+            const milestoneData = this.settings.rewards.milestoneRewards.map(milestone => ({
+                guild_id: this.guildId,
+                xp_required: milestone.xp,
+                reward_name: milestone.reward
+            }));
+
+            const { error } = await this.supabaseClient
+                .from('xp_milestone_rewards')
+                .insert(milestoneData);
+
+            if (error) throw error;
+            console.log(`✅ ${milestoneData.length} Meilenstein-Belohnungen in Supabase gespeichert`);
+
+        } catch (error) {
+            console.error('❌ Fehler beim Speichern der Meilenstein-Belohnungen:', error);
+            throw error;
+        }
+    }
+
+    // Daten laden (Hybrid: Settings und User aus Supabase oder JSON-Fallback)
     loadData() {
         try {
             // Verhindere Laden während Emergency Reset
@@ -242,12 +401,19 @@ class XPSystem {
                 return;
             }
             
-            // Einstellungen aus JSON laden (bleibt unverändert)
-            if (fs.existsSync('./xp-settings.json')) {
-                const settingsData = fs.readFileSync('./xp-settings.json', 'utf8');
-                const savedSettings = JSON.parse(settingsData);
-                this.settings = this.deepMerge(this.settings, savedSettings);
-                console.log('✅ XP-Einstellungen aus JSON geladen');
+            // Settings: Versuche zuerst Supabase, dann JSON-Fallback
+            if (this.useSupabase && this.supabaseClient) {
+                this.loadSettingsFromSupabase();
+            } else {
+                // JSON-Fallback für Settings
+                if (fs.existsSync('./xp-settings.json')) {
+                    const settingsData = fs.readFileSync('./xp-settings.json', 'utf8');
+                    const savedSettings = JSON.parse(settingsData);
+                    this.settings = this.deepMerge(this.settings, savedSettings);
+                    console.log('✅ XP-Einstellungen aus JSON geladen');
+                } else {
+                    console.log('📄 Keine XP-Settings gefunden, verwende Defaults');
+                }
             }
 
             // User-Daten: Versuche zuerst Supabase, dann JSON-Fallback
@@ -255,30 +421,30 @@ class XPSystem {
                 this.loadUserDataFromSupabase();
             } else {
                 // JSON-Fallback für User-Daten
-            if (fs.existsSync('./xp-data.json')) {
-                const xpData = fs.readFileSync('./xp-data.json', 'utf8');
-                const parsedData = JSON.parse(xpData);
-                
+                if (fs.existsSync('./xp-data.json')) {
+                    const xpData = fs.readFileSync('./xp-data.json', 'utf8');
+                    const parsedData = JSON.parse(xpData);
+                    
                     console.log(`📊 Lade XP-User-Daten aus JSON: ${parsedData.length} User`);
                 
-                this.userXP.clear();
-                for (const userData of parsedData) {
-                    this.userXP.set(userData.userId, {
-                        xp: userData.xp || 0,
-                        level: userData.level || 1,
-                        totalXP: userData.totalXP || userData.xp || 0,
-                        lastMessage: userData.lastMessage || 0,
-                        voiceJoinTime: userData.voiceJoinTime || 0,
-                        messageCount: userData.messageCount || 0,
-                        voiceTime: userData.voiceTime || 0,
-                        username: userData.username || 'Unbekannt',
-                        avatar: userData.avatar || null
-                    });
-                }
+                    this.userXP.clear();
+                    for (const userData of parsedData) {
+                        this.userXP.set(userData.userId, {
+                            xp: userData.xp || 0,
+                            level: userData.level || 1,
+                            totalXP: userData.totalXP || userData.xp || 0,
+                            lastMessage: userData.lastMessage || 0,
+                            voiceJoinTime: userData.voiceJoinTime || 0,
+                            messageCount: userData.messageCount || 0,
+                            voiceTime: userData.voiceTime || 0,
+                            username: userData.username || 'Unbekannt',
+                            avatar: userData.avatar || null
+                        });
+                    }
                     console.log(`✅ ${this.userXP.size} User aus JSON in Memory-Cache geladen`);
-            } else {
+                } else {
                     console.log('📄 Keine XP-User-Daten gefunden, starte mit leerer Datenbank');
-            }
+                }
             }
 
         } catch (error) {
@@ -286,7 +452,7 @@ class XPSystem {
         }
     }
 
-    // Daten speichern (Hybrid: Settings in JSON, User in Supabase oder JSON-Fallback)
+    // Daten speichern (Hybrid: Settings und User in Supabase oder JSON-Fallback)
     async saveData() {
         try {
             // Verhindere Speichern während Emergency Reset
@@ -295,8 +461,19 @@ class XPSystem {
                 return;
             }
             
-            // Einstellungen in JSON speichern (bleibt unverändert)
-            fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
+            // Settings: Versuche zuerst Supabase, dann JSON-Fallback
+            if (this.useSupabase && this.supabaseClient) {
+                const settingsSuccess = await this.saveSettingsToSupabase();
+                if (!settingsSuccess) {
+                    // Fallback zu JSON wenn Supabase fehlschlägt
+                    fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
+                    console.log('📄 Settings in JSON-Fallback gespeichert');
+                }
+            } else {
+                // JSON-Fallback für Settings
+                fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
+                console.log('📄 Settings in JSON gespeichert');
+            }
 
             // User-Daten: Versuche zuerst Supabase, dann JSON-Fallback
             if (this.useSupabase && this.supabaseClient) {
@@ -1291,6 +1468,182 @@ class XPSystem {
         console.log('  - Gespeicherte Message-IDs:', this.settings.autoLeaderboard.lastMessageIds?.length || 0);
         
         this.saveData();
+    }
+
+    // Konvertiere Supabase-Daten zu internem Settings-Format
+    convertSupabaseToSettings(settingsData, levelRoles, milestoneRewards) {
+        return {
+            enabled: settingsData.enabled,
+            messageXP: {
+                min: settingsData.message_xp_min,
+                max: settingsData.message_xp_max,
+                cooldown: settingsData.message_xp_cooldown
+            },
+            voiceXP: {
+                baseXP: settingsData.voice_xp_base,
+                afkChannelXP: settingsData.voice_xp_afk_channel,
+                soloChannelXP: settingsData.voice_xp_solo_channel,
+                cooldown: settingsData.voice_xp_cooldown,
+                intervalMinutes: settingsData.voice_xp_interval_minutes
+            },
+            levelSystem: {
+                baseXP: settingsData.level_system_base_xp,
+                multiplier: parseFloat(settingsData.level_system_multiplier),
+                maxLevel: settingsData.level_system_max_level
+            },
+            channels: {
+                levelUpChannel: settingsData.level_up_channel,
+                leaderboardChannel: settingsData.leaderboard_channel,
+                xpBlacklist: settingsData.xp_blacklist_channels || [],
+                voiceBlacklist: settingsData.voice_blacklist_channels || []
+            },
+            autoLeaderboard: {
+                enabled: settingsData.auto_leaderboard_enabled,
+                time: settingsData.auto_leaderboard_time,
+                timezone: settingsData.auto_leaderboard_timezone,
+                channelName: settingsData.auto_leaderboard_channel,
+                types: settingsData.auto_leaderboard_types || ['total'],
+                limit: settingsData.auto_leaderboard_limit,
+                lastPosted: settingsData.auto_leaderboard_last_posted,
+                autoDeleteOld: settingsData.auto_leaderboard_auto_delete,
+                lastMessageIds: settingsData.auto_leaderboard_last_message_ids || []
+            },
+            rewards: {
+                levelRoles: levelRoles.map(role => ({
+                    level: role.level,
+                    roleId: role.role_id,
+                    roleName: role.role_name
+                })),
+                milestoneRewards: milestoneRewards.map(milestone => ({
+                    xp: milestone.xp_required,
+                    reward: milestone.reward_name
+                }))
+            },
+            announcements: {
+                levelUp: settingsData.announcements_level_up,
+                milestones: settingsData.announcements_milestones,
+                newRecord: settingsData.announcements_new_record
+            },
+            display: {
+                showRank: settingsData.display_show_rank,
+                showProgress: settingsData.display_show_progress,
+                embedColor: settingsData.display_embed_color,
+                leaderboardSize: settingsData.display_leaderboard_size
+            },
+            levelUpEmbed: {
+                enabled: settingsData.level_up_embed_enabled,
+                title: settingsData.level_up_embed_title,
+                color: settingsData.level_up_embed_color,
+                animation: {
+                    enabled: settingsData.animation_enabled,
+                    style: settingsData.animation_style,
+                    duration: settingsData.animation_duration
+                },
+                fields: {
+                    showStats: settingsData.fields_show_stats,
+                    showNextLevel: settingsData.fields_show_next_level,
+                    showRank: settingsData.fields_show_rank,
+                    customMessage: settingsData.fields_custom_message
+                },
+                footer: {
+                    enabled: settingsData.footer_enabled,
+                    text: settingsData.footer_text
+                }
+            }
+        };
+    }
+
+    // Konvertiere interne Settings zu Supabase-Format
+    convertSettingsToSupabase(settings) {
+        return {
+            guild_id: this.guildId,
+            enabled: settings.enabled,
+            
+            // Message XP
+            message_xp_min: settings.messageXP.min,
+            message_xp_max: settings.messageXP.max,
+            message_xp_cooldown: settings.messageXP.cooldown,
+            
+            // Voice XP
+            voice_xp_base: settings.voiceXP.baseXP,
+            voice_xp_afk_channel: settings.voiceXP.afkChannelXP,
+            voice_xp_solo_channel: settings.voiceXP.soloChannelXP,
+            voice_xp_cooldown: settings.voiceXP.cooldown,
+            voice_xp_interval_minutes: settings.voiceXP.intervalMinutes,
+            
+            // Level System
+            level_system_base_xp: settings.levelSystem.baseXP,
+            level_system_multiplier: settings.levelSystem.multiplier,
+            level_system_max_level: settings.levelSystem.maxLevel,
+            
+            // Channels
+            level_up_channel: settings.channels.levelUpChannel,
+            leaderboard_channel: settings.channels.leaderboardChannel,
+            xp_blacklist_channels: settings.channels.xpBlacklist || [],
+            voice_blacklist_channels: settings.channels.voiceBlacklist || [],
+            
+            // Auto Leaderboard
+            auto_leaderboard_enabled: settings.autoLeaderboard.enabled,
+            auto_leaderboard_time: settings.autoLeaderboard.time,
+            auto_leaderboard_timezone: settings.autoLeaderboard.timezone,
+            auto_leaderboard_channel: settings.autoLeaderboard.channelName,
+            auto_leaderboard_types: settings.autoLeaderboard.types || ['total'],
+            auto_leaderboard_limit: settings.autoLeaderboard.limit,
+            auto_leaderboard_last_posted: settings.autoLeaderboard.lastPosted,
+            auto_leaderboard_auto_delete: settings.autoLeaderboard.autoDeleteOld,
+            auto_leaderboard_last_message_ids: settings.autoLeaderboard.lastMessageIds || [],
+            
+            // Announcements
+            announcements_level_up: settings.announcements.levelUp,
+            announcements_milestones: settings.announcements.milestones,
+            announcements_new_record: settings.announcements.newRecord,
+            
+            // Display
+            display_show_rank: settings.display.showRank,
+            display_show_progress: settings.display.showProgress,
+            display_embed_color: settings.display.embedColor,
+            display_leaderboard_size: settings.display.leaderboardSize,
+            
+            // Level Up Embed
+            level_up_embed_enabled: settings.levelUpEmbed.enabled,
+            level_up_embed_title: settings.levelUpEmbed.title,
+            level_up_embed_color: settings.levelUpEmbed.color,
+            
+            // Animation
+            animation_enabled: settings.levelUpEmbed.animation.enabled,
+            animation_style: settings.levelUpEmbed.animation.style,
+            animation_duration: settings.levelUpEmbed.animation.duration,
+            
+            // Fields
+            fields_show_stats: settings.levelUpEmbed.fields.showStats,
+            fields_show_next_level: settings.levelUpEmbed.fields.showNextLevel,
+            fields_show_rank: settings.levelUpEmbed.fields.showRank,
+            fields_custom_message: settings.levelUpEmbed.fields.customMessage,
+            
+            // Footer
+            footer_enabled: settings.levelUpEmbed.footer.enabled,
+            footer_text: settings.levelUpEmbed.footer.text
+        };
+    }
+
+    // Standard-Settings in Supabase erstellen
+    async createDefaultSettingsInSupabase() {
+        try {
+            console.log(`🔧 Erstelle Standard-Settings in Supabase für Guild ${this.guildId}...`);
+            
+            const supabaseSettings = this.convertSettingsToSupabase(this.settings);
+            
+            const { error } = await this.supabaseClient
+                .from('xp_settings')
+                .insert([supabaseSettings]);
+
+            if (error) throw error;
+            
+            console.log('✅ Standard-Settings in Supabase erstellt');
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Erstellen der Standard-Settings:', error);
+        }
     }
     
     // Helper für deep merge

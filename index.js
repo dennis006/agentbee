@@ -9005,6 +9005,164 @@ app.post('/api/xp/settings', (req, res) => {
     }
 });
 
+// Level-Rolle hinzufügen
+app.post('/api/xp/level-roles', (req, res) => {
+    try {
+        if (!xpSystem) {
+            return res.status(503).json({ error: 'XP-System nicht initialisiert' });
+        }
+
+        const { level, roleId, roleName } = req.body;
+        
+        if (!level || !roleId || !roleName) {
+            return res.status(400).json({ error: 'Level, roleId und roleName sind erforderlich' });
+        }
+
+        // Überprüfe ob Level bereits existiert
+        const existingRole = xpSystem.settings.rewards.levelRoles.find(r => r.level === level);
+        if (existingRole) {
+            return res.status(400).json({ error: `Level ${level} hat bereits eine Rolle` });
+        }
+
+        // Überprüfe ob RoleId bereits verwendet wird
+        const existingRoleId = xpSystem.settings.rewards.levelRoles.find(r => r.roleId === roleId);
+        if (existingRoleId) {
+            return res.status(400).json({ error: 'Diese Rolle wird bereits für ein anderes Level verwendet' });
+        }
+
+        // Füge neue Level-Rolle hinzu
+        xpSystem.settings.rewards.levelRoles.push({ level, roleId, roleName });
+        
+        // Sortiere nach Level
+        xpSystem.settings.rewards.levelRoles.sort((a, b) => a.level - b.level);
+        
+        // Speichere Settings
+        xpSystem.saveData();
+        
+        console.log(`✅ Level-Rolle hinzugefügt: Level ${level} -> ${roleName} (${roleId})`);
+        res.json({ 
+            success: true, 
+            message: `Level-Rolle für Level ${level} hinzugefügt`,
+            levelRoles: xpSystem.settings.rewards.levelRoles
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Hinzufügen der Level-Rolle:', error);
+        res.status(500).json({ error: 'Fehler beim Hinzufügen der Level-Rolle' });
+    }
+});
+
+// Level-Rolle entfernen
+app.delete('/api/xp/level-roles/:level', (req, res) => {
+    try {
+        if (!xpSystem) {
+            return res.status(503).json({ error: 'XP-System nicht initialisiert' });
+        }
+
+        const level = parseInt(req.params.level);
+        
+        if (!level) {
+            return res.status(400).json({ error: 'Gültiges Level ist erforderlich' });
+        }
+
+        // Finde und entferne Level-Rolle
+        const initialLength = xpSystem.settings.rewards.levelRoles.length;
+        xpSystem.settings.rewards.levelRoles = xpSystem.settings.rewards.levelRoles.filter(r => r.level !== level);
+        
+        if (xpSystem.settings.rewards.levelRoles.length === initialLength) {
+            return res.status(404).json({ error: `Keine Level-Rolle für Level ${level} gefunden` });
+        }
+
+        // Speichere Settings
+        xpSystem.saveData();
+        
+        console.log(`✅ Level-Rolle entfernt: Level ${level}`);
+        res.json({ 
+            success: true, 
+            message: `Level-Rolle für Level ${level} entfernt`,
+            levelRoles: xpSystem.settings.rewards.levelRoles
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Entfernen der Level-Rolle:', error);
+        res.status(500).json({ error: 'Fehler beim Entfernen der Level-Rolle' });
+    }
+});
+
+// Meilenstein-Belohnung hinzufügen
+app.post('/api/xp/milestone-rewards', (req, res) => {
+    try {
+        if (!xpSystem) {
+            return res.status(503).json({ error: 'XP-System nicht initialisiert' });
+        }
+
+        const { xp, reward } = req.body;
+        
+        if (!xp || !reward) {
+            return res.status(400).json({ error: 'XP und Belohnung sind erforderlich' });
+        }
+
+        // Überprüfe ob XP-Wert bereits existiert
+        const existingReward = xpSystem.settings.rewards.milestoneRewards.find(r => r.xp === xp);
+        if (existingReward) {
+            return res.status(400).json({ error: `XP-Wert ${xp} hat bereits eine Belohnung` });
+        }
+
+        // Füge neue Meilenstein-Belohnung hinzu
+        xpSystem.settings.rewards.milestoneRewards.push({ xp, reward });
+        
+        // Sortiere nach XP
+        xpSystem.settings.rewards.milestoneRewards.sort((a, b) => a.xp - b.xp);
+        
+        // Speichere Settings
+        xpSystem.saveData();
+        
+        console.log(`✅ Meilenstein-Belohnung hinzugefügt: ${xp} XP -> ${reward}`);
+        res.json({ 
+            success: true, 
+            message: `Meilenstein-Belohnung für ${xp} XP hinzugefügt`,
+            milestoneRewards: xpSystem.settings.rewards.milestoneRewards
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Hinzufügen der Meilenstein-Belohnung:', error);
+        res.status(500).json({ error: 'Fehler beim Hinzufügen der Meilenstein-Belohnung' });
+    }
+});
+
+// Meilenstein-Belohnung entfernen
+app.delete('/api/xp/milestone-rewards/:xp', (req, res) => {
+    try {
+        if (!xpSystem) {
+            return res.status(503).json({ error: 'XP-System nicht initialisiert' });
+        }
+
+        const xp = parseInt(req.params.xp);
+        
+        if (!xp) {
+            return res.status(400).json({ error: 'Gültiger XP-Wert ist erforderlich' });
+        }
+
+        // Finde und entferne Meilenstein-Belohnung
+        const initialLength = xpSystem.settings.rewards.milestoneRewards.length;
+        xpSystem.settings.rewards.milestoneRewards = xpSystem.settings.rewards.milestoneRewards.filter(r => r.xp !== xp);
+        
+        if (xpSystem.settings.rewards.milestoneRewards.length === initialLength) {
+            return res.status(404).json({ error: `Keine Meilenstein-Belohnung für ${xp} XP gefunden` });
+        }
+
+        // Speichere Settings
+        xpSystem.saveData();
+        
+        console.log(`✅ Meilenstein-Belohnung entfernt: ${xp} XP`);
+        res.json({ 
+            success: true, 
+            message: `Meilenstein-Belohnung für ${xp} XP entfernt`,
+            milestoneRewards: xpSystem.settings.rewards.milestoneRewards
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Entfernen der Meilenstein-Belohnung:', error);
+        res.status(500).json({ error: 'Fehler beim Entfernen der Meilenstein-Belohnung' });
+    }
+});
+
 // Leaderboard laden
 app.get('/api/xp/leaderboard', (req, res) => {
     try {

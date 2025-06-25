@@ -32,23 +32,58 @@ async function testSupabaseXP() {
         const supabase = createClient(supabaseUrl, supabaseKey);
         console.log(`   ✅ Supabase Client erstellt (${keyType})\n`);
         
-        // 3. Verbindung testen
+        // 3. Verbindung testen (prüfe alle XP-Tabellen)
         console.log('3️⃣ Teste Supabase-Verbindung...');
-        const { data: connectionTest, error: connectionError } = await supabase
+        
+        // Teste xp_users Tabelle
+        const { data: usersTest, error: usersError } = await supabase
             .from('xp_users')
             .select('count', { count: 'exact', head: true });
             
-        if (connectionError) {
-            if (connectionError.code === '42P01') {
-                console.log('   ⚠️ Tabelle "xp_users" existiert nicht');
-                console.log('   📝 Führe die SQL-Migration aus: xp_users_supabase_migration.sql\n');
-                return false;
-            } else {
-                throw connectionError;
-            }
+        // Teste xp_settings Tabelle
+        const { data: settingsTest, error: settingsError } = await supabase
+            .from('xp_settings')
+            .select('count', { count: 'exact', head: true });
+            
+        // Teste xp_level_roles Tabelle
+        const { data: rolesTest, error: rolesError } = await supabase
+            .from('xp_level_roles')
+            .select('count', { count: 'exact', head: true });
+            
+        // Teste xp_milestone_rewards Tabelle
+        const { data: milestonesTest, error: milestonesError } = await supabase
+            .from('xp_milestone_rewards')
+            .select('count', { count: 'exact', head: true });
+            
+        if (usersError && usersError.code === '42P01') {
+            console.log('   ⚠️ Tabelle "xp_users" existiert nicht');
+            console.log('   📝 Führe die SQL-Migration aus: xp_users_supabase_migration.sql\n');
+            return false;
         }
         
-        console.log(`   ✅ Verbindung erfolgreich (${connectionTest?.count || 0} Einträge in xp_users)\n`);
+        if (settingsError && settingsError.code === '42P01') {
+            console.log('   ⚠️ Tabelle "xp_settings" existiert nicht');
+            console.log('   📝 Führe die SQL-Migration aus: xp_settings_supabase_migration.sql\n');
+            return false;
+        }
+        
+        if (rolesError && rolesError.code === '42P01') {
+            console.log('   ⚠️ Tabelle "xp_level_roles" existiert nicht');
+            console.log('   📝 Führe die SQL-Migration aus: xp_settings_supabase_migration.sql\n');
+            return false;
+        }
+        
+        if (milestonesError && milestonesError.code === '42P01') {
+            console.log('   ⚠️ Tabelle "xp_milestone_rewards" existiert nicht');
+            console.log('   📝 Führe die SQL-Migration aus: xp_settings_supabase_migration.sql\n');
+            return false;
+        }
+        
+        console.log(`   ✅ Verbindung erfolgreich:`);
+        console.log(`     - xp_users: ${usersTest?.count || 0} Einträge`);
+        console.log(`     - xp_settings: ${settingsTest?.count || 0} Einträge`);
+        console.log(`     - xp_level_roles: ${rolesTest?.count || 0} Einträge`);
+        console.log(`     - xp_milestone_rewards: ${milestonesTest?.count || 0} Einträge\n`);
         
         // 4. Test-Daten einfügen
         console.log('4️⃣ Teste Daten-Einfügung...');
