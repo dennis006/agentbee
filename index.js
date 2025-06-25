@@ -8085,6 +8085,21 @@ function startAutoLeaderboardTimer() {
 
 // ================== VALORANT API ENDPOINTS ==================
 
+// Valorant News Trigger Endpoint
+app.post('/api/valorant/news/trigger', async (req, res) => {
+    try {
+        const { postNewNews } = require('./valorant-news-bot');
+        await postNewNews();
+        res.json({ success: true, message: 'Valorant News wurden erfolgreich gepostet' });
+    } catch (error) {
+        console.error('❌ Fehler beim manuellen Posten der Valorant News:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Posten der Valorant News' 
+        });
+    }
+});
+
 // Valorant API-Token Status
 app.get('/api/valorant/token-status', (req, res) => {
     try {
