@@ -1026,6 +1026,165 @@ const XP: React.FC = () => {
 
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-6" activeTab={activeTab}>
+          
+          {/* Level Progression Overview */}
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <Crown className="w-5 h-5 text-purple-accent" />
+                Level Progression
+                <Tooltip 
+                  title="📊 Level Progression erklärt:"
+                  content={
+                    <div>
+                      <div>Zeigt XP-Anforderungen für jedes Level:</div>
+                      <div>• Basis XP: Startwert für Level 1</div>
+                      <div>• Multiplikator: Steigerung pro Level</div>
+                      <div>• Formel: Level N = Basis × (Multiplikator^(N-1))</div>
+                      <div>• Kumulative XP = Summe aller vorherigen Level</div>
+                    </div>
+                  }
+                />
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Übersicht der XP-Anforderungen für die ersten 20 Level
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+                {Array.from({ length: 20 }, (_, i) => {
+                  const level = i + 1;
+                  // Berechne XP für dieses Level (exponentiell)
+                  const xpForLevel = Math.floor(settings.levelSystem.baseXP * Math.pow(settings.levelSystem.multiplier, level - 1));
+                  
+                  // Berechne kumulative XP (Gesamte XP die man braucht um dieses Level zu erreichen)
+                  let cumulativeXP = 0;
+                  for (let j = 1; j <= level; j++) {
+                    cumulativeXP += Math.floor(settings.levelSystem.baseXP * Math.pow(settings.levelSystem.multiplier, j - 1));
+                  }
+                  
+                  // Level-spezifische Farben
+                  const getLevelColor = (lvl: number) => {
+                    if (lvl <= 5) return 'text-green-400 border-green-400/30 bg-green-400/10';
+                    if (lvl <= 10) return 'text-blue-400 border-blue-400/30 bg-blue-400/10';
+                    if (lvl <= 15) return 'text-purple-400 border-purple-400/30 bg-purple-400/10';
+                    return 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10';
+                  };
+
+                  return (
+                    <div 
+                      key={level} 
+                      className={`p-3 rounded-lg border transition-all duration-200 hover:scale-105 ${getLevelColor(level)}`}
+                    >
+                      <div className="text-center">
+                        <div className="font-bold text-lg mb-1">
+                          Level {level}
+                        </div>
+                        <div className="text-xs opacity-80 mb-2">
+                          {xpForLevel.toLocaleString()} XP
+                        </div>
+                        <div className="text-xs font-mono opacity-60">
+                          Total: {cumulativeXP.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Level Progression Stats */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-dark-bg/50 rounded-lg border border-purple-primary/20">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-accent">
+                    {settings.levelSystem.baseXP.toLocaleString()}
+                  </div>
+                  <div className="text-sm text-dark-muted">Basis XP</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-accent">
+                    {settings.levelSystem.multiplier}x
+                  </div>
+                  <div className="text-sm text-dark-muted">Multiplikator</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-accent">
+                    {(() => {
+                      let total = 0;
+                      for (let i = 1; i <= 10; i++) {
+                        total += Math.floor(settings.levelSystem.baseXP * Math.pow(settings.levelSystem.multiplier, i - 1));
+                      }
+                      return total.toLocaleString();
+                    })()}
+                  </div>
+                  <div className="text-sm text-dark-muted">XP für Level 10</div>
+                </div>
+              </div>
+
+              {/* Level Calculator */}
+              <div className="mt-4 p-4 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg border border-purple-primary/30">
+                <h5 className="text-sm font-semibold text-purple-400 mb-3 flex items-center gap-2">
+                  🧮 Level Rechner
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-dark-muted mb-2 block">XP eingeben um Level zu berechnen:</label>
+                    <Input
+                      type="number"
+                      placeholder="XP eingeben..."
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
+                      onChange={(e) => {
+                        const inputXP = parseInt(e.target.value) || 0;
+                        let level = 1;
+                        let totalXP = 0;
+                        
+                        // Berechne Level basierend auf eingegeben XP
+                        while (totalXP < inputXP && level <= settings.levelSystem.maxLevel) {
+                          const xpForCurrentLevel = Math.floor(settings.levelSystem.baseXP * Math.pow(settings.levelSystem.multiplier, level - 1));
+                          if (totalXP + xpForCurrentLevel <= inputXP) {
+                            totalXP += xpForCurrentLevel;
+                            level++;
+                          } else {
+                            break;
+                          }
+                        }
+                        
+                        const resultDiv = document.getElementById('level-calculator-result');
+                        if (resultDiv) {
+                          if (inputXP === 0) {
+                            resultDiv.innerHTML = '<span class="text-dark-muted">Gib XP ein...</span>';
+                          } else {
+                            const progress = inputXP - totalXP;
+                            const nextLevelXP = Math.floor(settings.levelSystem.baseXP * Math.pow(settings.levelSystem.multiplier, level - 1));
+                            const remaining = nextLevelXP - progress;
+                            
+                            resultDiv.innerHTML = `
+                              <div class="text-purple-400 font-bold">Level ${level - 1}</div>
+                              <div class="text-xs text-dark-muted">
+                                ${progress.toLocaleString()}/${nextLevelXP.toLocaleString()} XP zum nächsten Level
+                              </div>
+                              <div class="text-xs text-yellow-400">
+                                Noch ${remaining.toLocaleString()} XP bis Level ${level}
+                              </div>
+                            `;
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-dark-muted mb-2 block">Ergebnis:</label>
+                    <div 
+                      id="level-calculator-result" 
+                      className="p-3 bg-dark-bg/70 border border-purple-primary/30 rounded-lg min-h-[42px] flex flex-col justify-center"
+                    >
+                      <span className="text-dark-muted">Gib XP ein...</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Message XP Settings */}
             <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
