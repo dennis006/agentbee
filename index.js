@@ -2698,10 +2698,10 @@ try {
         console.log('🔄 Status-Updates gestoppt (disconnect)');
     });
     
-    // Automatisch Regeln posten nach 2 Sekunden
-    setTimeout(async () => {
-        await autoPostRules();
-    }, 2000);
+    // AUTO-POST DEAKTIVIERT: Regeln nur manuell über Dashboard posten
+    // setTimeout(async () => {
+    //     await autoPostRules();
+    // }, 2000);
     
 
 
@@ -2824,10 +2824,10 @@ try {
             startDailyResetTimer();
             console.log('✅ Daily Reset Timer gestartet');
             
-            // Starte Auto-Leaderboard Timer (alle 1 Minute prüfen)
-            console.log('🚀 Starte Auto-Leaderboard Timer...');
-            startAutoLeaderboardTimer();
-            console.log('✅ Auto-Leaderboard Timer Setup abgeschlossen');
+            // AUTO-LEADERBOARD DEAKTIVIERT: Nur manuell über Dashboard posten
+            // console.log('🚀 Starte Auto-Leaderboard Timer...');
+            // startAutoLeaderboardTimer();
+            // console.log('✅ Auto-Leaderboard Timer Setup abgeschlossen');
         
         // Force reload der Logs nach kurzer Zeit zur Sicherheit
         setTimeout(() => {
@@ -3310,12 +3310,10 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
         // Prüfe ob es die richtige Reaktion ist
         if (reaction.emoji.name === currentRules.reaction.emoji) {
             try {
-                // Suche nach "verified" oder ähnlicher Rolle
+                // Suche nach der exakt konfigurierten Rolle
                 const verifiedRole = guild.roles.cache.find(role => 
-                    role.name.toLowerCase().includes(currentRules.reaction.acceptedRole) ||
-                    role.name.toLowerCase().includes('verified') ||
-                    role.name.toLowerCase().includes('member') ||
-                    role.name.toLowerCase().includes('user')
+                    role.name.toLowerCase() === currentRules.reaction.acceptedRole.toLowerCase() ||
+                    role.name.toLowerCase().includes(currentRules.reaction.acceptedRole.toLowerCase())
                 );
 
                 if (verifiedRole && !member.roles.cache.has(verifiedRole.id)) {
@@ -3374,9 +3372,8 @@ client.on(Events.MessageReactionRemove, async (reaction, user) => {
 
         // Optional: Rolle entfernen wenn Reaktion entfernt wird
         const verifiedRole = guild.roles.cache.find(role => 
-            role.name.toLowerCase().includes(currentRules.reaction.acceptedRole) ||
-            role.name.toLowerCase().includes('verified') ||
-            role.name.toLowerCase().includes('member')
+            role.name.toLowerCase() === currentRules.reaction.acceptedRole.toLowerCase() ||
+            role.name.toLowerCase().includes(currentRules.reaction.acceptedRole.toLowerCase())
         );
 
         if (verifiedRole && member.roles.cache.has(verifiedRole.id)) {
