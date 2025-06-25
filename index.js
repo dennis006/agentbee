@@ -2117,6 +2117,9 @@ client.commands = new Collection();
 // XP System initialisieren
 let xpSystem;
 
+// Valorant News System initialisieren
+let valorantNewsSystem;
+
 // Speichere Regeln-Nachrichten IDs für Reaktionen
 const rulesMessages = new Map();
 
@@ -2659,6 +2662,23 @@ client.once(Events.ClientReady, async readyClient => {
     }
     
     global.xpSystem = xpSystem; // Als globale Variable verfügbar machen
+
+    // Valorant News System initialisieren
+    valorantNewsSystem = new ValorantNewsSystem(client);
+    
+    // Supabase für News-System initialisieren falls verfügbar
+    if (global.supabaseClient) {
+        valorantNewsSystem.initializeSupabase(global.supabaseClient);
+        console.log('📰 Valorant News System mit Supabase initialisiert');
+        
+        // Starte automatische News-Updates
+        valorantNewsSystem.startAutoUpdate();
+        console.log('📰 Automatische Valorant News Updates gestartet');
+    } else {
+        console.log('⚠️ Valorant News System deaktiviert - Supabase erforderlich');
+    }
+    
+    global.valorantNewsSystem = valorantNewsSystem; // Als globale Variable verfügbar machen
 
 // Giveaway-System initialisieren
 let giveawaySystem = new GiveawaySystem(client);
@@ -9799,6 +9819,99 @@ app.get('/api/xp/channels', (req, res) => {
     } catch (error) {
         console.error('❌ Fehler beim Laden der Channels:', error);
         res.status(500).json({ error: 'Fehler beim Laden der Channels' });
+    }
+});
+
+// ================== VALORANT NEWS API ENDPOINTS ==================
+
+// GET: Aktuelle News laden
+app.get('/api/valorant/news', async (req, res) => {
+    try {
+        if (!valorantNewsSystem) {
+            return res.status(503).json({ error: 'Valorant News System nicht verfügbar' });
+        }
+
+        const stats = await valorantNewsSystem.getNewsStats();
+        
+        res.json({
+            success: true,
+            stats: stats || {
+                total: 0,
+                posted: 0,
+                pending: 0,
+                lastUpdate: 'Nie'
+            }
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Valorant News:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// POST: Manuelle News-Aktualisierung
+app.post('/api/valorant/news/update', async (req, res) => {
+    try {
+        if (!valorantNewsSystem) {
+            return res.status(503).json({ error: 'Valorant News System nicht verfügbar' });
+        }
+
+        const result = await valorantNewsSystem.forceUpdateNews();
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                message: result.message,
+                totalNews: result.totalNews,
+                newNews: result.newNews,
+                posted: result.posted
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.message
+            });
+        }
+    } catch (error) {
+        console.error('❌ Fehler beim manuellen News Update:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// GET: Valorant News Status
+app.get('/api/valorant/news/status', async (req, res) => {
+    try {
+        if (!valorantNewsSystem) {
+            return res.status(503).json({ error: 'Valorant News System nicht verfügbar' });
+        }
+
+        const stats = await valorantNewsSystem.getNewsStats();
+        const henrikApiAvailable = !!process.env.HENRIK_API_KEY;
+        const supabaseAvailable = !!global.supabaseClient;
+        const autoUpdateActive = valorantNewsSystem.autoUpdateInterval !== null;
+
+        res.json({
+            success: true,
+            status: {
+                system: 'active',
+                henrikApi: henrikApiAvailable,
+                supabase: supabaseAvailable,
+                autoUpdate: autoUpdateActive,
+                targetChannel: valorantNewsSystem.newsChannelName,
+                updateInterval: valorantNewsSystem.checkInterval / 60000 + ' Minuten',
+                nextUpdate: valorantNewsSystem.lastCheckTime > 0 ? 
+                    new Date(valorantNewsSystem.lastCheckTime + valorantNewsSystem.checkInterval).toLocaleString('de-DE') : 
+                    'Unbekannt'
+            },
+            stats: stats || {
+                total: 0,
+                posted: 0,
+                pending: 0,
+                lastUpdate: 'Nie'
+            }
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Laden des Valorant News Status:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
     }
 });
 
