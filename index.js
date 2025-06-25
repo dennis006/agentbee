@@ -67,10 +67,15 @@ function initializeSupabase() {
             const keyType = supabaseServiceKey ? 'SERVICE_ROLE' : 'ANON_KEY';
             
             supabase = createClient(supabaseUrl, keyToUse);
+            // Wichtig: Supabase als globale Variable verfügbar machen für XP-System
+            global.supabaseClient = supabase;
             console.log(`✅ Supabase erfolgreich initialisiert (${keyType})`);
             return true;
         } else {
             console.log('⚠️ Supabase Credentials nicht gefunden - verwende JSON-Fallback');
+            console.log(`   SUPABASE_URL: ${supabaseUrl ? 'gesetzt' : 'nicht gesetzt'}`);
+            console.log(`   SUPABASE_SERVICE_KEY: ${supabaseServiceKey ? 'gesetzt' : 'nicht gesetzt'}`);
+            console.log(`   SUPABASE_ANON_KEY: ${supabaseAnonKey ? 'gesetzt' : 'nicht gesetzt'}`);
             return false;
         }
     } catch (error) {
