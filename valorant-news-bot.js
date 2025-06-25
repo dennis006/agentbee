@@ -64,7 +64,7 @@ function buildNewsEmbed(news) {
     .setImage(news.banner_url || news.banner || null)
     .setTimestamp(new Date(news.date || Date.now()))
     .setColor(0xE74C3C)
-    .setFooter({ text: 'VALORANT News • henrikdev.xyz' });
+    .setFooter({ text: 'VALORANT News • AgentBee' });
 }
 
 async function postNewNews() {
@@ -96,12 +96,21 @@ async function postNewNews() {
   }
 }
 
-client.once('ready', () => {
-  console.log(`🤖 Valorant News Bot online als ${client.user.tag}`);
-  // Initial sofort prüfen
-  postNewNews();
-  // Dann alle 60 Minuten
-  setInterval(postNewNews, 60 * 60 * 1000);
-});
+// Exportiere Funktionen für API-Integration
+module.exports = {
+  postNewNews,
+  client
+};
 
-client.login(DISCORD_TOKEN); 
+// Starte Bot nur, wenn direkt ausgeführt (nicht beim Import für API)
+if (require.main === module) {
+  client.once('ready', () => {
+    console.log(`🤖 Valorant News Bot online als ${client.user.tag}`);
+    // Initial sofort prüfen
+    postNewNews();
+    // Dann alle 60 Minuten
+    setInterval(postNewNews, 60 * 60 * 1000);
+  });
+
+  client.login(DISCORD_TOKEN);
+} 
