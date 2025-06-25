@@ -406,10 +406,10 @@ class XPSystem {
                 this.loadSettingsFromSupabase();
             } else {
                 // JSON-Fallback für Settings
-                if (fs.existsSync('./xp-settings.json')) {
-                    const settingsData = fs.readFileSync('./xp-settings.json', 'utf8');
-                    const savedSettings = JSON.parse(settingsData);
-                    this.settings = this.deepMerge(this.settings, savedSettings);
+            if (fs.existsSync('./xp-settings.json')) {
+                const settingsData = fs.readFileSync('./xp-settings.json', 'utf8');
+                const savedSettings = JSON.parse(settingsData);
+                this.settings = this.deepMerge(this.settings, savedSettings);
                     console.log('✅ XP-Einstellungen aus JSON geladen');
                 } else {
                     console.log('📄 Keine XP-Settings gefunden, verwende Defaults');
@@ -421,30 +421,30 @@ class XPSystem {
                 this.loadUserDataFromSupabase();
             } else {
                 // JSON-Fallback für User-Daten
-                if (fs.existsSync('./xp-data.json')) {
-                    const xpData = fs.readFileSync('./xp-data.json', 'utf8');
-                    const parsedData = JSON.parse(xpData);
-                    
+            if (fs.existsSync('./xp-data.json')) {
+                const xpData = fs.readFileSync('./xp-data.json', 'utf8');
+                const parsedData = JSON.parse(xpData);
+                
                     console.log(`📊 Lade XP-User-Daten aus JSON: ${parsedData.length} User`);
                 
-                    this.userXP.clear();
-                    for (const userData of parsedData) {
-                        this.userXP.set(userData.userId, {
-                            xp: userData.xp || 0,
-                            level: userData.level || 1,
-                            totalXP: userData.totalXP || userData.xp || 0,
-                            lastMessage: userData.lastMessage || 0,
-                            voiceJoinTime: userData.voiceJoinTime || 0,
-                            messageCount: userData.messageCount || 0,
-                            voiceTime: userData.voiceTime || 0,
-                            username: userData.username || 'Unbekannt',
-                            avatar: userData.avatar || null
-                        });
-                    }
-                    console.log(`✅ ${this.userXP.size} User aus JSON in Memory-Cache geladen`);
-                } else {
-                    console.log('📄 Keine XP-User-Daten gefunden, starte mit leerer Datenbank');
+                this.userXP.clear();
+                for (const userData of parsedData) {
+                    this.userXP.set(userData.userId, {
+                        xp: userData.xp || 0,
+                        level: userData.level || 1,
+                        totalXP: userData.totalXP || userData.xp || 0,
+                        lastMessage: userData.lastMessage || 0,
+                        voiceJoinTime: userData.voiceJoinTime || 0,
+                        messageCount: userData.messageCount || 0,
+                        voiceTime: userData.voiceTime || 0,
+                        username: userData.username || 'Unbekannt',
+                        avatar: userData.avatar || null
+                    });
                 }
+                    console.log(`✅ ${this.userXP.size} User aus JSON in Memory-Cache geladen`);
+            } else {
+                    console.log('📄 Keine XP-User-Daten gefunden, starte mit leerer Datenbank');
+            }
             }
 
         } catch (error) {
@@ -466,7 +466,7 @@ class XPSystem {
                 const settingsSuccess = await this.saveSettingsToSupabase();
                 if (!settingsSuccess) {
                     // Fallback zu JSON wenn Supabase fehlschlägt
-                    fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
+            fs.writeFileSync('./xp-settings.json', JSON.stringify(this.settings, null, 2));
                     console.log('📄 Settings in JSON-Fallback gespeichert');
                 }
             } else {
@@ -748,8 +748,8 @@ class XPSystem {
             return;
         }
 
-        // Level-Up Nachricht senden
-        const levelUpChannel = guild.channels.cache.find(ch => 
+        // Level-Up Nachricht senden - verwende this.client wie bei Meilensteinen
+        const levelUpChannel = this.client.channels.cache.find(ch => 
             ch.name.includes(this.settings.channels.levelUpChannel) ||
             ch.name.includes('level') ||
             ch.name.includes('general')
@@ -757,32 +757,36 @@ class XPSystem {
 
         console.log(`   Suche Channel: ${this.settings.channels.levelUpChannel}`);
         console.log(`   Gefundener Channel: ${levelUpChannel ? levelUpChannel.name : 'nicht gefunden'}`);
+        console.log(`   Guild ID: ${guild ? guild.id : 'keine Guild'}`);
+        console.log(`   Client verfügbar: ${this.client ? 'ja' : 'nein'}`);
+        console.log(`   Anzahl verfügbare Channels: ${this.client ? this.client.channels.cache.size : 0}`);
 
         if (levelUpChannel) {
             try {
-                const embed = await this.createLevelUpEmbed(user, oldLevel, newLevel);
+            const embed = await this.createLevelUpEmbed(user, oldLevel, newLevel);
                 console.log('✅ Level-Up-Embed erstellt');
-                
-                // Animation-Support: Mehrere Nachrichten für Animationseffekt
-                if (this.settings.levelUpEmbed.animation.enabled) {
+            
+            // Animation-Support: Mehrere Nachrichten für Animationseffekt
+            if (this.settings.levelUpEmbed.animation.enabled) {
                     console.log('🎬 Sende animierte Level-Up-Nachricht');
-                    await this.sendAnimatedLevelUp(levelUpChannel, embed, user, newLevel);
-                } else {
+                await this.sendAnimatedLevelUp(levelUpChannel, embed, user, newLevel);
+            } else {
                     console.log('💬 Sende normale Level-Up-Nachricht');
-                    await levelUpChannel.send({ embeds: [embed] });
-                }
+                await levelUpChannel.send({ embeds: [embed] });
+            }
                 console.log('✅ Level-Up-Nachricht erfolgreich gesendet');
             } catch (error) {
                 console.error('❌ Fehler beim Senden der Level-Up-Nachricht:', error);
             }
         } else {
             console.log('❌ Kein geeigneter Channel für Level-Up-Nachrichten gefunden');
-            console.log('   Verfügbare Channels:', guild.channels.cache.map(ch => ch.name).join(', '));
+            console.log('   Verfügbare Guild-Channels:', guild.channels.cache.map(ch => ch.name).join(', '));
+            console.log('   Verfügbare Client-Channels:', this.client ? this.client.channels.cache.map(ch => ch.name).slice(0, 10).join(', ') : 'Client nicht verfügbar');
         }
 
         // Alle Rollen-Systeme aktualisieren (Level-Rollen und Meilenstein-Rollen)
         try {
-            await this.updateAllUserRoles(guild, user, newLevel);
+        await this.updateAllUserRoles(guild, user, newLevel);
             console.log('✅ Rollen-Systeme aktualisiert');
         } catch (error) {
             console.error('❌ Fehler beim Aktualisieren der Rollen:', error);
