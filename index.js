@@ -1094,6 +1094,14 @@ async function handleValorantModalSubmission(interaction) {
 // Express API Server
 const app = express();
 
+// CORS Konfiguration
+app.use(cors({
+    origin: 'https://agentbee-dashboard.netlify.app',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+    credentials: true
+}));
+
 // CORS Configuration für Production
 const corsOptions = {
     origin: function (origin, callback) {
