@@ -750,6 +750,26 @@ const Dashboard = () => {
               <RotateCcw className="w-5 h-5 mr-2" />
               🚧 Restart Bot - Coming Soon
             </Button>
+            
+            {/* Sofort Valorant News posten */}
+            <Button
+              onClick={async () => {
+                try {
+                  const response = await fetch(`${apiUrl}/api/valorant/news/trigger`, { method: 'POST' });
+                  if (response.ok) {
+                    showSuccess('Valorant News gepostet!', 'Die neuesten Valorant-News wurden im Discord gepostet.');
+                  } else {
+                    showError('Fehler beim Posten', 'Die News konnten nicht gepostet werden.');
+                  }
+                } catch (error) {
+                  showError('Verbindungsfehler', 'Konnte keine Verbindung zum Bot-Backend herstellen.');
+                }
+              }}
+              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105"
+            >
+              <Zap className="w-5 h-5 mr-2" />
+              Valorant News jetzt posten
+            </Button>
           </div>
           
           {/* Coming Soon Notice */}
