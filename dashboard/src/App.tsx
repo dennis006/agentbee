@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { Home, FileText, BarChart3, Settings as SettingsIcon, Zap, Heart, Star, Play, Shield, Users, ChevronDown, Target, Key, Bot, Ticket, Activity, Gift, Music, LogOut, User, Server } from 'lucide-react'
+import { Home, FileText, BarChart3, Settings as SettingsIcon, Zap, Heart, Star, Play, Shield, Users, ChevronDown, Target, Key, Bot, Ticket, Activity, Gift, Music, LogOut, User, Server, Newspaper } from 'lucide-react'
 import AuthProvider, { useAuth } from './contexts/AuthContext'
 // Import API library to activate global fetch override
 import './lib/api'
@@ -17,6 +17,7 @@ import VerificationSettings from './pages/VerificationSettings'
 import XP from './pages/XP'
 import TwitchNotifications from './pages/TwitchNotifications'
 import Valorant from './pages/Valorant'
+import ValorantNews from './pages/ValorantNews'
 import APIKeys from './pages/APIKeys'
 import Security from './pages/Security'
 // GELÖSCHT: ServerManager entfernt
@@ -107,7 +108,8 @@ const Navigation = ({
         { id: 'tickets', icon: Ticket, label: 'Ticket System', description: 'Support & Help Desk System' },
         // AFK System entfernt - verwende Discord Native AFK
         { id: 'twitch', icon: Play, label: 'Twitch Live', description: 'Live Stream Notifications' },
-        { id: 'valorant', icon: Target, label: 'Valorant', description: 'Player Stats & MMR Tracking' }
+        { id: 'valorant', icon: Target, label: 'Valorant', description: 'Player Stats & MMR Tracking' },
+        { id: 'valorant-news', icon: Newspaper, label: 'Valorant News', description: 'Automatische News Updates' }
       ]
     },
     {
@@ -405,6 +407,8 @@ const DashboardLayout = () => {
         return <TwitchNotifications />
       case 'valorant':
         return <Valorant />
+      case 'valorant-news':
+        return <ValorantNews />
       case 'verification':
         return <VerificationSettings />
       case 'logs':

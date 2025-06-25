@@ -23,6 +23,7 @@ const { makeValorantCard } = require('./src/utils/valorantCard');
 const TicketSystem = require('./ticket-system');
 const ServerStats = require('./server-stats-api');
 const settingsAPI = require('./settings-api');
+const ValorantNewsSystem = require('./valorant-news-system');
 // GELÖSCHT: Analytics-APIs entfernt (verursachten Bot-Crashes)
 const BulkServerActionsAPI = require('./bulk-server-actions-api');
 const MassMemberManagementAPI = require('./mass-member-management-api');
@@ -2617,19 +2618,24 @@ client.once(Events.ClientReady, async readyClient => {
     
     global.xpSystem = xpSystem; // Als globale Variable verfügbar machen
 
-    // Valorant News System initialisieren
+    // Valorant News System initialisieren (immer verfügbar)
     valorantNewsSystem = new ValorantNewsSystem(client);
     
     // Supabase für News-System initialisieren falls verfügbar
     if (global.supabaseClient) {
-        valorantNewsSystem.initializeSupabase(global.supabaseClient);
-        console.log('📰 Valorant News System mit Supabase initialisiert');
-        
-        // Starte automatische News-Updates
-        valorantNewsSystem.startAutoUpdate();
-        console.log('📰 Automatische Valorant News Updates gestartet');
+        try {
+            valorantNewsSystem.initializeSupabase(global.supabaseClient);
+            console.log('📰 Valorant News System mit Supabase initialisiert');
+            
+            // Starte automatische News-Updates
+            valorantNewsSystem.startAutoUpdate();
+            console.log('📰 Automatische Valorant News Updates gestartet');
+        } catch (error) {
+            console.error('❌ Fehler bei Valorant News System Supabase-Initialisierung:', error);
+            console.log('📰 Valorant News System läuft ohne Supabase (reduzierte Funktionalität)');
+        }
     } else {
-        console.log('⚠️ Valorant News System deaktiviert - Supabase erforderlich');
+        console.log('📰 Valorant News System läuft ohne Supabase (reduzierte Funktionalität)');
     }
     
     global.valorantNewsSystem = valorantNewsSystem; // Als globale Variable verfügbar machen
