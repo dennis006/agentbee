@@ -21,6 +21,15 @@ class ValorantNewsSystem {
         try {
             console.log('📰 Lade Valorant News von AgentBee...');
             
+            // Prüfe ob API Key verfügbar ist
+            if (!this.henrikApiKey || this.henrikApiKey.trim() === '') {
+                console.error('❌ Henrik API Key fehlt! Konfigurieren Sie den API Key im Dashboard.');
+                
+                // Fallback: Beispiel-News für Demo-Zwecke
+                console.log('📰 Verwende Demo-News (Henrik API Key fehlt)');
+                return this.getDemoNews();
+            }
+            
             const response = await fetch('https://api.henrikdev.xyz/valorant/v1/website/de-de', {
                 headers: {
                     'Authorization': this.henrikApiKey,
@@ -30,17 +39,56 @@ class ValorantNewsSystem {
 
             if (!response.ok) {
                 console.error('❌ Henrik API Fehler:', response.status, response.statusText);
-                return null;
+                
+                if (response.status === 401) {
+                    console.error('❌ Henrik API Key ungültig oder abgelaufen');
+                    return this.getDemoNews();
+                }
+                if (response.status === 429) {
+                    console.error('❌ Henrik API Rate Limit erreicht');
+                    return this.getDemoNews();
+                }
+                
+                return this.getDemoNews();
             }
 
             const data = await response.json();
-            console.log(`✅ ${data.data?.length || 0} Valorant News Artikel geladen`);
+            console.log(`✅ ${data.data?.length || 0} Valorant News Artikel von Henrik API geladen`);
             
             return data.data || [];
         } catch (error) {
             console.error('❌ Fehler beim Laden der Valorant News:', error);
-            return null;
+            console.log('📰 Verwende Demo-News als Fallback');
+            return this.getDemoNews();
         }
+    }
+
+    // Demo-News für Testing/Fallback
+    getDemoNews() {
+        return [
+            {
+                id: 'demo_news_1',
+                title: '🎯 Valorant News System ist aktiv!',
+                description: 'Das Valorant News System wurde erfolgreich eingerichtet. Konfigurieren Sie einen Henrik API Key für echte News-Updates.',
+                date: new Date().toISOString(),
+                category: 'System',
+                url: 'https://playvalorant.com/',
+                banner_url: 'https://media.valorant-api.com/logo/v_color.png',
+                author: 'AgentBee Bot',
+                tags: ['System', 'Demo', 'Test']
+            },
+            {
+                id: 'demo_news_2', 
+                title: '⚙️ Henrik API Key konfigurieren',
+                description: 'Um echte Valorant News zu erhalten, konfigurieren Sie einen Henrik API Key im Dashboard unter "API Konfiguration".',
+                date: new Date(Date.now() - 60000).toISOString(),
+                category: 'Konfiguration',
+                url: 'https://docs.henrikdev.xyz/valorant.html',
+                banner_url: 'https://media.valorant-api.com/logo/v_color.png',
+                author: 'AgentBee Bot',
+                tags: ['Konfiguration', 'API', 'Setup']
+            }
+        ];
     }
 
     // News in Supabase speichern
@@ -279,10 +327,10 @@ class ValorantNewsSystem {
 
             // 1. News von API laden
             const newsArticles = await this.fetchValorantNews();
-            if (!newsArticles) {
+            if (!newsArticles || newsArticles.length === 0) {
                 return { 
                     success: false, 
-                    message: 'Fehler beim Laden der News von der Henrik API. Bitte später versuchen.' 
+                    message: 'Keine News verfügbar. Prüfen Sie die Henrik API Konfiguration.' 
                 };
             }
 
