@@ -679,8 +679,11 @@ class XPSystem {
 
         // Level berechnen
         const newLevel = this.calculateLevel(userData.totalXP);
-        if (newLevel !== userData.level) {
+        const levelChanged = newLevel !== userData.level;
+        
+        if (levelChanged) {
             userData.level = newLevel;
+            console.log(`🎉 Level-Up erkannt! ${user.username}: ${oldLevel} -> ${newLevel}`);
         }
 
         // Lokal speichern
@@ -701,6 +704,21 @@ class XPSystem {
             console.log(`💾 Speichere User ${user.username} in JSON (Supabase: ${this.useSupabase ? 'aktiviert' : 'deaktiviert'}, Client: ${this.supabaseClient ? 'verfügbar' : 'nicht verfügbar'})`);
             // JSON-Fallback
             this.saveUserDataToJSON();
+        }
+
+        // Level-Up Handler aufrufen (FIX: Das war das fehlende Stück!)
+        if (levelChanged && this.client) {
+            console.log(`🎯 Level-Up Handler wird aufgerufen für ${user.username}`);
+            try {
+                const guild = this.client.guilds.cache.get(this.guildId);
+                if (guild) {
+                    await this.handleLevelUp(guild, user, oldLevel, newLevel);
+                } else {
+                    console.error(`❌ Guild ${this.guildId} nicht gefunden`);
+                }
+            } catch (error) {
+                console.error('❌ Fehler beim Level-Up Handler:', error);
+            }
         }
 
         // Meilenstein-Check
@@ -748,9 +766,12 @@ class XPSystem {
             return;
         }
 
-        // Level-Up Nachricht senden - verwende this.client wie bei Meilensteinen
+        // Level-Up Nachricht senden - exakte Channel-Suche wie bei Meilensteinen
+        const channelName = this.settings.channels.levelUpChannel;
         const levelUpChannel = this.client.channels.cache.find(ch => 
-            ch.name.includes(this.settings.channels.levelUpChannel) ||
+            ch.name === channelName || 
+            ch.name.includes(channelName) ||
+            ch.name.includes('level-up') ||
             ch.name.includes('level') ||
             ch.name.includes('general')
         );
