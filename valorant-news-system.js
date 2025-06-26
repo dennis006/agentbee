@@ -79,24 +79,33 @@ class ValorantNewsSystem {
 
     // News in Supabase speichern
     async saveNewsToSupabase(articles) {
-        if (!this.supabaseClient || !articles?.length) return false;
+        if (!this.supabaseClient || !articles?.length) {
+            console.log('⚠️ Supabase nicht verfügbar oder keine Artikel zum Speichern');
+            return false;
+        }
 
         try {
             console.log(`💾 Speichere ${articles.length} News Artikel in Supabase...`);
 
-            const newsData = articles.map(article => ({
-                news_id: article.id || this.generateNewsId(article),
-                title: article.title,
-                description: article.description || '',
-                date: new Date(article.date).toISOString(),
-                category: article.category || 'General',
-                url: article.url || '',
-                banner_url: article.banner_url || article.image || '',
-                author: article.author || 'Riot Games',
-                tags: JSON.stringify(article.tags || []),
-                created_at: new Date().toISOString(),
-                posted_to_discord: false
-            }));
+            const newsData = articles.map(article => {
+                const newsId = article.id || this.generateNewsId(article);
+                const newsEntry = {
+                    news_id: newsId,
+                    title: article.title,
+                    description: article.description || '',
+                    date: new Date(article.date).toISOString(),
+                    category: article.category || 'General',
+                    url: article.url || '',
+                    banner_url: article.banner_url || article.image || '',
+                    author: article.author || 'Riot Games',
+                    tags: JSON.stringify(article.tags || []),
+                    created_at: new Date().toISOString(),
+                    posted_to_discord: false
+                };
+                
+                console.log(`📝 Bereite News vor: ${newsEntry.title} (ID: ${newsId})`);
+                return newsEntry;
+            });
 
             const { data, error } = await this.supabaseClient
                 .from('valorant_news')
@@ -105,13 +114,22 @@ class ValorantNewsSystem {
 
             if (error) {
                 console.error('❌ Supabase News Speicher-Fehler:', error);
+                console.error('❌ Error Details:', JSON.stringify(error, null, 2));
                 return false;
             }
 
-            console.log(`✅ ${data?.length || 0} News Artikel in Supabase gespeichert`);
+            console.log(`✅ ${data?.length || 0} News Artikel erfolgreich in Supabase gespeichert`);
+            
+            // Debug: Zeige die gespeicherten News IDs
+            if (data && data.length > 0) {
+                data.forEach(savedNews => {
+                    console.log(`📋 Gespeichert: ${savedNews.title} (ID: ${savedNews.news_id})`);
+                });
+            }
+            
             return true;
         } catch (error) {
-            console.error('❌ Fehler beim Speichern der News:', error);
+            console.error('❌ Kritischer Fehler beim Speichern der News:', error);
             return false;
         }
     }
@@ -132,6 +150,32 @@ class ValorantNewsSystem {
             hash = hash & hash; // 32bit integer
         }
         return Math.abs(hash).toString(36);
+    }
+
+    // Bestehende News IDs aus Supabase laden
+    async getExistingNewsIds() {
+        if (!this.supabaseClient) {
+            return new Set();
+        }
+
+        try {
+            const { data, error } = await this.supabaseClient
+                .from('valorant_news')
+                .select('news_id')
+                .gte('date', this.newsCutoffDate.toISOString()); // Nur News ab Cutoff-Datum
+
+            if (error) {
+                console.error('❌ Fehler beim Laden bestehender News IDs:', error);
+                return new Set();
+            }
+
+            const newsIds = new Set(data?.map(row => row.news_id) || []);
+            console.log(`📋 ${newsIds.size} bestehende News IDs geladen`);
+            return newsIds;
+        } catch (error) {
+            console.error('❌ Fehler beim Laden bestehender News IDs:', error);
+            return new Set();
+        }
     }
 
     // Neue News aus Supabase laden die noch nicht gepostet wurden
@@ -177,25 +221,37 @@ class ValorantNewsSystem {
 
     // News als gepostet markieren
     async markNewsAsPosted(newsId) {
-        if (!this.supabaseClient) return false;
+        if (!this.supabaseClient) {
+            console.log(`⚠️ Supabase nicht verfügbar - kann News ${newsId} nicht als gepostet markieren`);
+            return false;
+        }
 
         try {
-            const { error } = await this.supabaseClient
+            console.log(`📝 Markiere News als gepostet: ${newsId}`);
+            
+            const { data, error } = await this.supabaseClient
                 .from('valorant_news')
                 .update({ 
                     posted_to_discord: true,
                     posted_at: new Date().toISOString()
                 })
-                .eq('news_id', newsId);
+                .eq('news_id', newsId)
+                .select();
 
             if (error) {
-                console.error('❌ Fehler beim Markieren der News als gepostet:', error);
+                console.error(`❌ Fehler beim Markieren der News ${newsId} als gepostet:`, error);
                 return false;
             }
 
-            return true;
+            if (data && data.length > 0) {
+                console.log(`✅ News ${newsId} erfolgreich als gepostet markiert`);
+                return true;
+            } else {
+                console.error(`❌ News ${newsId} nicht gefunden in Supabase für Update`);
+                return false;
+            }
         } catch (error) {
-            console.error('❌ Fehler beim Markieren der News:', error);
+            console.error(`❌ Fehler beim Markieren der News ${newsId}:`, error);
             return false;
         }
     }
@@ -345,22 +401,47 @@ class ValorantNewsSystem {
             let savedCount = 0;
             let postedCount = 0;
 
-            // 2. In Supabase speichern (falls verfügbar)
+            // 2. Ungepostete News vor dem Speichern identifizieren
+            let unpostedNews = [];
+            
             if (this.supabaseClient) {
-                const saveResult = await this.saveNewsToSupabase(newsArticles);
-                if (saveResult) {
-                    console.log('✅ News erfolgreich in Supabase gespeichert');
-                    savedCount = newsArticles.length;
+                // Erste Prüfung: Welche News sind bereits in Supabase?
+                const existingNewsIds = await this.getExistingNewsIds();
+                console.log(`📋 ${existingNewsIds.size} bestehende News IDs in Supabase gefunden`);
+                
+                // Filter: Nur wirklich neue News
+                const newNewsArticles = newsArticles.filter(article => {
+                    const newsId = this.generateNewsId(article);
+                    const isNew = !existingNewsIds.has(newsId);
+                    if (!isNew) {
+                        console.log(`⏭️ News bereits vorhanden: ${article.title}`);
+                    }
+                    return isNew;
+                });
+                
+                console.log(`🆕 ${newNewsArticles.length}/${newsArticles.length} wirklich neue News gefunden`);
+                
+                // 3. Nur neue News in Supabase speichern
+                if (newNewsArticles.length > 0) {
+                    const saveResult = await this.saveNewsToSupabase(newNewsArticles);
+                    if (saveResult) {
+                        console.log(`✅ ${newNewsArticles.length} neue News in Supabase gespeichert`);
+                        savedCount = newNewsArticles.length;
+                        
+                        // Diese neuen News sind zum Posten bereit
+                        unpostedNews = newNewsArticles
+                            .filter(article => new Date(article.date) >= this.newsCutoffDate)
+                            .map(article => ({
+                                ...article,
+                                news_id: this.generateNewsId(article)
+                            }));
+                    }
+                } else {
+                    console.log('ℹ️ Keine neuen News zum Speichern gefunden');
                 }
             } else {
                 console.log('⚠️ Supabase nicht verfügbar, überspringe Speicherung');
-            }
-
-            // 3. Ungepostete News laden (oder alle News verwenden falls kein Supabase)
-            let unpostedNews = [];
-            if (this.supabaseClient) {
-                unpostedNews = await this.getUnpostedNews();
-            } else {
+                
                 // Fallback: News nach Cutoff-Datum filtern und limitieren
                 const recentArticles = newsArticles.filter(article => {
                     const articleDate = new Date(article.date);
