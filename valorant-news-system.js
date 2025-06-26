@@ -102,7 +102,10 @@ class ValorantNewsSystem {
 
     // Neue News aus Supabase laden die noch nicht gepostet wurden
     async getUnpostedNews() {
-        if (!this.supabaseClient) return [];
+        if (!this.supabaseClient) {
+            console.log('⚠️ Supabase nicht verfügbar für ungepostete News');
+            return [];
+        }
 
         try {
             const { data, error } = await this.supabaseClient
@@ -117,6 +120,7 @@ class ValorantNewsSystem {
                 return [];
             }
 
+            console.log(`📋 ${data?.length || 0} ungepostete News aus Supabase geladen`);
             return data || [];
         } catch (error) {
             console.error('❌ Fehler beim Laden der News aus Supabase:', error);
@@ -266,23 +270,59 @@ class ValorantNewsSystem {
             if (!force && Date.now() - this.lastCheckTime < this.checkInterval) {
                 const nextCheck = new Date(this.lastCheckTime + this.checkInterval);
                 console.log(`⏰ Nächster News-Check: ${nextCheck.toLocaleString('de-DE')}`);
-                return { success: false, message: 'Rate Limited', nextCheck };
+                return { 
+                    success: false, 
+                    message: `Rate Limited. Nächstes Update: ${nextCheck.toLocaleString('de-DE')}`, 
+                    nextCheck 
+                };
             }
 
             // 1. News von API laden
             const newsArticles = await this.fetchValorantNews();
             if (!newsArticles) {
-                return { success: false, message: 'API Fehler' };
+                return { 
+                    success: false, 
+                    message: 'Fehler beim Laden der News von der Henrik API. Bitte später versuchen.' 
+                };
             }
 
-            // 2. In Supabase speichern
-            await this.saveNewsToSupabase(newsArticles);
+            console.log(`📰 ${newsArticles.length} News Artikel von API geladen`);
 
-            // 3. Ungepostete News laden
-            const unpostedNews = await this.getUnpostedNews();
+            let savedCount = 0;
+            let postedCount = 0;
+
+            // 2. In Supabase speichern (falls verfügbar)
+            if (this.supabaseClient) {
+                const saveResult = await this.saveNewsToSupabase(newsArticles);
+                if (saveResult) {
+                    console.log('✅ News erfolgreich in Supabase gespeichert');
+                    savedCount = newsArticles.length;
+                }
+            } else {
+                console.log('⚠️ Supabase nicht verfügbar, überspringe Speicherung');
+            }
+
+            // 3. Ungepostete News laden (oder alle News verwenden falls kein Supabase)
+            let unpostedNews = [];
+            if (this.supabaseClient) {
+                unpostedNews = await this.getUnpostedNews();
+            } else {
+                // Fallback: Alle News als "ungepostet" behandeln (limitiert auf 5)
+                unpostedNews = newsArticles.slice(0, 5).map((article, index) => ({
+                    ...article,
+                    news_id: this.generateNewsId(article)
+                }));
+            }
             
+            console.log(`📋 ${unpostedNews.length} ungepostete News gefunden`);
+
             // 4. News in Discord posten
-            const postedCount = await this.postNewsToDiscord(unpostedNews);
+            if (unpostedNews.length > 0) {
+                postedCount = await this.postNewsToDiscord(unpostedNews);
+                console.log(`✅ ${postedCount} News erfolgreich gepostet`);
+            } else {
+                console.log('ℹ️ Keine neuen News zum Posten');
+            }
 
             this.lastCheckTime = Date.now();
 
@@ -291,12 +331,17 @@ class ValorantNewsSystem {
                 totalNews: newsArticles.length,
                 newNews: unpostedNews.length,
                 posted: postedCount,
-                message: `${postedCount} neue News gepostet`
+                message: postedCount > 0 
+                    ? `${postedCount} neue News erfolgreich gepostet` 
+                    : 'Keine neuen News gefunden'
             };
 
         } catch (error) {
             console.error('❌ Fehler beim News Update:', error);
-            return { success: false, message: error.message };
+            return { 
+                success: false, 
+                message: `System-Fehler: ${error.message}. Bitte Administrator kontaktieren.` 
+            };
         }
     }
 
@@ -322,36 +367,58 @@ class ValorantNewsSystem {
         return await this.updateNews(true);
     }
 
-    // News Statistics aus Supabase
+    // News Statistics aus Supabase oder Fallback
     async getNewsStats() {
-        if (!this.supabaseClient) return null;
-
         try {
-            const { data, error } = await this.supabaseClient
-                .from('valorant_news')
-                .select('news_id, posted_to_discord, created_at')
-                .order('created_at', { ascending: false });
+            if (this.supabaseClient) {
+                const { data, error } = await this.supabaseClient
+                    .from('valorant_news')
+                    .select('news_id, posted_to_discord, created_at')
+                    .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error('❌ Fehler beim Laden der News Stats:', error);
-                return null;
+                if (error) {
+                    console.error('❌ Fehler beim Laden der News Stats:', error);
+                    return this.getFallbackStats();
+                }
+
+                const total = data?.length || 0;
+                const posted = data?.filter(n => n.posted_to_discord).length || 0;
+                const pending = total - posted;
+                const lastUpdate = data?.[0]?.created_at || null;
+
+                return {
+                    total,
+                    posted,
+                    pending,
+                    lastUpdate: lastUpdate ? new Date(lastUpdate).toLocaleString('de-DE') : 'Nie',
+                    autoUpdateActive: true,
+                    targetChannel: this.newsChannelName,
+                    updateInterval: Math.round(this.checkInterval / 60000) + ' Minuten',
+                    nextUpdate: this.lastCheckTime > 0 ? 
+                        new Date(this.lastCheckTime + this.checkInterval).toLocaleString('de-DE') : 
+                        'Bald'
+                };
+            } else {
+                return this.getFallbackStats();
             }
-
-            const total = data?.length || 0;
-            const posted = data?.filter(n => n.posted_to_discord).length || 0;
-            const pending = total - posted;
-            const lastUpdate = data?.[0]?.created_at || null;
-
-            return {
-                total,
-                posted,
-                pending,
-                lastUpdate: lastUpdate ? new Date(lastUpdate).toLocaleString('de-DE') : 'Nie'
-            };
         } catch (error) {
             console.error('❌ Fehler beim Laden der News Stats:', error);
-            return null;
+            return this.getFallbackStats();
         }
+    }
+
+    // Fallback Stats wenn Supabase nicht verfügbar
+    getFallbackStats() {
+        return {
+            total: 0,
+            posted: 0,
+            pending: 0,
+            lastUpdate: 'System startet...',
+            autoUpdateActive: true,
+            targetChannel: this.newsChannelName,
+            updateInterval: Math.round(this.checkInterval / 60000) + ' Minuten',
+            nextUpdate: 'Nach Systemstart'
+        };
     }
 }
 

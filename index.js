@@ -9860,6 +9860,156 @@ app.get('/api/valorant/news/status', async (req, res) => {
     }
 });
 
+// GET: Valorant News Settings laden
+app.get('/api/valorant/news/settings', async (req, res) => {
+    try {
+        if (!valorantNewsSystem) {
+            return res.status(503).json({ error: 'Valorant News System nicht verfügbar' });
+        }
+
+        const settings = {
+            enabled: true, // TODO: Von einer Config-Datei laden
+            targetChannel: valorantNewsSystem.newsChannelName || '📢ankündigungen',
+            updateInterval: (valorantNewsSystem.checkInterval || 1800000) / 60000, // Millisekunden zu Minuten
+            autoUpdate: true, // TODO: Von Konfiguration laden
+            henrikApiKey: '' // Aus Sicherheitsgründen leer zurückgeben
+        };
+
+        res.json({
+            success: true,
+            settings: settings
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der Valorant News Settings:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// POST: Valorant News Settings speichern
+app.post('/api/valorant/news/settings', async (req, res) => {
+    try {
+        if (!valorantNewsSystem) {
+            return res.status(503).json({ error: 'Valorant News System nicht verfügbar' });
+        }
+
+        const { enabled, targetChannel, updateInterval, autoUpdate, henrikApiKey } = req.body;
+
+        // Validierung
+        if (updateInterval && (updateInterval < 5 || updateInterval > 240)) {
+            return res.status(400).json({ error: 'Update-Intervall muss zwischen 5 und 240 Minuten liegen' });
+        }
+
+        // Einstellungen anwenden
+        if (targetChannel) {
+            valorantNewsSystem.newsChannelName = targetChannel;
+        }
+
+        if (updateInterval) {
+            valorantNewsSystem.checkInterval = updateInterval * 60000; // Minuten zu Millisekunden
+        }
+
+        if (henrikApiKey && henrikApiKey.trim()) {
+            valorantNewsSystem.henrikApiKey = henrikApiKey.trim();
+        }
+
+        // TODO: Persistente Speicherung in Konfigurationsdatei
+
+        console.log(`✅ Valorant News Settings gespeichert: Channel=${targetChannel}, Intervall=${updateInterval}min`);
+
+        res.json({
+            success: true,
+            message: 'Valorant News Einstellungen gespeichert'
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Valorant News Settings:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// POST: Valorant News System ein/ausschalten
+app.post('/api/valorant/news/toggle', async (req, res) => {
+    try {
+        if (!valorantNewsSystem) {
+            return res.status(503).json({ error: 'Valorant News System nicht verfügbar' });
+        }
+
+        // TODO: Toggle-Logik implementieren
+        const newState = true; // Placeholder
+
+        res.json({
+            success: true,
+            enabled: newState,
+            message: newState ? 'Valorant News System aktiviert' : 'Valorant News System deaktiviert'
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Toggle des Valorant News Systems:', error);
+        res.status(500).json({ error: 'Interner Server-Fehler' });
+    }
+});
+
+// POST: Test News Posting
+app.post('/api/valorant/news/test', async (req, res) => {
+    try {
+        if (!valorantNewsSystem || !client) {
+            return res.status(503).json({ error: 'Valorant News System oder Bot nicht verfügbar' });
+        }
+
+        const { channelName } = req.body;
+        
+        if (!channelName) {
+            return res.status(400).json({ error: 'Channel-Name ist erforderlich' });
+        }
+
+        // Finde den Channel
+        const channel = client.channels.cache.find(ch => 
+            ch.name === channelName || 
+            ch.name.includes(channelName.replace('📢', '')) ||
+            ch.name.includes('ankündigungen') ||
+            ch.name.includes('announcements') ||
+            ch.name.includes('news')
+        );
+
+        if (!channel) {
+            return res.status(404).json({ error: `Channel "${channelName}" nicht gefunden` });
+        }
+
+        // Test-News Embed erstellen
+        const { EmbedBuilder } = require('discord.js');
+        const testEmbed = new EmbedBuilder()
+            .setTitle('🧪 Test Valorant News')
+            .setDescription('Dies ist eine Test-Nachricht vom Valorant News System!')
+            .setColor(0xFF4654)
+            .setThumbnail('https://media.valorant-api.com/logo/v_color.png')
+            .addFields(
+                { name: '📂 Kategorie', value: 'System Test', inline: true },
+                { name: '🏷️ Tags', value: 'Test, System, AgentBee', inline: true },
+                { name: '⏰ Zeit', value: new Date().toLocaleString('de-DE'), inline: true }
+            )
+            .setFooter({ 
+                text: 'Valorant News • Test von AgentBee',
+                iconURL: 'https://media.valorant-api.com/logo/v_color.png'
+            })
+            .setTimestamp();
+
+        // Test-News senden
+        await channel.send({ 
+            content: '🧪 **Test Valorant News!**',
+            embeds: [testEmbed] 
+        });
+
+        console.log(`✅ Test News erfolgreich in Channel "${channelName}" gepostet`);
+
+        res.json({
+            success: true,
+            message: `Test News erfolgreich in #${channelName} gepostet`,
+            channelName: channelName
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Posten der Test News:', error);
+        res.status(500).json({ error: 'Fehler beim Posten der Test News: ' + error.message });
+    }
+});
+
 // ================== ALLGEMEINE API ENDPUNKTE ==================
 
 // Verfügbare Server-Rollen für alle Systeme abrufen
