@@ -10,11 +10,15 @@ class ValorantNewsSystem {
         this.lastCheckTime = 0;
         this.checkInterval = 30 * 60 * 1000; // 30 Minuten
         
+        // Cutoff-Datum: Nur News ab 24.06.2025 posten (verhindert alte News beim Neustart)
+        this.newsCutoffDate = new Date('2025-06-24T00:00:00.000Z');
+        
         // Debug-Info für API Key Status
         console.log('📰 ValorantNewsSystem initialisiert:');
         console.log(`   - Henrik API Key: ${this.henrikApiKey ? 'GESETZT ✅' : 'FEHLT ❌'}`);
         console.log(`   - Update Intervall: ${this.checkInterval / 60000} Minuten`);
         console.log(`   - Target Channel: ${this.newsChannelName}`);
+        console.log(`   - News Cutoff-Datum: ${this.newsCutoffDate.toLocaleDateString('de-DE')}`);
     }
 
     // Supabase initialisieren
@@ -142,6 +146,7 @@ class ValorantNewsSystem {
                 .from('valorant_news')
                 .select('*')
                 .eq('posted_to_discord', false)
+                .gte('date', this.newsCutoffDate.toISOString()) // Nur News ab Cutoff-Datum
                 .order('date', { ascending: false })
                 .limit(10);
 
@@ -150,8 +155,20 @@ class ValorantNewsSystem {
                 return [];
             }
 
-            console.log(`📋 ${data?.length || 0} ungepostete News aus Supabase geladen`);
-            return data || [];
+            const filteredData = data || [];
+            console.log(`📋 ${filteredData.length} ungepostete News nach ${this.newsCutoffDate.toLocaleDateString('de-DE')} gefunden`);
+            
+            // Zusätzliche Client-side Filterung für Sicherheit
+            const recentNews = filteredData.filter(news => {
+                const newsDate = new Date(news.date);
+                return newsDate >= this.newsCutoffDate;
+            });
+            
+            if (recentNews.length !== filteredData.length) {
+                console.log(`🗂️ ${filteredData.length - recentNews.length} alte News herausgefiltert`);
+            }
+            
+            return recentNews;
         } catch (error) {
             console.error('❌ Fehler beim Laden der News aus Supabase:', error);
             return [];
@@ -344,8 +361,15 @@ class ValorantNewsSystem {
             if (this.supabaseClient) {
                 unpostedNews = await this.getUnpostedNews();
             } else {
-                // Fallback: Alle News als "ungepostet" behandeln (limitiert auf 5)
-                unpostedNews = newsArticles.slice(0, 5).map((article, index) => ({
+                // Fallback: News nach Cutoff-Datum filtern und limitieren
+                const recentArticles = newsArticles.filter(article => {
+                    const articleDate = new Date(article.date);
+                    return articleDate >= this.newsCutoffDate;
+                });
+                
+                console.log(`📋 ${recentArticles.length}/${newsArticles.length} News nach ${this.newsCutoffDate.toLocaleDateString('de-DE')} gefiltert`);
+                
+                unpostedNews = recentArticles.slice(0, 5).map((article, index) => ({
                     ...article,
                     news_id: this.generateNewsId(article)
                 }));
@@ -454,8 +478,15 @@ class ValorantNewsSystem {
             autoUpdateActive: true,
             targetChannel: this.newsChannelName,
             updateInterval: Math.round(this.checkInterval / 60000) + ' Minuten',
-            nextUpdate: 'Nach Systemstart'
+            nextUpdate: 'Nach Systemstart',
+            cutoffDate: this.newsCutoffDate.toLocaleDateString('de-DE')
         };
+    }
+
+    // Cutoff-Datum für News-Filterung aktualisieren
+    updateNewsCutoffDate(newDate) {
+        this.newsCutoffDate = new Date(newDate);
+        console.log(`📅 News Cutoff-Datum aktualisiert auf: ${this.newsCutoffDate.toLocaleDateString('de-DE')}`);
     }
 }
 

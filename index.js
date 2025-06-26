@@ -10010,6 +10010,41 @@ app.post('/api/valorant/news/test', async (req, res) => {
     }
 });
 
+// POST: News Cutoff-Datum aktualisieren
+app.post('/api/valorant/news/cutoff-date', async (req, res) => {
+    try {
+        if (!valorantNewsSystem) {
+            return res.status(503).json({ error: 'Valorant News System nicht verfügbar' });
+        }
+
+        const { cutoffDate } = req.body;
+        
+        if (!cutoffDate) {
+            return res.status(400).json({ error: 'Cutoff-Datum ist erforderlich' });
+        }
+
+        // Validiere das Datum
+        const newDate = new Date(cutoffDate);
+        if (isNaN(newDate.getTime())) {
+            return res.status(400).json({ error: 'Ungültiges Datumsformat' });
+        }
+
+        // Aktualisiere das Cutoff-Datum im System
+        valorantNewsSystem.updateNewsCutoffDate(newDate);
+
+        console.log(`📅 News Cutoff-Datum über API aktualisiert: ${newDate.toLocaleDateString('de-DE')}`);
+
+        res.json({
+            success: true,
+            message: `News Cutoff-Datum erfolgreich auf ${newDate.toLocaleDateString('de-DE')} aktualisiert`,
+            cutoffDate: newDate.toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren des Cutoff-Datums:', error);
+        res.status(500).json({ error: 'Fehler beim Aktualisieren des Cutoff-Datums: ' + error.message });
+    }
+});
+
 // ================== ALLGEMEINE API ENDPUNKTE ==================
 
 // Verfügbare Server-Rollen für alle Systeme abrufen
