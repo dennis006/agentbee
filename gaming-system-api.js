@@ -6,10 +6,39 @@
 // Auto-Voice-Channels, Reputation System, Role & Channel Management
 
 const express = require('express');
+const fs = require('fs').promises;
+const path = require('path');
 const router = express.Router();
 
 // Export für index.js
 module.exports = router;
+
+// Gaming Settings File Path
+const GAMING_SETTINGS_FILE = path.join(__dirname, 'settings', 'gaming-system.json');
+
+// Helper Functions für File Operations
+async function loadGamingSettings() {
+    try {
+        await fs.mkdir(path.dirname(GAMING_SETTINGS_FILE), { recursive: true });
+        const data = await fs.readFile(GAMING_SETTINGS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.log('📄 Gaming Settings nicht gefunden, verwende Defaults');
+        return null;
+    }
+}
+
+async function saveGamingSettings(settings) {
+    try {
+        await fs.mkdir(path.dirname(GAMING_SETTINGS_FILE), { recursive: true });
+        await fs.writeFile(GAMING_SETTINGS_FILE, JSON.stringify(settings, null, 2));
+        console.log('✅ Gaming Settings gespeichert:', GAMING_SETTINGS_FILE);
+        return true;
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der Gaming Settings:', error);
+        return false;
+    }
+}
 
 // Gaming System Settings (Default)
 let gamingSystemSettings = {
@@ -135,6 +164,18 @@ let gamingSystemSettings = {
     }
 };
 
+// Initialize Gaming Settings on startup
+(async () => {
+    const savedSettings = await loadGamingSettings();
+    if (savedSettings) {
+        gamingSystemSettings = { ...gamingSystemSettings, ...savedSettings };
+        console.log('✅ Gaming Settings geladen aus Datei');
+    } else {
+        console.log('📝 Erstelle neue Gaming Settings Datei');
+        await saveGamingSettings(gamingSystemSettings);
+    }
+})();
+
 // In-Memory Data Storage (wird später durch Supabase ersetzt)
 let activeTeams = new Map(); // teamId -> team data
 let playerReputation = new Map(); // userId -> reputation data
@@ -191,8 +232,14 @@ router.post('/gaming/settings', async (req, res) => {
         // Update settings
         gamingSystemSettings = { ...gamingSystemSettings, ...newSettings };
         
-        // TODO: Save to Supabase
-        // await saveGamingSettingsToSupabase(gamingSystemSettings);
+        // Save to file
+        const saveSuccess = await saveGamingSettings(gamingSystemSettings);
+        if (!saveSuccess) {
+            return res.status(500).json({
+                success: false,
+                error: 'Fehler beim Speichern der Einstellungen'
+            });
+        }
 
         res.json({
             success: true,
@@ -483,7 +530,14 @@ router.post('/gaming/toggle', async (req, res) => {
     try {
         gamingSystemSettings.enabled = !gamingSystemSettings.enabled;
         
-        // TODO: Save to Supabase
+        // Save to file
+        const saveSuccess = await saveGamingSettings(gamingSystemSettings);
+        if (!saveSuccess) {
+            return res.status(500).json({
+                success: false,
+                error: 'Fehler beim Speichern der Toggle-Einstellung'
+            });
+        }
         
         res.json({
             success: true,
