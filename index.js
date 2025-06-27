@@ -117,20 +117,9 @@ let apiKeys = {
 // LFG Message Handler
 async function handleLFGMessage(message) {
     try {
-        // Lade LFG Settings direkt aus der Datei
-        const fs = require('fs').promises;
-        const path = require('path');
-        
-        const LFG_SETTINGS_FILE = path.join(__dirname, 'settings', 'lfg-system.json');
-        let settings;
-        
-        try {
-            const data = await fs.readFile(LFG_SETTINGS_FILE, 'utf8');
-            settings = JSON.parse(data);
-        } catch (error) {
-            // Fallback zu Default Settings
-            settings = { enabled: false };
-        }
+        // Lade LFG Settings aus Supabase
+        const { loadLFGSettings } = require('./lfg-supabase-api');
+        const settings = await loadLFGSettings(message.guild.id);
         
         if (!settings.enabled) return;
         
@@ -11900,9 +11889,9 @@ registerBotIntroductionAPI(app, client);
 
 // ================== END BOT INTRODUCTION API ==================
 
-// ================== GAMING SYSTEM API ==================
-// Gaming System API Integration
-const gamingSystemAPI = require('./gaming-system-api');
+// ================== LFG SUPABASE API ==================
+// LFG System API Integration mit Supabase
+const { router: lfgSupabaseAPI, initializeSupabaseForLFG } = require('./lfg-supabase-api');
 
 // Gaming System Settings (In-Memory, später Supabase)
 let gamingSystemSettings = {
@@ -12021,7 +12010,13 @@ let gamingSystemSettings = {
 };
 
 // LFG System API Routes registrieren
-app.use('/api/lfg', gamingSystemAPI);
+app.use('/api/lfg', lfgSupabaseAPI);
+
+// Initialisiere LFG Supabase wenn verfügbar
+if (supabaseInitialized && supabase) {
+    initializeSupabaseForLFG(supabase);
+    console.log('✅ LFG Supabase API initialisiert');
+}
 
 // Gaming Slash Commands registrieren
 async function registerGamingCommands() {
