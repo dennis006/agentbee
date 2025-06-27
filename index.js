@@ -113,6 +113,78 @@ let apiKeys = {
     }
 };
 
+// ================== LFG SYSTEM ==================
+// LFG Message Handler
+async function handleLFGMessage(message) {
+    try {
+        // Lade LFG Settings direkt aus der Datei
+        const fs = require('fs').promises;
+        const path = require('path');
+        
+        const LFG_SETTINGS_FILE = path.join(__dirname, 'settings', 'lfg-system.json');
+        let settings;
+        
+        try {
+            const data = await fs.readFile(LFG_SETTINGS_FILE, 'utf8');
+            settings = JSON.parse(data);
+        } catch (error) {
+            // Fallback zu Default Settings
+            settings = { enabled: false };
+        }
+        
+        if (!settings.enabled) return;
+        
+        // Prüfe ob Nachricht im LFG Channel ist
+        if (message.channel.name !== settings.channelName && message.channel.id !== settings.channelId) {
+            return;
+        }
+        
+        // Prüfe ob User die LFG Role erwähnt
+        const lfgRoleMention = `<@&${settings.roleId}>`;
+        if (!message.content.includes(lfgRoleMention) && !message.content.includes(`@${settings.roleName}`)) {
+            return;
+        }
+        
+        console.log(`🎮 LFG Ping erkannt von ${message.author.tag}: ${message.content}`);
+        
+        // Cooldown Check (vereinfacht für jetzt)
+        const userId = message.author.id;
+        const now = Date.now();
+        
+        // Erstelle Antwort Embed
+        const embed = new EmbedBuilder()
+            .setColor(parseInt(settings.roleColor.replace('#', ''), 16))
+            .setTitle('🎮 LFG Request')
+            .setDescription(message.content.replace(lfgRoleMention, '').replace(`@${settings.roleName}`, '').trim())
+            .setAuthor({
+                name: message.author.displayName,
+                iconURL: message.author.displayAvatarURL()
+            })
+            .setTimestamp()
+            .setFooter({
+                text: `LFG System • Auto-Delete nach ${settings.autoDeleteAfterHours}h`
+            });
+        
+        // Sende Embed und lösche nach eingestellter Zeit
+        const lfgMessage = await message.channel.send({ embeds: [embed] });
+        
+        // Auto-Delete
+        if (settings.autoDeleteAfterHours > 0) {
+            setTimeout(async () => {
+                try {
+                    await lfgMessage.delete();
+                    await message.delete();
+                } catch (error) {
+                    console.log('LFG Auto-Delete Fehler (Nachricht bereits gelöscht):', error.message);
+                }
+            }, settings.autoDeleteAfterHours * 60 * 60 * 1000);
+        }
+        
+    } catch (error) {
+        console.error('Fehler beim LFG Message Handling:', error);
+    }
+}
+
 // API-Keys aus Environment Variables laden
 function loadAPIKeys() {
     try {
@@ -2066,6 +2138,9 @@ const client = new Client({
     ] 
 });
 
+// Discord Client global verfügbar machen für APIs
+global.discordClient = client;
+
 // Commands Collection
 client.commands = new Collection();
 
@@ -3816,6 +3891,9 @@ client.on(Events.MessageCreate, async message => {
     if (xpSystem && message.guild) {
         await xpSystem.addMessageXP(message);
     }
+
+    // LFG System Message Handling
+    await handleLFGMessage(message);
 
     // Einfache Befehle
     if (message.content === '!ping') {
