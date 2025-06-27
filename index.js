@@ -114,65 +114,7 @@ let apiKeys = {
 };
 
 // ================== LFG SYSTEM ==================
-// LFG Message Handler
-async function handleLFGMessage(message) {
-    try {
-        // Lade LFG Settings aus Supabase
-        const { loadLFGSettings } = require('./lfg-supabase-api');
-        const settings = await loadLFGSettings(message.guild.id);
-        
-        if (!settings.enabled) return;
-        
-        // Prüfe ob Nachricht im LFG Channel ist
-        if (message.channel.name !== settings.channelName && message.channel.id !== settings.channelId) {
-            return;
-        }
-        
-        // Prüfe ob User die LFG Role erwähnt
-        const lfgRoleMention = `<@&${settings.roleId}>`;
-        if (!message.content.includes(lfgRoleMention) && !message.content.includes(`@${settings.roleName}`)) {
-            return;
-        }
-        
-        console.log(`🎮 LFG Ping erkannt von ${message.author.tag}: ${message.content}`);
-        
-        // Cooldown Check (vereinfacht für jetzt)
-        const userId = message.author.id;
-        const now = Date.now();
-        
-        // Erstelle Antwort Embed
-        const embed = new EmbedBuilder()
-            .setColor(parseInt(settings.roleColor.replace('#', ''), 16))
-            .setTitle('🎮 LFG Request')
-            .setDescription(message.content.replace(lfgRoleMention, '').replace(`@${settings.roleName}`, '').trim())
-            .setAuthor({
-                name: message.author.displayName,
-                iconURL: message.author.displayAvatarURL()
-            })
-            .setTimestamp()
-            .setFooter({
-                text: `LFG System • Auto-Delete nach ${settings.autoDeleteAfterHours}h`
-            });
-        
-        // Sende Embed und lösche nach eingestellter Zeit
-        const lfgMessage = await message.channel.send({ embeds: [embed] });
-        
-        // Auto-Delete
-        if (settings.autoDeleteAfterHours > 0) {
-            setTimeout(async () => {
-                try {
-                    await lfgMessage.delete();
-                    await message.delete();
-                } catch (error) {
-                    console.log('LFG Auto-Delete Fehler (Nachricht bereits gelöscht):', error.message);
-                }
-            }, settings.autoDeleteAfterHours * 60 * 60 * 1000);
-        }
-        
-    } catch (error) {
-        console.error('Fehler beim LFG Message Handling:', error);
-    }
-}
+// LFG System wird jetzt in gaming.js verwaltet
 
 // API-Keys aus Environment Variables laden
 function loadAPIKeys() {
@@ -3881,8 +3823,9 @@ client.on(Events.MessageCreate, async message => {
         await xpSystem.addMessageXP(message);
     }
 
-    // LFG System Message Handling
-    await handleLFGMessage(message);
+    // LFG System Message Handling (mit interaktiven Buttons)
+    const { handleLFGMessageWithResponses } = require('./gaming');
+    await handleLFGMessageWithResponses(message);
 
     // Einfache Befehle
     if (message.content === '!ping') {
@@ -4351,6 +4294,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.customId.startsWith('ticket_close_')) {
         await handleTicketCloseInteraction(interaction);
+    }
+
+    // Behandle LFG-Buttons
+    if (interaction.customId.startsWith('lfg_')) {
+        const { handleLFGButtonInteraction } = require('./gaming');
+        await handleLFGButtonInteraction(interaction);
     }
 
     // Giveaway-Button-Interaktionen werden jetzt von GiveawayInteractions behandelt

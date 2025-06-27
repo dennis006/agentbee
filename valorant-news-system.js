@@ -91,16 +91,16 @@ class ValorantNewsSystem {
                 const newsId = article.id || this.generateNewsId(article);
                 const newsEntry = {
                     news_id: newsId,
-                    title: article.title,
-                    description: article.description || '',
-                    date: new Date(article.date).toISOString(),
-                    category: article.category || 'General',
-                    url: article.url || '',
-                    banner_url: article.banner_url || article.image || '',
-                    author: article.author || 'Riot Games',
-                    tags: JSON.stringify(article.tags || []),
-                    created_at: new Date().toISOString(),
-                    posted_to_discord: false
+                title: article.title,
+                description: article.description || '',
+                date: new Date(article.date).toISOString(),
+                category: article.category || 'General',
+                url: article.url || '',
+                banner_url: article.banner_url || article.image || '',
+                author: article.author || 'Riot Games',
+                tags: JSON.stringify(article.tags || []),
+                created_at: new Date().toISOString(),
+                posted_to_discord: false
                 };
                 
                 console.log(`📝 Bereite News vor: ${newsEntry.title} (ID: ${newsId})`);
@@ -245,7 +245,7 @@ class ValorantNewsSystem {
 
             if (data && data.length > 0) {
                 console.log(`✅ News ${newsId} erfolgreich als gepostet markiert`);
-                return true;
+            return true;
             } else {
                 console.error(`❌ News ${newsId} nicht gefunden in Supabase für Update`);
                 return false;
@@ -457,7 +457,7 @@ class ValorantNewsSystem {
             }
             
             console.log(`📋 ${unpostedNews.length} ungepostete News gefunden`);
-
+            
             // 4. News in Discord posten
             if (unpostedNews.length > 0) {
                 postedCount = await this.postNewsToDiscord(unpostedNews);
@@ -513,25 +513,25 @@ class ValorantNewsSystem {
     async getNewsStats() {
         try {
             if (this.supabaseClient) {
-                const { data, error } = await this.supabaseClient
-                    .from('valorant_news')
-                    .select('news_id, posted_to_discord, created_at')
-                    .order('created_at', { ascending: false });
+            const { data, error } = await this.supabaseClient
+                .from('valorant_news')
+                .select('news_id, posted_to_discord, created_at')
+                .order('created_at', { ascending: false });
 
-                if (error) {
-                    console.error('❌ Fehler beim Laden der News Stats:', error);
+            if (error) {
+                console.error('❌ Fehler beim Laden der News Stats:', error);
                     return this.getFallbackStats();
-                }
+            }
 
-                const total = data?.length || 0;
-                const posted = data?.filter(n => n.posted_to_discord).length || 0;
-                const pending = total - posted;
-                const lastUpdate = data?.[0]?.created_at || null;
+            const total = data?.length || 0;
+            const posted = data?.filter(n => n.posted_to_discord).length || 0;
+            const pending = total - posted;
+            const lastUpdate = data?.[0]?.created_at || null;
 
-                return {
-                    total,
-                    posted,
-                    pending,
+            return {
+                total,
+                posted,
+                pending,
                     lastUpdate: lastUpdate ? new Date(lastUpdate).toLocaleString('de-DE') : 'Nie',
                     autoUpdateActive: true,
                     targetChannel: this.newsChannelName,
@@ -562,7 +562,7 @@ class ValorantNewsSystem {
             nextUpdate: 'Nach Systemstart',
             cutoffDate: this.newsCutoffDate.toLocaleDateString('de-DE')
         };
-    }
+        }
 
     // Cutoff-Datum für News-Filterung aktualisieren
     updateNewsCutoffDate(newDate) {
