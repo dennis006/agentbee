@@ -10,27 +10,16 @@ import {
   Star, 
   Settings, 
   Activity, 
-  Clock, 
-  Hash, 
   BarChart3,
-  CheckCircle2,
-  XCircle,
-  Calendar,
-  MessageSquare,
-  AlertTriangle,
-  TrendingUp,
   Save,
-  Send,
   RotateCcw,
-  Crown,
   Zap,
   Plus,
-  Trash2,
-  RefreshCw,
   Trophy,
   Target,
   Volume2,
-  Shield
+  Shield,
+  Calendar
 } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 
@@ -51,40 +40,23 @@ const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
 };
 
 // Badge component
-const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?: string }> = ({ 
-  children, 
-  className = '', 
-  variant = 'default' 
-}) => (
-  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-    variant === 'outline' 
-      ? 'border border-purple-primary text-purple-primary bg-transparent' 
-      : 'bg-purple-primary text-white'
-  } ${className}`}>
+const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?: string }> = ({ children, className = '', variant = 'default' }) => (
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variant === 'outline' ? 'border border-purple-primary text-purple-primary bg-transparent' : 'bg-purple-primary text-white'} ${className}`}>
     {children}
   </span>
 );
 
 // Switch component
-const Switch: React.FC<{ 
-  checked: boolean; 
-  onCheckedChange: (checked: boolean) => void; 
-  className?: string; 
-  id?: string 
-}> = ({ checked, onCheckedChange, className = '', id }) => (
+const Switch: React.FC<{ checked: boolean; onCheckedChange: (checked: boolean) => void; className?: string; id?: string }> = ({ checked, onCheckedChange, className = '', id }) => (
   <button
     type="button"
     role="switch"
     aria-checked={checked}
     id={id}
     onClick={() => onCheckedChange(!checked)}
-    className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${
-      checked ? 'bg-purple-primary' : 'bg-dark-bg'
-    } ${className}`}
+    className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-purple-primary' : 'bg-dark-bg'} ${className}`}
   >
-    <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
-      checked ? 'translate-x-5' : 'translate-x-0'
-    }`} />
+    <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
   </button>
 );
 
@@ -98,9 +70,11 @@ const Tooltip: React.FC<{ content: React.ReactNode; title?: string }> = ({ conte
       ❓
     </button>
     
+    {/* Tooltip */}
     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-dark-surface border border-purple-primary/30 rounded-lg text-xs text-dark-text opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 shadow-lg min-w-max">
       {title && <div className="font-medium text-blue-400 mb-1">{title}</div>}
       <div>{content}</div>
+      {/* Arrow */}
       <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-dark-surface"></div>
     </div>
   </div>
@@ -185,22 +159,22 @@ interface Channel {
 const Gaming: React.FC = () => {
   const { toasts, success, error, removeToast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [settings, setSettings] = useState<GamingSettings>({
     enabled: true,
     autoChannelCreation: true,
     autoRoleCreation: true,
-    
     autoPing: {
       enabled: true,
-      minRank: 'Bronze',
+      minRank: 'Bronze 1',
       maxPingRadius: 5,
       cooldown: 30000,
       maxPingsPerHour: 10,
       smartMatching: true,
       respectDND: true
     },
-    
     quickJoin: {
       enabled: true,
       autoVoiceJoin: true,
@@ -208,7 +182,6 @@ const Gaming: React.FC = () => {
       allowSpectators: true,
       autoRoleAssignment: true
     },
-    
     teamTracker: {
       enabled: true,
       showProgress: true,
@@ -216,7 +189,6 @@ const Gaming: React.FC = () => {
       trackStats: true,
       displayChannel: 'team-status'
     },
-    
     voiceChannels: {
       enabled: true,
       autoCreate: true,
@@ -225,7 +197,6 @@ const Gaming: React.FC = () => {
       maxChannels: 10,
       categoryName: '🎮 Gaming Lobbys'
     },
-    
     reputation: {
       enabled: true,
       startingPoints: 100,
@@ -240,10 +211,16 @@ const Gaming: React.FC = () => {
     }
   });
 
-  const [gamingStats, setGamingStats] = useState<GamingStats | null>(null);
+  const [gamingStats, setGamingStats] = useState<GamingStats>({
+    systemEnabled: true,
+    activeTeams: 3,
+    totalPlayers: 12,
+    scheduledGames: 5,
+    supportedGames: 4,
+    reputationEnabled: true
+  });
+
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -253,29 +230,14 @@ const Gaming: React.FC = () => {
     try {
       setLoading(true);
       
-      const [statsRes, channelsRes] = await Promise.all([
-        fetch('/api/gaming/status'),
-        fetch('/api/channels')
-      ]);
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        if (statsData.success) {
-          setGamingStats(statsData.stats);
-          if (statsData.settings) {
-            setSettings(statsData.settings);
-          }
-        }
+      const response = await fetch('/api/gaming/status');
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data.settings);
+        setGamingStats(data.stats);
       }
-
-      if (channelsRes.ok) {
-        const channelsData = await channelsRes.json();
-        const textChannels = channelsData.channels?.filter((ch: Channel) => ch.type === 'text') || [];
-        setChannels(textChannels);
-      }
-
     } catch (error) {
-      console.error('Fehler beim Laden der Gaming Daten:', error);
+      console.error('Fehler beim Laden der Gaming-Daten:', error);
       showMessage('error', 'Fehler beim Laden der Daten');
     } finally {
       setLoading(false);
@@ -292,19 +254,13 @@ const Gaming: React.FC = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          showMessage('success', 'Gaming System Einstellungen gespeichert');
-          setSettings(data.settings);
-        } else {
-          showMessage('error', data.error || 'Fehler beim Speichern');
-        }
+        showMessage('success', '✅ Gaming System Einstellungen gespeichert!');
+        loadData();
       } else {
-        showMessage('error', 'Server Fehler beim Speichern');
+        showMessage('error', '❌ Fehler beim Speichern der Einstellungen');
       }
-    } catch (error) {
-      console.error('Fehler beim Speichern:', error);
-      showMessage('error', 'Fehler beim Speichern der Einstellungen');
+    } catch (err) {
+      showMessage('error', '❌ Fehler beim Speichern der Einstellungen');
     } finally {
       setSaving(false);
     }
@@ -313,42 +269,37 @@ const Gaming: React.FC = () => {
   const toggleGamingSystem = async () => {
     try {
       const response = await fetch('/api/gaming/toggle', {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success) {
-          setSettings(prev => ({ ...prev, enabled: data.enabled }));
-          showMessage('success', `Gaming System ${data.enabled ? 'aktiviert' : 'deaktiviert'}`);
-        } else {
-          showMessage('error', data.error || 'Fehler beim Umschalten');
-        }
+        setSettings(prev => ({ ...prev, enabled: data.enabled }));
+        showMessage('success', `✅ ${data.message}`);
+      } else {
+        showMessage('error', '❌ Fehler beim Umschalten des Gaming Systems');
       }
-    } catch (error) {
-      console.error('Gaming Toggle Error:', error);
-      showMessage('error', 'Fehler beim Umschalten des Gaming Systems');
+    } catch (err) {
+      showMessage('error', '❌ Fehler beim Umschalten des Gaming Systems');
     }
   };
 
   const setupGameChannels = async (game: string) => {
     try {
       const response = await fetch(`/api/gaming/setup/${game}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data.success) {
-          showMessage('success', `${game} Setup erfolgreich abgeschlossen`);
-          loadData(); // Reload data to see new channels
-        } else {
-          showMessage('error', data.error || 'Fehler beim Setup');
-        }
+        showMessage('success', `✅ ${data.message}`);
+      } else {
+        showMessage('error', '❌ Fehler beim Game Setup');
       }
     } catch (error) {
-      console.error('Game Setup Error:', error);
-      showMessage('error', 'Fehler beim Setup der Game Channels');
+      showMessage('error', '❌ Fehler beim Game Setup');
     }
   };
 
@@ -362,320 +313,281 @@ const Gaming: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-bg text-dark-text relative overflow-hidden">
-        <MatrixBlocks density={20} />
-        <div className="container mx-auto px-4 py-8 relative z-10">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-primary" />
-              <p className="text-dark-text-secondary">Gaming System lädt...</p>
-            </div>
-          </div>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">Lade Gaming System...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-dark-bg text-dark-text relative overflow-hidden">
-      <MatrixBlocks density={25} />
+    <div className="space-y-8 p-6 animate-fade-in relative">
+      {/* Matrix Background Effects */}
+      <MatrixBlocks density={20} />
       
-      <div className="container mx-auto px-4 py-8 relative z-10">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-gradient-to-br from-purple-primary to-blue-500 rounded-lg">
-                <Gamepad2 className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-primary to-blue-500 bg-clip-text text-transparent">
-                  🎮 Gaming System
-                </h1>
-                <p className="text-dark-text-secondary">
-                  Smart Auto-Ping • Team Management • Voice Integration • Reputation System
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-dark-text-secondary">System Status:</span>
-                <Badge variant={settings.enabled ? 'default' : 'outline'}>
-                  {settings.enabled ? '🟢 Aktiv' : '🔴 Inaktiv'}
-                </Badge>
-              </div>
-              
-              <Button
-                onClick={toggleGamingSystem}
-                variant={settings.enabled ? 'outline' : 'default'}
-                size="sm"
-                className={`transition-all duration-200 ${
-                  settings.enabled 
-                    ? 'hover:bg-red-500/20 hover:border-red-500 hover:text-red-400' 
-                    : 'hover:bg-green-500/20 hover:border-green-500 hover:text-green-400'
-                }`}
-              >
-                {settings.enabled ? (
-                  <>
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Deaktivieren
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Aktivieren
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          {gamingStats && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-              <Card className="bg-dark-surface/50 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
-                <CardContent className="p-4 text-center">
-                  <Users className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-dark-text">{gamingStats.activeTeams}</div>
-                  <div className="text-xs text-dark-text-secondary">Aktive Teams</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-dark-surface/50 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
-                <CardContent className="p-4 text-center">
-                  <Target className="h-6 w-6 text-green-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-dark-text">{gamingStats.totalPlayers}</div>
-                  <div className="text-xs text-dark-text-secondary">Spieler Online</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-dark-surface/50 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
-                <CardContent className="p-4 text-center">
-                  <Calendar className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-dark-text">{gamingStats.scheduledGames}</div>
-                  <div className="text-xs text-dark-text-secondary">Geplante Games</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-dark-surface/50 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
-                <CardContent className="p-4 text-center">
-                  <Gamepad2 className="h-6 w-6 text-purple-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-dark-text">{gamingStats.supportedGames}</div>
-                  <div className="text-xs text-dark-text-secondary">Spiele</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-dark-surface/50 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
-                <CardContent className="p-4 text-center">
-                  <Star className="h-6 w-6 text-orange-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-dark-text">{gamingStats.reputationEnabled ? '✅' : '❌'}</div>
-                  <div className="text-xs text-dark-text-secondary">Reputation</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-dark-surface/50 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
-                <CardContent className="p-4 text-center">
-                  <Activity className="h-6 w-6 text-red-400 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-dark-text">{settings.enabled ? 'ON' : 'OFF'}</div>
-                  <div className="text-xs text-dark-text-secondary">System Status</div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+      {/* Page Header */}
+      <div className="text-center py-8">
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <Gamepad2 className="w-12 h-12 text-purple-accent animate-pulse" />
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
+            Gaming System Management
+          </h1>
         </div>
-
-        {/* Tabs Navigation */}
-        <div className="flex flex-wrap gap-2 mb-6 bg-dark-surface/30 p-2 rounded-lg">
-          {[
-            { id: 'overview', label: '📊 Übersicht', icon: BarChart3 },
-            { id: 'autoping', label: '🤖 Auto-Ping', icon: Zap },
-            { id: 'teams', label: '⚡ Team-Join', icon: Users },
-            { id: 'tracker', label: '📊 Team-Tracker', icon: Activity },
-            { id: 'voice', label: '🎤 Voice-Channels', icon: Mic },
-            { id: 'reputation', label: '⭐ Reputation', icon: Star },
-            { id: 'games', label: '🎮 Games Setup', icon: Settings }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.id
-                  ? 'bg-purple-primary text-white shadow-lg'
-                  : 'text-dark-text-secondary hover:text-dark-text hover:bg-dark-surface/50'
-              }`}
+        <div className="text-dark-text text-lg max-w-2xl mx-auto">
+          Verwalte das ultimative Gaming & Team System deines Servers wie ein Pro! 
+          <span className="ml-2 inline-block relative">
+            <svg 
+              className="w-6 h-6 animate-pulse hover:animate-bounce text-purple-400 hover:text-purple-300 transition-all duration-300 hover:scale-110 drop-shadow-lg" 
+              fill="currentColor" 
+              viewBox="0 0 24 24"
             >
-              <tab.icon className="h-4 w-4" />
-              <span>{tab.label}</span>
-            </button>
-          ))}
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            <div className="absolute inset-0 animate-ping">
+              <svg 
+                className="w-6 h-6 text-purple-500 opacity-30" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </div>
+          </span>
+        </div>
+        <div className="w-32 h-1 bg-gradient-neon mx-auto mt-4 rounded-full animate-glow"></div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex justify-center gap-4">
+        <Button
+          onClick={toggleGamingSystem}
+          className={`${settings.enabled ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' : 'bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent'} text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2`}
+        >
+          {settings.enabled ? <RotateCcw className="h-5 w-5" /> : <Gamepad2 className="h-5 w-5" />}
+          <span>{settings.enabled ? 'Gaming System Deaktivieren' : 'Gaming System Aktivieren'}</span>
+        </Button>
+        <Button 
+          onClick={saveSettings} 
+          disabled={saving}
+          className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-8 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+        >
+          <Save className="h-5 w-5" />
+          <span>{saving ? 'Speichere...' : 'Einstellungen Speichern'}</span>
+        </Button>
+      </div>
+
+      {/* System Status Badge */}
+      <div className="flex justify-center">
+        <Badge variant={settings.enabled ? "default" : "outline"} className="text-lg py-2 px-4">
+          {settings.enabled ? '✅ Gaming System Aktiviert' : '❌ Gaming System Deaktiviert'}
+        </Badge>
+      </div>
+
+      {/* Statistics Cards */}
+      {gamingStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-dark-text">Aktive Teams</CardTitle>
+              <Users className="h-4 w-4 text-purple-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-neon-purple">{gamingStats.activeTeams}</div>
+              <p className="text-xs text-dark-muted">
+                {gamingStats.totalPlayers} Spieler online
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-dark-text">Unterstützte Spiele</CardTitle>
+              <Gamepad2 className="h-4 w-4 text-purple-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-neon-purple">{gamingStats.supportedGames}</div>
+              <p className="text-xs text-dark-muted">
+                Valorant, LoL, OW2, CS2
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-dark-text">Geplante Games</CardTitle>
+              <Calendar className="h-4 w-4 text-purple-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-neon-purple">{gamingStats.scheduledGames}</div>
+              <p className="text-xs text-dark-muted">
+                Automatische Planung
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-dark-text">Reputation System</CardTitle>
+              <Star className="h-4 w-4 text-purple-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-neon-purple">{gamingStats.reputationEnabled ? '✅' : '❌'}</div>
+              <p className="text-xs text-dark-muted">
+                Community basiert
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Tabs */}
+      <div className="space-y-4">
+        <div className="grid w-full grid-cols-7 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 p-2 rounded-lg">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'overview' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span>Übersicht</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('autoping')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'autoping' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <Zap className="h-4 w-4" />
+            <span>Auto-Ping</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('teams')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'teams' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span>Team-Join</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('tracker')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'tracker' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <Activity className="h-4 w-4" />
+            <span>Team-Tracker</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('voice')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'voice' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <Mic className="h-4 w-4" />
+            <span>Voice-Channels</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('reputation')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'reputation' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <Star className="h-4 w-4" />
+            <span>Reputation</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('games')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'games' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            <span>Games Setup</span>
+          </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Feature Overview Cards */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card className="bg-gradient-to-br from-purple-primary/10 to-blue-500/10 border-purple-primary/30">
-                <CardHeader>
-                  <CardTitle className="text-purple-primary flex items-center">
-                    <Zap className="h-5 w-5 mr-2" />
-                    🤖 Smart Auto-Ping System
-                    <Tooltip content="Pingt automatisch passende Spieler basierend auf Rang und Preferences" />
-                  </CardTitle>
-                  <CardDescription>
-                    Automatisches Matching von Spielern mit ähnlichem Skill-Level
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Status:</span>
-                      <Badge variant={settings.autoPing.enabled ? 'default' : 'outline'}>
-                        {settings.autoPing.enabled ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Max Ping Radius:</span>
-                      <span className="text-sm font-mono">{settings.autoPing.maxPingRadius} Ränge</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Cooldown:</span>
-                      <span className="text-sm font-mono">{settings.autoPing.cooldown / 1000}s</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border-green-500/30">
-                <CardHeader>
-                  <CardTitle className="text-green-400 flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    ⚡ One-Click Team-Join
-                    <Tooltip content="Instant-Buttons für schnelles Team-Beitreten mit Auto-Voice-Join" />
-                  </CardTitle>
-                  <CardDescription>
-                    Sofortiges Beitreten zu Teams mit einem Klick
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Auto Voice-Join:</span>
-                      <Badge variant={settings.quickJoin.autoVoiceJoin ? 'default' : 'outline'}>
-                        {settings.quickJoin.autoVoiceJoin ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Max Team-Größe:</span>
-                      <span className="text-sm font-mono">{settings.quickJoin.maxTeamSize} Spieler</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Spectators:</span>
-                      <Badge variant={settings.quickJoin.allowSpectators ? 'default' : 'outline'}>
-                        {settings.quickJoin.allowSpectators ? 'Erlaubt' : 'Nicht erlaubt'}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/30">
-                <CardHeader>
-                  <CardTitle className="text-blue-400 flex items-center">
-                    <Activity className="h-5 w-5 mr-2" />
-                    📊 Live Team-Tracker
-                    <Tooltip content="Verfolge Team-Progress in Echtzeit mit Live-Updates" />
-                  </CardTitle>
-                  <CardDescription>
-                    Echtzeit-Verfolgung von Team-Aktivitäten und Progress
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Live Updates:</span>
-                      <Badge variant={settings.teamTracker.liveUpdates ? 'default' : 'outline'}>
-                        {settings.teamTracker.liveUpdates ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Stats Tracking:</span>
-                      <Badge variant={settings.teamTracker.trackStats ? 'default' : 'outline'}>
-                        {settings.teamTracker.trackStats ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Display Channel:</span>
-                      <span className="text-sm font-mono">#{settings.teamTracker.displayChannel}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/30">
-                <CardHeader>
-                  <CardTitle className="text-orange-400 flex items-center">
-                    <Mic className="h-5 w-5 mr-2" />
-                    🎤 Auto-Voice-Channels
-                    <Tooltip content="Automatische Erstellung und Löschung von Voice-Channels für Teams" />
-                  </CardTitle>
-                  <CardDescription>
-                    Automatische Voice-Channel-Verwaltung für Gaming-Teams
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Auto-Create:</span>
-                      <Badge variant={settings.voiceChannels.autoCreate ? 'default' : 'outline'}>
-                        {settings.voiceChannels.autoCreate ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Auto-Delete:</span>
-                      <Badge variant={settings.voiceChannels.autoDelete ? 'default' : 'outline'}>
-                        {settings.voiceChannels.autoDelete ? 'Aktiv' : 'Inaktiv'}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-dark-text-secondary">Max Channels:</span>
-                      <span className="text-sm font-mono">{settings.voiceChannels.maxChannels}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Reputation System Overview */}
-            <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
+            <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
               <CardHeader>
-                <CardTitle className="text-yellow-400 flex items-center">
-                  <Star className="h-5 w-5 mr-2" />
-                  ⭐ Reputation System Overview
-                  <Tooltip content="Community-basiertes Bewertungssystem für Teamplay und Verhalten" />
+                <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-purple-accent" />
+                  Gaming System Übersicht
                 </CardTitle>
-                <CardDescription>
-                  Community-basierte Spielerbewertung und Reputation-Management
+                <CardDescription className="text-dark-muted">
+                  Alle Gaming Features auf einen Blick
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-dark-surface/30 rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-400">{settings.reputation.startingPoints}</div>
-                    <div className="text-xs text-dark-text-secondary">Start-Punkte</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-lg border border-purple-primary/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Zap className="w-6 h-6 text-purple-400" />
+                      <h3 className="font-semibold text-dark-text">Smart Auto-Ping</h3>
+                    </div>
+                    <p className="text-sm text-dark-muted mb-2">Automatisches Matching von Spielern basierend auf Rang</p>
+                    <div className="text-xs text-purple-300">
+                      Status: {settings.autoPing.enabled ? '✅ Aktiv' : '❌ Inaktiv'}
+                    </div>
                   </div>
-                  <div className="text-center p-4 bg-dark-surface/30 rounded-lg">
-                    <div className="text-2xl font-bold text-green-400">+{settings.reputation.goodTeammateReward}</div>
-                    <div className="text-xs text-dark-text-secondary">Guter Teammate</div>
+
+                  <div className="p-4 bg-gradient-to-r from-green-600/20 to-blue-600/20 rounded-lg border border-green-primary/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Users className="w-6 h-6 text-green-400" />
+                      <h3 className="font-semibold text-dark-text">One-Click Team-Join</h3>
+                    </div>
+                    <p className="text-sm text-dark-muted mb-2">Sofortiges Beitreten zu Teams mit Voice-Integration</p>
+                    <div className="text-xs text-green-300">
+                      Status: {settings.quickJoin.enabled ? '✅ Aktiv' : '❌ Inaktiv'}
+                    </div>
                   </div>
-                  <div className="text-center p-4 bg-dark-surface/30 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-400">+{settings.reputation.winBonus}</div>
-                    <div className="text-xs text-dark-text-secondary">Win Bonus</div>
+
+                  <div className="p-4 bg-gradient-to-r from-orange-600/20 to-red-600/20 rounded-lg border border-orange-primary/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Activity className="w-6 h-6 text-orange-400" />
+                      <h3 className="font-semibold text-dark-text">Live Team-Tracker</h3>
+                    </div>
+                    <p className="text-sm text-dark-muted mb-2">Echtzeit-Verfolgung von Team-Progress und Statistiken</p>
+                    <div className="text-xs text-orange-300">
+                      Status: {settings.teamTracker.enabled ? '✅ Aktiv' : '❌ Inaktiv'}
+                    </div>
                   </div>
-                  <div className="text-center p-4 bg-dark-surface/30 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-400">{settings.reputation.maxPoints}</div>
-                    <div className="text-xs text-dark-text-secondary">Max Punkte</div>
+
+                  <div className="p-4 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 rounded-lg border border-blue-primary/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Mic className="w-6 h-6 text-blue-400" />
+                      <h3 className="font-semibold text-dark-text">Auto-Voice-Channels</h3>
+                    </div>
+                    <p className="text-sm text-dark-muted mb-2">Automatische Voice-Channel Erstellung und Verwaltung</p>
+                    <div className="text-xs text-blue-300">
+                      Status: {settings.voiceChannels.enabled ? '✅ Aktiv' : '❌ Inaktiv'}
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 rounded-lg border border-yellow-primary/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Star className="w-6 h-6 text-yellow-400" />
+                      <h3 className="font-semibold text-dark-text">Reputation System</h3>
+                    </div>
+                    <p className="text-sm text-dark-muted mb-2">Community-basiertes Bewertungssystem für Spieler</p>
+                    <div className="text-xs text-yellow-300">
+                      Status: {settings.reputation.enabled ? '✅ Aktiv' : '❌ Inaktiv'}
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-gradient-to-r from-pink-600/20 to-purple-600/20 rounded-lg border border-pink-primary/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Settings className="w-6 h-6 text-pink-400" />
+                      <h3 className="font-semibold text-dark-text">Games Setup</h3>
+                    </div>
+                    <p className="text-sm text-dark-muted mb-2">Automatische Channel und Rollen-Erstellung für Spiele</p>
+                    <div className="text-xs text-pink-300">
+                      Verfügbar: Valorant, LoL, OW2, CS2
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -683,1058 +595,37 @@ const Gaming: React.FC = () => {
           </div>
         )}
 
-        {/* Auto-Ping Tab */}
-        {activeTab === 'autoping' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-purple-primary/20">
-              <CardHeader>
-                <CardTitle className="text-purple-primary flex items-center">
-                  <Zap className="h-5 w-5 mr-2" />
-                  🤖 Smart Auto-Ping System
-                  <Tooltip content="Automatisches Matching von Spielern basierend auf Rang und Verfügbarkeit" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere das automatische Ping-System für optimales Team-Matching
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable/Disable */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Auto-Ping aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Automatisches Pingen von verfügbaren Spielern</p>
-                  </div>
-                  <Switch
-                    checked={settings.autoPing.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Min Rank */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Minimum Rang
-                    <Tooltip content="Niedrigster Rang für Auto-Ping Matching" />
-                  </label>
-                  <Select
-                    value={settings.autoPing.minRank}
-                    onValueChange={(value) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, minRank: value }
-                    }))}
-                  >
-                    <SelectTrigger className="bg-dark-surface border-purple-primary/30">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Iron">Iron</SelectItem>
-                      <SelectItem value="Bronze">Bronze</SelectItem>
-                      <SelectItem value="Silver">Silver</SelectItem>
-                      <SelectItem value="Gold">Gold</SelectItem>
-                      <SelectItem value="Platinum">Platinum</SelectItem>
-                      <SelectItem value="Diamond">Diamond</SelectItem>
-                      <SelectItem value="Immortal">Immortal</SelectItem>
-                      <SelectItem value="Radiant">Radiant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Max Ping Radius */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Max Ping Radius (Ränge)
-                    <Tooltip content="Maximale Rang-Differenz für Matching (z.B. 3 = Gold kann Silver bis Diamond pingen)" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={settings.autoPing.maxPingRadius}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, maxPingRadius: parseInt(e.target.value) || 5 }
-                    }))}
-                    className="bg-dark-surface border-purple-primary/30"
-                  />
-                </div>
-
-                {/* Cooldown */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Cooldown (Sekunden)
-                    <Tooltip content="Zeit zwischen Auto-Pings für denselben Spieler" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="10"
-                    max="300"
-                    value={settings.autoPing.cooldown / 1000}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, cooldown: (parseInt(e.target.value) || 30) * 1000 }
-                    }))}
-                    className="bg-dark-surface border-purple-primary/30"
-                  />
-                </div>
-
-                {/* Max Pings per Hour */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Max Pings pro Stunde
-                    <Tooltip content="Maximale Anzahl Auto-Pings pro Spieler pro Stunde" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={settings.autoPing.maxPingsPerHour}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, maxPingsPerHour: parseInt(e.target.value) || 10 }
-                    }))}
-                    className="bg-dark-surface border-purple-primary/30"
-                  />
-                </div>
-
-                {/* Additional Options */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Smart Matching</label>
-                      <p className="text-xs text-dark-text-secondary">KI-basiertes Skill-Matching</p>
-                    </div>
-                    <Switch
-                      checked={settings.autoPing.smartMatching}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        autoPing: { ...prev.autoPing, smartMatching: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">DND respektieren</label>
-                      <p className="text-xs text-dark-text-secondary">Keine Pings bei "Nicht stören"</p>
-                    </div>
-                    <Switch
-                      checked={settings.autoPing.respectDND}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        autoPing: { ...prev.autoPing, respectDND: checked }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Team-Join Tab */}
-        {activeTab === 'teams' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-green-500/20">
-              <CardHeader>
-                <CardTitle className="text-green-400 flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  ⚡ One-Click Team-Join System
-                  <Tooltip content="Instant-Buttons für schnelles Team-Beitreten mit automatischer Voice-Integration" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere das Schnell-Beitritt-System für Teams
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable Quick Join */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Quick-Join aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Ein-Klick Team-Beitritt mit Buttons</p>
-                  </div>
-                  <Switch
-                    checked={settings.quickJoin.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      quickJoin: { ...prev.quickJoin, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Auto Voice Join */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Auto Voice-Join</label>
-                    <p className="text-xs text-dark-text-secondary">Automatisch Voice-Channel beitreten</p>
-                  </div>
-                  <Switch
-                    checked={settings.quickJoin.autoVoiceJoin}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      quickJoin: { ...prev.quickJoin, autoVoiceJoin: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Max Team Size */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Maximale Team-Größe
-                    <Tooltip content="Maximale Anzahl Spieler pro Team" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="2"
-                    max="10"
-                    value={settings.quickJoin.maxTeamSize}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      quickJoin: { ...prev.quickJoin, maxTeamSize: parseInt(e.target.value) || 5 }
-                    }))}
-                    className="bg-dark-surface border-green-500/30"
-                  />
-                </div>
-
-                {/* Additional Options */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Spectators erlauben</label>
-                      <p className="text-xs text-dark-text-secondary">Zuschauer können Teams beitreten</p>
-                    </div>
-                    <Switch
-                      checked={settings.quickJoin.allowSpectators}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        quickJoin: { ...prev.quickJoin, allowSpectators: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Auto-Rollen-Zuweisung</label>
-                      <p className="text-xs text-dark-text-secondary">Automatische Spieler-Rollen</p>
-                    </div>
-                    <Switch
-                      checked={settings.quickJoin.autoRoleAssignment}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        quickJoin: { ...prev.quickJoin, autoRoleAssignment: checked }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Team Tracker Tab */}
-        {activeTab === 'tracker' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-blue-500/20">
-              <CardHeader>
-                <CardTitle className="text-blue-400 flex items-center">
-                  <Activity className="h-5 w-5 mr-2" />
-                  📊 Live Team-Tracker
-                  <Tooltip content="Echtzeit-Verfolgung von Team-Aktivitäten und Progress" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere das Team-Tracking und Progress-Monitoring
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable Tracker */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Team-Tracker aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Live-Verfolgung von Team-Aktivitäten</p>
-                  </div>
-                  <Switch
-                    checked={settings.teamTracker.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      teamTracker: { ...prev.teamTracker, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Display Channel */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Display Channel
-                    <Tooltip content="Channel für Team-Status-Updates" />
-                  </label>
-                  <Select
-                    value={settings.teamTracker.displayChannel}
-                    onValueChange={(value) => setSettings(prev => ({
-                      ...prev,
-                      teamTracker: { ...prev.teamTracker, displayChannel: value }
-                    }))}
-                  >
-                    <SelectTrigger className="bg-dark-surface border-blue-500/30">
-                      <SelectValue placeholder="Channel auswählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {channels.map(channel => (
-                        <SelectItem key={channel.id} value={channel.name}>
-                          #{channel.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Tracking Options */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Progress anzeigen</label>
-                      <p className="text-xs text-dark-text-secondary">Team-Fortschritt verfolgen</p>
-                    </div>
-                    <Switch
-                      checked={settings.teamTracker.showProgress}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        teamTracker: { ...prev.teamTracker, showProgress: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Live Updates</label>
-                      <p className="text-xs text-dark-text-secondary">Echtzeit-Aktualisierungen</p>
-                    </div>
-                    <Switch
-                      checked={settings.teamTracker.liveUpdates}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        teamTracker: { ...prev.teamTracker, liveUpdates: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Stats Tracking</label>
-                      <p className="text-xs text-dark-text-secondary">Detaillierte Statistiken sammeln</p>
-                    </div>
-                    <Switch
-                      checked={settings.teamTracker.trackStats}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        teamTracker: { ...prev.teamTracker, trackStats: checked }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Auto-Ping Tab */}
-        {activeTab === 'autoping' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-purple-primary/20">
-              <CardHeader>
-                <CardTitle className="text-purple-primary flex items-center">
-                  <Zap className="h-5 w-5 mr-2" />
-                  🤖 Smart Auto-Ping System
-                  <Tooltip content="Automatisches Matching von Spielern basierend auf Rang und Verfügbarkeit" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere das automatische Ping-System für optimales Team-Matching
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable/Disable */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Auto-Ping aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Automatisches Pingen von verfügbaren Spielern</p>
-                  </div>
-                  <Switch
-                    checked={settings.autoPing.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Min Rank */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Minimum Rang
-                    <Tooltip content="Niedrigster Rang für Auto-Ping Matching" />
-                  </label>
-                  <Select
-                    value={settings.autoPing.minRank}
-                    onValueChange={(value) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, minRank: value }
-                    }))}
-                  >
-                    <SelectTrigger className="bg-dark-surface border-purple-primary/30">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Iron">Iron</SelectItem>
-                      <SelectItem value="Bronze">Bronze</SelectItem>
-                      <SelectItem value="Silver">Silver</SelectItem>
-                      <SelectItem value="Gold">Gold</SelectItem>
-                      <SelectItem value="Platinum">Platinum</SelectItem>
-                      <SelectItem value="Diamond">Diamond</SelectItem>
-                      <SelectItem value="Immortal">Immortal</SelectItem>
-                      <SelectItem value="Radiant">Radiant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Max Ping Radius */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Max Ping Radius (Ränge)
-                    <Tooltip content="Maximale Rang-Differenz für Matching (z.B. 3 = Gold kann Silver bis Diamond pingen)" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={settings.autoPing.maxPingRadius}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, maxPingRadius: parseInt(e.target.value) || 5 }
-                    }))}
-                    className="bg-dark-surface border-purple-primary/30"
-                  />
-                </div>
-
-                {/* Cooldown */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Cooldown (Sekunden)
-                    <Tooltip content="Zeit zwischen Auto-Pings für denselben Spieler" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="10"
-                    max="300"
-                    value={settings.autoPing.cooldown / 1000}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, cooldown: (parseInt(e.target.value) || 30) * 1000 }
-                    }))}
-                    className="bg-dark-surface border-purple-primary/30"
-                  />
-                </div>
-
-                {/* Max Pings per Hour */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Max Pings pro Stunde
-                    <Tooltip content="Maximale Anzahl Auto-Pings pro Spieler pro Stunde" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={settings.autoPing.maxPingsPerHour}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      autoPing: { ...prev.autoPing, maxPingsPerHour: parseInt(e.target.value) || 10 }
-                    }))}
-                    className="bg-dark-surface border-purple-primary/30"
-                  />
-                </div>
-
-                {/* Additional Options */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Smart Matching</label>
-                      <p className="text-xs text-dark-text-secondary">KI-basiertes Skill-Matching</p>
-                    </div>
-                    <Switch
-                      checked={settings.autoPing.smartMatching}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        autoPing: { ...prev.autoPing, smartMatching: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">DND respektieren</label>
-                      <p className="text-xs text-dark-text-secondary">Keine Pings bei "Nicht stören"</p>
-                    </div>
-                    <Switch
-                      checked={settings.autoPing.respectDND}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        autoPing: { ...prev.autoPing, respectDND: checked }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Team-Join Tab */}
-        {activeTab === 'teams' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-green-500/20">
-              <CardHeader>
-                <CardTitle className="text-green-400 flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  ⚡ One-Click Team-Join System
-                  <Tooltip content="Instant-Buttons für schnelles Team-Beitreten mit automatischer Voice-Integration" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere das Schnell-Beitritt-System für Teams
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable Quick Join */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Quick-Join aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Ein-Klick Team-Beitritt mit Buttons</p>
-                  </div>
-                  <Switch
-                    checked={settings.quickJoin.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      quickJoin: { ...prev.quickJoin, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Auto Voice Join */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Auto Voice-Join</label>
-                    <p className="text-xs text-dark-text-secondary">Automatisch Voice-Channel beitreten</p>
-                  </div>
-                  <Switch
-                    checked={settings.quickJoin.autoVoiceJoin}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      quickJoin: { ...prev.quickJoin, autoVoiceJoin: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Max Team Size */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Maximale Team-Größe
-                    <Tooltip content="Maximale Anzahl Spieler pro Team" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="2"
-                    max="10"
-                    value={settings.quickJoin.maxTeamSize}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      quickJoin: { ...prev.quickJoin, maxTeamSize: parseInt(e.target.value) || 5 }
-                    }))}
-                    className="bg-dark-surface border-green-500/30"
-                  />
-                </div>
-
-                {/* Additional Options */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Spectators erlauben</label>
-                      <p className="text-xs text-dark-text-secondary">Zuschauer können Teams beitreten</p>
-                    </div>
-                    <Switch
-                      checked={settings.quickJoin.allowSpectators}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        quickJoin: { ...prev.quickJoin, allowSpectators: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Auto-Rollen-Zuweisung</label>
-                      <p className="text-xs text-dark-text-secondary">Automatische Spieler-Rollen</p>
-                    </div>
-                    <Switch
-                      checked={settings.quickJoin.autoRoleAssignment}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        quickJoin: { ...prev.quickJoin, autoRoleAssignment: checked }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Team Tracker Tab */}
-        {activeTab === 'tracker' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-blue-500/20">
-              <CardHeader>
-                <CardTitle className="text-blue-400 flex items-center">
-                  <Activity className="h-5 w-5 mr-2" />
-                  📊 Live Team-Tracker
-                  <Tooltip content="Echtzeit-Verfolgung von Team-Aktivitäten und Progress" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere das Team-Tracking und Progress-Monitoring
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable Tracker */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Team-Tracker aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Live-Verfolgung von Team-Aktivitäten</p>
-                  </div>
-                  <Switch
-                    checked={settings.teamTracker.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      teamTracker: { ...prev.teamTracker, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Display Channel */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Display Channel
-                    <Tooltip content="Channel für Team-Status-Updates" />
-                  </label>
-                  <Select
-                    value={settings.teamTracker.displayChannel}
-                    onValueChange={(value) => setSettings(prev => ({
-                      ...prev,
-                      teamTracker: { ...prev.teamTracker, displayChannel: value }
-                    }))}
-                  >
-                    <SelectTrigger className="bg-dark-surface border-blue-500/30">
-                      <SelectValue placeholder="Channel auswählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {channels.map(channel => (
-                        <SelectItem key={channel.id} value={channel.name}>
-                          #{channel.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Tracking Options */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Progress anzeigen</label>
-                      <p className="text-xs text-dark-text-secondary">Team-Fortschritt verfolgen</p>
-                    </div>
-                    <Switch
-                      checked={settings.teamTracker.showProgress}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        teamTracker: { ...prev.teamTracker, showProgress: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Live Updates</label>
-                      <p className="text-xs text-dark-text-secondary">Echtzeit-Aktualisierungen</p>
-                    </div>
-                    <Switch
-                      checked={settings.teamTracker.liveUpdates}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        teamTracker: { ...prev.teamTracker, liveUpdates: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Stats Tracking</label>
-                      <p className="text-xs text-dark-text-secondary">Detaillierte Statistiken sammeln</p>
-                    </div>
-                    <Switch
-                      checked={settings.teamTracker.trackStats}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        teamTracker: { ...prev.teamTracker, trackStats: checked }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Voice Channels Tab */}
-        {activeTab === 'voice' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-orange-500/20">
-              <CardHeader>
-                <CardTitle className="text-orange-400 flex items-center">
-                  <Mic className="h-5 w-5 mr-2" />
-                  🎤 Auto-Voice-Channels
-                  <Tooltip content="Automatische Erstellung und Verwaltung von Voice-Channels für Gaming-Teams" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere die automatische Voice-Channel-Verwaltung
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable Voice Channels */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Auto-Voice aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Automatische Voice-Channel-Verwaltung</p>
-                  </div>
-                  <Switch
-                    checked={settings.voiceChannels.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      voiceChannels: { ...prev.voiceChannels, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Category Name */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Kategorie Name
-                    <Tooltip content="Name der Voice-Channel-Kategorie" />
-                  </label>
-                  <Input
-                    value={settings.voiceChannels.categoryName}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      voiceChannels: { ...prev.voiceChannels, categoryName: e.target.value }
-                    }))}
-                    placeholder="z.B. 🎮 Gaming Lobbys"
-                    className="bg-dark-surface border-orange-500/30"
-                  />
-                </div>
-
-                {/* Naming Scheme */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Naming Schema
-                    <Tooltip content="Template für Channel-Namen. Variablen: {emoji}, {game}, {number}" />
-                  </label>
-                  <Input
-                    value={settings.voiceChannels.namingScheme}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      voiceChannels: { ...prev.voiceChannels, namingScheme: e.target.value }
-                    }))}
-                    placeholder="{emoji} {game} Team #{number}"
-                    className="bg-dark-surface border-orange-500/30"
-                  />
-                  <p className="text-xs text-dark-text-secondary">
-                    Verfügbare Variablen: {'{emoji}'} {'{game}'} {'{number}'}
-                  </p>
-                </div>
-
-                {/* Max Channels */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Max Voice-Channels
-                    <Tooltip content="Maximale Anzahl automatisch erstellter Voice-Channels" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={settings.voiceChannels.maxChannels}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      voiceChannels: { ...prev.voiceChannels, maxChannels: parseInt(e.target.value) || 10 }
-                    }))}
-                    className="bg-dark-surface border-orange-500/30"
-                  />
-                </div>
-
-                {/* Auto Options */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Auto-Create</label>
-                      <p className="text-xs text-dark-text-secondary">Automatische Channel-Erstellung</p>
-                    </div>
-                    <Switch
-                      checked={settings.voiceChannels.autoCreate}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        voiceChannels: { ...prev.voiceChannels, autoCreate: checked }
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-sm font-medium text-dark-text">Auto-Delete</label>
-                      <p className="text-xs text-dark-text-secondary">Leere Channels automatisch löschen</p>
-                    </div>
-                    <Switch
-                      checked={settings.voiceChannels.autoDelete}
-                      onCheckedChange={(checked) => setSettings(prev => ({
-                        ...prev,
-                        voiceChannels: { ...prev.voiceChannels, autoDelete: checked }
-                      }))}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Reputation Tab */}
-        {activeTab === 'reputation' && (
-          <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-yellow-500/20">
-              <CardHeader>
-                <CardTitle className="text-yellow-400 flex items-center">
-                  <Star className="h-5 w-5 mr-2" />
-                  ⭐ Reputation System
-                  <Tooltip content="Community-basierte Spielerbewertung und Reputation-Management" />
-                </CardTitle>
-                <CardDescription>
-                  Konfiguriere das Reputation- und Bewertungssystem
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Enable Reputation */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Reputation System aktivieren</label>
-                    <p className="text-xs text-dark-text-secondary">Community-basierte Spielerbewertung</p>
-                  </div>
-                  <Switch
-                    checked={settings.reputation.enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      reputation: { ...prev.reputation, enabled: checked }
-                    }))}
-                  />
-                </div>
-
-                {/* Point Settings */}
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-dark-text flex items-center">
-                      Start-Punkte
-                      <Tooltip content="Anfängliche Reputation-Punkte für neue Spieler" />
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      value={settings.reputation.startingPoints}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        reputation: { ...prev.reputation, startingPoints: parseInt(e.target.value) || 100 }
-                      }))}
-                      className="bg-dark-surface border-yellow-500/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-dark-text flex items-center">
-                      Max Punkte
-                      <Tooltip content="Maximale Reputation-Punkte" />
-                    </label>
-                    <Input
-                      type="number"
-                      min="100"
-                      max="10000"
-                      value={settings.reputation.maxPoints}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        reputation: { ...prev.reputation, maxPoints: parseInt(e.target.value) || 1000 }
-                      }))}
-                      className="bg-dark-surface border-yellow-500/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-dark-text flex items-center">
-                      Min Punkte
-                      <Tooltip content="Minimale Reputation-Punkte" />
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={settings.reputation.minPoints}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        reputation: { ...prev.reputation, minPoints: parseInt(e.target.value) || 0 }
-                      }))}
-                      className="bg-dark-surface border-yellow-500/30"
-                    />
-                  </div>
-                </div>
-
-                {/* Reward/Penalty Settings */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-dark-text flex items-center">
-                      Guter Teammate Belohnung
-                      <Tooltip content="Punkte für positive Bewertung" />
-                    </label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={settings.reputation.goodTeammateReward}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        reputation: { ...prev.reputation, goodTeammateReward: parseInt(e.target.value) || 5 }
-                      }))}
-                      className="bg-dark-surface border-green-500/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-dark-text flex items-center">
-                      Schlechter Teammate Abzug
-                      <Tooltip content="Punkte-Abzug für negative Bewertung" />
-                    </label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={settings.reputation.badTeammateDeduction}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        reputation: { ...prev.reputation, badTeammateDeduction: parseInt(e.target.value) || 10 }
-                      }))}
-                      className="bg-dark-surface border-red-500/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-dark-text flex items-center">
-                      Win Bonus
-                      <Tooltip content="Bonus-Punkte für Siege" />
-                    </label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={settings.reputation.winBonus}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        reputation: { ...prev.reputation, winBonus: parseInt(e.target.value) || 3 }
-                      }))}
-                      className="bg-dark-surface border-blue-500/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-dark-text flex items-center">
-                      Loss Abzug
-                      <Tooltip content="Punkte-Abzug für Niederlagen" />
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="10"
-                      value={settings.reputation.lossDeduction}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        reputation: { ...prev.reputation, lossDeduction: parseInt(e.target.value) || 1 }
-                      }))}
-                      className="bg-dark-surface border-orange-500/30"
-                    />
-                  </div>
-                </div>
-
-                {/* Min Games Required */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-dark-text flex items-center">
-                    Mindest-Spiele für Bewertung
-                    <Tooltip content="Minimale Anzahl Spiele bevor Reputation angezeigt wird" />
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={settings.reputation.requireMinGames}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      reputation: { ...prev.reputation, requireMinGames: parseInt(e.target.value) || 5 }
-                    }))}
-                    className="bg-dark-surface border-yellow-500/30"
-                  />
-                </div>
-
-                {/* Display Options */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium text-dark-text">Badges anzeigen</label>
-                    <p className="text-xs text-dark-text-secondary">Reputation-Badges in Profilen zeigen</p>
-                  </div>
-                  <Switch
-                    checked={settings.reputation.displayBadges}
-                    onCheckedChange={(checked) => setSettings(prev => ({
-                      ...prev,
-                      reputation: { ...prev.reputation, displayBadges: checked }
-                    }))}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Games Setup Tab */}
         {activeTab === 'games' && (
           <div className="space-y-6">
-            <Card className="bg-dark-surface/50 border-purple-primary/20">
+            <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
               <CardHeader>
-                <CardTitle className="text-purple-primary flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
+                <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-purple-accent" />
                   🎮 Games Setup
-                  <Tooltip content="Automatische Erstellung von Game-spezifischen Channels und Rollen" />
+                  <Tooltip 
+                    title="🎮 Games Setup erklärt:"
+                    content={
+                      <div>
+                        <div>Automatische Erstellung von Game-spezifischen Channels und Rollen:</div>
+                        <div>• Erstellt Text- und Voice-Channels für jedes Spiel</div>
+                        <div>• Erstellt Rollen für verschiedene Spieler-Positionen</div>
+                        <div>• Konfiguriert Permissions für optimales Gaming-Erlebnis</div>
+                        <div>• Fügt Emojis und passende Channel-Namen hinzu</div>
+                      </div>
+                    }
+                  />
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-dark-muted">
                   Erstelle automatisch Channels und Rollen für unterstützte Spiele
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Auto Creation Settings */}
                 <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
                     <div>
                       <label className="text-sm font-medium text-dark-text">Auto Channel-Erstellung</label>
-                      <p className="text-xs text-dark-text-secondary">Automatische Channel-Erstellung für Games</p>
+                      <p className="text-xs text-dark-muted">Automatische Channel-Erstellung für Games</p>
                     </div>
                     <Switch
                       checked={settings.autoChannelCreation}
@@ -1745,10 +636,10 @@ const Gaming: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
                     <div>
                       <label className="text-sm font-medium text-dark-text">Auto Rollen-Erstellung</label>
-                      <p className="text-xs text-dark-text-secondary">Automatische Rollen-Erstellung für Games</p>
+                      <p className="text-xs text-dark-muted">Automatische Rollen-Erstellung für Games</p>
                     </div>
                     <Switch
                       checked={settings.autoRoleCreation}
@@ -1785,27 +676,27 @@ const Gaming: React.FC = () => {
                       roles: ['Tank', 'Damage', 'Support']
                     },
                     { 
-                      id: 'cs2', 
+                      id: 'csgo', 
                       name: 'Counter-Strike 2', 
                       emoji: '🔫', 
                       description: '5v5 Tactical FPS',
                       roles: ['IGL', 'Entry', 'Support', 'AWPer', 'Lurker']
                     }
                   ].map(game => (
-                    <Card key={game.id} className="bg-dark-surface/30 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
+                    <Card key={game.id} className="bg-dark-bg/50 border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-200">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-3">
                             <span className="text-2xl">{game.emoji}</span>
                             <div>
                               <h3 className="font-medium text-dark-text">{game.name}</h3>
-                              <p className="text-xs text-dark-text-secondary">{game.description}</p>
+                              <p className="text-xs text-dark-muted">{game.description}</p>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="space-y-2">
-                          <div className="text-xs text-dark-text-secondary">Rollen:</div>
+                        <div className="space-y-2 mb-4">
+                          <div className="text-xs text-dark-muted">Rollen:</div>
                           <div className="flex flex-wrap gap-1">
                             {game.roles.map(role => (
                               <Badge key={role} variant="outline" className="text-xs">
@@ -1817,8 +708,7 @@ const Gaming: React.FC = () => {
 
                         <Button
                           onClick={() => setupGameChannels(game.id)}
-                          className="w-full mt-4 bg-purple-primary/20 hover:bg-purple-primary/30 border border-purple-primary/30 text-purple-primary"
-                          size="sm"
+                          className="w-full bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-2 px-4 rounded-lg shadow-neon transition-all duration-300 hover:scale-105"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Setup {game.name}
@@ -1827,52 +717,39 @@ const Gaming: React.FC = () => {
                     </Card>
                   ))}
                 </div>
-
-                {/* Setup Info */}
-                <Card className="bg-blue-500/10 border-blue-500/30">
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <AlertTriangle className="h-5 w-5 text-blue-400 mt-1" />
-                      <div>
-                        <h4 className="font-medium text-blue-400 mb-2">Setup Information</h4>
-                        <ul className="text-sm text-dark-text-secondary space-y-1">
-                          <li>• Erstellt automatisch game-spezifische Text- und Voice-Channels</li>
-                          <li>• Erstellt Rollen für verschiedene Spieler-Positionen</li>
-                          <li>• Konfiguriert Permissions für optimales Gaming-Erlebnis</li>
-                          <li>• Fügt Emojis und passende Channel-Namen hinzu</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Save Button */}
-        <div className="fixed bottom-6 right-6 z-20">
-          <Button
-            onClick={saveSettings}
-            disabled={saving}
-            className="bg-gradient-to-r from-purple-primary to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-6 py-3 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl"
-          >
-            {saving ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Speichert...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Einstellungen speichern
-              </>
-            )}
-          </Button>
-        </div>
-
-        <ToastContainer toasts={toasts} removeToast={removeToast} />
+        {/* Andere Tabs können hier hinzugefügt werden */}
+        {activeTab !== 'overview' && activeTab !== 'games' && (
+          <div className="space-y-6">
+            <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-dark-text">
+                  {activeTab === 'autoping' && '🤖 Smart Auto-Ping System'}
+                  {activeTab === 'teams' && '⚡ One-Click Team-Join'}
+                  {activeTab === 'tracker' && '📊 Live Team-Tracker'}
+                  {activeTab === 'voice' && '🎤 Auto-Voice-Channels'}
+                  {activeTab === 'reputation' && '⭐ Reputation System'}
+                </CardTitle>
+                <CardDescription className="text-dark-muted">
+                  Konfiguration für {activeTab} wird hier implementiert
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <p className="text-dark-muted">Diese Konfiguration wird in der nächsten Version implementiert.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };

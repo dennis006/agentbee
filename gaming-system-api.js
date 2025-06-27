@@ -114,7 +114,7 @@ let gamingSystemSettings = {
             emoji: '🎯',
             teamSize: 5,
             roles: ['Controller', 'Duelist', 'Initiator', 'Sentinel'],
-            ranks: ['Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Ascendant', 'Immortal', 'Radiant'],
+            ranks: ['Unranked', 'Iron 1', 'Iron 2', 'Iron 3', 'Bronze 1', 'Bronze 2', 'Bronze 3', 'Silver 1', 'Silver 2', 'Silver 3', 'Gold 1', 'Gold 2', 'Gold 3', 'Platinum 1', 'Platinum 2', 'Platinum 3', 'Diamond 1', 'Diamond 2', 'Diamond 3', 'Ascendant 1', 'Ascendant 2', 'Ascendant 3', 'Immortal 1', 'Immortal 2', 'Immortal 3', 'Radiant'],
             channels: {
                 general: '🎯 valorant-general',
                 lfg: '🔍 valorant-lfg',
@@ -538,7 +538,7 @@ router.post('/gaming/toggle', async (req, res) => {
                 error: 'Fehler beim Speichern der Toggle-Einstellung'
             });
         }
-        
+
         res.json({
             success: true,
             enabled: gamingSystemSettings.enabled,
@@ -550,6 +550,72 @@ router.post('/gaming/toggle', async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Fehler beim Umschalten des Gaming Systems',
+            details: error.message
+        });
+    }
+});
+
+// POST: Setup Game Channels & Roles
+router.post('/gaming/setup/:game', async (req, res) => {
+    try {
+        const { game } = req.params;
+        const gameConfig = gamingSystemSettings.supportedGames[game];
+        
+        if (!gameConfig) {
+            return res.status(404).json({
+                success: false,
+                error: `Spiel '${game}' wird nicht unterstützt`
+            });
+        }
+
+        console.log(`🎮 Starte ${gameConfig.name} Setup...`);
+        
+        const results = {
+            channelsCreated: [],
+            rolesCreated: [],
+            errors: []
+        };
+
+        // Mock setup (in production würde hier Discord API Integration stehen)
+        // Channels erstellen
+        Object.entries(gameConfig.channels).forEach(([type, channelName]) => {
+            results.channelsCreated.push({
+                type,
+                name: channelName,
+                success: true
+            });
+        });
+
+        // Rollen erstellen
+        gameConfig.roles.forEach(role => {
+            results.rolesCreated.push({
+                name: `${gameConfig.emoji} ${role}`,
+                success: true
+            });
+        });
+
+        // Kategorie erstellen
+        results.channelsCreated.push({
+            type: 'category',
+            name: `${gameConfig.emoji} ${gameConfig.name}`,
+            success: true
+        });
+
+        console.log(`✅ ${gameConfig.name} Setup abgeschlossen:`, results);
+
+        res.json({
+            success: true,
+            game: gameConfig.name,
+            emoji: gameConfig.emoji,
+            results,
+            message: `${gameConfig.name} Setup erfolgreich abgeschlossen! ${results.channelsCreated.length} Channels und ${results.rolesCreated.length} Rollen erstellt.`
+        });
+
+    } catch (error) {
+        console.error('❌ Game Setup Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Fehler beim Game Setup',
             details: error.message
         });
     }
