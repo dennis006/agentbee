@@ -11942,8 +11942,8 @@ let gamingSystemSettings = {
     }
 };
 
-// Gaming System API Routes registrieren
-app.use('/api', gamingSystemAPI);
+// LFG System API Routes registrieren
+app.use('/api/lfg', gamingSystemAPI);
 
 // Gaming Slash Commands registrieren
 async function registerGamingCommands() {
