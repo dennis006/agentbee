@@ -2881,6 +2881,12 @@ try {
                 console.error('❌ Fehler bei Simple Music Commands:', error);
             });
             
+            registerGamingCommands().then(() => {
+                console.log('✅ Gaming System Commands registriert');
+            }).catch(error => {
+                console.error('❌ Fehler bei Gaming Commands:', error);
+            });
+            
         } catch (error) {
             console.error('❌ Fehler beim Bot-Setup:', error);
         }
@@ -11815,3 +11821,255 @@ const {
 registerBotIntroductionAPI(app, client);
 
 // ================== END BOT INTRODUCTION API ==================
+
+// ================== GAMING SYSTEM API ==================
+// Gaming System API Integration
+const gamingSystemAPI = require('./gaming-system-api');
+
+// Gaming System Settings (In-Memory, später Supabase)
+let gamingSystemSettings = {
+    enabled: true,
+    autoChannelCreation: true,
+    autoRoleCreation: true,
+    
+    // 🤖 Smart Auto-Ping System
+    autoPing: {
+        enabled: true,
+        minRank: 'Bronze',
+        maxPingRadius: 5,
+        cooldown: 30000,
+        maxPingsPerHour: 10,
+        smartMatching: true,
+        respectDND: true
+    },
+    
+    // ⚡ One-Click Team-Join System
+    quickJoin: {
+        enabled: true,
+        autoVoiceJoin: true,
+        maxTeamSize: 5,
+        allowSpectators: true,
+        autoRoleAssignment: true
+    },
+    
+    // 📊 Live Team-Tracker
+    teamTracker: {
+        enabled: true,
+        showProgress: true,
+        liveUpdates: true,
+        trackStats: true,
+        displayChannel: 'team-status'
+    },
+    
+    // 🎤 Auto-Voice-Channels
+    voiceChannels: {
+        enabled: true,
+        autoCreate: true,
+        autoDelete: true,
+        namingScheme: '{emoji} {game} Team #{number}',
+        maxChannels: 10,
+        categoryName: '🎮 Gaming Lobbys'
+    },
+    
+    // ⭐ Reputation System
+    reputation: {
+        enabled: true,
+        startingPoints: 100,
+        maxPoints: 1000,
+        minPoints: 0,
+        goodTeammateReward: 5,
+        badTeammateDeduction: 10,
+        winBonus: 3,
+        lossDeduction: 1,
+        displayBadges: true,
+        requireMinGames: 5
+    },
+    
+    // 🎯 Games Configuration
+    supportedGames: {
+        valorant: {
+            name: 'Valorant',
+            emoji: '🎯',
+            teamSize: 5,
+            roles: ['Controller', 'Duelist', 'Initiator', 'Sentinel'],
+            ranks: ['Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Ascendant', 'Immortal', 'Radiant'],
+            channels: {
+                general: '🎯 valorant-general',
+                lfg: '🔍 valorant-lfg',
+                ranked: '🏆 valorant-ranked',
+                scrims: '⚔️ valorant-scrims'
+            }
+        },
+        lol: {
+            name: 'League of Legends',
+            emoji: '⭐',
+            teamSize: 5,
+            roles: ['Top', 'Jungle', 'Mid', 'ADC', 'Support'],
+            ranks: ['Iron', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster', 'Challenger'],
+            channels: {
+                general: '⭐ lol-general',
+                lfg: '🔍 lol-lfg',
+                ranked: '🏆 lol-ranked',
+                aram: '🎲 lol-aram'
+            }
+        },
+        overwatch: {
+            name: 'Overwatch 2',
+            emoji: '🧡',
+            teamSize: 5,
+            roles: ['Tank', 'Damage', 'Support'],
+            ranks: ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Grandmaster', 'Top 500'],
+            channels: {
+                general: '🧡 overwatch-general',
+                lfg: '🔍 overwatch-lfg',
+                competitive: '🏆 overwatch-comp',
+                quickplay: '⚡ overwatch-quick'
+            }
+        },
+        csgo: {
+            name: 'CS2',
+            emoji: '🔫',
+            teamSize: 5,
+            roles: ['IGL', 'Entry', 'Support', 'AWPer', 'Lurker'],
+            ranks: ['Silver', 'Gold Nova', 'Master Guardian', 'Distinguished Master Guardian', 'Legendary Eagle', 'Supreme', 'Global Elite'],
+            channels: {
+                general: '🔫 cs2-general',
+                lfg: '🔍 cs2-lfg',
+                competitive: '🏆 cs2-competitive',
+                retakes: '💥 cs2-retakes'
+            }
+        }
+    }
+};
+
+// Gaming System API Routes registrieren
+app.use('/api', gamingSystemAPI);
+
+// Gaming Slash Commands registrieren
+async function registerGamingCommands() {
+    try {
+        console.log('🎮 Registriere Gaming System Slash Commands...');
+        
+        const commands = [
+            {
+                name: 'team-create',
+                description: '🎯 Erstelle ein neues Gaming-Team',
+                options: [
+                    {
+                        name: 'game',
+                        description: 'Welches Spiel möchtest du spielen?',
+                        type: 3, // STRING
+                        required: true,
+                        choices: [
+                            { name: '🎯 Valorant', value: 'valorant' },
+                            { name: '⭐ League of Legends', value: 'lol' },
+                            { name: '🧡 Overwatch 2', value: 'overwatch' },
+                            { name: '🔫 CS2', value: 'csgo' }
+                        ]
+                    },
+                    {
+                        name: 'mode',
+                        description: 'Spielmodus (Standard: Competitive)',
+                        type: 3, // STRING
+                        required: false
+                    },
+                    {
+                        name: 'description',
+                        description: 'Team-Beschreibung',
+                        type: 3, // STRING
+                        required: false
+                    },
+                    {
+                        name: 'max_size',
+                        description: 'Maximale Team-Größe',
+                        type: 4, // INTEGER
+                        required: false
+                    }
+                ]
+            },
+            {
+                name: 'team-join',
+                description: '⚡ Trete einem Gaming-Team bei',
+                options: [
+                    {
+                        name: 'team_id',
+                        description: 'Team-ID (Optional - zeigt Liste wenn leer)',
+                        type: 3, // STRING
+                        required: false
+                    },
+                    {
+                        name: 'role',
+                        description: 'Bevorzugte Rolle',
+                        type: 3, // STRING
+                        required: false
+                    }
+                ]
+            },
+            {
+                name: 'team-find',
+                description: '🔍 Finde passende Gaming-Teams',
+                options: [
+                    {
+                        name: 'game',
+                        description: 'Spiel filtern',
+                        type: 3, // STRING
+                        required: false,
+                        choices: [
+                            { name: '🎯 Valorant', value: 'valorant' },
+                            { name: '⭐ League of Legends', value: 'lol' },
+                            { name: '🧡 Overwatch 2', value: 'overwatch' },
+                            { name: '🔫 CS2', value: 'csgo' }
+                        ]
+                    },
+                    {
+                        name: 'rank',
+                        description: 'Dein aktueller Rang',
+                        type: 3, // STRING
+                        required: false
+                    }
+                ]
+            },
+            {
+                name: 'reputation',
+                description: '⭐ Zeige Spieler-Reputation an',
+                options: [
+                    {
+                        name: 'user',
+                        description: 'User (Standard: Du selbst)',
+                        type: 6, // USER
+                        required: false
+                    }
+                ]
+            },
+            {
+                name: 'commend',
+                description: '👍 Bewerte einen Teamkameraden positiv',
+                options: [
+                    {
+                        name: 'user',
+                        description: 'Welchen User möchtest du empfehlen?',
+                        type: 6, // USER
+                        required: true
+                    },
+                    {
+                        name: 'reason',
+                        description: 'Grund für die Empfehlung',
+                        type: 3, // STRING
+                        required: false
+                    }
+                ]
+            }
+        ];
+
+        // Commands registrieren
+        for (const command of commands) {
+            await client.application.commands.create(command);
+        }
+
+        console.log('✅ Gaming System Slash Commands erfolgreich registriert');
+    } catch (error) {
+        console.error('❌ Fehler beim Registrieren der Gaming Commands:', error);
+    }
+}
+
+// ================== END GAMING SYSTEM API ==================

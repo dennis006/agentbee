@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { Home, FileText, BarChart3, Settings as SettingsIcon, Zap, Heart, Star, Play, Shield, Users, ChevronDown, Target, Key, Bot, Ticket, Activity, Gift, Music, LogOut, User, Server, Newspaper } from 'lucide-react'
+import { Home, FileText, BarChart3, Settings as SettingsIcon, Zap, Heart, Star, Play, Shield, Users, ChevronDown, Target, Key, Bot, Ticket, Activity, Gift, Music, LogOut, User, Server, Newspaper, Gamepad2 } from 'lucide-react'
 import AuthProvider, { useAuth } from './contexts/AuthContext'
 // Import API library to activate global fetch override
 import './lib/api'
@@ -18,6 +18,7 @@ import XP from './pages/XP'
 import TwitchNotifications from './pages/TwitchNotifications'
 import Valorant from './pages/Valorant'
 import ValorantNews from './pages/ValorantNews'
+import Gaming from './pages/Gaming'
 import APIKeys from './pages/APIKeys'
 import Security from './pages/Security'
 // GELÖSCHT: ServerManager entfernt
@@ -104,6 +105,7 @@ const Navigation = ({
       label: 'Features',
       description: 'Special Functions',
       items: [
+        { id: 'gaming', icon: Gamepad2, label: 'Gaming System', description: 'Smart Auto-Ping & Team Management' },
         { id: 'music', icon: Music, label: 'Music Bot', description: 'YouTube Music Player & Control' },
         { id: 'tickets', icon: Ticket, label: 'Ticket System', description: 'Support & Help Desk System' },
         // AFK System entfernt - verwende Discord Native AFK
@@ -398,6 +400,8 @@ const DashboardLayout = () => {
         return <XP />
       case 'giveaway':
         return <Giveaway />
+      case 'gaming':
+        return <Gaming />
       case 'music':
         return <MusicPage />
       case 'tickets':
