@@ -890,15 +890,15 @@ router.post('/update-fragpunk', async (req, res) => {
         }
 
         // Prüfe alle Settings nach dem Update
-        const { data: allSettings, error: fetchError } = await supabase
+        const { data: allSettings, error: verifyError } = await supabase
             .from('lfg_settings')
             .select('guild_id, allowed_games, game_team_sizes');
 
-        if (fetchError) {
-            console.error('❌ Fehler beim Laden der Settings:', fetchError);
+        if (verifyError) {
+            console.error('❌ Fehler beim Laden der Settings:', verifyError);
         }
 
-        let updatedCount = 0;
+        let finalUpdatedCount = 0;
         let totalCount = allSettings ? allSettings.length : 0;
         let fragpunkStats = {
             hasFragpunkInGames: 0,
@@ -915,7 +915,7 @@ router.post('/update-fragpunk', async (req, res) => {
                 if (hasInSizes) fragpunkStats.hasFragpunkInSizes++;
                 
                 if (hasInGames && hasInSizes) {
-                    updatedCount++;
+                    finalUpdatedCount++;
                 } else {
                     fragpunkStats.missingFragpunk.push({
                         guild_id: setting.guild_id,
@@ -926,14 +926,14 @@ router.post('/update-fragpunk', async (req, res) => {
             }
         }
 
-        console.log(`✅ Fragpunk Update abgeschlossen: ${updatedCount}/${totalCount} Settings aktualisiert`);
+        console.log(`✅ Fragpunk Update abgeschlossen: ${finalUpdatedCount}/${totalCount} Settings aktualisiert`);
 
         res.json({
             success: true,
-            message: `✅ Fragpunk erfolgreich hinzugefügt! ${updatedCount}/${totalCount} Settings aktualisiert.`,
+            message: `✅ Fragpunk erfolgreich hinzugefügt! ${finalUpdatedCount}/${totalCount} Settings aktualisiert.`,
             stats: {
                 totalSettings: totalCount,
-                updatedSettings: updatedCount,
+                updatedSettings: finalUpdatedCount,
                 fragpunkInGames: fragpunkStats.hasFragpunkInGames,
                 fragpunkInSizes: fragpunkStats.hasFragpunkInSizes,
                 missingFragpunk: fragpunkStats.missingFragpunk
