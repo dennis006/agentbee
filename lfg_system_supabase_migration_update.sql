@@ -109,3 +109,123 @@ WHERE id IS NOT NULL;
 -- Das Dashboard kann jetzt alle neuen Features konfigurieren!
 --
 -- ================================================================ 
+
+-- ================================================================
+-- 🎮 LFG SYSTEM - FRAGPUNK UPDATE
+-- ================================================================
+-- Fügt Fragpunk zu den unterstützten Spielen hinzu
+-- Created: 2025-01-27
+
+-- ================================================================
+-- 1. UPDATE EXISTING SETTINGS - ADD FRAGPUNK
+-- ================================================================
+
+-- Update allowed_games für alle bestehenden Einträge
+UPDATE lfg_settings 
+SET allowed_games = jsonb_set(
+    allowed_games, 
+    '{-1}', 
+    '"Fragpunk"'::jsonb, 
+    true
+)
+WHERE NOT (allowed_games ? 'Fragpunk');
+
+-- Update game_team_sizes für alle bestehenden Einträge
+UPDATE lfg_settings 
+SET game_team_sizes = jsonb_set(
+    game_team_sizes, 
+    '{"Fragpunk"}', 
+    '5'::jsonb, 
+    true
+)
+WHERE NOT (game_team_sizes ? 'Fragpunk');
+
+-- ================================================================
+-- 2. UPDATE DEFAULT VALUES FOR NEW ENTRIES
+-- ================================================================
+
+-- Aktualisiere die Default-Werte in der Tabellen-Definition
+ALTER TABLE lfg_settings 
+ALTER COLUMN allowed_games 
+SET DEFAULT '["Valorant", "League of Legends", "Overwatch 2", "Counter-Strike 2", "Apex Legends", "Rocket League", "Call of Duty", "Fortnite", "Fragpunk"]'::jsonb;
+
+ALTER TABLE lfg_settings 
+ALTER COLUMN game_team_sizes 
+SET DEFAULT '{
+    "Valorant": 5,
+    "League of Legends": 5,
+    "Overwatch 2": 6,
+    "Counter-Strike 2": 5,
+    "CS2": 5,
+    "Apex Legends": 3,
+    "Rocket League": 3,
+    "Call of Duty": 6,
+    "Fortnite": 4,
+    "Fragpunk": 5
+}'::jsonb;
+
+-- ================================================================
+-- 3. VERIFICATION QUERIES
+-- ================================================================
+
+-- Zeige alle Guild-Einstellungen mit Fragpunk-Status
+-- SELECT 
+--     guild_id,
+--     allowed_games ? 'Fragpunk' as has_fragpunk_in_games,
+--     game_team_sizes ? 'Fragpunk' as has_fragpunk_in_sizes,
+--     allowed_games,
+--     game_team_sizes
+-- FROM lfg_settings;
+
+-- ================================================================
+-- 4. CLEANUP FUNCTION (OPTIONAL)
+-- ================================================================
+
+-- Funktion um alle LFG-Einstellungen zu aktualisieren
+CREATE OR REPLACE FUNCTION update_lfg_settings_with_fragpunk()
+RETURNS void AS $$
+BEGIN
+    -- Füge Fragpunk zu allowed_games hinzu falls nicht vorhanden
+    UPDATE lfg_settings 
+    SET allowed_games = jsonb_set(
+        allowed_games, 
+        '{-1}', 
+        '"Fragpunk"'::jsonb, 
+        true
+    )
+    WHERE NOT (allowed_games ? 'Fragpunk');
+    
+    -- Füge Fragpunk zu game_team_sizes hinzu falls nicht vorhanden
+    UPDATE lfg_settings 
+    SET game_team_sizes = jsonb_set(
+        game_team_sizes, 
+        '{"Fragpunk"}', 
+        '5'::jsonb, 
+        true
+    )
+    WHERE NOT (game_team_sizes ? 'Fragpunk');
+    
+    -- Update updated_at timestamp
+    UPDATE lfg_settings 
+    SET updated_at = NOW() 
+    WHERE NOT (allowed_games ? 'Fragpunk') OR NOT (game_team_sizes ? 'Fragpunk');
+    
+    RAISE NOTICE 'Fragpunk erfolgreich zu allen LFG-Einstellungen hinzugefügt!';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Führe das Update aus
+SELECT update_lfg_settings_with_fragpunk();
+
+-- ================================================================
+-- 5. MIGRATION COMPLETE
+-- ================================================================
+
+-- Zeige Bestätigung
+DO $$
+BEGIN
+    RAISE NOTICE '✅ LFG System Fragpunk Migration abgeschlossen!';
+    RAISE NOTICE '🎮 Fragpunk wurde zu allen allowed_games hinzugefügt';
+    RAISE NOTICE '⚙️ Fragpunk Team-Größe auf 5 Spieler gesetzt';
+    RAISE NOTICE '🔄 Default-Werte für neue Einträge aktualisiert';
+END $$; 

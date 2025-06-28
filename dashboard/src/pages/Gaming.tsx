@@ -333,6 +333,32 @@ const LFGSystem: React.FC = () => {
     }
   };
 
+  const updateFragpunk = async () => {
+    try {
+      showMessage('success', '🎮 Fragpunk wird zu Supabase hinzugefügt...');
+      
+      const response = await fetch('/api/lfg/update-fragpunk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        showMessage('success', `✅ ${data.message}`);
+        console.log('🎮 Fragpunk Update Stats:', data.stats);
+        
+        // Lade Einstellungen neu nach dem Update
+        await loadData();
+      } else {
+        const data = await response.json();
+        showMessage('error', `❌ ${data.error}`);
+      }
+    } catch (error) {
+      showMessage('error', '❌ Fehler beim Fragpunk Update');
+    }
+  };
+
   const showMessage = (type: 'success' | 'error', text: string) => {
     if (type === 'success') {
       success(text);
@@ -1019,6 +1045,14 @@ const LFGSystem: React.FC = () => {
                     >
                       <TestTube className="h-5 w-5 mr-2" />
                       System Debug (Konsole)
+                    </Button>
+
+                    <Button
+                      onClick={updateFragpunk}
+                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-2 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      Fragpunk zu Supabase hinzufügen
                     </Button>
                   </div>
 

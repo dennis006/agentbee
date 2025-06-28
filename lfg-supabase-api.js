@@ -814,6 +814,141 @@ router.post('/debug', async (req, res) => {
     }
 });
 
+// POST /api/lfg/update-fragpunk - Add Fragpunk to existing settings
+router.post('/update-fragpunk', async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.status(500).json({
+                success: false,
+                error: 'Supabase nicht verfügbar'
+            });
+        }
+
+        console.log('🎮 Starte Fragpunk Update für alle LFG Settings...');
+
+        // Lade alle bestehenden Settings
+        const { data: existingSettings, error: fetchError } = await supabase
+            .from('lfg_settings')
+            .select('*');
+
+        if (fetchError) {
+            console.error('❌ Fehler beim Laden der Settings:', fetchError);
+            return res.status(500).json({
+                success: false,
+                error: 'Fehler beim Laden der Settings: ' + fetchError.message
+            });
+        }
+
+        let updatedCount = 0;
+        const errors = [];
+
+        // Update jede Setting einzeln
+        for (const setting of existingSettings || []) {
+            try {
+                let needsUpdate = false;
+                let newAllowedGames = setting.allowed_games || [];
+                let newGameTeamSizes = setting.game_team_sizes || {};
+
+                // Füge Fragpunk zu allowed_games hinzu falls nicht vorhanden
+                if (!newAllowedGames.includes('Fragpunk')) {
+                    newAllowedGames = [...newAllowedGames, 'Fragpunk'];
+                    needsUpdate = true;
+                }
+
+                // Füge Fragpunk zu game_team_sizes hinzu falls nicht vorhanden
+                if (!newGameTeamSizes.Fragpunk) {
+                    newGameTeamSizes.Fragpunk = 5;
+                    needsUpdate = true;
+                }
+
+                if (needsUpdate) {
+                    const { error: updateError } = await supabase
+                        .from('lfg_settings')
+                        .update({
+                            allowed_games: newAllowedGames,
+                            game_team_sizes: newGameTeamSizes,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', setting.id);
+
+                    if (updateError) {
+                        console.error(`❌ Fehler beim Update von Guild ${setting.guild_id}:`, updateError);
+                        errors.push(`Guild ${setting.guild_id}: ${updateError.message}`);
+                    } else {
+                        updatedCount++;
+                        console.log(`✅ Guild ${setting.guild_id} erfolgreich aktualisiert`);
+                    }
+                }
+            } catch (error) {
+                console.error(`❌ Fehler beim Verarbeiten von Guild ${setting.guild_id}:`, error);
+                errors.push(`Guild ${setting.guild_id}: ${error.message}`);
+            }
+        }
+
+        if (errors.length > 0) {
+            console.error('❌ Einige Updates fehlgeschlagen:', errors);
+        }
+
+        // Prüfe alle Settings nach dem Update
+        const { data: allSettings, error: fetchError } = await supabase
+            .from('lfg_settings')
+            .select('guild_id, allowed_games, game_team_sizes');
+
+        if (fetchError) {
+            console.error('❌ Fehler beim Laden der Settings:', fetchError);
+        }
+
+        let updatedCount = 0;
+        let totalCount = allSettings ? allSettings.length : 0;
+        let fragpunkStats = {
+            hasFragpunkInGames: 0,
+            hasFragpunkInSizes: 0,
+            missingFragpunk: []
+        };
+
+        if (allSettings) {
+            for (const setting of allSettings) {
+                const hasInGames = setting.allowed_games && setting.allowed_games.includes('Fragpunk');
+                const hasInSizes = setting.game_team_sizes && setting.game_team_sizes.Fragpunk;
+                
+                if (hasInGames) fragpunkStats.hasFragpunkInGames++;
+                if (hasInSizes) fragpunkStats.hasFragpunkInSizes++;
+                
+                if (hasInGames && hasInSizes) {
+                    updatedCount++;
+                } else {
+                    fragpunkStats.missingFragpunk.push({
+                        guild_id: setting.guild_id,
+                        hasInGames,
+                        hasInSizes
+                    });
+                }
+            }
+        }
+
+        console.log(`✅ Fragpunk Update abgeschlossen: ${updatedCount}/${totalCount} Settings aktualisiert`);
+
+        res.json({
+            success: true,
+            message: `✅ Fragpunk erfolgreich hinzugefügt! ${updatedCount}/${totalCount} Settings aktualisiert.`,
+            stats: {
+                totalSettings: totalCount,
+                updatedSettings: updatedCount,
+                fragpunkInGames: fragpunkStats.hasFragpunkInGames,
+                fragpunkInSizes: fragpunkStats.hasFragpunkInSizes,
+                missingFragpunk: fragpunkStats.missingFragpunk
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Fehler beim Fragpunk Update:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Fehler beim Fragpunk Update: ' + error.message
+        });
+    }
+});
+
 // Export functions für externe Nutzung
 module.exports = {
     router,
