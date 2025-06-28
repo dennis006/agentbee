@@ -82,7 +82,7 @@ async function handleLFGMessageWithResponses(message) {
         console.log(`🎮 LFG Request erkannt von ${message.author.tag}: ${message.content}`);
         
         // Parse LFG Message für Spiel-Info
-        const gameInfo = parseLFGMessage(message.content, settings.allowedGames);
+        const gameInfo = parseLFGMessage(message.content, settings.allowedGames, settings);
         
         // Erstelle LFG Post Object
         const lfgPost = new LFGPost(
@@ -98,13 +98,14 @@ async function handleLFGMessageWithResponses(message) {
         
         // Erstelle Interactive Embed mit Buttons
         const embed = createLFGEmbed(lfgPost, message.author, settings);
-        const buttons = createLFGButtons(lfgPost);
+        const buttons = settings.enableButtons ? createLFGButtons(lfgPost, settings) : null;
         
         // Sende LFG Embed mit Buttons
-        const lfgMessage = await message.channel.send({ 
-            embeds: [embed], 
-            components: [buttons] 
-        });
+        const messageOptions = { embeds: [embed] };
+        if (buttons) {
+            messageOptions.components = [buttons];
+        }
+        const lfgMessage = await message.channel.send(messageOptions);
         
         // Lösche ursprüngliche Nachricht
         await message.delete();
@@ -130,30 +131,40 @@ async function handleLFGMessageWithResponses(message) {
 // LFG MESSAGE PARSING
 // ================================================================
 
-function parseLFGMessage(content, allowedGames) {
+function parseLFGMessage(content, allowedGames, settings) {
     // Entferne Role Mentions
     let cleanContent = content.replace(/<@&\d+>/g, '').replace(/@\w+/g, '').trim();
     
-    // Suche nach Spiel in der Nachricht
+    // Suche nach Spiel in der Nachricht (wenn aktiviert)
     let detectedGame = 'Unbekannt';
-    for (const game of allowedGames) {
-        if (cleanContent.toLowerCase().includes(game.toLowerCase())) {
-            detectedGame = game;
-            break;
+    if (settings.enableGameDetection) {
+        for (const game of allowedGames) {
+            if (cleanContent.toLowerCase().includes(game.toLowerCase())) {
+                detectedGame = game;
+                break;
+            }
         }
     }
     
-    // Extrahiere Spieleranzahl aus Nachricht
+    // Extrahiere Spieleranzahl aus Nachricht (wenn aktiviert)
     let maxPlayers = 5; // Default
-    const playerMatch = cleanContent.match(/(\d+)\s*(spieler|player|man|mann)/i);
-    if (playerMatch) {
-        maxPlayers = Math.min(parseInt(playerMatch[1]), 10); // Max 10 Spieler
+    if (settings.enableTeamSizeDetection) {
+        const playerMatch = cleanContent.match(/(\d+)\s*(spieler|player|man|mann)/i);
+        if (playerMatch) {
+            const detectedSize = parseInt(playerMatch[1]);
+            maxPlayers = Math.max(settings.minTeamSize, Math.min(detectedSize, settings.maxTeamSize));
+        }
     }
     
-    // Spiel-spezifische Defaults
-    if (detectedGame.toLowerCase().includes('valorant')) maxPlayers = 5;
-    if (detectedGame.toLowerCase().includes('overwatch')) maxPlayers = 6;
-    if (detectedGame.toLowerCase().includes('cs') || detectedGame.toLowerCase().includes('counter')) maxPlayers = 5;
+    // Verwende konfigurierte Team-Größen
+    if (settings.gameTeamSizes && settings.gameTeamSizes[detectedGame]) {
+        maxPlayers = settings.gameTeamSizes[detectedGame];
+    }
+    
+    // Override mit globaler Einstellung falls gesetzt
+    if (settings.voiceUserLimitOverride) {
+        maxPlayers = Math.max(settings.minTeamSize, Math.min(settings.voiceUserLimitOverride, settings.maxTeamSize));
+    }
     
     return {
         game: detectedGame,
@@ -230,33 +241,45 @@ function createLFGEmbed(lfgPost, author, settings) {
 // LFG BUTTONS CREATION
 // ================================================================
 
-function createLFGButtons(lfgPost) {
+function createLFGButtons(lfgPost, settings) {
+    const buttons = [];
+    
+    // Beitreten Button (immer anzeigen)
     const joinButton = new ButtonBuilder()
         .setCustomId(`lfg_join_${lfgPost.messageId}`)
         .setLabel(`Beitreten (${lfgPost.getPlayerCount()})`)
         .setEmoji('✅')
         .setStyle(ButtonStyle.Success)
         .setDisabled(lfgPost.isFull());
+    buttons.push(joinButton);
     
+    // Verlassen Button
     const leaveButton = new ButtonBuilder()
         .setCustomId(`lfg_leave_${lfgPost.messageId}`)
         .setLabel('Verlassen')
         .setEmoji('❌')
         .setStyle(ButtonStyle.Danger);
+    buttons.push(leaveButton);
     
-    const voiceButton = new ButtonBuilder()
-        .setCustomId(`lfg_voice_${lfgPost.messageId}`)
-        .setLabel('Voice Channel')
-        .setEmoji('🎤')
-        .setStyle(ButtonStyle.Primary);
+    // Voice Channel Button (nur wenn aktiviert)
+    if (settings.enableVoiceCreation) {
+        const voiceButton = new ButtonBuilder()
+            .setCustomId(`lfg_voice_${lfgPost.messageId}`)
+            .setLabel('Voice Channel')
+            .setEmoji('🎤')
+            .setStyle(ButtonStyle.Primary);
+        buttons.push(voiceButton);
+    }
     
+    // Schließen Button
     const closeButton = new ButtonBuilder()
         .setCustomId(`lfg_close_${lfgPost.messageId}`)
         .setLabel('Schließen')
         .setEmoji('🔒')
         .setStyle(ButtonStyle.Secondary);
+    buttons.push(closeButton);
     
-    return new ActionRowBuilder().addComponents(joinButton, leaveButton, voiceButton, closeButton);
+    return new ActionRowBuilder().addComponents(...buttons);
 }
 
 // ================================================================
@@ -335,30 +358,32 @@ async function handleLFGJoin(interaction, lfgPost, userId) {
         components: [updatedButtons]
     });
     
-    // Benachrichtige Team Creator per DM
-    try {
-        const creator = await interaction.client.users.fetch(lfgPost.authorId);
-        const joinEmbed = new EmbedBuilder()
-            .setColor(0x00FF00)
-            .setTitle('🎮 Neuer Spieler beigetreten!')
-            .setDescription(`**${interaction.user.displayName}** ist deinem **${lfgPost.game}** Team beigetreten!`)
-            .addFields(
-                {
-                    name: '👥 Team Status',
-                    value: `${lfgPost.getPlayerCount()} Spieler`,
-                    inline: true
-                },
-                {
-                    name: '🎮 Spiel',
-                    value: lfgPost.game,
-                    inline: true
-                }
-            )
-            .setTimestamp();
-        
-        await creator.send({ embeds: [joinEmbed] });
-    } catch (error) {
-        console.log('Konnte Creator nicht benachrichtigen:', error.message);
+    // Benachrichtige Team Creator per DM (wenn aktiviert)
+    if (settings.enableDmNotifications) {
+        try {
+            const creator = await interaction.client.users.fetch(lfgPost.authorId);
+            const joinEmbed = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🎮 Neuer Spieler beigetreten!')
+                .setDescription(`**${interaction.user.displayName}** ist deinem **${lfgPost.game}** Team beigetreten!`)
+                .addFields(
+                    {
+                        name: '👥 Team Status',
+                        value: `${lfgPost.getPlayerCount()} Spieler`,
+                        inline: true
+                    },
+                    {
+                        name: '🎮 Spiel',
+                        value: lfgPost.game,
+                        inline: true
+                    }
+                )
+                .setTimestamp();
+            
+            await creator.send({ embeds: [joinEmbed] });
+        } catch (error) {
+            console.log('Konnte Creator nicht benachrichtigen:', error.message);
+        }
     }
     
     // Wenn Team voll ist, erstelle automatisch Voice Channel
@@ -379,7 +404,10 @@ async function handleLFGLeave(interaction, lfgPost, userId) {
         });
     }
     
-    if (userId === lfgPost.authorId) {
+    // Lade Settings für Creator Protection Check
+    const settings = await require('./lfg-supabase-api').loadLFGSettings(interaction.guild.id);
+    
+    if (userId === lfgPost.authorId && settings.enableCreatorProtection) {
         return await interaction.reply({
             content: '❌ Als Team Creator kannst du das Team nicht verlassen. Nutze "Schließen" um das Team aufzulösen.',
             ephemeral: true
@@ -391,10 +419,9 @@ async function handleLFGLeave(interaction, lfgPost, userId) {
     
     // Aktualisiere Embed und Buttons
     const author = await interaction.client.users.fetch(lfgPost.authorId);
-    const settings = await require('./lfg-supabase-api').loadLFGSettings(interaction.guild.id);
     
     const updatedEmbed = createLFGEmbed(lfgPost, author, settings);
-    const updatedButtons = createLFGButtons(lfgPost);
+    const updatedButtons = createLFGButtons(lfgPost, settings);
     
     await interaction.update({
         embeds: [updatedEmbed],
@@ -414,16 +441,22 @@ async function handleLFGLeave(interaction, lfgPost, userId) {
 async function createAutoVoiceChannel(interaction, lfgPost) {
     try {
         const guild = interaction.guild;
+        const settings = await require('./lfg-supabase-api').loadLFGSettings(interaction.guild.id);
+        
+        // Prüfe ob Voice Creation aktiviert ist
+        if (!settings.enableVoiceCreation) {
+            return;
+        }
         
         // Finde oder erstelle Gaming Category
         let category = guild.channels.cache.find(c => 
             c.type === ChannelType.GuildCategory && 
-            (c.name.includes('Gaming') || c.name.includes('LFG') || c.name.includes('Team'))
+            c.name === settings.voiceCategoryName
         );
         
-        if (!category) {
+        if (!category && settings.voiceAutoCreateCategory) {
             category = await guild.channels.create({
-                name: '🎮 Gaming Lobbys',
+                name: settings.voiceCategoryName,
                 type: ChannelType.GuildCategory,
                 reason: 'Auto-erstellte Gaming Category für LFG System'
             });
@@ -443,13 +476,19 @@ async function createAutoVoiceChannel(interaction, lfgPost) {
         };
         
         const gameEmoji = gameEmojis[lfgPost.game] || '🎮';
-        const channelName = `${gameEmoji} ${lfgPost.game} Team`;
+        const channelName = `${settings.voiceChannelPrefix}${gameEmoji} ${lfgPost.game} Team`;
+        
+        // Bestimme User Limit
+        let userLimit = lfgPost.maxPlayers;
+        if (settings.voiceUserLimitOverride !== null) {
+            userLimit = settings.voiceUserLimitOverride;
+        }
         
         const voiceChannel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildVoice,
-            parent: category.id,
-            userLimit: lfgPost.maxPlayers,
+            parent: category ? category.id : null,
+            userLimit: userLimit === 0 ? null : userLimit, // 0 = unbegrenzt
             reason: `Auto-erstellter Voice Channel für LFG Team`,
             permissionOverwrites: [
                 {
@@ -481,17 +520,19 @@ async function createAutoVoiceChannel(interaction, lfgPost) {
             embeds: [teamEmbed]
         });
         
-        // Auto-Delete Voice Channel nach 2 Stunden wenn leer
-        setTimeout(async () => {
-            try {
-                const channel = guild.channels.cache.get(voiceChannel.id);
-                if (channel && channel.members.size === 0) {
-                    await channel.delete('Auto-Delete: Voice Channel war 2 Stunden leer');
+        // Auto-Delete Voice Channel wenn aktiviert
+        if (settings.enableAutoVoiceCleanup) {
+            setTimeout(async () => {
+                try {
+                    const channel = guild.channels.cache.get(voiceChannel.id);
+                    if (channel && channel.members.size === 0) {
+                        await channel.delete(`Auto-Delete: Voice Channel war ${settings.voiceCleanupHours} Stunden leer`);
+                    }
+                } catch (error) {
+                    console.log('Voice Channel Auto-Delete Fehler:', error.message);
                 }
-            } catch (error) {
-                console.log('Voice Channel Auto-Delete Fehler:', error.message);
-            }
-        }, 2 * 60 * 60 * 1000); // 2 Stunden
+            }, settings.voiceCleanupHours * 60 * 60 * 1000);
+        }
         
     } catch (error) {
         console.error('Fehler beim Erstellen des Voice Channels:', error);

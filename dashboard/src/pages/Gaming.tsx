@@ -35,8 +35,8 @@ const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
 };
 
 // Badge component
-const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?: string }> = ({ children, className = '', variant = 'default' }) => (
-  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variant === 'outline' ? 'border border-purple-primary text-purple-primary bg-transparent' : 'bg-purple-primary text-white'} ${className}`}>
+const Badge: React.FC<{ children: React.ReactNode; className?: string; variant?: string; style?: React.CSSProperties }> = ({ children, className = '', variant = 'default', style }) => (
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variant === 'outline' ? 'border border-purple-primary text-purple-primary bg-transparent' : 'bg-purple-primary text-white'} ${className}`} style={style}>
     {children}
   </span>
 );
@@ -67,6 +67,34 @@ interface LFGSettings {
   maxPingsPerDay: number;
   requireReason: boolean;
   autoDeleteAfterHours: number;
+  
+  // 🎮 Interactive Features Configuration
+  enableButtons: boolean;
+  enableVoiceCreation: boolean;
+  enableDmNotifications: boolean;
+  enableAutoVoiceCleanup: boolean;
+  voiceCleanupHours: number;
+  
+  // 🏗️ Voice Channel Configuration
+  voiceCategoryName: string;
+  voiceAutoCreateCategory: boolean;
+  voiceUserLimitOverride: number | null;
+  voiceChannelPrefix: string;
+  
+  // 🎯 Game-Specific Settings
+  gameTeamSizes: Record<string, number>;
+  
+  // 🔧 Advanced Features
+  enableTeamSizeDetection: boolean;
+  enableGameDetection: boolean;
+  enableCreatorProtection: boolean;
+  maxTeamSize: number;
+  minTeamSize: number;
+  
+  // 📊 Analytics & Tracking
+  trackTeamStatistics: boolean;
+  trackUserActivity: boolean;
+  enableLeaderboards: boolean;
 }
 
 interface LFGStats {
@@ -102,7 +130,45 @@ const LFGSystem: React.FC = () => {
     cooldownMinutes: 30,
     maxPingsPerDay: 10,
     requireReason: true,
-    autoDeleteAfterHours: 24
+    autoDeleteAfterHours: 24,
+    
+    // 🎮 Interactive Features Configuration
+    enableButtons: true,
+    enableVoiceCreation: true,
+    enableDmNotifications: true,
+    enableAutoVoiceCleanup: true,
+    voiceCleanupHours: 2,
+    
+    // 🏗️ Voice Channel Configuration
+    voiceCategoryName: '🎮 Gaming Lobbys',
+    voiceAutoCreateCategory: true,
+    voiceUserLimitOverride: null,
+    voiceChannelPrefix: '',
+    
+    // 🎯 Game-Specific Settings
+    gameTeamSizes: {
+      'Valorant': 5,
+      'League of Legends': 5,
+      'Overwatch 2': 6,
+      'Counter-Strike 2': 5,
+      'CS2': 5,
+      'Apex Legends': 3,
+      'Rocket League': 3,
+      'Call of Duty': 6,
+      'Fortnite': 4
+    },
+    
+    // 🔧 Advanced Features
+    enableTeamSizeDetection: true,
+    enableGameDetection: true,
+    enableCreatorProtection: true,
+    maxTeamSize: 10,
+    minTeamSize: 2,
+    
+    // 📊 Analytics & Tracking
+    trackTeamStatistics: true,
+    trackUserActivity: true,
+    enableLeaderboards: false
   });
 
   const [stats, setStats] = useState<LFGStats>({
@@ -352,7 +418,7 @@ const LFGSystem: React.FC = () => {
 
       {/* Main Tabs */}
       <div className="space-y-4">
-        <div className="grid w-full grid-cols-3 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 p-2 rounded-lg">
+        <div className="grid w-full grid-cols-4 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 p-2 rounded-lg">
           <button
             onClick={() => setActiveTab('overview')}
             className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -369,7 +435,16 @@ const LFGSystem: React.FC = () => {
             }`}
           >
             <Settings className="h-4 w-4" />
-            <span>Einstellungen</span>
+            <span>Basis</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('advanced')}
+            className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === 'advanced' ? 'bg-purple-primary text-white' : 'hover:bg-purple-primary/20 text-dark-text'
+            }`}
+          >
+            <Shield className="h-4 w-4" />
+            <span>Erweitert</span>
           </button>
           <button
             onClick={() => setActiveTab('test')}
@@ -407,7 +482,7 @@ const LFGSystem: React.FC = () => {
                       </div>
                       <div className="flex items-center justify-between p-3 bg-dark-bg/50 rounded-lg">
                         <span className="text-sm text-dark-text">Rolle:</span>
-                        <Badge style={{ backgroundColor: settings.roleColor }}>@{settings.roleName}</Badge>
+                        <Badge className="text-white" style={{ backgroundColor: settings.roleColor }}>@{settings.roleName}</Badge>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-dark-bg/50 rounded-lg">
                         <span className="text-sm text-dark-text">Cooldown:</span>
@@ -575,6 +650,270 @@ const LFGSystem: React.FC = () => {
                     ))}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'advanced' && (
+          <div className="space-y-6">
+            <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-purple-accent" />
+                  Erweiterte Konfiguration
+                </CardTitle>
+                <CardDescription className="text-dark-muted">
+                  Konfiguriere die interaktiven Features und Team-Funktionen
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                
+                {/* Interactive Features */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-dark-text">🎮 Interactive Features</h3>
+                  
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Button Interaktionen</label>
+                      <p className="text-xs text-dark-muted">Aktiviert Beitreten/Verlassen/Voice/Schließen Buttons</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableButtons}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableButtons: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Voice Channel Erstellung</label>
+                      <p className="text-xs text-dark-muted">Automatische Voice Channel Erstellung für Teams</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableVoiceCreation}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableVoiceCreation: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">DM Benachrichtigungen</label>
+                      <p className="text-xs text-dark-muted">Team Creator bekommt DM wenn Spieler beitreten</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableDmNotifications}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableDmNotifications: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Auto Voice Cleanup</label>
+                      <p className="text-xs text-dark-muted">Leere Voice Channels automatisch löschen</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableAutoVoiceCleanup}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableAutoVoiceCleanup: checked }))}
+                    />
+                  </div>
+
+                  {settings.enableAutoVoiceCleanup && (
+                    <div>
+                      <label className="text-sm font-medium text-dark-text mb-2 block">Voice Cleanup nach (Stunden)</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="24"
+                        value={settings.voiceCleanupHours}
+                        onChange={(e) => setSettings(prev => ({ ...prev, voiceCleanupHours: parseInt(e.target.value) || 2 }))}
+                        className="bg-dark-bg/70 border-purple-primary/30 text-dark-text"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Voice Channel Configuration */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-dark-text">🏗️ Voice Channel Konfiguration</h3>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-dark-text mb-2 block">Voice Category Name</label>
+                    <Input
+                      value={settings.voiceCategoryName}
+                      onChange={(e) => setSettings(prev => ({ ...prev, voiceCategoryName: e.target.value }))}
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text"
+                      placeholder="🎮 Gaming Lobbys"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Auto-Category Erstellung</label>
+                      <p className="text-xs text-dark-muted">Category automatisch erstellen falls nicht vorhanden</p>
+                    </div>
+                    <Switch
+                      checked={settings.voiceAutoCreateCategory}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, voiceAutoCreateCategory: checked }))}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-dark-text mb-2 block">Voice Channel Prefix</label>
+                    <Input
+                      value={settings.voiceChannelPrefix}
+                      onChange={(e) => setSettings(prev => ({ ...prev, voiceChannelPrefix: e.target.value }))}
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text"
+                      placeholder="z.B. 'Team-' für 'Team-Valorant'"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-dark-text mb-2 block">Voice User Limit Override</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="99"
+                      value={settings.voiceUserLimitOverride || ''}
+                      onChange={(e) => setSettings(prev => ({ 
+                        ...prev, 
+                        voiceUserLimitOverride: e.target.value ? parseInt(e.target.value) : null 
+                      }))}
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text"
+                      placeholder="Leer = Spiel-spezifische Limits"
+                    />
+                    <p className="text-xs text-dark-muted mt-1">
+                      Überschreibt alle Spiel-spezifischen Team-Größen (0 = unbegrenzt)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Game-Specific Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-dark-text">🎯 Spiel-spezifische Team-Größen</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(settings.gameTeamSizes).map(([game, size]) => (
+                      <div key={game} className="flex items-center justify-between p-3 bg-dark-bg/50 rounded-lg">
+                        <span className="text-sm text-dark-text font-medium">{game}</span>
+                        <Input
+                          type="number"
+                          min="2"
+                          max="20"
+                          value={size}
+                          onChange={(e) => setSettings(prev => ({
+                            ...prev,
+                            gameTeamSizes: {
+                              ...prev.gameTeamSizes,
+                              [game]: parseInt(e.target.value) || 5
+                            }
+                          }))}
+                          className="w-20 bg-dark-bg/70 border-purple-primary/30 text-dark-text text-center"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Advanced Features */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-dark-text">🔧 Erweiterte Features</h3>
+                  
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Team-Größen Erkennung</label>
+                      <p className="text-xs text-dark-muted">Automatische Erkennung von "5 Spieler" aus Nachrichten</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableTeamSizeDetection}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableTeamSizeDetection: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Spiel-Erkennung</label>
+                      <p className="text-xs text-dark-muted">Automatische Erkennung des Spiels aus Nachrichten</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableGameDetection}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableGameDetection: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Creator Schutz</label>
+                      <p className="text-xs text-dark-muted">Team Creator kann Team nicht verlassen (nur schließen)</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableCreatorProtection}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableCreatorProtection: checked }))}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text mb-2 block">Min Team-Größe</label>
+                      <Input
+                        type="number"
+                        min="2"
+                        max="10"
+                        value={settings.minTeamSize}
+                        onChange={(e) => setSettings(prev => ({ ...prev, minTeamSize: parseInt(e.target.value) || 2 }))}
+                        className="bg-dark-bg/70 border-purple-primary/30 text-dark-text"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-dark-text mb-2 block">Max Team-Größe</label>
+                      <Input
+                        type="number"
+                        min="2"
+                        max="20"
+                        value={settings.maxTeamSize}
+                        onChange={(e) => setSettings(prev => ({ ...prev, maxTeamSize: parseInt(e.target.value) || 10 }))}
+                        className="bg-dark-bg/70 border-purple-primary/30 text-dark-text"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Analytics & Tracking */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-dark-text">📊 Analytics & Tracking</h3>
+                  
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Team Statistiken</label>
+                      <p className="text-xs text-dark-muted">Sammle Daten über Team-Bildung und Erfolg</p>
+                    </div>
+                    <Switch
+                      checked={settings.trackTeamStatistics}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, trackTeamStatistics: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">User Aktivität</label>
+                      <p className="text-xs text-dark-muted">Verfolge individuelle LFG Nutzung</p>
+                    </div>
+                    <Switch
+                      checked={settings.trackUserActivity}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, trackUserActivity: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Leaderboards</label>
+                      <p className="text-xs text-dark-muted">Zeige Top LFG User und beliebte Spiele</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableLeaderboards}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableLeaderboards: checked }))}
+                    />
+                  </div>
+                </div>
+
               </CardContent>
             </Card>
           </div>

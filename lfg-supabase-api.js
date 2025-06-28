@@ -40,7 +40,45 @@ const defaultLFGSettings = {
         'Call of Duty',
         'Fortnite'
     ],
-    requireReason: true
+    requireReason: true,
+    
+    // 🎮 Interactive Features Configuration
+    enableButtons: true,
+    enableVoiceCreation: true,
+    enableDmNotifications: true,
+    enableAutoVoiceCleanup: true,
+    voiceCleanupHours: 2,
+    
+    // 🏗️ Voice Channel Configuration
+    voiceCategoryName: '🎮 Gaming Lobbys',
+    voiceAutoCreateCategory: true,
+    voiceUserLimitOverride: null,
+    voiceChannelPrefix: '',
+    
+    // 🎯 Game-Specific Settings
+    gameTeamSizes: {
+        'Valorant': 5,
+        'League of Legends': 5,
+        'Overwatch 2': 6,
+        'Counter-Strike 2': 5,
+        'CS2': 5,
+        'Apex Legends': 3,
+        'Rocket League': 3,
+        'Call of Duty': 6,
+        'Fortnite': 4
+    },
+    
+    // 🔧 Advanced Features
+    enableTeamSizeDetection: true,
+    enableGameDetection: true,
+    enableCreatorProtection: true,
+    maxTeamSize: 10,
+    minTeamSize: 2,
+    
+    // 📊 Analytics & Tracking
+    trackTeamStatistics: true,
+    trackUserActivity: true,
+    enableLeaderboards: false
 };
 
 // ================================================================
@@ -84,11 +122,47 @@ async function loadLFGSettings(guildId = null) {
             return await createDefaultLFGSettings(guildId);
         }
 
-        // Merge mit Default Settings für fehlende Felder
+        // Konvertiere Supabase Daten zu Frontend Format mit allen neuen Feldern
         const settings = {
-            ...defaultLFGSettings,
-            ...data,
-            allowedGames: data.allowed_games || defaultLFGSettings.allowedGames
+            enabled: data.enabled || false,
+            channelId: data.channel_id || '',
+            channelName: data.channel_name || 'lfg-suche',
+            roleId: data.role_id || '',
+            roleName: data.role_name || 'LFG',
+            roleColor: data.role_color || '#9333ea',
+            cooldownMinutes: data.cooldown_minutes || 30,
+            maxPingsPerDay: data.max_pings_per_day || 10,
+            autoDeleteAfterHours: data.auto_delete_after_hours || 24,
+            allowedGames: data.allowed_games || defaultLFGSettings.allowedGames,
+            requireReason: data.require_reason ?? true,
+            
+            // 🎮 Interactive Features Configuration
+            enableButtons: data.enable_buttons ?? true,
+            enableVoiceCreation: data.enable_voice_creation ?? true,
+            enableDmNotifications: data.enable_dm_notifications ?? true,
+            enableAutoVoiceCleanup: data.enable_auto_voice_cleanup ?? true,
+            voiceCleanupHours: data.voice_cleanup_hours || 2,
+            
+            // 🏗️ Voice Channel Configuration
+            voiceCategoryName: data.voice_category_name || '🎮 Gaming Lobbys',
+            voiceAutoCreateCategory: data.voice_auto_create_category ?? true,
+            voiceUserLimitOverride: data.voice_user_limit_override || null,
+            voiceChannelPrefix: data.voice_channel_prefix || '',
+            
+            // 🎯 Game-Specific Settings
+            gameTeamSizes: data.game_team_sizes || defaultLFGSettings.gameTeamSizes,
+            
+            // 🔧 Advanced Features
+            enableTeamSizeDetection: data.enable_team_size_detection ?? true,
+            enableGameDetection: data.enable_game_detection ?? true,
+            enableCreatorProtection: data.enable_creator_protection ?? true,
+            maxTeamSize: data.max_team_size || 10,
+            minTeamSize: data.min_team_size || 2,
+            
+            // 📊 Analytics & Tracking
+            trackTeamStatistics: data.track_team_statistics ?? true,
+            trackUserActivity: data.track_user_activity ?? true,
+            enableLeaderboards: data.enable_leaderboards ?? false
         };
 
         console.log('✅ LFG Settings aus Supabase geladen');
@@ -167,7 +241,35 @@ async function saveLFGSettings(settings, guildId = null) {
             max_pings_per_day: settings.maxPingsPerDay || settings.max_pings_per_day,
             auto_delete_after_hours: settings.autoDeleteAfterHours || settings.auto_delete_after_hours,
             allowed_games: settings.allowedGames || settings.allowed_games,
-            require_reason: settings.requireReason !== undefined ? settings.requireReason : settings.require_reason
+            require_reason: settings.requireReason !== undefined ? settings.requireReason : settings.require_reason,
+            
+            // 🎮 Interactive Features Configuration
+            enable_buttons: settings.enableButtons !== undefined ? settings.enableButtons : settings.enable_buttons,
+            enable_voice_creation: settings.enableVoiceCreation !== undefined ? settings.enableVoiceCreation : settings.enable_voice_creation,
+            enable_dm_notifications: settings.enableDmNotifications !== undefined ? settings.enableDmNotifications : settings.enable_dm_notifications,
+            enable_auto_voice_cleanup: settings.enableAutoVoiceCleanup !== undefined ? settings.enableAutoVoiceCleanup : settings.enable_auto_voice_cleanup,
+            voice_cleanup_hours: settings.voiceCleanupHours || settings.voice_cleanup_hours,
+            
+            // 🏗️ Voice Channel Configuration
+            voice_category_name: settings.voiceCategoryName || settings.voice_category_name,
+            voice_auto_create_category: settings.voiceAutoCreateCategory !== undefined ? settings.voiceAutoCreateCategory : settings.voice_auto_create_category,
+            voice_user_limit_override: settings.voiceUserLimitOverride || settings.voice_user_limit_override,
+            voice_channel_prefix: settings.voiceChannelPrefix || settings.voice_channel_prefix,
+            
+            // 🎯 Game-Specific Settings
+            game_team_sizes: settings.gameTeamSizes || settings.game_team_sizes,
+            
+            // 🔧 Advanced Features
+            enable_team_size_detection: settings.enableTeamSizeDetection !== undefined ? settings.enableTeamSizeDetection : settings.enable_team_size_detection,
+            enable_game_detection: settings.enableGameDetection !== undefined ? settings.enableGameDetection : settings.enable_game_detection,
+            enable_creator_protection: settings.enableCreatorProtection !== undefined ? settings.enableCreatorProtection : settings.enable_creator_protection,
+            max_team_size: settings.maxTeamSize || settings.max_team_size,
+            min_team_size: settings.minTeamSize || settings.min_team_size,
+            
+            // 📊 Analytics & Tracking
+            track_team_statistics: settings.trackTeamStatistics !== undefined ? settings.trackTeamStatistics : settings.track_team_statistics,
+            track_user_activity: settings.trackUserActivity !== undefined ? settings.trackUserActivity : settings.track_user_activity,
+            enable_leaderboards: settings.enableLeaderboards !== undefined ? settings.enableLeaderboards : settings.enable_leaderboards
         };
 
         const { data, error } = await supabase

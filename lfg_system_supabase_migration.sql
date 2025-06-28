@@ -24,6 +24,45 @@ CREATE TABLE IF NOT EXISTS lfg_settings (
     auto_delete_after_hours INTEGER DEFAULT 24,
     allowed_games JSONB DEFAULT '["Valorant", "League of Legends", "Overwatch 2", "Counter-Strike 2", "Apex Legends", "Rocket League", "Call of Duty", "Fortnite"]'::jsonb,
     require_reason BOOLEAN DEFAULT true,
+    
+    -- 🎮 Interactive Features Configuration
+    enable_buttons BOOLEAN DEFAULT true,
+    enable_voice_creation BOOLEAN DEFAULT true,
+    enable_dm_notifications BOOLEAN DEFAULT true,
+    enable_auto_voice_cleanup BOOLEAN DEFAULT true,
+    voice_cleanup_hours INTEGER DEFAULT 2,
+    
+    -- 🏗️ Voice Channel Configuration
+    voice_category_name TEXT DEFAULT '🎮 Gaming Lobbys',
+    voice_auto_create_category BOOLEAN DEFAULT true,
+    voice_user_limit_override INTEGER DEFAULT NULL, -- NULL = use game defaults
+    voice_channel_prefix TEXT DEFAULT '', -- Custom prefix for voice channels
+    
+    -- 🎯 Game-Specific Settings
+    game_team_sizes JSONB DEFAULT '{
+        "Valorant": 5,
+        "League of Legends": 5,
+        "Overwatch 2": 6,
+        "Counter-Strike 2": 5,
+        "CS2": 5,
+        "Apex Legends": 3,
+        "Rocket League": 3,
+        "Call of Duty": 6,
+        "Fortnite": 4
+    }'::jsonb,
+    
+    -- 🔧 Advanced Features
+    enable_team_size_detection BOOLEAN DEFAULT true,
+    enable_game_detection BOOLEAN DEFAULT true,
+    enable_creator_protection BOOLEAN DEFAULT true, -- Creator kann Team nicht verlassen
+    max_team_size INTEGER DEFAULT 10,
+    min_team_size INTEGER DEFAULT 2,
+    
+    -- 📊 Analytics & Tracking
+    track_team_statistics BOOLEAN DEFAULT true,
+    track_user_activity BOOLEAN DEFAULT true,
+    enable_leaderboards BOOLEAN DEFAULT false,
+    
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
