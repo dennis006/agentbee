@@ -38,7 +38,8 @@ const defaultLFGSettings = {
         'Apex Legends',
         'Rocket League',
         'Call of Duty',
-        'Fortnite'
+        'Fortnite',
+        'Fragpunk'
     ],
     requireReason: true,
     
@@ -65,7 +66,8 @@ const defaultLFGSettings = {
         'Apex Legends': 3,
         'Rocket League': 3,
         'Call of Duty': 6,
-        'Fortnite': 4
+        'Fortnite': 4,
+        'Fragpunk': 5
     },
     
     // 🔧 Advanced Features
@@ -606,7 +608,7 @@ router.post('/setup', async (req, res) => {
 // POST /api/lfg/test-ping - Test LFG ping
 router.post('/test-ping', async (req, res) => {
     try {
-        const { game, message } = req.body;
+        const { game, reason } = req.body;
         const guildId = req.body.guildId || (global.discordClient?.guilds.cache.first()?.id);
         
         if (!guildId) {
@@ -625,26 +627,189 @@ router.post('/test-ping', async (req, res) => {
             });
         }
 
-        // Simuliere Test-Ping
-        const testMessage = `@${settings.roleName} - ${game}: ${message}`;
+        // Get Discord client from global scope
+        const client = global.discordClient;
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Discord Bot ist nicht verfügbar'
+            });
+        }
+
+        // Get the guild and LFG channel
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+            return res.status(500).json({
+                success: false,
+                error: 'Guild nicht gefunden'
+            });
+        }
+
+        // Find LFG channel
+        let lfgChannel = guild.channels.cache.find(channel => 
+            (channel.name === settings.channelName || channel.id === settings.channelId) && channel.type === 0
+        );
+
+        if (!lfgChannel) {
+            return res.status(400).json({
+                success: false,
+                error: `LFG Channel "${settings.channelName}" nicht gefunden. Führe zuerst das Setup aus.`
+            });
+        }
+
+        // Find LFG role
+        let lfgRole = guild.roles.cache.find(role => 
+            role.name === settings.roleName || role.id === settings.roleId
+        );
+
+        if (!lfgRole) {
+            return res.status(400).json({
+                success: false,
+                error: `LFG Rolle "${settings.roleName}" nicht gefunden. Führe zuerst das Setup aus.`
+            });
+        }
+
+        // Create test message content
+        const testContent = `<@&${lfgRole.id}> - ${game}${reason ? `: ${reason}` : ''}`;
         
+        // Send test message to LFG channel
+        const { EmbedBuilder } = require('discord.js');
+        const testEmbed = new EmbedBuilder()
+            .setColor(parseInt(settings.roleColor.replace('#', ''), 16))
+            .setTitle('🧪 LFG Test-Ping')
+            .setDescription(`**Test-Nachricht gesendet:**\n\`${testContent}\`\n\n` +
+                          `**Spiel:** ${game}\n` +
+                          `**Nachricht:** ${reason || 'Keine Nachricht'}\n` +
+                          `**Channel:** ${lfgChannel.name}\n` +
+                          `**Rolle:** @${lfgRole.name}`)
+            .setTimestamp()
+            .setFooter({ text: 'Test-Ping von Dashboard' });
+
+        await lfgChannel.send({ embeds: [testEmbed] });
+        
+        // Also send the actual LFG message for testing
+        await lfgChannel.send(testContent);
+
         res.json({
             success: true,
-            message: 'Test-Ping Vorschau erstellt',
-            preview: {
-                content: testMessage,
+            message: `✅ Test-Ping erfolgreich an #${lfgChannel.name} gesendet!`,
+            details: {
+                content: testContent,
                 game: game,
-                originalMessage: message,
-                roleName: settings.roleName,
-                channelName: settings.channelName,
-                autoDeleteAfterHours: settings.autoDeleteAfterHours
+                reason: reason,
+                channelName: lfgChannel.name,
+                roleName: lfgRole.name,
+                roleId: lfgRole.id
             }
         });
     } catch (error) {
         console.error('Fehler beim Test-Ping:', error);
         res.status(500).json({
             success: false,
-            error: 'Fehler beim Test-Ping'
+            error: 'Fehler beim Test-Ping: ' + error.message
+        });
+    }
+});
+
+// POST /api/lfg/debug - Debug LFG system
+router.post('/debug', async (req, res) => {
+    try {
+        const guildId = req.body.guildId || (global.discordClient?.guilds.cache.first()?.id);
+        
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Keine Guild ID verfügbar'
+            });
+        }
+
+        const settings = await loadLFGSettings(guildId);
+        const client = global.discordClient;
+        
+        if (!client) {
+            return res.status(500).json({
+                success: false,
+                error: 'Discord Bot ist nicht verfügbar'
+            });
+        }
+
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+            return res.status(500).json({
+                success: false,
+                error: 'Guild nicht gefunden'
+            });
+        }
+
+        // Debug info sammeln
+        const debugInfo = {
+            settings: settings,
+            guild: {
+                id: guild.id,
+                name: guild.name,
+                memberCount: guild.memberCount
+            },
+            channels: {
+                total: guild.channels.cache.size,
+                lfgChannel: null,
+                lfgChannelExists: false
+            },
+            roles: {
+                total: guild.roles.cache.size,
+                lfgRole: null,
+                lfgRoleExists: false
+            },
+            system: {
+                botUser: client.user?.tag,
+                botId: client.user?.id,
+                uptime: process.uptime(),
+                supabaseConnected: !!global.supabaseClient
+            }
+        };
+
+        // Check LFG Channel
+        const lfgChannel = guild.channels.cache.find(channel => 
+            (channel.name === settings.channelName || channel.id === settings.channelId) && channel.type === 0
+        );
+        
+        if (lfgChannel) {
+            debugInfo.channels.lfgChannelExists = true;
+            debugInfo.channels.lfgChannel = {
+                id: lfgChannel.id,
+                name: lfgChannel.name,
+                type: lfgChannel.type,
+                topic: lfgChannel.topic,
+                permissions: lfgChannel.permissionsFor(client.user)?.toArray() || []
+            };
+        }
+
+        // Check LFG Role
+        const lfgRole = guild.roles.cache.find(role => 
+            role.name === settings.roleName || role.id === settings.roleId
+        );
+        
+        if (lfgRole) {
+            debugInfo.roles.lfgRoleExists = true;
+            debugInfo.roles.lfgRole = {
+                id: lfgRole.id,
+                name: lfgRole.name,
+                color: lfgRole.hexColor,
+                mentionable: lfgRole.mentionable,
+                memberCount: lfgRole.members.size
+            };
+        }
+
+        res.json({
+            success: true,
+            message: 'Debug-Informationen gesammelt',
+            debug: debugInfo
+        });
+
+    } catch (error) {
+        console.error('Fehler beim LFG Debug:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Fehler beim LFG Debug: ' + error.message
         });
     }
 });

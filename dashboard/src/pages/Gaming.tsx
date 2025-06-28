@@ -125,7 +125,8 @@ const LFGSystem: React.FC = () => {
       'Apex Legends',
       'Rocket League',
       'Call of Duty',
-      'Fortnite'
+      'Fortnite',
+      'Fragpunk'
     ],
     cooldownMinutes: 30,
     maxPingsPerDay: 10,
@@ -155,7 +156,8 @@ const LFGSystem: React.FC = () => {
       'Apex Legends': 3,
       'Rocket League': 3,
       'Call of Duty': 6,
-      'Fortnite': 4
+      'Fortnite': 4,
+      'Fragpunk': 5
     },
     
     // 🔧 Advanced Features
@@ -295,6 +297,27 @@ const LFGSystem: React.FC = () => {
       }
     } catch (error) {
       showMessage('error', '❌ Fehler beim Test Ping');
+    }
+  };
+
+  const debugLFG = async () => {
+    try {
+      const response = await fetch('/api/lfg/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔍 LFG Debug Info:', data.debug);
+        showMessage('success', '✅ Debug-Informationen in Konsole ausgegeben');
+      } else {
+        const data = await response.json();
+        showMessage('error', `❌ ${data.error}`);
+      }
+    } catch (error) {
+      showMessage('error', '❌ Fehler beim Debug');
     }
   };
 
@@ -961,14 +984,24 @@ const LFGSystem: React.FC = () => {
                     </div>
                   )}
 
-                  <Button
-                    onClick={testPing}
-                    disabled={!settings.enabled}
-                    className="w-full bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105"
-                  >
-                    <MessageSquare className="h-5 w-5 mr-2" />
-                    Test Ping Senden
-                  </Button>
+                  <div className="space-y-3">
+                    <Button
+                      onClick={testPing}
+                      disabled={!settings.enabled}
+                      className="w-full bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105"
+                    >
+                      <MessageSquare className="h-5 w-5 mr-2" />
+                      Test Ping Senden
+                    </Button>
+
+                    <Button
+                      onClick={debugLFG}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105"
+                    >
+                      <TestTube className="h-5 w-5 mr-2" />
+                      System Debug (Konsole)
+                    </Button>
+                  </div>
 
                   {!settings.enabled && (
                     <p className="text-center text-sm text-red-400">
@@ -991,6 +1024,55 @@ const LFGSystem: React.FC = () => {
                           )}
                         </>
                       )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* LFG Anleitung */}
+                <div className="mt-8 p-6 bg-dark-bg/30 rounded-lg border border-purple-primary/20">
+                  <h4 className="text-lg font-semibold text-dark-text mb-4 flex items-center gap-2">
+                    📖 LFG System Anleitung
+                  </h4>
+                  <div className="space-y-4 text-sm text-dark-text">
+                    <div>
+                      <h5 className="font-medium text-purple-accent mb-2">✅ So funktioniert's:</h5>
+                      <ul className="space-y-1 text-dark-muted ml-4">
+                        <li>• Gehe in den <span className="text-purple-accent">#{settings.channelName}</span> Channel</li>
+                        <li>• Erwähne die <span className="text-purple-accent">@{settings.roleName}</span> Rolle in deiner Nachricht</li>
+                        <li>• Format: <code className="bg-dark-bg/50 px-2 py-1 rounded">@{settings.roleName} - [Spiel]: [Nachricht]</code></li>
+                        <li>• Das System erstellt automatisch ein interaktives LFG-Embed mit Buttons</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h5 className="font-medium text-purple-accent mb-2">📝 Beispiele:</h5>
+                      <ul className="space-y-1 text-dark-muted ml-4">
+                        <li>• <code className="bg-dark-bg/50 px-2 py-1 rounded">@{settings.roleName} - Valorant: Suche 2 Spieler für Ranked</code></li>
+                        <li>• <code className="bg-dark-bg/50 px-2 py-1 rounded">@{settings.roleName} - Fragpunk: Wer hat Lust auf ein paar Runden?</code></li>
+                        <li>• <code className="bg-dark-bg/50 px-2 py-1 rounded">@{settings.roleName} - CS2: 5er Stack für Faceit</code></li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h5 className="font-medium text-purple-accent mb-2">🎮 Features:</h5>
+                      <ul className="space-y-1 text-dark-muted ml-4">
+                        <li>• Interaktive Buttons zum Beitreten/Verlassen</li>
+                        <li>• Automatische Voice Channel Erstellung</li>
+                        <li>• Team-Größen-Erkennung aus Nachrichten</li>
+                        <li>• Spiel-spezifische Konfigurationen</li>
+                        <li>• Auto-Löschung nach {settings.autoDeleteAfterHours} Stunden</li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h5 className="font-medium text-purple-accent mb-2">⚙️ Erweiterte Features:</h5>
+                      <ul className="space-y-1 text-dark-muted ml-4">
+                        <li>• <strong>Button Interaktionen:</strong> {settings.enableButtons ? '✅ Aktiviert' : '❌ Deaktiviert'}</li>
+                        <li>• <strong>Voice Channel Erstellung:</strong> {settings.enableVoiceCreation ? '✅ Aktiviert' : '❌ Deaktiviert'}</li>
+                        <li>• <strong>DM Benachrichtigungen:</strong> {settings.enableDmNotifications ? '✅ Aktiviert' : '❌ Deaktiviert'}</li>
+                        <li>• <strong>Team-Größen Erkennung:</strong> {settings.enableTeamSizeDetection ? '✅ Aktiviert' : '❌ Deaktiviert'}</li>
+                        <li>• <strong>Spiel-Erkennung:</strong> {settings.enableGameDetection ? '✅ Aktiviert' : '❌ Deaktiviert'}</li>
+                      </ul>
                     </div>
                   </div>
                 </div>

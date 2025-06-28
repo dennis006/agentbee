@@ -66,16 +66,30 @@ async function handleLFGMessageWithResponses(message) {
         const { loadLFGSettings } = require('./lfg-supabase-api');
         const settings = await loadLFGSettings(message.guild.id);
         
-        if (!settings.enabled) return;
+        console.log(`🔍 LFG Message Check - User: ${message.author.tag}, Channel: ${message.channel.name}, Content: "${message.content}"`);
+        console.log(`🔧 LFG Settings - Enabled: ${settings.enabled}, Channel: ${settings.channelName}, Role: ${settings.roleName}`);
+        
+        if (!settings.enabled) {
+            console.log('⚠️ LFG System ist deaktiviert');
+            return;
+        }
         
         // Prüfe ob Nachricht im LFG Channel ist
-        if (message.channel.name !== settings.channelName && message.channel.id !== settings.channelId) {
+        const isCorrectChannel = message.channel.name === settings.channelName || message.channel.id === settings.channelId;
+        console.log(`📍 Channel Check - Aktuell: ${message.channel.name} (${message.channel.id}), Erwartet: ${settings.channelName} (${settings.channelId}), Match: ${isCorrectChannel}`);
+        
+        if (!isCorrectChannel) {
+            console.log('⚠️ Nachricht nicht im LFG Channel');
             return;
         }
         
         // Prüfe ob User die LFG Role erwähnt
         const lfgRoleMention = `<@&${settings.roleId}>`;
-        if (!message.content.includes(lfgRoleMention) && !message.content.includes(`@${settings.roleName}`)) {
+        const hasRoleMention = message.content.includes(lfgRoleMention) || message.content.includes(`@${settings.roleName}`);
+        console.log(`🏷️ Role Check - Erwartet: ${lfgRoleMention} oder @${settings.roleName}, Content: "${message.content}", Match: ${hasRoleMention}`);
+        
+        if (!hasRoleMention) {
+            console.log('⚠️ Keine LFG Rolle erwähnt');
             return;
         }
         
@@ -83,6 +97,7 @@ async function handleLFGMessageWithResponses(message) {
         
         // Parse LFG Message für Spiel-Info
         const gameInfo = parseLFGMessage(message.content, settings.allowedGames, settings);
+        console.log(`🎯 Parsed Game Info:`, gameInfo);
         
         // Erstelle LFG Post Object
         const lfgPost = new LFGPost(
@@ -95,6 +110,7 @@ async function handleLFGMessageWithResponses(message) {
         
         // Speichere in aktivem Cache
         activeLFGPosts.set(message.id, lfgPost);
+        console.log(`💾 LFG Post gespeichert - ID: ${message.id}, Active Posts: ${activeLFGPosts.size}`);
         
         // Erstelle Interactive Embed mit Buttons
         const embed = createLFGEmbed(lfgPost, message.author, settings);
@@ -106,9 +122,11 @@ async function handleLFGMessageWithResponses(message) {
             messageOptions.components = [buttons];
         }
         const lfgMessage = await message.channel.send(messageOptions);
+        console.log(`📤 LFG Embed gesendet - Message ID: ${lfgMessage.id}`);
         
         // Lösche ursprüngliche Nachricht
         await message.delete();
+        console.log(`🗑️ Ursprüngliche Nachricht gelöscht`);
         
         // Auto-Delete Timer
         if (settings.autoDeleteAfterHours > 0) {
@@ -116,6 +134,7 @@ async function handleLFGMessageWithResponses(message) {
                 try {
                     await lfgMessage.delete();
                     activeLFGPosts.delete(message.id);
+                    console.log(`⏰ LFG Post automatisch gelöscht nach ${settings.autoDeleteAfterHours} Stunden`);
                 } catch (error) {
                     console.log('LFG Auto-Delete Fehler:', error.message);
                 }
@@ -123,7 +142,7 @@ async function handleLFGMessageWithResponses(message) {
         }
         
     } catch (error) {
-        console.error('Fehler beim LFG Message Handling:', error);
+        console.error('❌ Fehler beim LFG Message Handling:', error);
     }
 }
 
@@ -187,7 +206,8 @@ function createLFGEmbed(lfgPost, author, settings) {
         'Apex Legends': '🔺',
         'Rocket League': '🚗',
         'Call of Duty': '🎖️',
-        'Fortnite': '🏗️'
+        'Fortnite': '🏗️',
+        'Fragpunk': '🎮'
     };
     
     const gameEmoji = gameEmojis[lfgPost.game] || '🎮';
