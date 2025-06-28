@@ -814,6 +814,46 @@ router.post('/debug', async (req, res) => {
     }
 });
 
+// GET /api/lfg/test-buttons - Test button settings
+router.get('/test-buttons', async (req, res) => {
+    try {
+        const guildId = req.query.guildId || (global.discordClient?.guilds.cache.first()?.id);
+        
+        if (!guildId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Keine Guild ID verfügbar'
+            });
+        }
+
+        const settings = await loadLFGSettings(guildId);
+        
+        res.json({
+            success: true,
+            message: 'Button Settings geladen',
+            settings: {
+                enabled: settings.enabled,
+                enableButtons: settings.enableButtons,
+                enableVoiceCreation: settings.enableVoiceCreation,
+                enableDmNotifications: settings.enableDmNotifications,
+                enableAutoVoiceCleanup: settings.enableAutoVoiceCleanup,
+                enableTeamSizeDetection: settings.enableTeamSizeDetection,
+                enableGameDetection: settings.enableGameDetection,
+                enableCreatorProtection: settings.enableCreatorProtection,
+                allowedGames: settings.allowedGames,
+                gameTeamSizes: settings.gameTeamSizes
+            }
+        });
+
+    } catch (error) {
+        console.error('Fehler beim Button Test:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Fehler beim Button Test: ' + error.message
+        });
+    }
+});
+
 // POST /api/lfg/update-fragpunk - Add Fragpunk to existing settings
 router.post('/update-fragpunk', async (req, res) => {
     try {

@@ -359,6 +359,28 @@ const LFGSystem: React.FC = () => {
     }
   };
 
+  const testButtonSettings = async () => {
+    try {
+      const response = await fetch('/api/lfg/test-buttons');
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔧 Button Settings Test:', data.settings);
+        showMessage('success', '✅ Button Settings in Konsole ausgegeben');
+        
+        // Zeige wichtige Infos in einer Nachricht
+        const buttonStatus = data.settings.enableButtons ? '✅ Aktiviert' : '❌ Deaktiviert';
+        const voiceStatus = data.settings.enableVoiceCreation ? '✅ Aktiviert' : '❌ Deaktiviert';
+        showMessage('success', `🔧 Buttons: ${buttonStatus}, Voice: ${voiceStatus}`);
+      } else {
+        const data = await response.json();
+        showMessage('error', `❌ ${data.error}`);
+      }
+    } catch (error) {
+      showMessage('error', '❌ Fehler beim Button Test');
+    }
+  };
+
   const showMessage = (type: 'success' | 'error', text: string) => {
     if (type === 'success') {
       success(text);
@@ -1053,6 +1075,14 @@ const LFGSystem: React.FC = () => {
                     >
                       <Plus className="h-5 w-5 mr-2" />
                       Fragpunk zu Supabase hinzufügen
+                    </Button>
+
+                    <Button
+                      onClick={testButtonSettings}
+                      className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-2 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105"
+                    >
+                      <Settings className="h-5 w-5 mr-2" />
+                      Button Settings testen
                     </Button>
                   </div>
 

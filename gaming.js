@@ -115,11 +115,15 @@ async function handleLFGMessageWithResponses(message) {
         // Erstelle Interactive Embed mit Buttons
         const embed = createLFGEmbed(lfgPost, message.author, settings);
         const buttons = settings.enableButtons ? createLFGButtons(lfgPost, settings) : null;
+        console.log(`🔧 Button Settings - enableButtons: ${settings.enableButtons}, buttons created: ${!!buttons}`);
         
         // Sende LFG Embed mit Buttons
         const messageOptions = { embeds: [embed] };
         if (buttons) {
             messageOptions.components = [buttons];
+            console.log(`✅ Buttons hinzugefügt zu LFG Message`);
+        } else {
+            console.log(`⚠️ Keine Buttons erstellt - enableButtons: ${settings.enableButtons}`);
         }
         const lfgMessage = await message.channel.send(messageOptions);
         console.log(`📤 LFG Embed gesendet - Message ID: ${lfgMessage.id}`);
@@ -371,7 +375,7 @@ async function handleLFGJoin(interaction, lfgPost, userId) {
     const settings = await require('./lfg-supabase-api').loadLFGSettings(interaction.guild.id);
     
     const updatedEmbed = createLFGEmbed(lfgPost, author, settings);
-    const updatedButtons = createLFGButtons(lfgPost);
+    const updatedButtons = createLFGButtons(lfgPost, settings);
     
     await interaction.update({
         embeds: [updatedEmbed],
@@ -492,7 +496,8 @@ async function createAutoVoiceChannel(interaction, lfgPost) {
             'Apex Legends': '🔺',
             'Rocket League': '🚗',
             'Call of Duty': '🎖️',
-            'Fortnite': '🏗️'
+            'Fortnite': '🏗️',
+            'Fragpunk': '🎮'
         };
         
         const gameEmoji = gameEmojis[lfgPost.game] || '🎮';
