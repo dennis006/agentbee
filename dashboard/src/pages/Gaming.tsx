@@ -195,14 +195,16 @@ const LFGSystem: React.FC = () => {
       const response = await fetch('/api/lfg/status');
       if (response.ok) {
         const data = await response.json();
+        console.log('🔄 LFG Settings vom Backend geladen:', data.settings);
         setSettings(data.settings || settings);
         setStats(data.stats || stats);
       } else {
         // Fallback wenn API nicht verfügbar ist
-        console.log('LFG API nicht verfügbar, verwende lokale Einstellungen');
+        console.log('⚠️ LFG API nicht verfügbar, verwende lokale Einstellungen');
+        console.log('Response Status:', response.status);
       }
     } catch (error) {
-      console.error('Fehler beim Laden der LFG-Daten:', error);
+      console.error('❌ Fehler beim Laden der LFG-Daten:', error);
       // Verwende lokale Einstellungen als Fallback
     } finally {
       setLoading(false);
@@ -321,6 +323,16 @@ const LFGSystem: React.FC = () => {
     }
   };
 
+  const reloadSettings = async () => {
+    try {
+      showMessage('success', '🔄 Einstellungen werden neu geladen...');
+      await loadData();
+      showMessage('success', '✅ Einstellungen aktualisiert!');
+    } catch (error) {
+      showMessage('error', '❌ Fehler beim Neuladen der Einstellungen');
+    }
+  };
+
   const showMessage = (type: 'success' | 'error', text: string) => {
     if (type === 'success') {
       success(text);
@@ -359,7 +371,7 @@ const LFGSystem: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="flex justify-center gap-4">
+      <div className="flex justify-center gap-4 flex-wrap">
         <Button
           onClick={toggleLFGSystem}
           className={`${settings.enabled ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' : 'bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent'} text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2`}
@@ -374,6 +386,13 @@ const LFGSystem: React.FC = () => {
         >
           <Save className="h-5 w-5" />
           <span>{saving ? 'Speichere...' : 'Einstellungen Speichern'}</span>
+        </Button>
+        <Button 
+          onClick={reloadSettings}
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+        >
+          <RotateCcw className="h-5 w-5" />
+          <span>Aktualisieren</span>
         </Button>
       </div>
 
