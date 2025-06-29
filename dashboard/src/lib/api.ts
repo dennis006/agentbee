@@ -5,14 +5,10 @@ const isDevelopment = import.meta.env.MODE === 'development';
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 
     (isDevelopment ? 'http://localhost:3001' : 'https://agentbee.up.railway.app');
 
-console.log('🔗 API_BASE_URL:', API_BASE_URL);
-console.log('🔧 Mode:', import.meta.env.MODE);
-
 // HTTP Client mit Default-Konfiguration
 export const apiClient = {
     get: async (endpoint: string) => {
         const url = `${API_BASE_URL}${endpoint}`;
-        console.log(`🔗 GET Request: ${url}`);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -32,7 +28,6 @@ export const apiClient = {
     
     post: async (endpoint: string, data?: any) => {
         const url = `${API_BASE_URL}${endpoint}`;
-        console.log(`🔗 POST Request: ${url}`, data);
         
         const response = await fetch(url, {
             method: 'POST',
@@ -53,7 +48,6 @@ export const apiClient = {
     
     put: async (endpoint: string, data?: any) => {
         const url = `${API_BASE_URL}${endpoint}`;
-        console.log(`🔗 PUT Request: ${url}`, data);
         
         const response = await fetch(url, {
             method: 'PUT',
@@ -74,7 +68,6 @@ export const apiClient = {
     
     delete: async (endpoint: string) => {
         const url = `${API_BASE_URL}${endpoint}`;
-        console.log(`🔗 DELETE Request: ${url}`);
         
         const response = await fetch(url, {
             method: 'DELETE',
@@ -161,9 +154,6 @@ export const ENV_INFO = {
     buildTime: new Date().toISOString()
 };
 
-// Log Environment Info beim Import
-console.log('🔧 API Configuration:', ENV_INFO);
-
 // GLOBAL FETCH OVERRIDE - Automatically redirect relative /api calls to Railway
 const originalFetch = window.fetch;
 window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
@@ -173,9 +163,6 @@ window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<R
     // If it's a relative API call, redirect to Railway
     if (url.startsWith('/api/')) {
         const railwayUrl = `${API_BASE_URL}${url}`;
-        if (import.meta.env.DEV) {
-            console.log(`🔀 Redirecting ${url} → ${railwayUrl}`);
-        }
         return originalFetch(railwayUrl, init);
     }
     
