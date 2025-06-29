@@ -680,8 +680,172 @@ function setupCrosshairProxyAPI(app) {
         }
     });
 
+    // GET: Discord Guilds where bot is present
+    app.get('/api/crosshair/discord/guilds', cors(corsOptions), async (req, res) => {
+        try {
+            const botToken = process.env.DISCORD_BOT_TOKEN;
+            if (!botToken) {
+                return res.status(500).json({
+                    error: 'Bot token not configured',
+                    message: 'Discord Bot Token fehlt in den Environment Variables'
+                });
+            }
+
+            const response = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+                headers: {
+                    'Authorization': `Bot ${botToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                console.error('❌ Discord API Error:', response.status, response.statusText);
+                return res.status(response.status).json({
+                    error: 'Discord API Error',
+                    message: 'Fehler beim Laden der Discord Server'
+                });
+            }
+
+            const guilds = await response.json();
+            
+            // Filter only guilds where bot has admin permissions
+            const filteredGuilds = guilds.filter(guild => 
+                (parseInt(guild.permissions) & 0x8) === 0x8 || // Administrator
+                guild.owner === true
+            );
+
+            res.json({
+                success: true,
+                guilds: filteredGuilds.map(guild => ({
+                    id: guild.id,
+                    name: guild.name,
+                    icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
+                    owner: guild.owner,
+                    permissions: guild.permissions
+                })),
+                total: filteredGuilds.length
+            });
+
+        } catch (error) {
+            console.error('❌ Guild loading error:', error);
+            res.status(500).json({
+                error: 'Internal Server Error',
+                message: 'Fehler beim Laden der Discord Server'
+            });
+        }
+    });
+
+    // GET: Discord Channels for a specific guild
+    app.get('/api/crosshair/discord/guilds/:guild_id/channels', cors(corsOptions), async (req, res) => {
+        try {
+            const { guild_id } = req.params;
+            const botToken = process.env.DISCORD_BOT_TOKEN;
+
+            if (!botToken) {
+                return res.status(500).json({
+                    error: 'Bot token not configured',
+                    message: 'Discord Bot Token fehlt'
+                });
+            }
+
+            const response = await fetch(`https://discord.com/api/v10/guilds/${guild_id}/channels`, {
+                headers: {
+                    'Authorization': `Bot ${botToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                return res.status(response.status).json({
+                    error: 'Discord API Error',
+                    message: 'Fehler beim Laden der Channels'
+                });
+            }
+
+            const channels = await response.json();
+            
+            // Filter only text channels where bot can send messages
+            const textChannels = channels.filter(channel => 
+                channel.type === 0 && // GUILD_TEXT
+                !channel.parent_id // Not a thread
+            );
+
+            res.json({
+                success: true,
+                channels: textChannels.map(channel => ({
+                    id: channel.id,
+                    name: channel.name,
+                    type: channel.type,
+                    position: channel.position
+                }))
+            });
+
+        } catch (error) {
+            console.error('❌ Channel loading error:', error);
+            res.status(500).json({
+                error: 'Internal Server Error',
+                message: 'Fehler beim Laden der Channels'
+            });
+        }
+    });
+
+    // GET: Discord Roles for a specific guild
+    app.get('/api/crosshair/discord/guilds/:guild_id/roles', cors(corsOptions), async (req, res) => {
+        try {
+            const { guild_id } = req.params;
+            const botToken = process.env.DISCORD_BOT_TOKEN;
+
+            if (!botToken) {
+                return res.status(500).json({
+                    error: 'Bot token not configured',
+                    message: 'Discord Bot Token fehlt'
+                });
+            }
+
+            const response = await fetch(`https://discord.com/api/v10/guilds/${guild_id}/roles`, {
+                headers: {
+                    'Authorization': `Bot ${botToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                return res.status(response.status).json({
+                    error: 'Discord API Error',
+                    message: 'Fehler beim Laden der Rollen'
+                });
+            }
+
+            const roles = await response.json();
+            
+            // Sort by position (higher = more important)
+            const sortedRoles = roles
+                .filter(role => role.name !== '@everyone')
+                .sort((a, b) => b.position - a.position);
+
+            res.json({
+                success: true,
+                roles: sortedRoles.map(role => ({
+                    id: role.id,
+                    name: role.name,
+                    color: role.color,
+                    position: role.position,
+                    permissions: role.permissions
+                }))
+            });
+
+        } catch (error) {
+            console.error('❌ Role loading error:', error);
+            res.status(500).json({
+                error: 'Internal Server Error',
+                message: 'Fehler beim Laden der Rollen'
+            });
+        }
+    });
+
     console.log('✅ Crosshair Proxy API routes registered');
     console.log('✅ Discord Crosshair Sharing System initialized');
+    console.log('✅ Discord Real Data Integration enabled');
 }
 
 module.exports = { setupCrosshairProxyAPI }; 

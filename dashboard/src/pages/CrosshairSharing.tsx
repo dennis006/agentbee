@@ -19,6 +19,29 @@ interface CrosshairSettings {
   notification_settings: Record<string, any>;
 }
 
+interface DiscordGuild {
+  id: string;
+  name: string;
+  icon: string | null;
+  owner: boolean;
+  permissions: string;
+}
+
+interface DiscordChannel {
+  id: string;
+  name: string;
+  type: number;
+  position: number;
+}
+
+interface DiscordRole {
+  id: string;
+  name: string;
+  color: number;
+  position: number;
+  permissions: string;
+}
+
 interface CrosshairShare {
   id: string;
   username: string;
@@ -37,23 +60,86 @@ interface CrosshairShare {
 const CrosshairSharing = () => {
   const [settings, setSettings] = useState<CrosshairSettings | null>(null);
   const [crosshairs, setCrosshairs] = useState<CrosshairShare[]>([]);
+  const [guilds, setGuilds] = useState<DiscordGuild[]>([]);
+  const [channels, setChannels] = useState<DiscordChannel[]>([]);
+  const [roles, setRoles] = useState<DiscordRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [guildsLoading, setGuildsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedGuild, setSelectedGuild] = useState('');
   const { success, error } = useToast();
 
-  // Mock guild data (in real app, get from Discord API)
-  const mockGuilds = [
-    { id: '1234567890', name: 'AgentBee Community' },
-    { id: '0987654321', name: 'Valorant Pros' }
-  ];
+  // Load Discord guilds on component mount
+  useEffect(() => {
+    loadDiscordGuilds();
+  }, []);
 
+  // Load guild-specific data when guild is selected
   useEffect(() => {
     if (selectedGuild) {
       loadSettings();
       loadCrosshairs();
+      loadDiscordChannels();
+      loadDiscordRoles();
     }
   }, [selectedGuild]);
+
+  const loadDiscordGuilds = async () => {
+    try {
+      setGuildsLoading(true);
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setGuilds(data.guilds);
+        console.log('✅ Discord Guilds loaded:', data.guilds.length);
+      } else {
+        error(data.message || 'Fehler beim Laden der Discord Server');
+      }
+    } catch (err) {
+      error('Fehler beim Laden der Discord Server');
+      console.error('Discord Guilds Error:', err);
+    } finally {
+      setGuildsLoading(false);
+    }
+  };
+
+  const loadDiscordChannels = async () => {
+    if (!selectedGuild) return;
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/channels`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setChannels(data.channels);
+      } else {
+        console.warn('Channel loading failed:', data.message);
+      }
+    } catch (err) {
+      console.error('Channel loading error:', err);
+    }
+  };
+
+  const loadDiscordRoles = async () => {
+    if (!selectedGuild) return;
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/roles`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setRoles(data.roles);
+      } else {
+        console.warn('Role loading failed:', data.message);
+      }
+    } catch (err) {
+      console.error('Role loading error:', err);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -66,9 +152,10 @@ const CrosshairSharing = () => {
         setSettings(data.settings);
       } else {
         // No settings found, use defaults
+        const selectedGuildData = guilds.find(g => g.id === selectedGuild);
         setSettings({
           guild_id: selectedGuild,
-          guild_name: mockGuilds.find(g => g.id === selectedGuild)?.name || 'Unknown Guild',
+          guild_name: selectedGuildData?.name || 'Unknown Guild',
           crosshair_channel_id: '',
           crosshair_channel_name: '',
           auto_post_enabled: true,
@@ -153,16 +240,37 @@ const CrosshairSharing = () => {
             <label className="block text-gray-300 text-sm font-medium mb-2">
               Discord Server auswählen
             </label>
-            <select 
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              value={selectedGuild}
-              onChange={(e) => setSelectedGuild(e.target.value)}
-            >
-              <option value="">-- Server auswählen --</option>
-              {mockGuilds.map(guild => (
-                <option key={guild.id} value={guild.id}>{guild.name}</option>
-              ))}
-            </select>
+            
+            {guildsLoading ? (
+              <div className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-gray-400 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400 mr-2"></div>
+                Lade Discord Server...
+              </div>
+            ) : guilds.length === 0 ? (
+              <div className="w-full px-4 py-3 bg-red-900/20 border border-red-500/30 rounded-lg text-red-300 text-center">
+                <AlertCircle className="w-5 h-5 mx-auto mb-2" />
+                Keine Discord Server gefunden oder Bot Token fehlt
+              </div>
+            ) : (
+              <select 
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                value={selectedGuild}
+                onChange={(e) => setSelectedGuild(e.target.value)}
+              >
+                <option value="">-- Server auswählen --</option>
+                {guilds.map(guild => (
+                  <option key={guild.id} value={guild.id}>
+                    {guild.icon && '🖼️ '}{guild.name} {guild.owner && '👑'}
+                  </option>
+                ))}
+              </select>
+            )}
+            
+            {guilds.length > 0 && (
+              <p className="text-xs text-gray-400 mt-2">
+                {guilds.length} Server verfügbar • Nur Server mit Admin-Rechten
+              </p> 
+            )}
           </div>
         </div>
       </div>
@@ -212,15 +320,31 @@ const CrosshairSharing = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Crosshair Channel ID
+                    Crosshair Channel
                   </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="z.B. 1234567890123456789"
-                    value={settings?.crosshair_channel_id || ''}
-                    onChange={(e) => updateSetting('crosshair_channel_id', e.target.value)}
-                  />
+                  {channels.length > 0 ? (
+                    <select
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      value={settings?.crosshair_channel_id || ''}
+                      onChange={(e) => {
+                        const selectedChannel = channels.find(c => c.id === e.target.value);
+                        updateSetting('crosshair_channel_id', e.target.value);
+                        updateSetting('crosshair_channel_name', selectedChannel?.name || '');
+                      }}
+                    >
+                      <option value="">-- Channel auswählen --</option>
+                      {channels.map(channel => (
+                        <option key={channel.id} value={channel.id}>
+                          #{channel.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400 mr-2"></div>
+                      Lade Channels...
+                    </div>
+                  )}
                   <p className="text-xs text-gray-400 mt-1">
                     Channel wo Crosshairs automatisch gepostet werden
                   </p>
@@ -303,28 +427,55 @@ const CrosshairSharing = () => {
 
                 <div>
                   <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Moderator Role ID
+                    Moderator Role
                   </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="z.B. 1234567890123456789"
-                    value={settings?.moderator_role_id || ''}
-                    onChange={(e) => updateSetting('moderator_role_id', e.target.value)}
-                  />
+                  {roles.length > 0 ? (
+                    <select
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={settings?.moderator_role_id || ''}
+                      onChange={(e) => updateSetting('moderator_role_id', e.target.value)}
+                    >
+                      <option value="">-- Keine Moderator Role --</option>
+                      {roles.map(role => (
+                        <option key={role.id} value={role.id}>
+                          @{role.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400 mr-2"></div>
+                      Lade Rollen...
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Featured Role ID
+                    Featured Role
                   </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="z.B. 1234567890123456789"
-                    value={settings?.featured_role_id || ''}
-                    onChange={(e) => updateSetting('featured_role_id', e.target.value)}
-                  />
+                  {roles.length > 0 ? (
+                    <select
+                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={settings?.featured_role_id || ''}
+                      onChange={(e) => updateSetting('featured_role_id', e.target.value)}
+                    >
+                      <option value="">-- Keine Featured Role --</option>
+                      {roles.map(role => (
+                        <option key={role.id} value={role.id}>
+                          @{role.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400 mr-2"></div>
+                      Lade Rollen...
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    User mit dieser Role können Crosshairs als Featured markieren
+                  </p>
                 </div>
 
                 <div>

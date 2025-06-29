@@ -517,16 +517,23 @@ const CrosshairCreator = () => {
     try {
       setLoading(true);
       
-      // Mock user data (in real app, get from Discord OAuth)
+      // Get available guilds first
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+      const guildsResponse = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
+      const guildsData = await guildsResponse.json();
+      
+      if (!guildsData.success || guildsData.guilds.length === 0) {
+        throw new Error('Keine Discord Server verfügbar. Stelle sicher, dass der Bot konfiguriert ist.');
+      }
+
+      // Use first available guild for now (TODO: Let user choose)
+      const selectedGuild = guildsData.guilds[0];
+      
+      // TODO: Replace with real Discord OAuth user data
       const mockUser = {
         id: '123456789012345678',
         username: 'TestUser',
         avatar: 'https://cdn.discordapp.com/embed/avatars/0.png'
-      };
-
-      const mockGuild = {
-        id: '1234567890',
-        name: 'AgentBee Community'
       };
 
       // Detect crosshair type
@@ -549,7 +556,7 @@ const CrosshairCreator = () => {
         user_id: mockUser.id,
         username: mockUser.username,
         user_avatar: mockUser.avatar,
-        guild_id: mockGuild.id,
+        guild_id: selectedGuild.id,
         crosshair_code: crosshairCode || generateValorantCrosshairCode(settings),
         crosshair_name: `${getCrosshairType()} Crosshair`,
         description: `Created with AgentBee Crosshair Creator`,
@@ -559,8 +566,6 @@ const CrosshairCreator = () => {
       };
 
       console.log('🎯 Sharing crosshair:', shareData);
-
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       const response = await fetch(`${apiUrl}/api/crosshair/share`, {
         method: 'POST',
         headers: {
