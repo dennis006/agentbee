@@ -103,8 +103,18 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       if (settings.outerLinesThickness !== 1) {
         code += `;0t;${settings.outerLinesThickness}`; // outer thickness
       }
+      // Outer Lines Outline
+      if (settings.outerLinesOutline) {
+        code += `;0s;1`; // outer outline on
+        code += `;0o;${settings.outerLinesOutlineOpacity}`; // outer outline opacity
+        if (settings.outerLinesOutlineThickness !== 1) {
+          code += `;0st;${settings.outerLinesOutlineThickness}`; // outer outline thickness
+        }
+      } else {
+        code += `;0s;0`; // outer outline off
+      }
     } else {
-      code += ";0l;0;0o;0;0a;0;0f;0";
+      code += ";0l;0;0o;0;0a;0;0f;0;0s;0";
     }
     
     // Inner Lines (1x parameters)  
@@ -116,6 +126,16 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
         code += `;1t;${settings.innerLinesThickness}`; // inner thickness
       }
       code += ";1m;0;1f;0"; // inner movement, fade
+      // Inner Lines Outline
+      if (settings.innerLinesOutline) {
+        code += `;1s;1`; // inner outline on
+        code += `;1o;${settings.innerLinesOutlineOpacity}`; // inner outline opacity
+        if (settings.innerLinesOutlineThickness !== 1) {
+          code += `;1st;${settings.innerLinesOutlineThickness}`; // inner outline thickness
+        }
+      } else {
+        code += `;1s;0`; // inner outline off
+      }
     }
     
     // Standard end
@@ -139,11 +159,17 @@ interface CrosshairSettings {
   outerLinesThickness: number;
   outerLinesOffset: number;
   outerLinesOpacity: number;
+  outerLinesOutline: boolean;
+  outerLinesOutlineOpacity: number;
+  outerLinesOutlineThickness: number;
   innerLinesShow: boolean;
   innerLinesLength: number;
   innerLinesThickness: number;
   innerLinesOffset: number;
   innerLinesOpacity: number;
+  innerLinesOutline: boolean;
+  innerLinesOutlineOpacity: number;
+  innerLinesOutlineThickness: number;
   outlineShow: boolean;
   outlineOpacity: number;
   outlineThickness: number;
@@ -173,11 +199,17 @@ const CrosshairCreator = () => {
     outerLinesThickness: 2,
     outerLinesOffset: 3,
     outerLinesOpacity: 255,
+    outerLinesOutline: false,
+    outerLinesOutlineOpacity: 255,
+    outerLinesOutlineThickness: 1,
     innerLinesShow: false,
     innerLinesLength: 4,
     innerLinesThickness: 2,
     innerLinesOffset: 1,
     innerLinesOpacity: 255,
+    innerLinesOutline: false,
+    innerLinesOutlineOpacity: 255,
+    innerLinesOutlineThickness: 1,
     outlineShow: false,
     outlineOpacity: 255,
     outlineThickness: 1,
@@ -297,7 +329,7 @@ const CrosshairCreator = () => {
     }, 800);
 
     return () => clearTimeout(timeoutId);
-  }, [settings]);
+    }, [settings]);
 
   // Initial load of real preview
   useEffect(() => {
@@ -639,7 +671,7 @@ const CrosshairCreator = () => {
                         />
                         <div className="absolute bottom-2 right-2 text-xs text-green-400 bg-black/50 px-2 py-1 rounded">
                           AgentBee ✅
-                        </div>
+                      </div>
                       </div>
                     ) : (
                       <>
@@ -650,8 +682,8 @@ const CrosshairCreator = () => {
                                              radial-gradient(circle at 75px 75px, rgba(255,255,255,0.05) 1px, transparent 0)`,
                             backgroundSize: '100px 100px'
                           }}></div>
-                        </div>
-                        
+                </div>
+
                         {/* CSS Fallback Preview */}
                         <div className="relative w-32 h-32 z-10">
                           {/* Outer Lines */}
@@ -773,15 +805,15 @@ const CrosshairCreator = () => {
                             <div className="flex items-center gap-3 text-purple-300">
                               <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
                               <span className="text-sm font-medium">Lade echte Vorschau...</span>
-                            </div>
+                      </div>
                           </div>
                         )}
                       </>
                     )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
             {/* Crosshair Einstellungen - Rechts */}
             <div className="lg:col-span-7 space-y-6 animate-slide-in-right" style={{ animationDelay: '700ms' }}>
@@ -792,202 +824,296 @@ const CrosshairCreator = () => {
                   Crosshair Details
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Center Dot */}
+              {/* Center Dot */}
                   <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-lg hover:bg-purple-600/20 hover:border-purple-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 animate-fade-in" style={{ animationDelay: '900ms' }}>
                     <div className="flex items-center space-x-2 mb-4">
-                      <Checkbox
-                        id="centerDotShow"
-                        checked={settings.centerDotShow}
-                        onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
-                      />
-                      <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
+                  <Checkbox
+                    id="centerDotShow"
+                    checked={settings.centerDotShow}
+                    onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
+                  />
+                  <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
                         Center Dot
-                      </label>
-                    </div>
-
-                    {settings.centerDotShow && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-purple-200 text-sm mb-2">
-                            Dicke: {settings.centerDotThickness}
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="6"
-                            value={settings.centerDotThickness}
-                            onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
-                            className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-purple-200 text-sm mb-2">
-                            Transparenz: {settings.centerDotOpacity}
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="255"
-                            value={settings.centerDotOpacity}
-                            onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
-                            className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Outer Lines */}
-                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg hover:bg-blue-600/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 animate-fade-in" style={{ animationDelay: '1000ms' }}>
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Checkbox
-                        id="outerLinesShow"
-                        checked={settings.outerLinesShow}
-                        onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
-                      />
-                      <label htmlFor="outerLinesShow" className="text-blue-200 font-medium">
-                        Äußere Linien
-                      </label>
-                    </div>
-
-                    {settings.outerLinesShow && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                            Länge: {settings.outerLinesLength}
-                          </label>
-                          <input
-                            type="range"
-                            min="1"
-                            max="20"
-                            value={settings.outerLinesLength}
-                            onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                            Dicke: {settings.outerLinesThickness}
-                          </label>
-                          <input
-                            type="range"
-                            min="1"
-                            max="10"
-                            value={settings.outerLinesThickness}
-                            onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                            Abstand: {settings.outerLinesOffset}
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="15"
-                            value={settings.outerLinesOffset}
-                            onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                            Transparenz: {settings.outerLinesOpacity}
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="255"
-                            value={settings.outerLinesOpacity}
-                            onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Inner Lines */}
-                  <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg hover:bg-cyan-600/20 hover:border-cyan-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 animate-fade-in" style={{ animationDelay: '1100ms' }}>
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Checkbox
-                        id="innerLinesShow"
-                        checked={settings.innerLinesShow}
-                        onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
-                      />
-                      <label htmlFor="innerLinesShow" className="text-cyan-200 font-medium">
-                        Innere Linien
-                      </label>
-                    </div>
-
-                    {settings.innerLinesShow && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                            Länge: {settings.innerLinesLength}
-                          </label>
-                          <input
-                            type="range"
-                            min="1"
-                            max="15"
-                            value={settings.innerLinesLength}
-                            onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                            Dicke: {settings.innerLinesThickness}
-                          </label>
-                          <input
-                            type="range"
-                            min="1"
-                            max="8"
-                            value={settings.innerLinesThickness}
-                            onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                            Abstand: {settings.innerLinesOffset}
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="10"
-                            value={settings.innerLinesOffset}
-                            onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                            Transparenz: {settings.innerLinesOpacity}
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="255"
-                            value={settings.innerLinesOpacity}
-                            onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  </label>
                 </div>
+
+                {settings.centerDotShow && (
+                      <div className="space-y-3">
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Dicke: {settings.centerDotThickness}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="6"
+                        value={settings.centerDotThickness}
+                        onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Transparenz: {settings.centerDotOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.centerDotOpacity}
+                        onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Outer Lines */}
+                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg hover:bg-blue-600/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 animate-fade-in" style={{ animationDelay: '1000ms' }}>
+                    <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="outerLinesShow"
+                    checked={settings.outerLinesShow}
+                    onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
+                  />
+                      <label htmlFor="outerLinesShow" className="text-blue-200 font-medium">
+                        Äußere Linien
+                  </label>
+                </div>
+
+                {settings.outerLinesShow && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Länge: {settings.outerLinesLength}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="20"
+                              value={settings.outerLinesLength}
+                              onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Dicke: {settings.outerLinesThickness}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="10"
+                              value={settings.outerLinesThickness}
+                              onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Abstand: {settings.outerLinesOffset}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="15"
+                              value={settings.outerLinesOffset}
+                              onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Transparenz: {settings.outerLinesOpacity}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="255"
+                              value={settings.outerLinesOpacity}
+                              onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Outer Lines Outline */}
+                        <div className="p-3 bg-blue-800/20 border border-blue-600/30 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Checkbox
+                              id="outerLinesOutline"
+                              checked={settings.outerLinesOutline}
+                              onCheckedChange={(checked) => updateSetting('outerLinesOutline', checked)}
+                            />
+                            <label htmlFor="outerLinesOutline" className="text-blue-200 font-medium text-sm">
+                              💀 Outline
+                            </label>
+                          </div>
+                          
+                          {settings.outerLinesOutline && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-blue-200 text-xs mb-2">
+                                  Outline Dicke: {settings.outerLinesOutlineThickness}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="5"
+                                  value={settings.outerLinesOutlineThickness}
+                                  onChange={(e) => updateSetting('outerLinesOutlineThickness', parseInt(e.target.value))}
+                                  className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-blue-200 text-xs mb-2">
+                                  Outline Transparenz: {settings.outerLinesOutlineOpacity}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="255"
+                                  value={settings.outerLinesOutlineOpacity}
+                                  onChange={(e) => updateSetting('outerLinesOutlineOpacity', parseInt(e.target.value))}
+                                  className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                )}
+              </div>
+
+              {/* Inner Lines */}
+                  <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg hover:bg-cyan-600/20 hover:border-cyan-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 animate-fade-in" style={{ animationDelay: '1100ms' }}>
+                    <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="innerLinesShow"
+                    checked={settings.innerLinesShow}
+                    onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
+                  />
+                      <label htmlFor="innerLinesShow" className="text-cyan-200 font-medium">
+                        Innere Linien
+                  </label>
+                </div>
+
+                {settings.innerLinesShow && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Länge: {settings.innerLinesLength}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="15"
+                              value={settings.innerLinesLength}
+                              onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Dicke: {settings.innerLinesThickness}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="8"
+                              value={settings.innerLinesThickness}
+                              onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Abstand: {settings.innerLinesOffset}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="10"
+                              value={settings.innerLinesOffset}
+                              onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Transparenz: {settings.innerLinesOpacity}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="255"
+                              value={settings.innerLinesOpacity}
+                              onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Inner Lines Outline */}
+                        <div className="p-3 bg-cyan-800/20 border border-cyan-600/30 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Checkbox
+                              id="innerLinesOutline"
+                              checked={settings.innerLinesOutline}
+                              onCheckedChange={(checked) => updateSetting('innerLinesOutline', checked)}
+                            />
+                            <label htmlFor="innerLinesOutline" className="text-cyan-200 font-medium text-sm">
+                              💀 Outline
+                            </label>
+                          </div>
+                          
+                          {settings.innerLinesOutline && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-cyan-200 text-xs mb-2">
+                                  Outline Dicke: {settings.innerLinesOutlineThickness}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="5"
+                                  value={settings.innerLinesOutlineThickness}
+                                  onChange={(e) => updateSetting('innerLinesOutlineThickness', parseInt(e.target.value))}
+                                  className="w-full h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-cyan-200 text-xs mb-2">
+                                  Outline Transparenz: {settings.innerLinesOutlineOpacity}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="255"
+                                  value={settings.innerLinesOutlineOpacity}
+                                  onChange={(e) => updateSetting('innerLinesOutlineOpacity', parseInt(e.target.value))}
+                                  className="w-full h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                )}
+              </div>
+            </div>
+                  </div>
+                  
               {/* Farbauswahl - Unten */}
               <div className="animate-fade-in" style={{ animationDelay: '1200ms' }}>
                 <h3 className="text-xl font-bold text-pink-400 mb-6 flex items-center gap-2 animate-glow">
@@ -1109,11 +1235,17 @@ const CrosshairCreator = () => {
                   outerLinesThickness: 2,
                   outerLinesOffset: 3,
                   outerLinesOpacity: 255,
+                  outerLinesOutline: false,
+                  outerLinesOutlineOpacity: 255,
+                  outerLinesOutlineThickness: 1,
                   innerLinesShow: false,
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
                   innerLinesOpacity: 255,
+                  innerLinesOutline: false,
+                  innerLinesOutlineOpacity: 255,
+                  innerLinesOutlineThickness: 1,
                   outlineShow: false,
                   outlineOpacity: 255,
                   outlineThickness: 1,
