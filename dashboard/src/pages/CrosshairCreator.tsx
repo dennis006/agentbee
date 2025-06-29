@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Target, Copy, Download, Settings, Eye } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
-import { toast } from '../components/ui/toast';
+import { useToast, ToastContainer } from '../components/ui/toast';
 import { cn } from '../lib/utils';
 
 interface CrosshairSettings {
@@ -26,6 +26,9 @@ const CrosshairCreator = () => {
   const [loading, setLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [crosshairCode, setCrosshairCode] = useState('');
+  
+  // Toast System
+  const { toasts, success, error, removeToast } = useToast();
 
   // Crosshair Settings State
   const [settings, setSettings] = useState<CrosshairSettings>({
@@ -79,9 +82,9 @@ const CrosshairCreator = () => {
   const copyCode = async () => {
     try {
       await navigator.clipboard.writeText(crosshairCode);
-      toast({ title: "✅ Code kopiert!", description: "Der Crosshair-Code wurde kopiert." });
-    } catch (error) {
-      toast({ title: "❌ Fehler", description: "Code konnte nicht kopiert werden.", variant: "destructive" });
+      success("Der Crosshair-Code wurde kopiert.");
+    } catch (err) {
+      error("Code konnte nicht kopiert werden.");
     }
   };
 
@@ -96,13 +99,13 @@ const CrosshairCreator = () => {
         const blob = await response.blob();
         const imageUrl = URL.createObjectURL(blob);
         setGeneratedImage(imageUrl);
-        toast({ title: "🎯 Crosshair generiert!", description: "Dein Crosshair-Bild wurde erstellt." });
+        success("Dein Crosshair-Bild wurde erfolgreich erstellt.");
       } else {
         throw new Error('API Fehler: ' + response.status);
       }
-    } catch (error) {
-      console.error('Fehler beim Generieren:', error);
-      toast({ title: "❌ Generierung fehlgeschlagen", description: "Das Crosshair-Bild konnte nicht erstellt werden.", variant: "destructive" });
+    } catch (err) {
+      console.error('Fehler beim Generieren:', err);
+      error("Das Crosshair-Bild konnte nicht erstellt werden.");
     } finally {
       setLoading(false);
     }
@@ -117,7 +120,7 @@ const CrosshairCreator = () => {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast({ title: "💾 Download gestartet", description: "Dein Crosshair wird heruntergeladen." });
+    success("Dein Crosshair wird heruntergeladen.");
   };
 
   // Get Color Value
@@ -136,6 +139,7 @@ const CrosshairCreator = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white relative overflow-hidden">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="relative z-10 max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="text-center mb-8 p-8 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 shadow-2xl">
