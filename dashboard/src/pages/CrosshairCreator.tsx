@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Copy, Download, Settings, Eye, Check } from 'lucide-react';
+import { Target, Copy, Download, Settings, Eye, Check, RotateCcw } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { useToast, ToastContainer } from '../components/ui/toast';
@@ -106,17 +106,26 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     // Farbe
     params.push(`c;${color}`);
     
-    // Outline standardmäßig aktiviert
-    params.push("h;0");
+    // Outline Parameter
+    params.push(`h;${settings.outlineShow ? 1 : 0}`);
+    if (settings.outlineShow) {
+      params.push(`ho;${Math.round(settings.outlineOpacity / 255)}`);
+      params.push(`ht;${settings.outlineThickness}`);
+    }
     
     // Center Dot Parameter
-    if (settings.centerDotShow) {
+    if (settings.centerDotShow && settings.centerDotThickness > 0) {
       params.push("d;1");
       params.push(`z;${settings.centerDotThickness}`);
-      params.push("a;1");
+      params.push(`a;${Math.round(settings.centerDotOpacity / 255)}`);
     } else {
       params.push("d;0");
     }
+    
+    // Movement & Firing Error
+    params.push(`f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`);
+    params.push(`s;${settings.firingErrorShow ? 1 : 0}`);
+    params.push(`m;${settings.movementErrorShow ? 1 : 0}`);
     
     // Outer Lines Parameter
     if (settings.outerLinesShow) {
@@ -170,6 +179,12 @@ interface CrosshairSettings {
   innerLinesThickness: number;
   innerLinesOffset: number;
   innerLinesOpacity: number;
+  outlineShow: boolean;
+  outlineOpacity: number;
+  outlineThickness: number;
+  firingErrorShow: boolean;
+  movementErrorShow: boolean;
+  fadeCrosshairWithFiringError: boolean;
 }
 
 const CrosshairCreator = () => {
@@ -182,7 +197,7 @@ const CrosshairCreator = () => {
   const { toasts, success, error, removeToast } = useToast();
   const { showNotification, NotificationComponent } = useNotification();
 
-  // Vereinfachte Crosshair Settings
+  // Erweiterte Crosshair Settings
   const [settings, setSettings] = useState<CrosshairSettings>({
     primaryColor: 'green',
     centerDotShow: true,
@@ -197,7 +212,13 @@ const CrosshairCreator = () => {
     innerLinesLength: 4,
     innerLinesThickness: 2,
     innerLinesOffset: 1,
-    innerLinesOpacity: 255
+    innerLinesOpacity: 255,
+    outlineShow: false,
+    outlineOpacity: 255,
+    outlineThickness: 1,
+    firingErrorShow: false,
+    movementErrorShow: false,
+    fadeCrosshairWithFiringError: false
   });
 
   // Color Mapping
@@ -208,12 +229,12 @@ const CrosshairCreator = () => {
 
   const colorOptions = [
     { name: 'white', value: 'white', color: '#ffffff', label: 'Weiß' },
-    { name: 'green', value: 'green', color: '#00ff00', label: 'Grün' },
-    { name: 'yellowish-green', value: 'yellowish-green', color: '#adff2f', label: 'Gelb-Grün' },
-    { name: 'greenish-yellow', value: 'greenish-yellow', color: '#9aff9a', label: 'Grün-Gelb' },
-    { name: 'cyan', value: 'cyan', color: '#00ffff', label: 'Türkis' },
-    { name: 'pink', value: 'pink', color: '#ff69b4', label: 'Pink' },
-    { name: 'red', value: 'red', color: '#ff0000', label: 'Rot' }
+    { name: 'green', value: 'green', color: '#00ff41', label: 'Grün (Valorant)' },
+    { name: 'yellowish-green', value: 'yellowish-green', color: '#ccff00', label: 'Gelb-Grün' },
+    { name: 'greenish-yellow', value: 'greenish-yellow', color: '#ffff00', label: 'Gelb' },
+    { name: 'cyan', value: 'cyan', color: '#00ffff', label: 'Cyan' },
+    { name: 'pink', value: 'pink', color: '#ff00ff', label: 'Pink/Magenta' },
+    { name: 'red', value: 'red', color: '#ff0044', label: 'Rot' }
   ];
 
   // Update Setting
@@ -286,11 +307,16 @@ const CrosshairCreator = () => {
     showNotification("Dein Crosshair wird heruntergeladen.");
   };
 
-  // Get Color Value
+  // Get Color Value - Angepasst an echte Valorant-Farben
   const getColorValue = (colorName: string) => {
     const colors: Record<string, string> = {
-      'white': '#ffffff', 'green': '#00ff00', 'yellowish-green': '#adff2f', 'greenish-yellow': '#9aff9a',
-      'cyan': '#00ffff', 'pink': '#ff69b4', 'red': '#ff0000'
+      'white': '#ffffff', 
+      'green': '#00ff41', 
+      'yellowish-green': '#ccff00', 
+      'greenish-yellow': '#ffff00',
+      'cyan': '#00ffff', 
+      'pink': '#ff00ff', 
+      'red': '#ff0044'
     };
     return colors[colorName] || '#ffffff';
   };
@@ -401,23 +427,41 @@ const CrosshairCreator = () => {
                   </label>
                 </div>
 
-                {settings.centerDotShow && (
-                  <div className="ml-6 space-y-3">
-                    <div>
-                      <label className="block text-purple-200 text-sm mb-2">
-                        Dicke: {settings.centerDotThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="6"
-                        value={settings.centerDotThickness}
-                        onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
-                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                <div className="ml-6 space-y-3">
+                  <div>
+                    <label className="block text-purple-200 text-sm mb-2">
+                      Dicke: {settings.centerDotThickness}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="6"
+                      value={settings.centerDotThickness}
+                      onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
+                      className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <p className="text-xs text-purple-300 mt-1">
+                      {settings.centerDotThickness === 0 ? "Unsichtbar" : `${settings.centerDotThickness}px dick`}
+                    </p>
                   </div>
-                )}
+
+                  <div>
+                    <label className="block text-purple-200 text-sm mb-2">
+                      Transparenz: {settings.centerDotOpacity}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="255"
+                      value={settings.centerDotOpacity}
+                      onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
+                      className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <p className="text-xs text-purple-300 mt-1">
+                      {settings.centerDotOpacity === 0 ? "Komplett transparent" : `${Math.round((settings.centerDotOpacity/255)*100)}% sichtbar`}
+                    </p>
+                  </div>
+                </div>
               </div>
 
                              {/* Outer Lines */}
@@ -568,6 +612,90 @@ const CrosshairCreator = () => {
                  )}
                </div>
 
+               {/* Outline Settings */}
+               <div className="space-y-4">
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="outlineShow"
+                     checked={settings.outlineShow}
+                     onCheckedChange={(checked) => updateSetting('outlineShow', checked)}
+                   />
+                   <label htmlFor="outlineShow" className="text-purple-200 font-medium">
+                     Umrandung anzeigen
+                   </label>
+                 </div>
+
+                 {settings.outlineShow && (
+                   <div className="ml-6 space-y-3">
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Dicke: {settings.outlineThickness}
+                       </label>
+                       <input
+                         type="range"
+                         min="1"
+                         max="5"
+                         value={settings.outlineThickness}
+                         onChange={(e) => updateSetting('outlineThickness', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Transparenz: {settings.outlineOpacity}
+                       </label>
+                       <input
+                         type="range"
+                         min="0"
+                         max="255"
+                         value={settings.outlineOpacity}
+                         onChange={(e) => updateSetting('outlineOpacity', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+                   </div>
+                 )}
+               </div>
+
+               {/* Movement & Firing Error */}
+               <div className="space-y-4">
+                 <h4 className="text-purple-300 font-medium">Bewegung & Schuss-Feedback</h4>
+                 
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="firingErrorShow"
+                     checked={settings.firingErrorShow}
+                     onCheckedChange={(checked) => updateSetting('firingErrorShow', checked)}
+                   />
+                   <label htmlFor="firingErrorShow" className="text-purple-200 text-sm">
+                     Schuss-Fehler anzeigen
+                   </label>
+                 </div>
+
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="movementErrorShow"
+                     checked={settings.movementErrorShow}
+                     onCheckedChange={(checked) => updateSetting('movementErrorShow', checked)}
+                   />
+                   <label htmlFor="movementErrorShow" className="text-purple-200 text-sm">
+                     Bewegungs-Fehler anzeigen
+                   </label>
+                 </div>
+
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="fadeCrosshairWithFiringError"
+                     checked={settings.fadeCrosshairWithFiringError}
+                     onCheckedChange={(checked) => updateSetting('fadeCrosshairWithFiringError', checked)}
+                   />
+                   <label htmlFor="fadeCrosshairWithFiringError" className="text-purple-200 text-sm">
+                     Crosshair beim Schießen ausblenden
+                   </label>
+                 </div>
+               </div>
+
                {/* Live Preview */}
                <div className="border border-purple-400/30 rounded-lg p-6 bg-black/20">
                  <h3 className="text-purple-300 font-medium mb-4">Live Vorschau</h3>
@@ -695,7 +823,36 @@ const CrosshairCreator = () => {
         <div className="mt-8 bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-2xl font-bold text-purple-400">Dein Crosshair Code</h3>
-            <div className="flex gap-4">
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setSettings({
+                  primaryColor: 'green',
+                  centerDotShow: true,
+                  centerDotThickness: 2,
+                  centerDotOpacity: 255,
+                  outerLinesShow: true,
+                  outerLinesLength: 7,
+                  outerLinesThickness: 2,
+                  outerLinesOffset: 3,
+                  outerLinesOpacity: 255,
+                  innerLinesShow: false,
+                  innerLinesLength: 4,
+                  innerLinesThickness: 2,
+                  innerLinesOffset: 1,
+                  innerLinesOpacity: 255,
+                  outlineShow: false,
+                  outlineOpacity: 255,
+                  outlineThickness: 1,
+                  firingErrorShow: false,
+                  movementErrorShow: false,
+                  fadeCrosshairWithFiringError: false
+                })}
+                variant="outline"
+                className="border-red-500 text-red-400 hover:bg-red-500/20"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset
+              </Button>
               <Button
                 onClick={generateImage}
                 disabled={loading}
