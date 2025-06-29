@@ -92,11 +92,12 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     code += `;0t;${innerThickness}`;
     code += ";0m;0;0f;0"; // Movement + Fade immer 0
     
-    // OUTER LINES (1x) - IMMER alle Parameter setzen!
-    const outerLength = (settings.outerLinesShow && settings.outerLinesLength > 0) ? settings.outerLinesLength : 0;
-    const outerOffset = settings.outerLinesShow ? settings.outerLinesOffset : 0;
-    const outerAlpha = settings.outerLinesShow ? Math.round(settings.outerLinesOpacity / 255) : 0;
-    const outerThickness = settings.outerLinesShow ? settings.outerLinesThickness : 0;
+    // OUTER LINES (1x) - TEMPORARILY DISABLED (Coming Soon)
+    // TODO: Fix outer lines parameter compatibility
+    const outerLength = 0; // Temporarily disabled
+    const outerOffset = 0;
+    const outerAlpha = 0;
+    const outerThickness = 0;
     
     code += `;1l;${outerLength}`;
     code += `;1o;${outerOffset}`;
@@ -154,12 +155,12 @@ const CrosshairCreator = () => {
     centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
-    outerLinesShow: true,
-    outerLinesLength: 7,
-    outerLinesThickness: 2,
-    outerLinesOffset: 3,
+    outerLinesShow: false, // Disabled - Coming Soon
+    outerLinesLength: 0,
+    outerLinesThickness: 0,
+    outerLinesOffset: 0,
     outerLinesOpacity: 255,
-    innerLinesShow: false,
+    innerLinesShow: true, // Enable Inner Lines instead
     innerLinesLength: 4,
     innerLinesThickness: 2,
     innerLinesOffset: 1,
@@ -200,8 +201,8 @@ const CrosshairCreator = () => {
     if (mode === 'pro') {
       // VCRDB-basierte realistische Pro-Range Zufallswerte
       const centerDotShow = Math.random() > 0.4; // 60% haben Center Dot
-      const outerLinesShow = Math.random() > 0.1; // 90% haben Outer Lines
-      const innerLinesShow = Math.random() > 0.7; // 30% haben Inner Lines (seltener bei Pros)
+      const outerLinesShow = false; // Temporarily disabled - Coming Soon
+      const innerLinesShow = Math.random() > 0.5; // 50% haben Inner Lines (mehr wegen Outer Lines disabled)
       const outlineShow = Math.random() > 0.7; // 30% outline
       
       // VCRDB Pro-Ranges (basierend auf echten Valorant Parameter)
@@ -222,14 +223,12 @@ const CrosshairCreator = () => {
       const outlineThickness = Math.floor(Math.random() * 6) + 1; // 1-6 (VCRDB)
       const outlineOpacity = Math.floor((Math.random() * 0.4 + 0.3) * 255); // 0.3-0.7 alpha
       
-      // Beschreibung des generierten Typs
+      // Beschreibung des generierten Typs (Outer Lines disabled)
       let crosshairType = '';
       if (centerDotShow && !innerLinesShow) crosshairType = 'Center Dot';
       else if (!centerDotShow && innerLinesShow) crosshairType = 'Inner Lines';
-      else if (centerDotShow && innerLinesShow) crosshairType = 'Hybrid';
-      else if (outerLinesLength <= 3) crosshairType = 'Compact';
-      else if (outerLinesLength >= 8) crosshairType = 'Extended';
-      else crosshairType = 'Classic';
+      else if (centerDotShow && innerLinesShow) crosshairType = 'Hybrid Dot+Inner';
+      else crosshairType = 'Minimal';
       
       setSettings(prev => ({
         ...prev,
@@ -270,11 +269,11 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 4) + 3, // 3-6 (VCRDB max)
-            outerLinesShow: true,
-            outerLinesLength: Math.floor(Math.random() * 6) + 5, // 5-10 (VCRDB)
-            outerLinesThickness: Math.floor(Math.random() * 6) + 5, // 5-10 (thick neon, VCRDB max)
-            outerLinesOffset: Math.floor(Math.random() * 21), // 0-20 (VCRDB range)
-            innerLinesShow: Math.random() > 0.3,
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
+            innerLinesShow: true, // Focus on Inner Lines
             innerLinesLength: Math.floor(Math.random() * 10) + 6, // 6-15 (VCRDB)
             color: getRandomColor()
           };
@@ -283,11 +282,11 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: Math.random() > 0.5,
             centerDotThickness: Math.floor(Math.random() * 3) + 1, // 1-3
-            outerLinesShow: true,
-            outerLinesLength: Math.floor(Math.random() * 5) + 6, // 6-10 (VCRDB max)
-            outerLinesThickness: Math.floor(Math.random() * 2) + 1, // 1-2 (thin retro, min 1)
-            outerLinesOffset: Math.floor(Math.random() * 31) + 10, // 10-40 (wide spacing, VCRDB)
-            innerLinesShow: false,
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
+            innerLinesShow: Math.random() > 0.3, // More Inner Lines usage
             color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FECA57'][Math.floor(Math.random() * 4)]
           };
           break;
@@ -295,11 +294,11 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 2) + 1, // 1-2
-            outerLinesShow: Math.random() > 0.3,
-            outerLinesLength: Math.floor(Math.random() * 4) + 1, // 1-4 (VCRDB min range, min 1)
-            outerLinesThickness: Math.floor(Math.random() * 2) + 1, // 1-2 (minimal, min 1)
-            outerLinesOffset: Math.floor(Math.random() * 16), // 0-15 (VCRDB range)
-            innerLinesShow: false,
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
+            innerLinesShow: Math.random() > 0.6, // Sometimes Inner Lines
             color: getRandomColor()
           };
           break;
@@ -307,11 +306,11 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: Math.random() > 0.4,
             centerDotThickness: Math.floor(Math.random() * 3) + 4, // 4-6 (VCRDB max)
-            outerLinesShow: true,
-            outerLinesLength: Math.floor(Math.random() * 6) + 4, // 4-9
-            outerLinesThickness: Math.floor(Math.random() * 4) + 7, // 7-10 (very thick, VCRDB max)
-            outerLinesOffset: Math.floor(Math.random() * 31) + 10, // 10-40 (VCRDB range)
-            innerLinesShow: Math.random() > 0.6,
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
+            innerLinesShow: true, // Focus on thick Inner Lines
             color: getRandomColor()
           };
           break;
@@ -319,11 +318,11 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 3) + 4, // 4-6 (VCRDB max)
-            outerLinesShow: Math.random() > 0.5,
-            outerLinesLength: Math.floor(Math.random() * 4) + 1, // 1-4 (small lines, min 1)
-            outerLinesThickness: Math.floor(Math.random() * 3) + 1, // 1-3 (min 1 für Sichtbarkeit)
-            outerLinesOffset: Math.floor(Math.random() * 36) + 5, // 5-40 (VCRDB range)
-            innerLinesShow: false,
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
+            innerLinesShow: false, // Focus on center dot only
             color: getRandomColor()
           };
           break;
@@ -331,11 +330,11 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: Math.random() > 0.4,
             centerDotThickness: Math.floor(Math.random() * 6) + 1, // 1-6 (VCRDB full range)
-            outerLinesShow: Math.random() > 0.2,
-            outerLinesLength: Math.floor(Math.random() * 10) + 1, // 1-10 (VCRDB, min 1)
-            outerLinesThickness: Math.floor(Math.random() * 10) + 1, // 1-10 (VCRDB, min 1)
-            outerLinesOffset: Math.floor(Math.random() * 41), // 0-40 (VCRDB 1:1)
-            innerLinesShow: Math.random() > 0.5,
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
+            innerLinesShow: Math.random() > 0.3, // More Inner Lines
             innerLinesLength: Math.floor(Math.random() * 18) + 2, // 2-20 (VCRDB)
             color: getRandomColor()
           };
@@ -820,54 +819,8 @@ const CrosshairCreator = () => {
 
                         {/* CSS Fallback Preview */}
                         <div className="relative w-32 h-32 z-10">
-                          {/* Outer Lines */}
-                          {settings.outerLinesShow && (
-                            <>
-                              {/* Horizontal Outer Lines */}
-                              <div 
-                                className="absolute top-1/2 transform -translate-y-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesLength * 2}px`,
-                                  height: `${settings.outerLinesThickness}px`,
-                                  left: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255
-                                }}
-                              />
-                              <div 
-                                className="absolute top-1/2 transform -translate-y-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesLength * 2}px`,
-                                  height: `${settings.outerLinesThickness}px`,
-                                  right: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255
-                                }}
-                              />
-                              
-                              {/* Vertical Outer Lines */}
-                              <div 
-                                className="absolute left-1/2 transform -translate-x-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesThickness}px`,
-                                  height: `${settings.outerLinesLength * 2}px`,
-                                  top: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255
-                                }}
-                              />
-                              <div 
-                                className="absolute left-1/2 transform -translate-x-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesThickness}px`,
-                                  height: `${settings.outerLinesLength * 2}px`,
-                                  bottom: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255
-                                }}
-                              />
-                            </>
-                          )}
+                          {/* Outer Lines - DISABLED (Coming Soon) */}
+                          {/* TODO: Re-enable when parameter compatibility is fixed */}
 
                           {/* Inner Lines */}
                           {settings.innerLinesShow && (
@@ -1004,78 +957,24 @@ const CrosshairCreator = () => {
                 )}
               </div>
 
-              {/* Outer Lines */}
-                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg hover:bg-blue-600/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 animate-fade-in" style={{ animationDelay: '1000ms' }}>
-                    <div className="flex items-center space-x-2 mb-4">
-                  <Checkbox
-                    id="outerLinesShow"
-                    checked={settings.outerLinesShow}
-                    onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
-                  />
-                      <label htmlFor="outerLinesShow" className="text-blue-200 font-medium">
-                        Äußere Linien
-                  </label>
-                </div>
-
-                {settings.outerLinesShow && (
-                      <div className="grid grid-cols-2 gap-3">
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Länge: {settings.outerLinesLength}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="20"
-                        value={settings.outerLinesLength}
-                        onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
+              {/* Outer Lines - COMING SOON */}
+                  <div className="p-4 bg-gray-600/10 border border-gray-500/20 rounded-lg opacity-60 animate-fade-in" style={{ animationDelay: '1000ms' }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-gray-400 rounded opacity-30"></div>
+                        <label className="text-gray-400 font-medium">
+                          Äußere Linien
+                        </label>
+                      </div>
+                      <div className="bg-orange-500/20 border border-orange-400/30 px-3 py-1 rounded-full">
+                        <span className="text-orange-300 text-xs font-medium">🚧 Coming Soon</span>
+                      </div>
                     </div>
-
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Dicke: {settings.outerLinesThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        value={settings.outerLinesThickness}
-                        onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
+                    
+                    <div className="text-center py-6">
+                      <div className="text-gray-400 text-sm mb-2">⚠️ Äußere Linien werden aktuell überarbeitet</div>
+                      <div className="text-gray-500 text-xs">Parameter-Kompatibilität wird optimiert...</div>
                     </div>
-
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Abstand: {settings.outerLinesOffset}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="15"
-                        value={settings.outerLinesOffset}
-                        onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Transparenz: {settings.outerLinesOpacity}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={settings.outerLinesOpacity}
-                        onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Inner Lines */}
@@ -1334,12 +1233,12 @@ const CrosshairCreator = () => {
                   centerDotShow: true,
                   centerDotThickness: 2,
                   centerDotOpacity: 255,
-                  outerLinesShow: true,
-                  outerLinesLength: 7,
-                  outerLinesThickness: 2,
-                  outerLinesOffset: 3,
+                  outerLinesShow: false, // Disabled - Coming Soon
+                  outerLinesLength: 0,
+                  outerLinesThickness: 0,
+                  outerLinesOffset: 0,
                   outerLinesOpacity: 255,
-                  innerLinesShow: false,
+                  innerLinesShow: true, // Enable Inner Lines instead
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
