@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useToast, ToastContainer } from '../components/ui/toast';
-import { Save, Target, MessageSquare, Users, Settings, Shield, BarChart3, ArrowUpDown, Copy, RefreshCw, AlertCircle, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { Save, Target, MessageSquare, Users, Settings, Shield, BarChart3, ArrowUpDown, Copy, RefreshCw, AlertCircle, CheckCircle, XCircle, Clock, ExternalLink, Info } from 'lucide-react';
 
 // Matrix Blocks Komponente
 const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
@@ -46,14 +46,17 @@ const Tooltip: React.FC<{ content: React.ReactNode; title?: string }> = ({ conte
       ❓
     </button>
     
-    {/* Tooltip */}
     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-dark-surface border border-purple-primary/30 rounded-lg text-xs text-dark-text opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 shadow-lg min-w-max">
       {title && <div className="font-medium text-blue-400 mb-1">{title}</div>}
       <div>{content}</div>
-      {/* Arrow */}
       <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-dark-surface"></div>
     </div>
   </div>
+);
+
+// Vote component placeholder
+const Vote = ({ className }: { className?: string }) => (
+  <ArrowUpDown className={className} />
 );
 
 interface CrosshairSettings {
@@ -143,7 +146,6 @@ const CrosshairSharing = () => {
       setGuildsLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      // Use repaired crosshair-specific guilds endpoint
       const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
       const data = await response.json();
       
@@ -158,9 +160,9 @@ const CrosshairSharing = () => {
       console.error('❌ Guild loading error:', err);
       setGuilds([]);
       error('Fehler beim Laden der Discord Server. Prüfe die Bot-Konfiguration.');
-          } finally {
-        setGuildsLoading(false);
-      }
+    } finally {
+      setGuildsLoading(false);
+    }
   };
 
   const loadDiscordChannels = async () => {
@@ -170,7 +172,6 @@ const CrosshairSharing = () => {
       setLoadingChannels(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      // Use crosshair-specific channels endpoint
       const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/channels`);
       const data = await response.json();
       
@@ -194,7 +195,6 @@ const CrosshairSharing = () => {
       setLoadingRoles(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      // Use crosshair-specific roles endpoint
       const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/roles`);
       const data = await response.json();
       
@@ -221,7 +221,6 @@ const CrosshairSharing = () => {
       if (data.success) {
         setSettings(data.settings);
       } else {
-        // No settings found, use defaults
         const selectedGuildData = guilds.find(g => g.id === selectedGuild);
         setSettings({
           guild_id: selectedGuild,
@@ -301,10 +300,8 @@ const CrosshairSharing = () => {
   if (!selectedGuild) {
     return (
       <div className="space-y-8 p-6 animate-fade-in relative">
-        {/* Matrix Background Effects */}
         <MatrixBlocks density={20} />
         
-        {/* Page Header */}
         <div className="text-center py-8">
           <div className="flex items-center justify-center gap-3 mb-4">
             <Target className="w-12 h-12 text-purple-accent animate-pulse" />
@@ -318,7 +315,6 @@ const CrosshairSharing = () => {
           <div className="w-32 h-1 bg-gradient-neon mx-auto mt-4 rounded-full animate-glow"></div>
         </div>
 
-        {/* Guild Selection */}
         <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow max-w-md mx-auto">
           <CardHeader>
             <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
@@ -363,7 +359,6 @@ const CrosshairSharing = () => {
           </CardContent>
         </Card>
 
-        {/* Toast Container */}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
     );
@@ -372,10 +367,8 @@ const CrosshairSharing = () => {
   if (loading) {
     return (
       <div className="space-y-8 p-6 animate-fade-in relative">
-        {/* Matrix Background Effects */}
         <MatrixBlocks density={20} />
         
-        {/* Loading */}
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-accent mx-auto mb-4"></div>
@@ -383,7 +376,6 @@ const CrosshairSharing = () => {
           </div>
         </div>
 
-        {/* Toast Container */}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
     );
@@ -391,10 +383,8 @@ const CrosshairSharing = () => {
 
   return (
     <div className="space-y-8 p-6 animate-fade-in relative">
-      {/* Matrix Background Effects */}
       <MatrixBlocks density={20} />
       
-      {/* Page Header */}
       <div className="text-center py-8">
         <div className="flex items-center justify-center gap-3 mb-4">
           <Target className="w-12 h-12 text-purple-accent animate-pulse" />
@@ -425,7 +415,6 @@ const CrosshairSharing = () => {
         </div>
         <div className="w-32 h-1 bg-gradient-neon mx-auto mt-4 rounded-full animate-glow"></div>
         
-        {/* Guild Info */}
         <div className="mt-6 p-4 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow rounded-xl max-w-md mx-auto">
           <p className="text-dark-text text-sm mb-2">
             Konfiguration für
@@ -442,7 +431,6 @@ const CrosshairSharing = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="flex justify-center gap-4">
         <Button
           onClick={saveSettings}
@@ -455,9 +443,7 @@ const CrosshairSharing = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Settings Panel */}
         <div className="space-y-6">
-          {/* Basic Settings */}
           <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
             <CardHeader>
               <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
@@ -481,7 +467,6 @@ const CrosshairSharing = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-dark-text mb-2 block">
@@ -510,48 +495,40 @@ const CrosshairSharing = () => {
                       Lade Channels...
                     </div>
                   )}
-                  <p className="text-xs text-dark-muted mt-1">
-                    Channel wo Crosshairs automatisch gepostet werden
-                  </p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-dark-text mb-2 block">
-                    Discord Webhook URL
+                    Webhook URL
                   </label>
                   <Input
                     type="url"
-                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
                     placeholder="https://discord.com/api/webhooks/..."
                     value={settings?.webhook_url || ''}
                     onChange={(e) => updateSetting('webhook_url', e.target.value)}
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
                   />
-                  <p className="text-xs text-dark-muted mt-1">
-                    Webhook für das automatische Posten von Crosshairs
-                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-dark-text">Auto-Post aktiviert</label>
-                    <Switch
-                      checked={settings?.auto_post_enabled || false}
-                      onCheckedChange={(checked) => updateSetting('auto_post_enabled', checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-dark-text">Voting System aktiviert</label>
-                    <Switch
-                      checked={settings?.voting_enabled || false}
-                      onCheckedChange={(checked) => updateSetting('voting_enabled', checked)}
-                    />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-dark-text">Auto-Post aktiviert</label>
+                  <Switch
+                    checked={settings?.auto_post_enabled || false}
+                    onCheckedChange={(checked) => updateSetting('auto_post_enabled', checked)}
+                  />
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-dark-text">Voting System aktiviert</label>
+                  <Switch
+                    checked={settings?.voting_enabled || false}
+                    onCheckedChange={(checked) => updateSetting('voting_enabled', checked)}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Moderation Settings */}
           <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
             <CardHeader>
               <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
@@ -575,7 +552,6 @@ const CrosshairSharing = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -655,10 +631,9 @@ const CrosshairSharing = () => {
                   />
                 </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
 
-          {/* Save Button */}
           <Button
             onClick={saveSettings}
             disabled={saving}
@@ -671,29 +646,28 @@ const CrosshairSharing = () => {
               </>
             ) : (
               <>
-                <Check className="w-4 h-4 mr-2" />
+                <CheckCircle className="w-4 h-4 mr-2" />
                 Einstellungen speichern
               </>
             )}
           </Button>
         </div>
 
-        {/* Preview & Stats */}
         <div className="space-y-6">
-          {/* Recent Crosshairs */}
           <Card className="bg-gray-800 border-gray-700">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Target className="w-6 h-6 text-green-400" />
-                  <h2 className="text-xl font-bold text-white">Neueste Crosshairs</h2>
+                  <CardTitle className="text-xl font-bold text-white">Neueste Crosshairs</CardTitle>
                 </div>
                 <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Alle anzeigen
                 </Button>
               </div>
-
+            </CardHeader>
+            <CardContent>
               <div className="space-y-3">
                 {crosshairs.length === 0 ? (
                   <div className="text-center py-8">
@@ -737,17 +711,17 @@ const CrosshairSharing = () => {
                   ))
                 )}
               </div>
-            </div>
+            </CardContent>
           </Card>
 
-          {/* Setup Guide */}
           <Card className="bg-blue-900/20 border-blue-500/30">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
+            <CardHeader>
+              <div className="flex items-center gap-3">
                 <Info className="w-6 h-6 text-blue-400" />
-                <h2 className="text-xl font-bold text-white">Setup Anleitung</h2>
+                <CardTitle className="text-xl font-bold text-white">Setup Anleitung</CardTitle>
               </div>
-
+            </CardHeader>
+            <CardContent>
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
@@ -781,27 +755,27 @@ const CrosshairSharing = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </CardContent>
           </Card>
 
-          {/* Warning */}
           {(!settings?.webhook_url || !settings?.crosshair_channel_id) && (
             <Card className="bg-orange-900/20 border-orange-500/30">
-              <div className="p-6">
-                <div className="flex items-center gap-3 mb-2">
+              <CardHeader>
+                <div className="flex items-center gap-3">
                   <AlertCircle className="w-6 h-6 text-orange-400" />
-                  <h3 className="text-lg font-bold text-white">Konfiguration unvollständig</h3>
+                  <CardTitle className="text-lg font-bold text-white">Konfiguration unvollständig</CardTitle>
                 </div>
+              </CardHeader>
+              <CardContent>
                 <p className="text-orange-200">
                   Webhook URL und Channel ID sind erforderlich für das automatische Posten von Crosshairs.
                 </p>
-              </div>
+              </CardContent>
             </Card>
           )}
         </div>
       </div>
 
-      {/* Toast Container */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
