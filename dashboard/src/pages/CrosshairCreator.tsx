@@ -70,10 +70,13 @@ const CrosshairCreator = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  // Generate Crosshair Code
+  // Generate Crosshair Code - Vereinfachte Version
   const generateCrosshairCode = () => {
     const colorCode = colorMap[settings.primaryColor] || 1;
-    const code = `0;P;c;${colorCode};s;1;P;c;${colorCode};o;${settings.centerDotOpacity};d;${settings.centerDotShow ? 1 : 0};0t;${settings.outerLinesThickness};0l;${settings.outerLinesLength};0o;${settings.outerLinesOffset};0a;${settings.outerLinesOpacity};0f;0;1t;${settings.innerLinesThickness};1l;${settings.innerLinesLength};1o;${settings.innerLinesOffset};1a;${settings.innerLinesOpacity};1m;0;1f;0`;
+    
+    // Vereinfachter Valorant Crosshair Code
+    const code = `0;p;0;s;1;P;c;${colorCode};o;${settings.centerDotOpacity};d;${settings.centerDotShow ? 1 : 0};z;1;0t;${settings.outerLinesThickness};0l;${settings.outerLinesLength};0o;${settings.outerLinesOffset};0a;${settings.outerLinesOpacity};0f;0;1t;${settings.innerLinesThickness};1l;${settings.innerLinesLength};1o;${settings.innerLinesOffset};1a;${settings.innerLinesOpacity};1m;0;1f;0`;
+    
     setCrosshairCode(code);
     return code;
   };
@@ -88,12 +91,15 @@ const CrosshairCreator = () => {
     }
   };
 
-  // Generate Image
+  // Generate Image via Railway Proxy
   const generateImage = async () => {
     setLoading(true);
     try {
       const code = generateCrosshairCode();
-      const response = await fetch(`https://api.henrikdev.xyz/valorant/v1/crosshair/generate?id=${encodeURIComponent(code)}`);
+      
+      // Use Railway Backend as Proxy (CORS-Safe)
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/crosshair/generate?code=${encodeURIComponent(code)}`);
       
       if (response.ok) {
         const blob = await response.blob();
@@ -101,11 +107,12 @@ const CrosshairCreator = () => {
         setGeneratedImage(imageUrl);
         success("Dein Crosshair-Bild wurde erfolgreich erstellt.");
       } else {
-        throw new Error('API Fehler: ' + response.status);
+        const errorData = await response.json().catch(() => ({ message: 'Unbekannter Fehler' }));
+        throw new Error(errorData.message || `API Fehler: ${response.status}`);
       }
     } catch (err) {
       console.error('Fehler beim Generieren:', err);
-      error("Das Crosshair-Bild konnte nicht erstellt werden.");
+      error(`Das Crosshair-Bild konnte nicht erstellt werden: ${err.message}`);
     } finally {
       setLoading(false);
     }

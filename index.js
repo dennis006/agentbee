@@ -34,6 +34,7 @@ const AIOptimizationAPI = require('./ai-optimization-api');
 const { setupAIOptimizationRoutes } = require('./ai-optimization-routes');
 const { setupRulesSupabaseRoutes } = require('./rules-supabase-api');
 const { setupModerationSupabaseRoutes } = require('./moderation-supabase-api');
+const { setupCrosshairProxyAPI } = require('./crosshair-proxy-api');
 
 const { 
     initializeSupabaseForWelcome,
@@ -7303,6 +7304,9 @@ setupAIOptimizationRoutes(app);
 // Supabase API Routen registrieren
 setupRulesSupabaseRoutes(app);
 setupModerationSupabaseRoutes(app);
+
+// Crosshair Proxy API registrieren
+setupCrosshairProxyAPI(app);
 
 
 
