@@ -353,34 +353,34 @@ const CrosshairCreator = () => {
                     </div>
                     <div>
                       <label className="block text-pink-200 text-sm mb-2">Hex-Code</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={settings.customColor}
-                          onChange={(e) => {
-                            updateSetting('customColor', e.target.value);
-                            updateSetting('primaryColor', 'custom');
-                          }}
-                          className="flex-1 px-3 py-2 bg-black/30 border border-pink-500/30 rounded text-pink-100 placeholder-pink-400"
-                          placeholder="#FF0000"
-                        />
-                        <button
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(settings.customColor);
-                              showNotification(`Hex-Code ${settings.customColor} kopiert!`);
-                            } catch (err) {
-                              showNotification("Kopieren fehlgeschlagen", "error");
-                            }
-                          }}
-                          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white text-sm"
-                          title="Hex-Code kopieren"
-                        >
-                          📋
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={settings.customColor}
+                        onChange={(e) => {
+                          updateSetting('customColor', e.target.value);
+                          updateSetting('primaryColor', 'custom');
+                        }}
+                        className="w-full px-3 py-2 bg-black/30 border border-pink-500/30 rounded text-pink-100 placeholder-pink-400"
+                        placeholder="#FF0000"
+                      />
                       <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-                        <p className="text-xs text-yellow-300 font-medium mb-2">🔥 WICHTIGE ANLEITUNG:</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-yellow-300 font-medium">🔥 WICHTIGE ANLEITUNG:</p>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(settings.customColor);
+                                showNotification(`Hex-Code ${settings.customColor} kopiert!`);
+                              } catch (err) {
+                                showNotification("Kopieren fehlgeschlagen", "error");
+                              }
+                            }}
+                            className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-white text-xs font-medium"
+                            title="Hex-Code kopieren"
+                          >
+                            📋 {settings.customColor}
+                          </button>
+                        </div>
                         <ol className="text-xs text-yellow-200 space-y-1">
                           <li>1. Wähle deine Farbe (z.B. #F90606)</li>
                           <li>2. Kopiere den generierten Code</li>
