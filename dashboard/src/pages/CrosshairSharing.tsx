@@ -350,6 +350,25 @@ const CrosshairSharing = () => {
     }
   };
 
+  // Spezielle Funktion für Channel-Updates - beide Werte gleichzeitig setzen
+  const updateChannelSelection = (channelId: string, channelName: string) => {
+    if (!settings) return;
+    
+    console.log(`🎯 Updating channel selection: ID=${channelId}, Name=${channelName}`);
+    const newSettings = {
+      ...settings,
+      crosshair_channel_id: channelId,
+      crosshair_channel_name: channelName
+    };
+    
+    setSettings(newSettings);
+    
+    console.log('✅ Channel selection updated:', { 
+      channel_id: newSettings.crosshair_channel_id, 
+      channel_name: newSettings.crosshair_channel_name 
+    });
+  };
+
   if (!selectedGuild) {
     return (
       <div className="space-y-8 p-6 animate-fade-in relative">
@@ -550,8 +569,11 @@ const CrosshairSharing = () => {
                         value={settings?.crosshair_channel_id || ''}
                         onChange={(e) => {
                           const selectedChannel = channels.find(c => c.id === e.target.value);
-                          updateSetting('crosshair_channel_id', e.target.value);
-                          updateSetting('crosshair_channel_name', selectedChannel?.name || '');
+                          const channelName = selectedChannel?.name || '';
+                          
+                          // Verwende die neue Funktion für beide Werte gleichzeitig
+                          updateChannelSelection(e.target.value, channelName);
+                          
                           if (selectedChannel) {
                             success(`Channel #${selectedChannel.name} ausgewählt!`);
                           }
