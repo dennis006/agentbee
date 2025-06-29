@@ -88,10 +88,10 @@ const presets = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Color Mapping (Rückwärts gemappt: Was User sieht → korrekter Index)  
+    // Color Mapping (User-Feedback korrigiert: Index 2=gelb-grün, Index 4=gelb)
     const colorMap: Record<string, number> = {
-      'white': 0, 'green': 1, 'yellowish-green': 4, 'greenish-yellow': 3,
-      'cyan': 5, 'pink': 6, 'red': 2, 'custom': 5
+      'white': 0, 'green': 1, 'yellow-green': 2, 'yellow': 4, 
+      'cyan': 5, 'pink': 6, 'red': 3, 'custom': 5
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
@@ -222,20 +222,20 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // Color Mapping (Rückwärts gemappt: Was User sieht → korrekter Index)
+  // Color Mapping (User-Feedback korrigiert: Index 2=gelb-grün, Index 4=gelb)
   const colorMap: Record<string, number> = {
-    'white': 0, 'green': 1, 'yellowish-green': 4, 'greenish-yellow': 3,
-    'cyan': 5, 'pink': 6, 'red': 2, 'custom': 5
+    'white': 0, 'green': 1, 'yellow-green': 2, 'yellow': 4,
+    'cyan': 5, 'pink': 6, 'red': 3, 'custom': 5
   };
 
   const colorOptions = [
     { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
     { name: 'green', value: 'green', color: '#00FF00', label: 'Grün' },
-    { name: 'yellowish-green', value: 'yellowish-green', color: '#9ACD32', label: 'Gelb-Grün' },
-    { name: 'greenish-yellow', value: 'greenish-yellow', color: '#ADFF2F', label: 'Grün-Gelb' },
+    { name: 'yellow-green', value: 'yellow-green', color: '#9ACD32', label: 'Gelb-Grün' },
+    { name: 'red', value: 'red', color: '#FF0000', label: 'Rot' },
+    { name: 'yellow', value: 'yellow', color: '#FFFF00', label: 'Gelb' },
     { name: 'cyan', value: 'cyan', color: '#00ffdf', label: 'Cyan' },
-    { name: 'pink', value: 'pink', color: '#FF69B4', label: 'Pink' },
-    { name: 'red', value: 'red', color: '#FF0000', label: 'Rot' }
+    { name: 'pink', value: 'pink', color: '#FF69B4', label: 'Pink' }
   ];
 
   // Update Setting
@@ -258,15 +258,15 @@ const CrosshairCreator = () => {
     const hexColor = getColorValue(settings.primaryColor);
     console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
     console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
-    console.log(`🧪 SYSTEMATISCHER TEST - Aktuelle Zuordnung:`);
-    console.log(`  📌 white → Index 0 (sollte WEISS zeigen)`);
-    console.log(`  📌 green → Index 1 (sollte GRÜN zeigen)`);  
-    console.log(`  📌 red → Index 2 (sollte ROT zeigen)`);
-    console.log(`  📌 greenish-yellow → Index 3 (sollte GRÜN-GELB zeigen)`);
-    console.log(`  📌 yellowish-green → Index 4 (sollte GELB-GRÜN zeigen)`);
+    console.log(`🧪 KORRIGIERTE ZUORDNUNG basierend auf User-Feedback:`);
+    console.log(`  📌 white → Index 0 (sollte WEISS zeigen) ✅`);
+    console.log(`  📌 green → Index 1 (sollte GRÜN zeigen) ✅`);  
+    console.log(`  📌 yellow-green → Index 2 (sollte GELB-GRÜN zeigen)`);
+    console.log(`  📌 red → Index 3 (sollte ROT zeigen)`);
+    console.log(`  📌 yellow → Index 4 (sollte GELB zeigen)`);
     console.log(`  📌 cyan → Index 5 (sollte CYAN zeigen)`);
     console.log(`  📌 pink → Index 6 (sollte PINK zeigen)`);
-    console.log(`❗ Teste jede Farbe und sage mir was du in Valorant siehst!`);
+    console.log(`🎯 Doppelte Farben entfernt, echtes Gelb hinzugefügt!`);
     
     setCrosshairCode(code);
     return code;
@@ -328,16 +328,16 @@ const CrosshairCreator = () => {
     showNotification("Dein Crosshair wird heruntergeladen.");
   };
 
-  // Get Color Value - ECHTE Valorant-Farben (recherchiert)
+  // Get Color Value - Korrigierte Valorant-Farben
   const getColorValue = (colorName: string) => {
     const colors: Record<string, string> = {
       'white': '#FFFFFF', 
       'green': '#00FF00', 
-      'yellowish-green': '#9ACD32', 
-      'greenish-yellow': '#ADFF2F',
+      'yellow-green': '#9ACD32', 
+      'red': '#FF0000',
+      'yellow': '#FFFF00',
       'cyan': '#00ffdf', 
-      'pink': '#FF69B4', 
-      'red': '#FF0000'
+      'pink': '#FF69B4'
     };
     const result = colors[colorName] || '#FFFFFF';
     console.log(`Getting color for '${colorName}': ${result}`);
