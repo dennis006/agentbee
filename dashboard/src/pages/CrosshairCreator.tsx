@@ -223,8 +223,16 @@ const CrosshairCreator = () => {
     }
   };
 
-  // Generate Image via Railway Proxy
+  // Generate Image for Download (uses real preview if available)
   const generateImage = async () => {
+    // If we already have a real preview, use that for download
+    if (realPreviewImage) {
+      setGeneratedImage(realPreviewImage);
+      showNotification("Aktuelles Crosshair-Bild bereit zum Download.");
+      return;
+    }
+
+    // Otherwise generate fresh image
     setLoading(true);
     try {
       const code = crosshairCode || generateCrosshairCode();
@@ -251,9 +259,11 @@ const CrosshairCreator = () => {
 
   // Download Image
   const downloadImage = () => {
-    if (!generatedImage) return;
+    const imageToDownload = generatedImage || realPreviewImage;
+    if (!imageToDownload) return;
+    
     const a = document.createElement('a');
-    a.href = generatedImage;
+    a.href = imageToDownload;
     a.download = 'valorant-crosshair.png';
     document.body.appendChild(a);
     a.click();
@@ -273,10 +283,69 @@ const CrosshairCreator = () => {
     return result;
   };
 
-  // Update code when settings change
+  // Auto-generate real crosshair image with debouncing
+  const [realPreviewImage, setRealPreviewImage] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Debounced effect for real-time preview
   useEffect(() => {
     generateCrosshairCode();
-    }, [settings]);
+
+    // Debounce API calls for real preview (wait 800ms after last change)
+    const timeoutId = setTimeout(() => {
+      generateRealPreview();
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [settings]);
+
+  // Initial load of real preview
+  useEffect(() => {
+    generateRealPreview();
+  }, []);
+
+  // Generate real crosshair preview via API
+  const generateRealPreview = async () => {
+    setPreviewLoading(true);
+    try {
+      const code = generateValorantCrosshairCode(settings);
+      
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/crosshair/generate?code=${encodeURIComponent(code)}`);
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        
+        // Clean up old image URL
+        if (realPreviewImage) {
+          URL.revokeObjectURL(realPreviewImage);
+        }
+        
+        setRealPreviewImage(imageUrl);
+      } else {
+        console.warn('Real preview failed, using CSS fallback');
+        setRealPreviewImage(null);
+      }
+    } catch (err) {
+      console.warn('Real preview error:', err);
+      setRealPreviewImage(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  // Cleanup URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (realPreviewImage) {
+        URL.revokeObjectURL(realPreviewImage);
+      }
+      if (generatedImage && generatedImage !== realPreviewImage) {
+        URL.revokeObjectURL(generatedImage);
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white relative overflow-hidden">
@@ -593,135 +662,179 @@ const CrosshairCreator = () => {
             <div>
               <div className="border border-purple-400/30 rounded-lg p-6 bg-black/20">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-purple-300 font-medium">Live Vorschau</h3>
-                  <div className="text-xs text-purple-400 bg-purple-900/30 px-2 py-1 rounded">
-                    ⚠️ Annäherung - Echtes Valorant kann abweichen
+                  <h3 className="text-purple-300 font-medium">
+                    {realPreviewImage ? '🎯 Echte Valorant Vorschau' : 'Live Vorschau'}
+                  </h3>
+                  <div className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                    realPreviewImage ? 'text-green-400 bg-green-900/30' : 'text-purple-400 bg-purple-900/30'
+                  }`}>
+                    {previewLoading ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
+                        Lädt...
+                      </>
+                    ) : realPreviewImage ? (
+                      <>✅ 1:1 wie in Valorant</>
+                    ) : (
+                      <>⚠️ CSS Annäherung</>
+                    )}
                   </div>
                 </div>
+                
                 <div className="w-full h-48 bg-gradient-to-b from-gray-900 to-black rounded-lg flex items-center justify-center relative overflow-hidden border border-gray-700">
-                  {/* Valorant-ähnlicher Hintergrund */}
-                  <div className="absolute inset-0 opacity-10">
-                    <div className="w-full h-full" style={{
-                      backgroundImage: `radial-gradient(circle at 25px 25px, rgba(255,255,255,0.1) 2px, transparent 0),
-                                       radial-gradient(circle at 75px 75px, rgba(255,255,255,0.05) 1px, transparent 0)`,
-                      backgroundSize: '100px 100px'
-                    }}></div>
-                  </div>
-                  
-                  {/* Erweiterte Crosshair Preview */}
-                  <div className="relative w-32 h-32 z-10">
-                    {/* Outer Lines */}
-                    {settings.outerLinesShow && (
-                      <>
-                        {/* Horizontal Outer Lines */}
-                        <div 
-                          className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.outerLinesLength * 2}px`,
-                            height: `${settings.outerLinesThickness}px`,
-                            left: `${64 + settings.outerLinesOffset * 2}px`,
-                            opacity: settings.outerLinesOpacity / 255
-                          }}
-                        />
-                        <div 
-                          className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.outerLinesLength * 2}px`,
-                            height: `${settings.outerLinesThickness}px`,
-                            right: `${64 + settings.outerLinesOffset * 2}px`,
-                            opacity: settings.outerLinesOpacity / 255
-                          }}
-                        />
-                        
-                        {/* Vertical Outer Lines */}
-                        <div 
-                          className="absolute left-1/2 transform -translate-x-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.outerLinesThickness}px`,
-                            height: `${settings.outerLinesLength * 2}px`,
-                            top: `${64 + settings.outerLinesOffset * 2}px`,
-                            opacity: settings.outerLinesOpacity / 255
-                          }}
-                        />
-                        <div 
-                          className="absolute left-1/2 transform -translate-x-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.outerLinesThickness}px`,
-                            height: `${settings.outerLinesLength * 2}px`,
-                            bottom: `${64 + settings.outerLinesOffset * 2}px`,
-                            opacity: settings.outerLinesOpacity / 255
-                          }}
-                        />
-                      </>
-                    )}
-
-                    {/* Inner Lines */}
-                    {settings.innerLinesShow && (
-                      <>
-                        {/* Horizontal Inner Lines */}
-                        <div 
-                          className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.innerLinesLength * 2}px`,
-                            height: `${settings.innerLinesThickness}px`,
-                            left: `${64 + settings.innerLinesOffset * 2}px`,
-                            opacity: settings.innerLinesOpacity / 255
-                          }}
-                        />
-                        <div 
-                          className="absolute top-1/2 transform -translate-y-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.innerLinesLength * 2}px`,
-                            height: `${settings.innerLinesThickness}px`,
-                            right: `${64 + settings.innerLinesOffset * 2}px`,
-                            opacity: settings.innerLinesOpacity / 255
-                          }}
-                        />
-                        
-                        {/* Vertical Inner Lines */}
-                        <div 
-                          className="absolute left-1/2 transform -translate-x-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.innerLinesThickness}px`,
-                            height: `${settings.innerLinesLength * 2}px`,
-                            top: `${64 + settings.innerLinesOffset * 2}px`,
-                            opacity: settings.innerLinesOpacity / 255
-                          }}
-                        />
-                        <div 
-                          className="absolute left-1/2 transform -translate-x-1/2"
-                          style={{
-                            backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${settings.innerLinesThickness}px`,
-                            height: `${settings.innerLinesLength * 2}px`,
-                            bottom: `${64 + settings.innerLinesOffset * 2}px`,
-                            opacity: settings.innerLinesOpacity / 255
-                          }}
-                        />
-                      </>
-                    )}
-
-                    {/* Center Dot */}
-                    {settings.centerDotShow && settings.centerDotThickness > 0 && (
-                      <div 
-                        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full"
-                        style={{
-                          backgroundColor: getColorValue(settings.primaryColor),
-                          width: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
-                          height: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
-                          opacity: settings.centerDotOpacity / 255,
-                          boxShadow: settings.outlineShow ? `0 0 0 1px rgba(0,0,0,0.8)` : 'none'
+                  {/* Real Valorant Preview */}
+                  {realPreviewImage ? (
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      <img 
+                        src={realPreviewImage}
+                        alt="Real Valorant Crosshair Preview"
+                        className="max-w-full max-h-full object-contain rounded"
+                        style={{ 
+                          imageRendering: 'pixelated',
+                          filter: 'contrast(1.1) brightness(1.1)'
                         }}
                       />
-                    )}
-                  </div>
+                      <div className="absolute bottom-2 right-2 text-xs text-green-400 bg-black/50 px-2 py-1 rounded">
+                        Henrik API ✅
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Valorant-ähnlicher Hintergrund */}
+                      <div className="absolute inset-0 opacity-10">
+                        <div className="w-full h-full" style={{
+                          backgroundImage: `radial-gradient(circle at 25px 25px, rgba(255,255,255,0.1) 2px, transparent 0),
+                                           radial-gradient(circle at 75px 75px, rgba(255,255,255,0.05) 1px, transparent 0)`,
+                          backgroundSize: '100px 100px'
+                        }}></div>
+                      </div>
+                      
+                      {/* CSS Fallback Preview */}
+                      <div className="relative w-32 h-32 z-10">
+                        {/* Outer Lines */}
+                        {settings.outerLinesShow && (
+                          <>
+                            {/* Horizontal Outer Lines */}
+                            <div 
+                              className="absolute top-1/2 transform -translate-y-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.outerLinesLength * 2}px`,
+                                height: `${settings.outerLinesThickness}px`,
+                                left: `${64 + settings.outerLinesOffset * 2}px`,
+                                opacity: settings.outerLinesOpacity / 255
+                              }}
+                            />
+                            <div 
+                              className="absolute top-1/2 transform -translate-y-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.outerLinesLength * 2}px`,
+                                height: `${settings.outerLinesThickness}px`,
+                                right: `${64 + settings.outerLinesOffset * 2}px`,
+                                opacity: settings.outerLinesOpacity / 255
+                              }}
+                            />
+                            
+                            {/* Vertical Outer Lines */}
+                            <div 
+                              className="absolute left-1/2 transform -translate-x-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.outerLinesThickness}px`,
+                                height: `${settings.outerLinesLength * 2}px`,
+                                top: `${64 + settings.outerLinesOffset * 2}px`,
+                                opacity: settings.outerLinesOpacity / 255
+                              }}
+                            />
+                            <div 
+                              className="absolute left-1/2 transform -translate-x-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.outerLinesThickness}px`,
+                                height: `${settings.outerLinesLength * 2}px`,
+                                bottom: `${64 + settings.outerLinesOffset * 2}px`,
+                                opacity: settings.outerLinesOpacity / 255
+                              }}
+                            />
+                          </>
+                        )}
+
+                        {/* Inner Lines */}
+                        {settings.innerLinesShow && (
+                          <>
+                            {/* Horizontal Inner Lines */}
+                            <div 
+                              className="absolute top-1/2 transform -translate-y-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.innerLinesLength * 2}px`,
+                                height: `${settings.innerLinesThickness}px`,
+                                left: `${64 + settings.innerLinesOffset * 2}px`,
+                                opacity: settings.innerLinesOpacity / 255
+                              }}
+                            />
+                            <div 
+                              className="absolute top-1/2 transform -translate-y-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.innerLinesLength * 2}px`,
+                                height: `${settings.innerLinesThickness}px`,
+                                right: `${64 + settings.innerLinesOffset * 2}px`,
+                                opacity: settings.innerLinesOpacity / 255
+                              }}
+                            />
+                            
+                            {/* Vertical Inner Lines */}
+                            <div 
+                              className="absolute left-1/2 transform -translate-x-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.innerLinesThickness}px`,
+                                height: `${settings.innerLinesLength * 2}px`,
+                                top: `${64 + settings.innerLinesOffset * 2}px`,
+                                opacity: settings.innerLinesOpacity / 255
+                              }}
+                            />
+                            <div 
+                              className="absolute left-1/2 transform -translate-x-1/2"
+                              style={{
+                                backgroundColor: getColorValue(settings.primaryColor),
+                                width: `${settings.innerLinesThickness}px`,
+                                height: `${settings.innerLinesLength * 2}px`,
+                                bottom: `${64 + settings.innerLinesOffset * 2}px`,
+                                opacity: settings.innerLinesOpacity / 255
+                              }}
+                            />
+                          </>
+                        )}
+
+                        {/* Center Dot */}
+                        {settings.centerDotShow && settings.centerDotThickness > 0 && (
+                          <div 
+                            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full"
+                            style={{
+                              backgroundColor: getColorValue(settings.primaryColor),
+                              width: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
+                              height: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
+                              opacity: settings.centerDotOpacity / 255,
+                              boxShadow: settings.outlineShow ? `0 0 0 1px rgba(0,0,0,0.8)` : 'none'
+                            }}
+                          />
+                        )}
+                      </div>
+                      
+                      {/* Loading Overlay */}
+                      {previewLoading && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                          <div className="flex items-center gap-3 text-purple-300">
+                            <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-sm font-medium">Lade echte Vorschau...</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -773,6 +886,11 @@ const CrosshairCreator = () => {
                     <Download className="w-4 h-4 mr-2 animate-spin" />
                     Generiere...
                   </>
+                ) : realPreviewImage ? (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Für Download bereit
+                  </>
                 ) : (
                   <>
                     <Eye className="w-4 h-4 mr-2" />
@@ -791,22 +909,33 @@ const CrosshairCreator = () => {
             {crosshairCode || "Wähle ein Preset oder passe die Einstellungen an..."}
           </div>
 
-          {generatedImage && (
+          {(generatedImage || realPreviewImage) && (
             <div className="mt-6 text-center">
-              <h4 className="text-purple-300 font-medium mb-4">Generiertes Crosshair</h4>
+              <h4 className="text-purple-300 font-medium mb-4">
+                {realPreviewImage ? '🎯 Valorant Crosshair (Live Preview)' : 'Generiertes Crosshair'}
+              </h4>
               <div className="inline-block bg-black/30 p-4 rounded-lg">
                 <img 
-                  src={generatedImage} 
-                  alt="Generated Crosshair" 
+                  src={generatedImage || realPreviewImage} 
+                  alt="Valorant Crosshair" 
                   className="max-w-xs mx-auto rounded"
+                  style={{ 
+                    imageRendering: 'pixelated',
+                    filter: 'contrast(1.1) brightness(1.1)'
+                  }}
                 />
                 <Button 
                   onClick={downloadImage}
                   className="mt-4 bg-blue-600 hover:bg-blue-700"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Bild Herunterladen
+                  Crosshair Herunterladen
                 </Button>
+                {realPreviewImage && (
+                  <p className="text-xs text-green-400 mt-2">
+                    ✅ Automatisch generiert • 1:1 wie in Valorant
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -862,10 +991,11 @@ const CrosshairCreator = () => {
             <div className="flex items-start gap-3">
               <Eye className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h4 className="font-medium text-blue-400 mb-2">Wichtiger Hinweis</h4>
+                <h4 className="font-medium text-blue-400 mb-2">🚀 Neue Echtzeit-Vorschau!</h4>
                 <p className="text-sm text-blue-300">
-                  Die Browser-Vorschau ist nur eine <strong>Annäherung</strong>. Das echte Crosshair in Valorant 
-                  kann anders aussehen. Verwende die <strong>generierten Codes</strong> für das genaue Ergebnis!
+                  Die <strong>Live Vorschau</strong> zeigt jetzt automatisch das echte Crosshair aus Valorant! 
+                  Keine Annäherung mehr - das ist <strong>genau 1:1</strong> wie es in Valorant aussieht. 
+                  Die Vorschau lädt automatisch nach jeder Änderung.
                 </p>
               </div>
             </div>
