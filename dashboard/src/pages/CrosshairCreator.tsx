@@ -94,7 +94,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
-    console.log(`🔍 CODE GEN: "${settings.primaryColor}" → Color Index: ${color}`);
+    
     let code = "0"; // Start
     
     // Scaling (optional, für modernere Codes)
@@ -157,7 +157,6 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     
     return code;
   } catch (error) {
-    console.error("Fehler bei der Codegenerierung:", error);
     // Fallback zu funktionierendem TenZ-Code
     return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
   }
@@ -236,10 +235,8 @@ const CrosshairCreator = () => {
 
   // Update Setting
   const updateSetting = (key: keyof CrosshairSettings, value: any) => {
-    console.log(`Updating ${key} to:`, value);
     setSettings(prev => {
       const newSettings = { ...prev, [key]: value };
-      console.log('New settings:', newSettings);
       return newSettings;
     });
   };
@@ -248,20 +245,6 @@ const CrosshairCreator = () => {
   const generateCrosshairCode = () => {
     // Verwende die erweiterte Funktion mit allen Settings
     const code = generateValorantCrosshairCode(settings);
-    
-    // Debug: Zeige welcher Color-Index verwendet wird
-    const colorIndex = colorMap[settings.primaryColor] || 1;
-    const hexColor = getColorValue(settings.primaryColor);
-    console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
-    console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
-    console.log(`🎨 VALORANT CUSTOM COLOR SYSTEM:`);
-    console.log(`  📌 Weiß → Index 0 (#FFFFFF)`);
-    console.log(`  📌 Grün → Index 1 (#00FF41)`);  
-    console.log(`  📌 Custom → Index 5 (${settings.customColor})`);
-    console.log(`🎯 WICHTIG: In Valorant musst du zusätzlich die Custom Color setzen!`);
-    console.log(`📋 1. Code importieren mit Index 5`);
-    console.log(`📋 2. In Valorant: Settings → Crosshair → Primary → Color → Custom → ${settings.customColor}`);
-    console.log(`❗ Der Crosshair-Code und Custom Color müssen SEPARAT gesetzt werden!`);
     
     setCrosshairCode(code);
     return code;
@@ -304,7 +287,6 @@ const CrosshairCreator = () => {
         throw new Error(errorData.message || `API Fehler: ${response.status}`);
       }
     } catch (err) {
-      console.error('Fehler beim Generieren:', err);
       showNotification(`Das Crosshair-Bild konnte nicht erstellt werden: ${err.message}`, "error");
     } finally {
       setLoading(false);
@@ -333,7 +315,6 @@ const CrosshairCreator = () => {
       'green': '#00FF41'
     };
     const result = colors[colorName] || settings.customColor;
-    console.log(`Getting color for '${colorName}': ${result}`);
     return result;
   };
 
@@ -454,7 +435,6 @@ const CrosshairCreator = () => {
                       <button
                         key={color.value}
                         onClick={() => {
-                          console.log('Color button clicked:', color.value);
                           updateSetting('primaryColor', color.value);
                         }}
                         className={cn(
