@@ -256,7 +256,7 @@ const CrosshairCreator = () => {
     outerLinesMovementErrorMultiplier: 1,
     outerLinesFiringError: false,
     outerLinesFiringErrorMultiplier: 1,
-    innerLinesShow: true,
+    innerLinesShow: false,
     innerLinesLength: 4,
     innerLinesThickness: 2,
     innerLinesOffset: 1,
@@ -1253,7 +1253,7 @@ const CrosshairCreator = () => {
                   outerLinesMovementErrorMultiplier: 1,
                   outerLinesFiringError: false,
                   outerLinesFiringErrorMultiplier: 1,
-                  innerLinesShow: true,
+                  innerLinesShow: false,
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
@@ -1456,7 +1456,7 @@ const CrosshairCreator = () => {
               <div className="p-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-lg">
                 <h4 className="text-purple-300 font-medium mb-4">⚙️ Advanced Settings</h4>
                 
-                {/* Outline Controls */}
+                {/* Global Outline Controls - WICHTIG: Gilt für GESAMTES Crosshair! */}
                 <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
                   <div className="flex items-center space-x-2 mb-3">
                     <Checkbox
@@ -1465,15 +1465,22 @@ const CrosshairCreator = () => {
                       onCheckedChange={(checked) => updateSetting('outlineShow', checked)}
                     />
                     <label htmlFor="outlineShow" className="text-yellow-200 text-sm font-medium">
-                      💀 Crosshair Outline
+                      💀 Global Crosshair Outline (gesamtes Crosshair)
                     </label>
+                  </div>
+                  
+                  <div className="mb-3 p-2 bg-orange-900/20 border border-orange-500/30 rounded">
+                    <p className="text-xs text-orange-300">
+                      ⚠️ <strong>WICHTIG:</strong> Outline funktioniert in Valorant NUR global für das komplette Crosshair, 
+                      nicht separat für Outer/Inner Lines!
+                    </p>
                   </div>
                   
                   {settings.outlineShow && (
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-yellow-200 text-xs mb-2">
-                          Opacity: {settings.outlineOpacity}
+                          Global Opacity: {settings.outlineOpacity.toFixed(1)}
                         </label>
                         <input
                           type="range"
@@ -1487,7 +1494,7 @@ const CrosshairCreator = () => {
                       </div>
                       <div>
                         <label className="block text-yellow-200 text-xs mb-2">
-                          Thickness: {settings.outlineThickness}
+                          Global Thickness: {settings.outlineThickness}
                         </label>
                         <input
                           type="range"
