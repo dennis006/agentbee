@@ -18,6 +18,7 @@ import XP from './pages/XP'
 import TwitchNotifications from './pages/TwitchNotifications'
 import Valorant from './pages/Valorant'
 import ValorantNews from './pages/ValorantNews'
+import CrosshairCreator from './pages/CrosshairCreator'
 
 import Gaming from './pages/Gaming'
 import APIKeys from './pages/APIKeys'
@@ -497,6 +498,7 @@ const App = () => {
         <Routes>
           {/* Public Routes */}
           <Route path="/verify" element={<VerifyPage />} />
+          <Route path="/crosshair" element={<CrosshairCreator />} />
           <Route path="/login" element={<LoginPage />} />
           
           {/* Protected Dashboard Routes */}
