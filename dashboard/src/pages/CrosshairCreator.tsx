@@ -347,30 +347,84 @@ const CrosshairCreator = () => {
     };
   }, []);
 
+  // Custom animations using inline styles
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes crosshair-float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes crosshair-glow {
+        0%, 100% { filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.5)); }
+        50% { filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8)); }
+      }
+      @keyframes crosshair-gradient {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+      }
+      @keyframes crosshair-fade-up {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes crosshair-fade {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes crosshair-slide-left {
+        from { opacity: 0; transform: translateX(-50px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes crosshair-slide-right {
+        from { opacity: 0; transform: translateX(50px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes crosshair-spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .animate-float { animation: crosshair-float 3s ease-in-out infinite; }
+      .animate-glow { animation: crosshair-glow 2s ease-in-out infinite; }
+      .animate-gradient-x { 
+        background-size: 400% 400%;
+        animation: crosshair-gradient 3s ease infinite;
+      }
+      .animate-fade-in-up { animation: crosshair-fade-up 0.6s ease-out forwards; }
+      .animate-fade-in { animation: crosshair-fade 0.6s ease-out forwards; }
+      .animate-slide-in-left { animation: crosshair-slide-left 0.6s ease-out forwards; }
+      .animate-slide-in-right { animation: crosshair-slide-right 0.6s ease-out forwards; }
+      .animate-spin-slow { animation: crosshair-spin-slow 4s linear infinite; }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white relative overflow-hidden">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <NotificationComponent />
       <div className="relative z-10 max-w-7xl mx-auto p-6">
         {/* Header */}
-        <div className="text-center mb-8 p-8 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 shadow-2xl">
+        <div className="text-center mb-8 p-8 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 shadow-2xl animate-fade-in-up">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Target className="w-12 h-12 text-purple-400 animate-pulse" />
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+            <Target className="w-12 h-12 text-purple-400 animate-pulse hover:animate-spin transition-all duration-300 hover:scale-110" />
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent animate-gradient-x">
               Valorant Crosshair Creator
             </h1>
           </div>
-          <p className="text-xl text-purple-200 mb-6">
+          <p className="text-xl text-purple-200 mb-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
             Erstelle dein perfektes Crosshair mit Custom Color System
           </p>
         </div>
 
         {/* Side-by-Side Layout */}
-        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl">
+        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl animate-fade-in-up hover:shadow-2xl transition-all duration-500" style={{ animationDelay: '300ms' }}>
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-3">
-            <h2 className="text-2xl font-bold text-purple-400 flex items-center gap-3">
-              <Sliders className="w-6 h-6" />
+            <h2 className="text-2xl font-bold text-purple-400 flex items-center gap-3 animate-slide-in-left">
+              <Sliders className="w-6 h-6 animate-bounce hover:animate-spin transition-all duration-300" />
               Crosshair Creator
             </h2>
 
@@ -379,12 +433,12 @@ const CrosshairCreator = () => {
           {/* Side-by-Side: Vorschau links, Einstellungen rechts */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Live Vorschau - Links */}
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-5 animate-slide-in-left" style={{ animationDelay: '500ms' }}>
               <div className="sticky top-8">
-                <div className="p-6 bg-gradient-to-br from-green-500/10 to-cyan-500/10 border border-green-500/20 rounded-xl">
+                <div className="p-6 bg-gradient-to-br from-green-500/10 to-cyan-500/10 border border-green-500/20 rounded-xl hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-green-500/20 animate-float">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-                    <h3 className="text-lg font-bold text-green-400 flex items-center gap-2">
-                      <Eye className="w-5 h-5" />
+                    <h3 className="text-lg font-bold text-green-400 flex items-center gap-2 animate-glow">
+                      <Eye className="w-5 h-5 animate-pulse" />
                       {realPreviewImage ? '🎯 Echtzeit Vorschau' : 'Live Vorschau'}
                     </h3>
                     <div className={`text-xs px-3 py-1.5 rounded-full flex items-center gap-1 font-medium ${
@@ -563,16 +617,16 @@ const CrosshairCreator = () => {
             </div>
 
             {/* Crosshair Einstellungen - Rechts */}
-            <div className="lg:col-span-7 space-y-6">
+            <div className="lg:col-span-7 space-y-6 animate-slide-in-right" style={{ animationDelay: '700ms' }}>
               {/* Crosshair Details - Oben */}
               <div>
-                <h3 className="text-xl font-bold text-purple-400 mb-6 flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
+                <h3 className="text-xl font-bold text-purple-400 mb-6 flex items-center gap-2 animate-glow">
+                  <Settings className="w-5 h-5 animate-spin-slow" />
                   Crosshair Details
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Center Dot */}
-                  <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-lg">
+                  <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-lg hover:bg-purple-600/20 hover:border-purple-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 animate-fade-in" style={{ animationDelay: '900ms' }}>
                     <div className="flex items-center space-x-2 mb-4">
                       <Checkbox
                         id="centerDotShow"
@@ -618,7 +672,7 @@ const CrosshairCreator = () => {
                   </div>
 
                   {/* Outer Lines */}
-                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg">
+                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg hover:bg-blue-600/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 animate-fade-in" style={{ animationDelay: '1000ms' }}>
                     <div className="flex items-center space-x-2 mb-4">
                       <Checkbox
                         id="outerLinesShow"
@@ -692,7 +746,7 @@ const CrosshairCreator = () => {
                   </div>
 
                   {/* Inner Lines */}
-                  <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg">
+                  <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg hover:bg-cyan-600/20 hover:border-cyan-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 animate-fade-in" style={{ animationDelay: '1100ms' }}>
                     <div className="flex items-center space-x-2 mb-4">
                       <Checkbox
                         id="innerLinesShow"
@@ -768,12 +822,12 @@ const CrosshairCreator = () => {
               </div>
 
               {/* Farbauswahl - Unten */}
-              <div>
-                <h3 className="text-xl font-bold text-pink-400 mb-6 flex items-center gap-2">
-                  <Star className="w-5 h-5" />
+              <div className="animate-fade-in" style={{ animationDelay: '1200ms' }}>
+                <h3 className="text-xl font-bold text-pink-400 mb-6 flex items-center gap-2 animate-glow">
+                  <Star className="w-5 h-5 animate-spin-slow" />
                   Farbauswahl
                 </h3>
-                <div className="p-6 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl">
+                <div className="p-6 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-pink-500/20">
                   <div className="mb-6">
                     <label className="block text-pink-200 font-medium mb-4">
                       Primärfarbe 
@@ -872,10 +926,10 @@ const CrosshairCreator = () => {
         </div>
 
         {/* Code und Actions */}
-        <div className="mt-8 bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl">
+        <div className="mt-8 bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl animate-fade-in-up hover:shadow-2xl transition-all duration-500" style={{ animationDelay: '1500ms' }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-bold text-purple-400">Dein Crosshair Code</h3>
-            <div className="flex gap-3">
+            <h3 className="text-2xl font-bold text-purple-400 animate-glow">Dein Crosshair Code</h3>
+            <div className="flex gap-3 animate-slide-in-right" style={{ animationDelay: '1700ms' }}>
               <Button
                 onClick={() => setSettings({
                   primaryColor: 'white',
@@ -935,7 +989,7 @@ const CrosshairCreator = () => {
             </div>
           </div>
           
-          <div className="bg-black/30 p-4 rounded-lg font-mono text-sm break-all text-purple-100 mb-4">
+          <div className="bg-black/30 p-4 rounded-lg font-mono text-sm break-all text-purple-100 mb-4 hover:bg-black/40 transition-all duration-300 animate-fade-in hover:shadow-inner border border-purple-800/30" style={{ animationDelay: '1800ms' }}>
             {crosshairCode || "Wähle ein Preset oder passe die Einstellungen an..."}
           </div>
 
