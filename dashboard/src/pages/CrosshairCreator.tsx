@@ -198,7 +198,7 @@ const CrosshairCreator = () => {
 
   // Erweiterte Crosshair Settings
   const [settings, setSettings] = useState<CrosshairSettings>({
-    primaryColor: 'green',
+    primaryColor: 'white',
     centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
@@ -840,7 +840,7 @@ const CrosshairCreator = () => {
             <div className="flex gap-3">
               <Button
                 onClick={() => setSettings({
-                  primaryColor: 'green',
+                  primaryColor: 'white',
                   centerDotShow: true,
                   centerDotThickness: 2,
                   centerDotOpacity: 255,
