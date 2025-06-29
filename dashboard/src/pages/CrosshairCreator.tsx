@@ -54,77 +54,63 @@ const COLORS = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // 🎨 CUSTOM COLOR SYSTEM - verwendet Index 5 für alle custom colors
+    // VCRDB-konforme Code-Generierung
     const colorMap: Record<string, number> = {
       'white': 0, 'custom': 5
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
     
-    let code = "0"; // Start
+    // Basis-Struktur: 0;s;1;P;...
+    let code = "0;s;1;P";
     
-    // Scaling (optional, für modernere Codes)
-    if (settings.centerDotShow || settings.outerLinesShow || settings.innerLinesShow) {
-      code += ";s;1";
-    }
-    
-    // Primary Crosshair Marker
-    code += ";P";
-    
-    // Color
-    code += `;c;${color}`;
-    
-    // Outline/Border
-    code += `;h;${settings.outlineShow ? 1 : 0}`;
+    // Primäre Parameter in korrekter Reihenfolge
+    code += `;c;${color}`; // Color
+    code += `;h;${settings.outlineShow ? 1 : 0}`; // Outline on/off
+    code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`; // Firing error
     
     // Center Dot
+    code += `;d;${settings.centerDotShow ? 1 : 0}`; // Dot on/off
     if (settings.centerDotShow && settings.centerDotThickness > 0) {
-      code += ";o;1"; // outline on
-      code += ";d;1"; // dot on
-      code += `;z;${settings.centerDotThickness}`; // dot size
-    } else {
-      code += ";d;0"; // dot off
+      code += `;z;${settings.centerDotThickness}`; // Dot size
     }
     
-    // Firing error fade
-    code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`;
-    
-    // Movement error
+    // Movement error (optional)
     if (settings.movementErrorShow) {
       code += ";m;1";
     }
     
-    // Inner Lines (0x parameters) - VCRDB korrekt!
-    if (settings.innerLinesShow && settings.innerLinesLength > 0) {
-      code += `;0l;${settings.innerLinesLength}`; // inner length
-      code += `;0o;${settings.innerLinesOffset}`; // inner offset
-      code += `;0a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
-      code += `;0t;${settings.innerLinesThickness}`; // inner thickness (immer setzen!)
-      code += ";0m;0;0f;0"; // inner movement, fade
-    } else {
-      // Inner Lines ausgeschaltet - Parameter müssen trotzdem da sein!
-      code += ";0l;0;0o;0;0a;0;0t;0;0m;0;0f;0";
-    }
+    // INNER LINES (0x) - IMMER alle Parameter setzen!
+    const innerLength = (settings.innerLinesShow && settings.innerLinesLength > 0) ? settings.innerLinesLength : 0;
+    const innerOffset = settings.innerLinesShow ? settings.innerLinesOffset : 0;
+    const innerAlpha = settings.innerLinesShow ? Math.round(settings.innerLinesOpacity / 255) : 0;
+    const innerThickness = settings.innerLinesShow ? settings.innerLinesThickness : 0;
     
-    // Outer Lines (1x parameters) - VCRDB korrekt!
-    if (settings.outerLinesShow && settings.outerLinesLength > 0) {
-      code += `;1l;${settings.outerLinesLength}`; // outer length
-      code += `;1o;${settings.outerLinesOffset}`; // outer offset
-      code += `;1a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha
-      code += `;1t;${settings.outerLinesThickness}`; // outer thickness (immer setzen!)
-      code += ";1m;0;1f;0"; // outer movement, fade
-    } else {
-      // Outer Lines ausgeschaltet - Parameter müssen trotzdem da sein!
-      code += ";1l;0;1o;0;1a;0;1t;0;1m;0;1f;0";
-    }
+    code += `;0l;${innerLength}`;
+    code += `;0o;${innerOffset}`;
+    code += `;0a;${innerAlpha}`;
+    code += `;0t;${innerThickness}`;
+    code += ";0m;0;0f;0"; // Movement + Fade immer 0
+    
+    // OUTER LINES (1x) - IMMER alle Parameter setzen!
+    const outerLength = (settings.outerLinesShow && settings.outerLinesLength > 0) ? settings.outerLinesLength : 0;
+    const outerOffset = settings.outerLinesShow ? settings.outerLinesOffset : 0;
+    const outerAlpha = settings.outerLinesShow ? Math.round(settings.outerLinesOpacity / 255) : 0;
+    const outerThickness = settings.outerLinesShow ? settings.outerLinesThickness : 0;
+    
+    code += `;1l;${outerLength}`;
+    code += `;1o;${outerOffset}`;
+    code += `;1a;${outerAlpha}`;
+    code += `;1t;${outerThickness}`;
+    code += ";1m;0;1f;0"; // Movement + Fade immer 0
     
     // Standard end
     code += ";1b;0";
     
     return code;
   } catch (error) {
-    // Fallback zu funktionierendem TenZ-Code
-    return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
+    // Fallback: Funktionierender Code mit sichtbaren Outer Lines
+    return "0;s;1;P;c;1;h;0;f;0;d;1;z;2;0l;0;0o;0;0a;0;0t;0;0m;0;0f;0;1l;4;1o;3;1a;1;1t;2;1m;0;1f;0;1b;0";
   }
 };
 
