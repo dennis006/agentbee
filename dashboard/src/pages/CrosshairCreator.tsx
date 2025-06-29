@@ -373,9 +373,7 @@ const CrosshairCreator = () => {
               <Sliders className="w-6 h-6" />
               Crosshair Creator
             </h2>
-            <div className="text-sm text-purple-300 bg-purple-900/20 px-3 py-1.5 rounded-lg border border-purple-600/30">
-              💡 Vorschau + Einstellungen nebeneinander - kein Scrollen!
-            </div>
+
           </div>
 
           {/* Side-by-Side: Vorschau links, Einstellungen rechts */}
@@ -398,7 +396,7 @@ const CrosshairCreator = () => {
                           Lädt...
                         </>
                       ) : realPreviewImage ? (
-                        <>✅ Henrik API</>
+                        <>✅ AgentBee</>
                       ) : (
                         <>⚠️ CSS Fallback</>
                       )}
@@ -419,7 +417,7 @@ const CrosshairCreator = () => {
                           }}
                         />
                         <div className="absolute bottom-2 right-2 text-xs text-green-400 bg-black/50 px-2 py-1 rounded">
-                          Henrik API ✅
+                          AgentBee ✅
                         </div>
                       </div>
                     ) : (
@@ -965,7 +963,7 @@ const CrosshairCreator = () => {
                 </Button>
                 {realPreviewImage && (
                   <p className="text-xs text-green-400 mt-2">
-                    ✅ Automatisch generiert • 1:1 wie in Valorant
+                    ✅ Powered by AgentBee • 1:1 wie in Valorant
                   </p>
                 )}
               </div>
@@ -1006,32 +1004,7 @@ const CrosshairCreator = () => {
             </div>
           )}
 
-          <div className="mt-6 p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-green-400 mb-2">Bewährte Codes</h4>
-                <p className="text-sm text-green-300">
-                  Alle Presets sind von der Community getestet und funktionieren garantiert in Valorant. 
-                  Kopiere den Code und füge ihn unter Einstellungen → Fadenkreuz → Importieren ein.
-                </p>
-              </div>
-            </div>
-          </div>
 
-          <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Eye className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-blue-400 mb-2">🚀 Kompaktes All-in-One Design!</h4>
-                <p className="text-sm text-blue-300">
-                  Jetzt alles auf einen Blick! Die <strong>Echtzeit-Vorschau</strong> ist direkt über den Einstellungen 
-                  integriert - so siehst du sofort wie dein Crosshair aussieht, ohne zu scrollen. 
-                  Kompakt, praktisch und <strong>genau 1:1 wie in Valorant</strong>!
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
