@@ -51,42 +51,55 @@ const COLORS = [
   { name: "Benutzerdefiniert", value: "custom", code: 7 }
 ];
 
-// KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
+// KORREKTE Valorant Code-Generierung basierend auf echter Struktur
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // 🎨 CUSTOM COLOR SYSTEM - verwendet Index 5 für alle custom colors
+    // Color mapping - Custom color uses index 5
     const colorMap: Record<string, number> = {
       'white': 0, 'custom': 5
     };
     
-    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
+    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 5;
     
-    let code = "0"; // Start
+    let code = "0"; // Start marker
     
-    // Scaling (optional, für modernere Codes)
-    if (settings.centerDotShow || settings.outerLinesShow || settings.innerLinesShow) {
-      code += ";s;1";
-    }
+    // Scale (s;1 für moderne Codes)
+    code += ";s;1";
     
-    // Primary Crosshair Marker
+    // Primary marker
     code += ";P";
     
     // Color
     code += `;c;${color}`;
     
+    // Custom color (u parameter for hex codes)
+    if (settings.primaryColor === 'custom') {
+      // Convert hex to RGB values for Valorant format
+      const hex = settings.customColor.replace('#', '');
+      code += `;u;${hex.toUpperCase()}FF`; // Add alpha FF
+    }
+    
     // Outline/Border
-    code += `;h;${settings.outlineShow ? 1 : 0}`;
+    if (settings.outlineShow) {
+      code += ";o;1"; // outline on
+      code += `;h;${settings.outlineThickness}`; // outline thickness
+      if (settings.outlineOpacity !== 255) {
+        code += `;oa;${settings.outlineOpacity / 255}`; // outline alpha
+      }
+    } else {
+      code += ";h;0"; // no outline
+    }
     
     // Center Dot
     if (settings.centerDotShow && settings.centerDotThickness > 0) {
-      code += ";o;1"; // outline on
       code += ";d;1"; // dot on
-      code += `;z;${settings.centerDotThickness}`; // dot size
-    } else {
-      code += ";d;0"; // dot off
+      code += `;z;${settings.centerDotThickness}`; // dot thickness
+      if (settings.centerDotOpacity !== 255) {
+        code += `;a;${settings.centerDotOpacity / 255}`; // dot alpha
+      }
     }
     
-    // Firing error fade
+    // Firing error
     code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`;
     
     // Movement error
@@ -96,35 +109,74 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     
     // Outer Lines (0x parameters)
     if (settings.outerLinesShow) {
-      code += `;0l;${settings.outerLinesLength}`; // outer length
+      code += `;0t;${settings.outerLinesThickness}`; // outer thickness
+      code += `;0l;${settings.outerLinesLength}`; // outer length  
       code += `;0o;${settings.outerLinesOffset}`; // outer offset
-      code += `;0a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha (0 or 1)
-      code += `;0f;0`; // outer fade
-      if (settings.outerLinesThickness !== 1) {
-        code += `;0t;${settings.outerLinesThickness}`; // outer thickness
+      code += `;0a;${settings.outerLinesOpacity / 255}`; // outer alpha (0-1)
+      
+      // Movement error für outer lines
+      if (settings.outerLinesMovementError) {
+        code += ";0m;1"; // outer movement error on
+        if (settings.outerLinesMovementErrorMultiplier !== 1) {
+          code += `;0e;${settings.outerLinesMovementErrorMultiplier}`; // outer movement multiplier
+        }
+      } else {
+        code += ";0m;0"; // outer movement error off
+      }
+      
+      // Firing error für outer lines  
+      if (settings.outerLinesFiringError) {
+        code += ";0f;1"; // outer firing error on
+        if (settings.outerLinesFiringErrorMultiplier !== 1) {
+          code += `;0s;${settings.outerLinesFiringErrorMultiplier}`; // outer firing multiplier
+        }
+      } else {
+        code += ";0f;0"; // outer firing error off
       }
     } else {
-      code += ";0l;0;0o;0;0a;0;0f;0";
+      code += ";0l;0;0o;0;0a;0;0f;0;0m;0"; // all outer off
     }
     
-    // Inner Lines (1x parameters)  
+    // Inner Lines (1x parameters)
     if (settings.innerLinesShow) {
+      code += `;1t;${settings.innerLinesThickness}`; // inner thickness
       code += `;1l;${settings.innerLinesLength}`; // inner length
-      code += `;1o;${settings.innerLinesOffset}`; // inner offset
-      code += `;1a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
-      if (settings.innerLinesThickness !== 1) {
-        code += `;1t;${settings.innerLinesThickness}`; // inner thickness
+      code += `;1o;${settings.innerLinesOffset}`; // inner offset  
+      code += `;1a;${settings.innerLinesOpacity / 255}`; // inner alpha (0-1)
+      
+      // Movement error für inner lines
+      if (settings.innerLinesMovementError) {
+        code += ";1m;1"; // inner movement error on
+        if (settings.innerLinesMovementErrorMultiplier !== 1) {
+          code += `;1e;${settings.innerLinesMovementErrorMultiplier}`; // inner movement multiplier
+        }
+      } else {
+        code += ";1m;0"; // inner movement error off
       }
-      code += ";1m;0;1f;0"; // inner movement, fade
+      
+      // Firing error für inner lines
+      if (settings.innerLinesFiringError) {
+        code += ";1f;1"; // inner firing error on
+        if (settings.innerLinesFiringErrorMultiplier !== 1) {
+          code += `;1s;${settings.innerLinesFiringErrorMultiplier}`; // inner firing multiplier
+        }
+      } else {
+        code += ";1f;0"; // inner firing error off
+      }
+    } else {
+      code += ";1b;0"; // inner off
     }
     
-    // Standard end
-    code += ";1b;0";
+    // End marker
+    if (!settings.innerLinesShow) {
+      code += ";1b;0";
+    }
     
     return code;
   } catch (error) {
-    // Fallback zu funktionierendem TenZ-Code
-    return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
+    console.error('Code generation error:', error);
+    // Funktionierender Fallback-Code
+    return "0;s;1;P;c;5;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
   }
 };
 
@@ -139,11 +191,19 @@ interface CrosshairSettings {
   outerLinesThickness: number;
   outerLinesOffset: number;
   outerLinesOpacity: number;
+  outerLinesFiringError: boolean;
+  outerLinesMovementError: boolean;
+  outerLinesFiringErrorMultiplier: number;
+  outerLinesMovementErrorMultiplier: number;
   innerLinesShow: boolean;
   innerLinesLength: number;
   innerLinesThickness: number;
   innerLinesOffset: number;
   innerLinesOpacity: number;
+  innerLinesFiringError: boolean;
+  innerLinesMovementError: boolean;
+  innerLinesFiringErrorMultiplier: number;
+  innerLinesMovementErrorMultiplier: number;
   outlineShow: boolean;
   outlineOpacity: number;
   outlineThickness: number;
@@ -173,11 +233,19 @@ const CrosshairCreator = () => {
     outerLinesThickness: 2,
     outerLinesOffset: 3,
     outerLinesOpacity: 255,
+    outerLinesFiringError: false,
+    outerLinesMovementError: false,
+    outerLinesFiringErrorMultiplier: 1,
+    outerLinesMovementErrorMultiplier: 1,
     innerLinesShow: false,
     innerLinesLength: 4,
     innerLinesThickness: 2,
     innerLinesOffset: 1,
     innerLinesOpacity: 255,
+    innerLinesFiringError: false,
+    innerLinesMovementError: false,
+    innerLinesFiringErrorMultiplier: 1,
+    innerLinesMovementErrorMultiplier: 1,
     outlineShow: false,
     outlineOpacity: 255,
     outlineThickness: 1,
@@ -247,14 +315,22 @@ const CrosshairCreator = () => {
         outerLinesThickness,
         outerLinesOffset,
         outerLinesOpacity: 255,
+        outerLinesFiringError: Math.random() > 0.8, // 20% outer firing error
+        outerLinesMovementError: Math.random() > 0.8, // 20% outer movement error  
+        outerLinesFiringErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
+        outerLinesMovementErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
         innerLinesShow,
         innerLinesLength,
         innerLinesThickness,
         innerLinesOffset,
         innerLinesOpacity: 255,
+        innerLinesFiringError: Math.random() > 0.9, // 10% inner firing error (selten)
+        innerLinesMovementError: Math.random() > 0.9, // 10% inner movement error (selten)
+        innerLinesFiringErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
+        innerLinesMovementErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
         outlineShow: Math.random() > 0.8, // 20% outline (selten bei Pros)
-        outlineOpacity: 255,
-        outlineThickness: 1,
+        outlineOpacity: Math.floor(Math.random() * 100) + 155, // 155-255
+        outlineThickness: Math.floor(Math.random() * 3) + 1, // 1-3
         firingErrorShow: Math.random() > 0.6, // 40% firing error
         movementErrorShow: Math.random() > 0.7, // 30% movement error
         fadeCrosshairWithFiringError: Math.random() > 0.9 // 10% fade (sehr selten)
@@ -357,14 +433,22 @@ const CrosshairCreator = () => {
         outerLinesThickness: funConfig.outerLinesThickness,
         outerLinesOffset: funConfig.outerLinesOffset,
         outerLinesOpacity: Math.floor(Math.random() * 100) + 155, // 155-255
+        outerLinesFiringError: Math.random() > 0.5, // 50% für Fun Mode
+        outerLinesMovementError: Math.random() > 0.5, // 50% für Fun Mode
+        outerLinesFiringErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
+        outerLinesMovementErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
         innerLinesShow: funConfig.innerLinesShow || false,
         innerLinesLength: funConfig.innerLinesLength || 3,
         innerLinesThickness: Math.floor(Math.random() * 3) + 1, // 1-3
         innerLinesOffset: Math.floor(Math.random() * 4) + 1, // 1-4
         innerLinesOpacity: Math.floor(Math.random() * 100) + 155,
+        innerLinesFiringError: Math.random() > 0.6, // 40% für Fun Mode
+        innerLinesMovementError: Math.random() > 0.6, // 40% für Fun Mode  
+        innerLinesFiringErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
+        innerLinesMovementErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
         outlineShow: Math.random() > 0.6, // 40% outline
         outlineOpacity: Math.floor(Math.random() * 100) + 155,
-        outlineThickness: Math.floor(Math.random() * 2) + 1, // 1-2
+        outlineThickness: Math.floor(Math.random() * 4) + 1, // 1-4 (extremer für Fun)
         firingErrorShow: Math.random() > 0.6,
         movementErrorShow: Math.random() > 0.7,
         fadeCrosshairWithFiringError: Math.random() > 0.8
@@ -977,34 +1061,80 @@ const CrosshairCreator = () => {
 
                 {settings.centerDotShow && (
                       <div className="space-y-3">
-                    <div>
-                      <label className="block text-purple-200 text-sm mb-2">
-                        Dicke: {settings.centerDotThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="6"
-                        value={settings.centerDotThickness}
-                        onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
-                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                        <div>
+                          <label className="block text-purple-200 text-sm mb-2">
+                            Dicke: {settings.centerDotThickness}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="6"
+                            value={settings.centerDotThickness}
+                            onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
+                            className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
 
-                    <div>
-                      <label className="block text-purple-200 text-sm mb-2">
-                        Transparenz: {settings.centerDotOpacity}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={settings.centerDotOpacity}
-                        onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
-                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-                  </div>
+                        <div>
+                          <label className="block text-purple-200 text-sm mb-2">
+                            Transparenz: {settings.centerDotOpacity}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="255"
+                            value={settings.centerDotOpacity}
+                            onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
+                            className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        {/* Outline Settings */}
+                        <div className="pt-2 border-t border-purple-700/30">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Checkbox
+                              id="outlineShow"
+                              checked={settings.outlineShow}
+                              onCheckedChange={(checked) => updateSetting('outlineShow', checked)}
+                            />
+                            <label htmlFor="outlineShow" className="text-purple-200 text-sm font-medium">
+                              Outline/Umrandung
+                            </label>
+                          </div>
+                          
+                          {settings.outlineShow && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-purple-200 text-xs mb-1">
+                                  Outline Dicke: {settings.outlineThickness}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="5"
+                                  value={settings.outlineThickness}
+                                  onChange={(e) => updateSetting('outlineThickness', parseInt(e.target.value))}
+                                  className="w-full h-1 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-purple-200 text-xs mb-1">
+                                  Outline Transparenz: {settings.outlineOpacity}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="255"
+                                  value={settings.outlineOpacity}
+                                  onChange={(e) => updateSetting('outlineOpacity', parseInt(e.target.value))}
+                                  className="w-full h-1 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                 )}
               </div>
 
@@ -1022,63 +1152,127 @@ const CrosshairCreator = () => {
                 </div>
 
                 {settings.outerLinesShow && (
-                      <div className="grid grid-cols-2 gap-3">
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Länge: {settings.outerLinesLength}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="20"
-                        value={settings.outerLinesLength}
-                        onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Länge: {settings.outerLinesLength}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="20"
+                              value={settings.outerLinesLength}
+                              onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
 
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Dicke: {settings.outerLinesThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        value={settings.outerLinesThickness}
-                        onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Dicke: {settings.outerLinesThickness}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="10"
+                              value={settings.outerLinesThickness}
+                              onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
 
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Abstand: {settings.outerLinesOffset}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="15"
-                        value={settings.outerLinesOffset}
-                        onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Abstand: {settings.outerLinesOffset}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="15"
+                              value={settings.outerLinesOffset}
+                              onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
 
-                    <div>
-                          <label className="block text-blue-200 text-sm mb-2">
-                        Transparenz: {settings.outerLinesOpacity}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={settings.outerLinesOpacity}
-                        onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
-                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-                  </div>
+                          <div>
+                            <label className="block text-blue-200 text-sm mb-2">
+                              Transparenz: {settings.outerLinesOpacity}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="255"
+                              value={settings.outerLinesOpacity}
+                              onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Error Settings für Outer Lines */}
+                        <div className="pt-3 border-t border-blue-700/30">
+                          <h4 className="text-blue-300 font-medium mb-3">Movement & Firing Error</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="outerMovementError"
+                                checked={settings.outerLinesMovementError}
+                                onCheckedChange={(checked) => updateSetting('outerLinesMovementError', checked)}
+                              />
+                              <label htmlFor="outerMovementError" className="text-blue-200 text-sm">
+                                Movement Error
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="outerFiringError"
+                                checked={settings.outerLinesFiringError}
+                                onCheckedChange={(checked) => updateSetting('outerLinesFiringError', checked)}
+                              />
+                              <label htmlFor="outerFiringError" className="text-blue-200 text-sm">
+                                Firing Error
+                              </label>
+                            </div>
+
+                            {settings.outerLinesMovementError && (
+                              <div>
+                                <label className="block text-blue-200 text-xs mb-1">
+                                  Movement Error Multiplier: {settings.outerLinesMovementErrorMultiplier}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0.1"
+                                  max="3"
+                                  step="0.1"
+                                  value={settings.outerLinesMovementErrorMultiplier}
+                                  onChange={(e) => updateSetting('outerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
+                                  className="w-full h-1 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                            )}
+
+                            {settings.outerLinesFiringError && (
+                              <div>
+                                <label className="block text-blue-200 text-xs mb-1">
+                                  Firing Error Multiplier: {settings.outerLinesFiringErrorMultiplier}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0.1"
+                                  max="3"
+                                  step="0.1"
+                                  value={settings.outerLinesFiringErrorMultiplier}
+                                  onChange={(e) => updateSetting('outerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
+                                  className="w-full h-1 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                 )}
               </div>
 
@@ -1096,63 +1290,127 @@ const CrosshairCreator = () => {
                 </div>
 
                 {settings.innerLinesShow && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                        Länge: {settings.innerLinesLength}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="15"
-                        value={settings.innerLinesLength}
-                        onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Länge: {settings.innerLinesLength}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="15"
+                              value={settings.innerLinesLength}
+                              onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
 
-                    <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                        Dicke: {settings.innerLinesThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="8"
-                        value={settings.innerLinesThickness}
-                        onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Dicke: {settings.innerLinesThickness}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="8"
+                              value={settings.innerLinesThickness}
+                              onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
 
-                    <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                        Abstand: {settings.innerLinesOffset}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        value={settings.innerLinesOffset}
-                        onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Abstand: {settings.innerLinesOffset}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="10"
+                              value={settings.innerLinesOffset}
+                              onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
 
-                    <div>
-                          <label className="block text-cyan-200 text-sm mb-2">
-                        Transparenz: {settings.innerLinesOpacity}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={settings.innerLinesOpacity}
-                        onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
-                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-                  </div>
+                          <div>
+                            <label className="block text-cyan-200 text-sm mb-2">
+                              Transparenz: {settings.innerLinesOpacity}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="255"
+                              value={settings.innerLinesOpacity}
+                              onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
+                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Error Settings für Inner Lines */}
+                        <div className="pt-3 border-t border-cyan-700/30">
+                          <h4 className="text-cyan-300 font-medium mb-3">Movement & Firing Error</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="innerMovementError"
+                                checked={settings.innerLinesMovementError}
+                                onCheckedChange={(checked) => updateSetting('innerLinesMovementError', checked)}
+                              />
+                              <label htmlFor="innerMovementError" className="text-cyan-200 text-sm">
+                                Movement Error
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="innerFiringError"
+                                checked={settings.innerLinesFiringError}
+                                onCheckedChange={(checked) => updateSetting('innerLinesFiringError', checked)}
+                              />
+                              <label htmlFor="innerFiringError" className="text-cyan-200 text-sm">
+                                Firing Error
+                              </label>
+                            </div>
+
+                            {settings.innerLinesMovementError && (
+                              <div>
+                                <label className="block text-cyan-200 text-xs mb-1">
+                                  Movement Error Multiplier: {settings.innerLinesMovementErrorMultiplier}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0.1"
+                                  max="3"
+                                  step="0.1"
+                                  value={settings.innerLinesMovementErrorMultiplier}
+                                  onChange={(e) => updateSetting('innerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
+                                  className="w-full h-1 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                            )}
+
+                            {settings.innerLinesFiringError && (
+                              <div>
+                                <label className="block text-cyan-200 text-xs mb-1">
+                                  Firing Error Multiplier: {settings.innerLinesFiringErrorMultiplier}
+                                </label>
+                                <input
+                                  type="range"
+                                  min="0.1"
+                                  max="3"
+                                  step="0.1"
+                                  value={settings.innerLinesFiringErrorMultiplier}
+                                  onChange={(e) => updateSetting('innerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
+                                  className="w-full h-1 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                 )}
               </div>
             </div>
@@ -1343,11 +1601,19 @@ const CrosshairCreator = () => {
                   outerLinesThickness: 2,
                   outerLinesOffset: 3,
                   outerLinesOpacity: 255,
+                  outerLinesFiringError: false,
+                  outerLinesMovementError: false,
+                  outerLinesFiringErrorMultiplier: 1,
+                  outerLinesMovementErrorMultiplier: 1,
                   innerLinesShow: false,
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
                   innerLinesOpacity: 255,
+                  innerLinesFiringError: false,
+                  innerLinesMovementError: false,
+                  innerLinesFiringErrorMultiplier: 1,
+                  innerLinesMovementErrorMultiplier: 1,
                   outlineShow: false,
                   outlineOpacity: 255,
                   outlineThickness: 1,
