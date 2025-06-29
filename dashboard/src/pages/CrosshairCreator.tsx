@@ -204,6 +204,104 @@ const CrosshairCreator = () => {
     });
   };
 
+  // Random Crosshair Generator
+  const generateRandomCrosshair = (mode: 'pro' | 'fun' = 'pro') => {
+    const getRandomColor = () => {
+      const colors = ['#FF4656', '#00D4AA', '#FFBC40', '#B19CD9', '#FE8C8A', '#50FA7B', '#FF79C6', '#8BE9FD', '#F1FA8C'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    };
+
+    if (mode === 'pro') {
+      // Pro player inspired settings
+      const proConfigs = [
+        {
+          centerDotShow: Math.random() > 0.6,
+          centerDotThickness: Math.floor(Math.random() * 3) + 1, // 1-3
+          outerLinesShow: true,
+          outerLinesLength: Math.floor(Math.random() * 6) + 4, // 4-9
+          outerLinesThickness: Math.floor(Math.random() * 2) + 1, // 1-2
+          outerLinesOffset: Math.floor(Math.random() * 4) + 2, // 2-5
+          innerLinesShow: Math.random() > 0.7,
+          innerLinesLength: Math.floor(Math.random() * 4) + 2, // 2-5
+        },
+        {
+          centerDotShow: true,
+          centerDotThickness: 2,
+          outerLinesShow: true,
+          outerLinesLength: 7,
+          outerLinesThickness: 2,
+          outerLinesOffset: 3,
+          innerLinesShow: false,
+        },
+        {
+          centerDotShow: false,
+          outerLinesShow: true,
+          outerLinesLength: 5,
+          outerLinesThickness: 1,
+          outerLinesOffset: 2,
+          innerLinesShow: true,
+          innerLinesLength: 3,
+          innerLinesThickness: 1,
+        }
+      ];
+      
+      const baseConfig = proConfigs[Math.floor(Math.random() * proConfigs.length)];
+      
+      setSettings(prev => ({
+        ...prev,
+        primaryColor: Math.random() > 0.3 ? 'custom' : 'white',
+        customColor: getRandomColor(),
+        centerDotShow: baseConfig.centerDotShow,
+        centerDotThickness: baseConfig.centerDotThickness || 2,
+        centerDotOpacity: 255,
+        outerLinesShow: baseConfig.outerLinesShow,
+        outerLinesLength: baseConfig.outerLinesLength || 7,
+        outerLinesThickness: baseConfig.outerLinesThickness || 2,
+        outerLinesOffset: baseConfig.outerLinesOffset || 3,
+        outerLinesOpacity: 255,
+        innerLinesShow: baseConfig.innerLinesShow || false,
+        innerLinesLength: baseConfig.innerLinesLength || 4,
+        innerLinesThickness: baseConfig.innerLinesThickness || 2,
+        innerLinesOffset: Math.floor(Math.random() * 3) + 1,
+        innerLinesOpacity: 255,
+        outlineShow: Math.random() > 0.8,
+        outlineOpacity: 255,
+        outlineThickness: 1,
+        firingErrorShow: Math.random() > 0.6,
+        movementErrorShow: Math.random() > 0.7,
+        fadeCrosshairWithFiringError: Math.random() > 0.8
+      }));
+    } else {
+      // Fun/Crazy mode
+      setSettings(prev => ({
+        ...prev,
+        primaryColor: 'custom',
+        customColor: getRandomColor(),
+        centerDotShow: Math.random() > 0.3,
+        centerDotThickness: Math.floor(Math.random() * 6) + 1, // 1-6
+        centerDotOpacity: Math.floor(Math.random() * 156) + 100, // 100-255
+        outerLinesShow: Math.random() > 0.2,
+        outerLinesLength: Math.floor(Math.random() * 15) + 3, // 3-17
+        outerLinesThickness: Math.floor(Math.random() * 8) + 1, // 1-8
+        outerLinesOffset: Math.floor(Math.random() * 10), // 0-9
+        outerLinesOpacity: Math.floor(Math.random() * 156) + 100,
+        innerLinesShow: Math.random() > 0.4,
+        innerLinesLength: Math.floor(Math.random() * 12) + 2, // 2-13
+        innerLinesThickness: Math.floor(Math.random() * 6) + 1, // 1-6
+        innerLinesOffset: Math.floor(Math.random() * 8), // 0-7
+        innerLinesOpacity: Math.floor(Math.random() * 156) + 100,
+        outlineShow: Math.random() > 0.5,
+        outlineOpacity: Math.floor(Math.random() * 156) + 100,
+        outlineThickness: Math.floor(Math.random() * 3) + 1,
+        firingErrorShow: Math.random() > 0.5,
+        movementErrorShow: Math.random() > 0.5,
+        fadeCrosshairWithFiringError: Math.random() > 0.5
+      }));
+    }
+    
+    showNotification(`🎲 ${mode === 'pro' ? 'Pro' : 'Fun'} Random Crosshair generiert!`);
+  };
+
   // Generate Crosshair Code - Nutzt alle erweiterten Einstellungen
   const generateCrosshairCode = () => {
     // Verwende die erweiterte Funktion mit allen Settings
@@ -1086,6 +1184,70 @@ const CrosshairCreator = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Randomizer Section */}
+        <div className="mt-8 bg-gradient-to-br from-amber-500/10 to-orange-500/10 backdrop-blur-md border border-amber-500/20 rounded-2xl p-6 shadow-xl animate-fade-in-up hover:shadow-2xl transition-all duration-500" style={{ animationDelay: '1400ms' }}>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-xl font-bold text-amber-400 animate-glow mb-2 flex items-center gap-2">
+                🎲 Crosshair Randomizer
+              </h3>
+              <p className="text-amber-200 text-sm">
+                Lass den Zufall entscheiden! Generiere automatisch neue Crosshair-Designs.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 animate-slide-in-right" style={{ animationDelay: '1600ms' }}>
+              <div className="group relative">
+                <Button
+                  onClick={() => generateRandomCrosshair('pro')}
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/30"
+                >
+                  <Star className="w-4 h-4 mr-2 animate-spin-slow" />
+                  🏆 Pro Random
+                </Button>
+                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black/90 text-white text-xs rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                  Realistische Pro-Player Settings
+                </div>
+              </div>
+              <div className="group relative">
+                <Button
+                  onClick={() => generateRandomCrosshair('fun')}
+                  className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-pink-500/30"
+                >
+                  <Star className="w-4 h-4 mr-2 animate-bounce" />
+                  🎨 Fun Random
+                </Button>
+                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black/90 text-white text-xs rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                  Wilde & experimentelle Crosshairs
+                </div>
+              </div>
+              <div className="group relative">
+                <Button
+                  onClick={() => {
+                    let count = 0;
+                    const interval = setInterval(() => {
+                      generateRandomCrosshair(Math.random() > 0.5 ? 'pro' : 'fun');
+                      count++;
+                      if (count >= 5) {
+                        clearInterval(interval);
+                        showNotification('🎲✨ Auto-Random Spree abgeschlossen!');
+                      }
+                    }, 1500);
+                    showNotification('🔥 Auto-Random Spree gestartet! (5x in Folge)');
+                  }}
+                  variant="outline"
+                  className="border-amber-500 text-amber-400 hover:bg-amber-500/20 transition-all duration-300 hover:scale-105"
+                >
+                  <Target className="w-4 h-4 mr-2 animate-pulse" />
+                  🔥 Spree
+                </Button>
+                <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black/90 text-white text-xs rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                  5 Random Crosshairs hintereinander
                 </div>
               </div>
             </div>
