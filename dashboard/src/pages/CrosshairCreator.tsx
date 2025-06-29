@@ -88,10 +88,10 @@ const presets = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Color Mapping (ORIGINALE korrekte Valorant-Werte)
+    // Color Mapping (Basierend auf Google-Recherche: Alle Custom Colors = 5!)
     const colorMap: Record<string, number> = {
-      'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
-      'cyan': 4, 'pink': 5, 'red': 6, 'custom': 7
+      'white': 5, 'green': 5, 'yellowish-green': 5, 'greenish-yellow': 5,
+      'cyan': 5, 'pink': 5, 'red': 5, 'custom': 5
     };
     
     const color = colorMap[settings.primaryColor] || 1;
@@ -222,10 +222,10 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // Color Mapping (ORIGINALE korrekte Valorant-Farbindices)
+  // Color Mapping (Basierend auf Google-Recherche: Alle Custom Colors = 5!)
   const colorMap: Record<string, number> = {
-    'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
-    'cyan': 4, 'pink': 5, 'red': 6, 'custom': 7
+    'white': 5, 'green': 5, 'yellowish-green': 5, 'greenish-yellow': 5,
+    'cyan': 5, 'pink': 5, 'red': 5, 'custom': 5
   };
 
   const colorOptions = [
