@@ -565,303 +565,312 @@ const CrosshairCreator = () => {
             </div>
 
             {/* Crosshair Einstellungen - Rechts */}
-            <div className="lg:col-span-7">
-              <h3 className="text-xl font-bold text-purple-400 mb-6 flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Einstellungen
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Primary Color */}
-              <div className="lg:col-span-2">
+            <div className="lg:col-span-7 space-y-6">
+              {/* Crosshair Details - Oben */}
               <div>
-                <label className="block text-purple-200 font-medium mb-3">
-                  Primärfarbe 
-                  <span className="text-sm text-purple-300 ml-2">
-                    (Aktuell: {settings.primaryColor} → {getColorValue(settings.primaryColor)})
-                  </span>
-                </label>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {presetColors.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => {
-                        updateSetting('primaryColor', color.value);
-                      }}
-                      className={`relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
-                        settings.primaryColor === color.value
-                          ? 'border-purple-400 bg-purple-500/20 shadow-lg'
-                          : 'border-purple-600/30 hover:border-purple-400/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 rounded border-2 border-white/20"
-                          style={{ backgroundColor: color.color }}
-                        />
-                        <span className="text-purple-200 font-medium">{color.label}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Custom Color Picker - Always visible */}
-                <div className="mt-4 p-4 bg-gradient-to-r from-pink-900/20 to-purple-900/20 rounded-lg border border-pink-500/30">
-                  <label className="block text-pink-300 font-medium mb-3">
-                    🎨 Custom Color Picker
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-pink-200 text-sm mb-2">Farbe wählen</label>
-                      <input
-                        type="color"
-                        value={settings.customColor}
-                        onChange={(e) => {
-                          updateSetting('customColor', e.target.value);
-                          updateSetting('primaryColor', 'custom');
-                        }}
-                        className="w-full h-12 rounded border border-pink-500/30 bg-transparent cursor-pointer"
+                <h3 className="text-xl font-bold text-purple-400 mb-6 flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Crosshair Details
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Center Dot */}
+                  <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Checkbox
+                        id="centerDotShow"
+                        checked={settings.centerDotShow}
+                        onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
                       />
+                      <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
+                        Center Dot
+                      </label>
                     </div>
-                    <div>
-                      <label className="block text-pink-200 text-sm mb-2">Hex-Code</label>
-                      <input
-                        type="text"
-                        value={settings.customColor}
-                        onChange={(e) => {
-                          updateSetting('customColor', e.target.value);
-                          updateSetting('primaryColor', 'custom');
-                        }}
-                        className="w-full px-3 py-2 bg-black/30 border border-pink-500/30 rounded text-pink-100 placeholder-pink-400"
-                        placeholder="#FF0000"
-                      />
-                      <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-yellow-300 font-medium">🔥 WICHTIGE ANLEITUNG:</p>
-                          <button
-                            onClick={async () => {
-                              try {
-                                await navigator.clipboard.writeText(settings.customColor);
-                                showNotification(`Hex-Code ${settings.customColor} kopiert!`);
-                              } catch (err) {
-                                showNotification("Kopieren fehlgeschlagen", "error");
-                              }
-                            }}
-                            className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-white text-xs font-medium"
-                            title="Hex-Code kopieren"
-                          >
-                            📋 {settings.customColor}
-                          </button>
+
+                    {settings.centerDotShow && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-purple-200 text-sm mb-2">
+                            Dicke: {settings.centerDotThickness}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="6"
+                            value={settings.centerDotThickness}
+                            onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
+                            className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
                         </div>
-                        <ol className="text-xs text-yellow-200 space-y-1">
-                          <li>1. Wähle deine Farbe (z.B. #F90606)</li>
-                          <li>2. Kopiere den generierten Code</li>
-                          <li>3. In Valorant: Code importieren</li>
-                          <li>4. In Valorant: Settings → Crosshair → Primary → Color → Custom → <span className="bg-black/30 px-1 rounded">{settings.customColor}</span></li>
-                        </ol>
-                        <p className="text-xs text-yellow-300 mt-2 font-medium">⚠️ Custom Color muss separat in Valorant gesetzt werden!</p>
+
+                        <div>
+                          <label className="block text-purple-200 text-sm mb-2">
+                            Transparenz: {settings.centerDotOpacity}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="255"
+                            value={settings.centerDotOpacity}
+                            onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
+                            className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Outer Lines */}
+                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Checkbox
+                        id="outerLinesShow"
+                        checked={settings.outerLinesShow}
+                        onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
+                      />
+                      <label htmlFor="outerLinesShow" className="text-blue-200 font-medium">
+                        Äußere Linien
+                      </label>
+                    </div>
+
+                    {settings.outerLinesShow && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                            Länge: {settings.outerLinesLength}
+                          </label>
+                          <input
+                            type="range"
+                            min="1"
+                            max="20"
+                            value={settings.outerLinesLength}
+                            onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                            Dicke: {settings.outerLinesThickness}
+                          </label>
+                          <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={settings.outerLinesThickness}
+                            onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                            Abstand: {settings.outerLinesOffset}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="15"
+                            value={settings.outerLinesOffset}
+                            onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                            Transparenz: {settings.outerLinesOpacity}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="255"
+                            value={settings.outerLinesOpacity}
+                            onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Inner Lines */}
+                  <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Checkbox
+                        id="innerLinesShow"
+                        checked={settings.innerLinesShow}
+                        onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
+                      />
+                      <label htmlFor="innerLinesShow" className="text-cyan-200 font-medium">
+                        Innere Linien
+                      </label>
+                    </div>
+
+                    {settings.innerLinesShow && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                            Länge: {settings.innerLinesLength}
+                          </label>
+                          <input
+                            type="range"
+                            min="1"
+                            max="15"
+                            value={settings.innerLinesLength}
+                            onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                            Dicke: {settings.innerLinesThickness}
+                          </label>
+                          <input
+                            type="range"
+                            min="1"
+                            max="8"
+                            value={settings.innerLinesThickness}
+                            onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                            Abstand: {settings.innerLinesOffset}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="10"
+                            value={settings.innerLinesOffset}
+                            onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                            Transparenz: {settings.innerLinesOpacity}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="255"
+                            value={settings.innerLinesOpacity}
+                            onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Farbauswahl - Unten */}
+              <div>
+                <h3 className="text-xl font-bold text-pink-400 mb-6 flex items-center gap-2">
+                  <Star className="w-5 h-5" />
+                  Farbauswahl
+                </h3>
+                <div className="p-6 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl">
+                  <div className="mb-6">
+                    <label className="block text-pink-200 font-medium mb-4">
+                      Primärfarbe 
+                      <span className="text-sm text-pink-300 ml-2">
+                        (Aktuell: {settings.primaryColor} → {getColorValue(settings.primaryColor)})
+                      </span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      {presetColors.map((color) => (
+                        <button
+                          key={color.value}
+                          onClick={() => {
+                            updateSetting('primaryColor', color.value);
+                          }}
+                          className={`relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
+                            settings.primaryColor === color.value
+                              ? 'border-pink-400 bg-pink-500/20 shadow-lg'
+                              : 'border-pink-600/30 hover:border-pink-400/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded border-2 border-white/20"
+                              style={{ backgroundColor: color.color }}
+                            />
+                            <span className="text-pink-200 font-medium">{color.label}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Custom Color Picker */}
+                  <div className="p-4 bg-gradient-to-r from-orange-900/20 to-red-900/20 rounded-lg border border-orange-500/30">
+                    <label className="block text-orange-300 font-medium mb-3">
+                      🎨 Custom Color Picker
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-orange-200 text-sm mb-2">Farbe wählen</label>
+                        <input
+                          type="color"
+                          value={settings.customColor}
+                          onChange={(e) => {
+                            updateSetting('customColor', e.target.value);
+                            updateSetting('primaryColor', 'custom');
+                          }}
+                          className="w-full h-12 rounded border border-orange-500/30 bg-transparent cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-orange-200 text-sm mb-2">Hex-Code</label>
+                        <input
+                          type="text"
+                          value={settings.customColor}
+                          onChange={(e) => {
+                            updateSetting('customColor', e.target.value);
+                            updateSetting('primaryColor', 'custom');
+                          }}
+                          className="w-full px-3 py-2 bg-black/30 border border-orange-500/30 rounded text-orange-100 placeholder-orange-400"
+                          placeholder="#FF0000"
+                        />
+                        <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs text-yellow-300 font-medium">🔥 WICHTIGE ANLEITUNG:</p>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(settings.customColor);
+                                  showNotification(`Hex-Code ${settings.customColor} kopiert!`);
+                                } catch (err) {
+                                  showNotification("Kopieren fehlgeschlagen", "error");
+                                }
+                              }}
+                              className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-white text-xs font-medium"
+                              title="Hex-Code kopieren"
+                            >
+                              📋 {settings.customColor}
+                            </button>
+                          </div>
+                          <ol className="text-xs text-yellow-200 space-y-1">
+                            <li>1. Wähle deine Farbe (z.B. #F90606)</li>
+                            <li>2. Kopiere den generierten Code</li>
+                            <li>3. In Valorant: Code importieren</li>
+                            <li>4. In Valorant: Settings → Crosshair → Primary → Color → Custom → <span className="bg-black/30 px-1 rounded">{settings.customColor}</span></li>
+                          </ol>
+                          <p className="text-xs text-yellow-300 mt-2 font-medium">⚠️ Custom Color muss separat in Valorant gesetzt werden!</p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              </div>
-
-              {/* Center Dot */}
-              <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-lg">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Checkbox
-                    id="centerDotShow"
-                    checked={settings.centerDotShow}
-                    onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
-                  />
-                  <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
-                    Center Dot
-                  </label>
-                </div>
-
-                {settings.centerDotShow && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-purple-200 text-sm mb-2">
-                        Dicke: {settings.centerDotThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="6"
-                        value={settings.centerDotThickness}
-                        onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
-                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-purple-200 text-sm mb-2">
-                        Transparenz: {settings.centerDotOpacity}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={settings.centerDotOpacity}
-                        onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
-                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Outer Lines */}
-              <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Checkbox
-                    id="outerLinesShow"
-                    checked={settings.outerLinesShow}
-                    onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
-                  />
-                  <label htmlFor="outerLinesShow" className="text-blue-200 font-medium">
-                    Äußere Linien
-                  </label>
-                </div>
-
-                {settings.outerLinesShow && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-blue-200 text-xs mb-1">
-                        Länge: {settings.outerLinesLength}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="20"
-                        value={settings.outerLinesLength}
-                        onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
-                        className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-blue-200 text-xs mb-1">
-                        Dicke: {settings.outerLinesThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        value={settings.outerLinesThickness}
-                        onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                        className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-blue-200 text-xs mb-1">
-                        Abstand: {settings.outerLinesOffset}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="15"
-                        value={settings.outerLinesOffset}
-                        onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                        className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-blue-200 text-xs mb-1">
-                        Transparenz: {settings.outerLinesOpacity}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={settings.outerLinesOpacity}
-                        onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
-                        className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Inner Lines */}
-              <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Checkbox
-                    id="innerLinesShow"
-                    checked={settings.innerLinesShow}
-                    onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
-                  />
-                  <label htmlFor="innerLinesShow" className="text-cyan-200 font-medium">
-                    Innere Linien
-                  </label>
-                </div>
-
-                {settings.innerLinesShow && (
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div>
-                      <label className="block text-cyan-200 text-xs mb-1">
-                        Länge: {settings.innerLinesLength}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="15"
-                        value={settings.innerLinesLength}
-                        onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
-                        className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-cyan-200 text-xs mb-1">
-                        Dicke: {settings.innerLinesThickness}
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="8"
-                        value={settings.innerLinesThickness}
-                        onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
-                        className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-cyan-200 text-xs mb-1">
-                        Abstand: {settings.innerLinesOffset}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        value={settings.innerLinesOffset}
-                        onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
-                        className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-cyan-200 text-xs mb-1">
-                        Transparenz: {settings.innerLinesOpacity}
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={settings.innerLinesOpacity}
-                        onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
-                        className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
-        </div>
         </div>
 
         {/* Code und Actions */}
