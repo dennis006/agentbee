@@ -88,10 +88,10 @@ const presets = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Color Mapping (TEST: Valorant Standard-Indices - systematischer Test)
+    // Color Mapping (Rückwärts gemappt: Was User sieht → korrekter Index)  
     const colorMap: Record<string, number> = {
-      'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
-      'cyan': 4, 'pink': 5, 'red': 6, 'custom': 5
+      'white': 0, 'green': 1, 'yellowish-green': 4, 'greenish-yellow': 3,
+      'cyan': 5, 'pink': 6, 'red': 2, 'custom': 5
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
@@ -222,10 +222,10 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // Color Mapping (TEST: Valorant Standard-Indices - systematischer Test)
+  // Color Mapping (Rückwärts gemappt: Was User sieht → korrekter Index)
   const colorMap: Record<string, number> = {
-    'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
-    'cyan': 4, 'pink': 5, 'red': 6, 'custom': 5
+    'white': 0, 'green': 1, 'yellowish-green': 4, 'greenish-yellow': 3,
+    'cyan': 5, 'pink': 6, 'red': 2, 'custom': 5
   };
 
   const colorOptions = [
@@ -258,7 +258,15 @@ const CrosshairCreator = () => {
     const hexColor = getColorValue(settings.primaryColor);
     console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
     console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
-    console.log(`🧪 WENN FALSCHE FARBE → teile mir mit welche Farbe du in Valorant siehst!`);
+    console.log(`🧪 SYSTEMATISCHER TEST - Aktuelle Zuordnung:`);
+    console.log(`  📌 white → Index 0 (sollte WEISS zeigen)`);
+    console.log(`  📌 green → Index 1 (sollte GRÜN zeigen)`);  
+    console.log(`  📌 red → Index 2 (sollte ROT zeigen)`);
+    console.log(`  📌 greenish-yellow → Index 3 (sollte GRÜN-GELB zeigen)`);
+    console.log(`  📌 yellowish-green → Index 4 (sollte GELB-GRÜN zeigen)`);
+    console.log(`  📌 cyan → Index 5 (sollte CYAN zeigen)`);
+    console.log(`  📌 pink → Index 6 (sollte PINK zeigen)`);
+    console.log(`❗ Teste jede Farbe und sage mir was du in Valorant siehst!`);
     
     setCrosshairCode(code);
     return code;
