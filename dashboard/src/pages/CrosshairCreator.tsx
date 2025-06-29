@@ -403,8 +403,7 @@ const CrosshairCreator = () => {
       const code = crosshairCode || generateCrosshairCode();
       
       // Use Railway Backend as Proxy (CORS-Safe)
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/generate?code=${encodeURIComponent(code)}`);
+      const response = await fetch('/api/crosshair/generate?code=${encodeURIComponent(code)}');
       
       if (response.ok) {
         const blob = await response.blob();
@@ -475,8 +474,7 @@ const CrosshairCreator = () => {
     try {
       const code = generateValorantCrosshairCode(settings);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/generate?code=${encodeURIComponent(code)}`);
+      const response = await fetch('/api/crosshair/generate?code=${encodeURIComponent(code)}');
       
       if (response.ok) {
         const blob = await response.blob();
@@ -518,8 +516,7 @@ const CrosshairCreator = () => {
       setLoading(true);
       
       // Get available guilds first using repaired crosshair endpoint
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const guildsResponse = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
+      const guildsResponse = await fetch('/api/crosshair/discord/guilds');
       const guildsData = await guildsResponse.json();
       
       if (!guildsData.success || !guildsData.guilds || guildsData.guilds.length === 0) {
@@ -566,7 +563,7 @@ const CrosshairCreator = () => {
       };
 
       console.log('🎯 Sharing crosshair:', shareData);
-      const response = await fetch(`${apiUrl}/api/crosshair/share`, {
+      const response = await fetch('/api/crosshair/share', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

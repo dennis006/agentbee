@@ -144,9 +144,8 @@ const CrosshairSharing = () => {
   const loadDiscordGuilds = async () => {
     try {
       setGuildsLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
+      const response = await fetch('/api/crosshair/discord/guilds');
       const data = await response.json();
       
       if (data.success && data.guilds) {
@@ -170,10 +169,9 @@ const CrosshairSharing = () => {
     
     try {
       setLoadingChannels(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
       console.log('🔄 Loading channels for guild:', selectedGuild);
-      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/channels`);
+      const response = await fetch(`/api/crosshair/discord/guilds/${selectedGuild}/channels`);
       const data = await response.json();
       
       console.log('📡 Channels response:', data);
@@ -206,9 +204,8 @@ const CrosshairSharing = () => {
     
     try {
       setLoadingRoles(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/roles`);
+      const response = await fetch(`/api/crosshair/discord/guilds/${selectedGuild}/roles`);
       const data = await response.json();
       
       if (data.success && data.roles) {
@@ -227,8 +224,7 @@ const CrosshairSharing = () => {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/settings/${selectedGuild}`);
+      const response = await fetch(`/api/crosshair/settings/${selectedGuild}`);
       const data = await response.json();
       
       if (data.success && data.settings) {
@@ -288,8 +284,7 @@ const CrosshairSharing = () => {
 
   const loadCrosshairs = async () => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/list/${selectedGuild}?limit=10`);
+      const response = await fetch(`/api/crosshair/list/${selectedGuild}?limit=10`);
       const data = await response.json();
       
       if (data.success) {
@@ -311,10 +306,9 @@ const CrosshairSharing = () => {
         attempt++;
         setSaving(true);
         
-        const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
         console.log(`💾 Saving settings (Attempt ${attempt}/${MAX_RETRIES})...`);
         
-        const response = await fetch(`${apiUrl}/api/crosshair/settings/${selectedGuild}`, {
+        const response = await fetch(`/api/crosshair/settings/${selectedGuild}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -338,7 +332,7 @@ const CrosshairSharing = () => {
         } else {
           // Spezielle Behandlung für verschiedene HTTP-Status-Codes
           if (response.status === 503) {
-            throw new Error('Server temporär nicht verfügbar (503). Railway.app könnte Wartungsarbeiten durchführen.');
+            throw new Error('Server temporär nicht verfügbar (503). Backend könnte neu starten.');
           } else if (response.status === 500) {
             throw new Error('Interner Server-Fehler (500). Backend hat ein Problem.');
           } else if (response.status === 404) {
@@ -385,7 +379,7 @@ const CrosshairSharing = () => {
           // Zeige hilfreiche Tipps
           if (errorMessage.includes('503') || errorMessage.includes('Service Unavailable')) {
             setTimeout(() => {
-              error('💡 Tipp: Railway.app könnte Wartungsarbeiten haben. Versuche es in 5-10 Minuten erneut.');
+              error('💡 Tipp: Backend könnte neu starten. Versuche es in 1-2 Minuten erneut.');
             }, 2000);
           }
         }
