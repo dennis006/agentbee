@@ -88,10 +88,10 @@ const presets = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Color Mapping (Basierend auf Google-Recherche: Alle Custom Colors = 5!)
+    // Color Mapping (TEST: Valorant Standard-Indices - systematischer Test)
     const colorMap: Record<string, number> = {
-      'white': 5, 'green': 5, 'yellowish-green': 5, 'greenish-yellow': 5,
-      'cyan': 5, 'pink': 5, 'red': 5, 'custom': 5
+      'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
+      'cyan': 4, 'pink': 5, 'red': 6, 'custom': 5
     };
     
     const color = colorMap[settings.primaryColor] || 1;
@@ -222,10 +222,10 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // Color Mapping (Basierend auf Google-Recherche: Alle Custom Colors = 5!)
+  // Color Mapping (TEST: Valorant Standard-Indices - systematischer Test)
   const colorMap: Record<string, number> = {
-    'white': 5, 'green': 5, 'yellowish-green': 5, 'greenish-yellow': 5,
-    'cyan': 5, 'pink': 5, 'red': 5, 'custom': 5
+    'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
+    'cyan': 4, 'pink': 5, 'red': 6, 'custom': 5
   };
 
   const colorOptions = [
@@ -255,7 +255,10 @@ const CrosshairCreator = () => {
     
     // Debug: Zeige welcher Color-Index verwendet wird
     const colorIndex = colorMap[settings.primaryColor] || 1;
-    console.log(`🎯 DEBUG: Color "${settings.primaryColor}" → Index ${colorIndex} → Code: ${code}`);
+    const hexColor = getColorValue(settings.primaryColor);
+    console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
+    console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
+    console.log(`🧪 WENN FALSCHE FARBE → teile mir mit welche Farbe du in Valorant siehst!`);
     
     setCrosshairCode(code);
     return code;
