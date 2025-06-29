@@ -59,7 +59,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       'white': 0, 'custom': 5
     };
     
-    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 0;
+    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
     
     let code = "0"; // Start
     
@@ -74,20 +74,14 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     // Color
     code += `;c;${color}`;
     
-    // KORREKTE Outline Parameter (h, o, t) - diese funktionieren in Valorant!
+    // Outline/Border
     code += `;h;${settings.outlineShow ? 1 : 0}`;
-    if (settings.outlineShow) {
-      code += `;o;${settings.outlineOpacity.toFixed(1)}`;
-      code += `;t;${Math.max(1, Math.round(settings.outlineThickness))}`;
-    }
     
     // Center Dot
     if (settings.centerDotShow && settings.centerDotThickness > 0) {
+      code += ";o;1"; // outline on
       code += ";d;1"; // dot on
       code += `;z;${settings.centerDotThickness}`; // dot size
-      if (settings.centerDotOpacity < 255) {
-        code += `;da;${Math.round(settings.centerDotOpacity / 255)}`; // dot alpha
-      }
     } else {
       code += ";d;0"; // dot off
     }
@@ -99,11 +93,6 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     if (settings.movementErrorShow) {
       code += ";m;1";
     }
-
-    // Override Firing Error Offset
-    if (settings.overrideFiringErrorOffsetWithCrosshairOffset) {
-      code += ";op;1";
-    }
     
     // Outer Lines (0x parameters)
     if (settings.outerLinesShow) {
@@ -114,28 +103,8 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       if (settings.outerLinesThickness !== 1) {
         code += `;0t;${settings.outerLinesThickness}`; // outer thickness
       }
-      
-      // Movement Error für Outer Lines
-      if (settings.outerLinesMovementError) {
-        code += `;0m;1`; // outer movement error on
-        if (settings.outerLinesMovementErrorMultiplier !== 1) {
-          code += `;0mi;${settings.outerLinesMovementErrorMultiplier}`; // outer movement error multiplier
-        }
-      } else {
-        code += `;0m;0`; // outer movement error off
-      }
-      
-      // Firing Error für Outer Lines
-      if (settings.outerLinesFiringError) {
-        code += `;0e;1`; // outer firing error on
-        if (settings.outerLinesFiringErrorMultiplier !== 1) {
-          code += `;0ei;${settings.outerLinesFiringErrorMultiplier}`; // outer firing error multiplier
-        }
-      } else {
-        code += `;0e;0`; // outer firing error off
-      }
     } else {
-      code += ";0l;0;0o;0;0a;0;0f;0;0m;0;0e;0";
+      code += ";0l;0;0o;0;0a;0;0f;0";
     }
     
     // Inner Lines (1x parameters)  
@@ -146,29 +115,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       if (settings.innerLinesThickness !== 1) {
         code += `;1t;${settings.innerLinesThickness}`; // inner thickness
       }
-      code += ";1f;0"; // inner fade off
-      
-      // Movement Error für Inner Lines
-      if (settings.innerLinesMovementError) {
-        code += `;1m;1`; // inner movement error on
-        if (settings.innerLinesMovementErrorMultiplier !== 1) {
-          code += `;1mi;${settings.innerLinesMovementErrorMultiplier}`; // inner movement error multiplier
-        }
-      } else {
-        code += `;1m;0`; // inner movement error off
-      }
-      
-      // Firing Error für Inner Lines
-      if (settings.innerLinesFiringError) {
-        code += `;1e;1`; // inner firing error on
-        if (settings.innerLinesFiringErrorMultiplier !== 1) {
-          code += `;1ei;${settings.innerLinesFiringErrorMultiplier}`; // inner firing error multiplier
-        }
-      } else {
-        code += `;1e;0`; // inner firing error off
-      }
-    } else {
-      code += ";1l;0;1o;0;1a;0;1f;0;1m;0;1e;0";
+      code += ";1m;0;1f;0"; // inner movement, fade
     }
     
     // Standard end
@@ -176,7 +123,6 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     
     return code;
   } catch (error) {
-    console.error('Crosshair code generation error:', error);
     // Fallback zu funktionierendem TenZ-Code
     return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
   }
@@ -188,41 +134,22 @@ interface CrosshairSettings {
   centerDotShow: boolean;
   centerDotThickness: number;
   centerDotOpacity: number;
-  centerDotOutline: boolean; // DEPRECATED - kept for compatibility
-  centerDotOutlineThickness: number; // DEPRECATED - kept for compatibility
-  centerDotOutlineOpacity: number; // DEPRECATED - kept for compatibility
   outerLinesShow: boolean;
   outerLinesLength: number;
   outerLinesThickness: number;
   outerLinesOffset: number;
   outerLinesOpacity: number;
-  outerLinesOutline: boolean; // DEPRECATED - kept for compatibility
-  outerLinesOutlineOpacity: number; // DEPRECATED - kept for compatibility
-  outerLinesOutlineThickness: number; // DEPRECATED - kept for compatibility
-  outerLinesMovementError: boolean;
-  outerLinesMovementErrorMultiplier: number;
-  outerLinesFiringError: boolean;
-  outerLinesFiringErrorMultiplier: number;
   innerLinesShow: boolean;
   innerLinesLength: number;
   innerLinesThickness: number;
   innerLinesOffset: number;
   innerLinesOpacity: number;
-  innerLinesOutline: boolean; // DEPRECATED - kept for compatibility
-  innerLinesOutlineOpacity: number; // DEPRECATED - kept for compatibility
-  innerLinesOutlineThickness: number; // DEPRECATED - kept for compatibility
-  innerLinesMovementError: boolean;
-  innerLinesMovementErrorMultiplier: number;
-  innerLinesFiringError: boolean;
-  innerLinesFiringErrorMultiplier: number;
-  // WORKING OUTLINE PARAMETERS (h, o, t)
-  outlineShow: boolean; // h parameter - works!
-  outlineOpacity: number; // o parameter - works! (0.0 to 1.0)
-  outlineThickness: number; // t parameter - works! (1 to 6)
+  outlineShow: boolean;
+  outlineOpacity: number;
+  outlineThickness: number;
   firingErrorShow: boolean;
   movementErrorShow: boolean;
   fadeCrosshairWithFiringError: boolean;
-  overrideFiringErrorOffsetWithCrosshairOffset: boolean;
 }
 
 const CrosshairCreator = () => {
@@ -241,40 +168,22 @@ const CrosshairCreator = () => {
     centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
-    centerDotOutline: false,
-    centerDotOutlineThickness: 1,
-    centerDotOutlineOpacity: 255,
     outerLinesShow: true,
     outerLinesLength: 7,
     outerLinesThickness: 2,
     outerLinesOffset: 3,
     outerLinesOpacity: 255,
-    outerLinesOutline: false,
-    outerLinesOutlineOpacity: 255,
-    outerLinesOutlineThickness: 1,
-    outerLinesMovementError: false,
-    outerLinesMovementErrorMultiplier: 1,
-    outerLinesFiringError: false,
-    outerLinesFiringErrorMultiplier: 1,
     innerLinesShow: false,
     innerLinesLength: 4,
     innerLinesThickness: 2,
     innerLinesOffset: 1,
     innerLinesOpacity: 255,
-    innerLinesOutline: false,
-    innerLinesOutlineOpacity: 255,
-    innerLinesOutlineThickness: 1,
-    innerLinesMovementError: false,
-    innerLinesMovementErrorMultiplier: 1,
-    innerLinesFiringError: false,
-    innerLinesFiringErrorMultiplier: 1,
     outlineShow: false,
-    outlineOpacity: 0.5,
+    outlineOpacity: 255,
     outlineThickness: 1,
     firingErrorShow: false,
     movementErrorShow: false,
-    fadeCrosshairWithFiringError: false,
-    overrideFiringErrorOffsetWithCrosshairOffset: false
+    fadeCrosshairWithFiringError: false
   });
 
   // 🎨 SIMPLIFIED COLOR SYSTEM - Nur Weiß und Custom
@@ -675,19 +584,6 @@ const CrosshairCreator = () => {
           <p className="text-xl text-purple-200 mb-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
             Erstelle dein perfektes Crosshair mit Custom Color System
           </p>
-          
-          {/* Wichtiger Fix-Hinweis */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-green-900/20 to-yellow-900/20 border border-green-500/30 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-green-400 mb-2">✅ Crosshair Code MIT OUTLINE GEFIXT!</h4>
-                <p className="text-sm text-green-300">
-                  <strong>Outline-Parameter funktionieren wieder!</strong> Verwendet jetzt die korrekten Valorant-Parameter (h, o, t) statt der nicht-existierenden. Der Code funktioniert 100% in-game! 🎯💀
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Side-by-Side Layout */}
@@ -769,8 +665,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.outerLinesLength * 2}px`,
                                   height: `${settings.outerLinesThickness}px`,
                                   left: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.outerLinesOpacity / 255
                                 }}
                               />
                               <div 
@@ -780,8 +675,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.outerLinesLength * 2}px`,
                                   height: `${settings.outerLinesThickness}px`,
                                   right: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.outerLinesOpacity / 255
                                 }}
                               />
                               
@@ -793,8 +687,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.outerLinesThickness}px`,
                                   height: `${settings.outerLinesLength * 2}px`,
                                   top: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.outerLinesOpacity / 255
                                 }}
                               />
                               <div 
@@ -804,8 +697,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.outerLinesThickness}px`,
                                   height: `${settings.outerLinesLength * 2}px`,
                                   bottom: `${64 + settings.outerLinesOffset * 2}px`,
-                                  opacity: settings.outerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.outerLinesOpacity / 255
                                 }}
                               />
                             </>
@@ -822,8 +714,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesLength * 2}px`,
                                   height: `${settings.innerLinesThickness}px`,
                                   left: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.innerLinesOpacity / 255
                                 }}
                               />
                               <div 
@@ -833,8 +724,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesLength * 2}px`,
                                   height: `${settings.innerLinesThickness}px`,
                                   right: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.innerLinesOpacity / 255
                                 }}
                               />
                               
@@ -846,8 +736,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesThickness}px`,
                                   height: `${settings.innerLinesLength * 2}px`,
                                   top: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.innerLinesOpacity / 255
                                 }}
                               />
                               <div 
@@ -857,8 +746,7 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesThickness}px`,
                                   height: `${settings.innerLinesLength * 2}px`,
                                   bottom: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                  opacity: settings.innerLinesOpacity / 255
                                 }}
                               />
                             </>
@@ -873,7 +761,7 @@ const CrosshairCreator = () => {
                                 width: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
                                 height: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
                                 opacity: settings.centerDotOpacity / 255,
-                                boxShadow: settings.outlineShow ? `0 0 0 ${settings.outlineThickness}px rgba(0,0,0,${settings.outlineOpacity})` : 'none'
+                                boxShadow: settings.outlineShow ? `0 0 0 1px rgba(0,0,0,0.8)` : 'none'
                               }}
                             />
                           )}
@@ -901,322 +789,300 @@ const CrosshairCreator = () => {
               <div>
                 <h3 className="text-xl font-bold text-purple-400 mb-6 flex items-center gap-2 animate-glow">
                   <Settings className="w-5 h-5 animate-spin-slow" />
-                  Crosshair Einstellungen
+                  Crosshair Details
                 </h3>
-                
-                {/* 🎯 KOMPAKTE GRID-STRUKTUR - Alle Einstellungen sichtbar */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
-                  {/* Center Dot */}
-                  <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-lg">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Center Dot */}
+                  <div className="p-4 bg-purple-600/10 border border-purple-500/20 rounded-lg hover:bg-purple-600/20 hover:border-purple-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 animate-fade-in" style={{ animationDelay: '900ms' }}>
                     <div className="flex items-center space-x-2 mb-4">
-                      <Checkbox
-                        id="centerDotShow"
-                        checked={settings.centerDotShow}
-                        onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
-                      />
-                      <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
-                        🟣 Center Dot
+                  <Checkbox
+                    id="centerDotShow"
+                    checked={settings.centerDotShow}
+                    onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
+                  />
+                  <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
+                        Center Dot
+                  </label>
+                </div>
+
+                {settings.centerDotShow && (
+                      <div className="space-y-3">
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Dicke: {settings.centerDotThickness}
                       </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="6"
+                        value={settings.centerDotThickness}
+                        onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
 
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Dicke: {settings.centerDotThickness}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="6"
-                          value={settings.centerDotThickness}
-                          onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Transparenz: {settings.centerDotOpacity}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
-                          value={settings.centerDotOpacity}
-                          onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Transparenz: {settings.centerDotOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.centerDotOpacity}
+                        onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
                   </div>
+                )}
+              </div>
 
-                  {/* Outer Lines */}
-                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg">
+              {/* Outer Lines */}
+                  <div className="p-4 bg-blue-600/10 border border-blue-500/20 rounded-lg hover:bg-blue-600/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 animate-fade-in" style={{ animationDelay: '1000ms' }}>
                     <div className="flex items-center space-x-2 mb-4">
-                      <Checkbox
-                        id="outerLinesShow"
-                        checked={settings.outerLinesShow}
-                        onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
-                      />
+                  <Checkbox
+                    id="outerLinesShow"
+                    checked={settings.outerLinesShow}
+                    onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
+                  />
                       <label htmlFor="outerLinesShow" className="text-blue-200 font-medium">
-                        🔵 Äußere Linien
+                        Äußere Linien
+                  </label>
+                </div>
+
+                {settings.outerLinesShow && (
+                      <div className="grid grid-cols-2 gap-3">
+                    <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                        Länge: {settings.outerLinesLength}
                       </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="20"
+                        value={settings.outerLinesLength}
+                        onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-blue-200 text-sm mb-2">
-                          Länge: {settings.outerLinesLength}
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="20"
-                          value={settings.outerLinesLength}
-                          onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
-                          className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-blue-200 text-sm mb-2">
-                          Dicke: {settings.outerLinesThickness}
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="10"
-                          value={settings.outerLinesThickness}
-                          onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-blue-200 text-sm mb-2">
-                          Abstand: {settings.outerLinesOffset}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="15"
-                          value={settings.outerLinesOffset}
-                          onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                          className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-blue-200 text-sm mb-2">
-                          Transparenz: {settings.outerLinesOpacity}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
-                          value={settings.outerLinesOpacity}
-                          onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
-                          className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
+                    <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                        Dicke: {settings.outerLinesThickness}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={settings.outerLinesThickness}
+                        onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
 
-                    {/* Movement & Firing Error für Outer Lines */}
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <div className="p-2 bg-blue-700/20 border border-blue-500/30 rounded">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Checkbox
-                            id="outerLinesMovementError"
-                            checked={settings.outerLinesMovementError}
-                            onCheckedChange={(checked) => updateSetting('outerLinesMovementError', checked)}
-                          />
-                          <label htmlFor="outerLinesMovementError" className="text-blue-200 text-xs">
-                            🏃 Movement Error
-                          </label>
-                        </div>
-                        
-                        {settings.outerLinesMovementError && (
-                          <div>
-                            <label className="block text-blue-200 text-xs mb-1">
-                              Multiplier: {settings.outerLinesMovementErrorMultiplier}
-                            </label>
-                            <input
-                              type="range"
-                              min="1"
-                              max="3"
-                              step="0.1"
-                              value={settings.outerLinesMovementErrorMultiplier}
-                              onChange={(e) => updateSetting('outerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
-                              className="w-full h-1 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                          </div>
-                        )}
-                      </div>
+                    <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                        Abstand: {settings.outerLinesOffset}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="15"
+                        value={settings.outerLinesOffset}
+                        onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
 
-                      <div className="p-2 bg-blue-700/20 border border-blue-500/30 rounded">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Checkbox
-                            id="outerLinesFiringError"
-                            checked={settings.outerLinesFiringError}
-                            onCheckedChange={(checked) => updateSetting('outerLinesFiringError', checked)}
-                          />
-                          <label htmlFor="outerLinesFiringError" className="text-blue-200 text-xs">
-                            🔫 Firing Error
-                          </label>
-                        </div>
-                        
-                        {settings.outerLinesFiringError && (
-                          <div>
-                            <label className="block text-blue-200 text-xs mb-1">
-                              Multiplier: {settings.outerLinesFiringErrorMultiplier}
-                            </label>
-                            <input
-                              type="range"
-                              min="1"
-                              max="3"
-                              step="0.1"
-                              value={settings.outerLinesFiringErrorMultiplier}
-                              onChange={(e) => updateSetting('outerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
-                              className="w-full h-1 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
+                    <div>
+                          <label className="block text-blue-200 text-sm mb-2">
+                        Transparenz: {settings.outerLinesOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.outerLinesOpacity}
+                        onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Inner Lines */}
+                  <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg hover:bg-cyan-600/20 hover:border-cyan-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 animate-fade-in" style={{ animationDelay: '1100ms' }}>
+                    <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="innerLinesShow"
+                    checked={settings.innerLinesShow}
+                    onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
+                  />
+                      <label htmlFor="innerLinesShow" className="text-cyan-200 font-medium">
+                        Innere Linien
+                  </label>
+                </div>
+
+                {settings.innerLinesShow && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Länge: {settings.innerLinesLength}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="15"
+                        value={settings.innerLinesLength}
+                        onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Dicke: {settings.innerLinesThickness}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="8"
+                        value={settings.innerLinesThickness}
+                        onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Abstand: {settings.innerLinesOffset}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={settings.innerLinesOffset}
+                        onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Transparenz: {settings.innerLinesOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.innerLinesOpacity}
+                        onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+                  </div>
+                  
+              {/* Farbauswahl - Unten */}
+              <div className="animate-fade-in" style={{ animationDelay: '1200ms' }}>
+                <h3 className="text-xl font-bold text-pink-400 mb-6 flex items-center gap-2 animate-glow">
+                  <Star className="w-5 h-5 animate-spin-slow" />
+                  Farbauswahl
+                </h3>
+                <div className="p-6 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-xl hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-pink-500/20">
+                  <div className="mb-6">
+                    <label className="block text-pink-200 font-medium mb-4">
+                      Primärfarbe 
+                      <span className="text-sm text-pink-300 ml-2">
+                        (Aktuell: {settings.primaryColor} → {getColorValue(settings.primaryColor)})
+                      </span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      {presetColors.map((color) => (
+                        <button
+                          key={color.value}
+                          onClick={() => {
+                            updateSetting('primaryColor', color.value);
+                          }}
+                          className={`relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
+                            settings.primaryColor === color.value
+                              ? 'border-pink-400 bg-pink-500/20 shadow-lg'
+                              : 'border-pink-600/30 hover:border-pink-400/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded border-2 border-white/20"
+                              style={{ backgroundColor: color.color }}
                             />
+                            <span className="text-pink-200 font-medium">{color.label}</span>
                           </div>
-                        )}
-                      </div>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Inner Lines - Full Width */}
-                  <div className="md:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Checkbox
-                        id="innerLinesShow"
-                        checked={settings.innerLinesShow}
-                        onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
-                      />
-                      <label htmlFor="innerLinesShow" className="text-cyan-200 font-medium">
-                        🔷 Innere Linien
-                      </label>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {/* Custom Color Picker */}
+                  <div className="p-4 bg-gradient-to-r from-orange-900/20 to-red-900/20 rounded-lg border border-orange-500/30">
+                    <label className="block text-orange-300 font-medium mb-3">
+                      🎨 Custom Color Picker
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-cyan-200 text-sm mb-2">
-                          Länge: {settings.innerLinesLength}
-                        </label>
+                        <label className="block text-orange-200 text-sm mb-2">Farbe wählen</label>
                         <input
-                          type="range"
-                          min="1"
-                          max="15"
-                          value={settings.innerLinesLength}
-                          onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
-                          className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                          type="color"
+                          value={settings.customColor}
+                          onChange={(e) => {
+                            updateSetting('customColor', e.target.value);
+                            updateSetting('primaryColor', 'custom');
+                          }}
+                          className="w-full h-12 rounded border border-orange-500/30 bg-transparent cursor-pointer"
                         />
                       </div>
-
                       <div>
-                        <label className="block text-cyan-200 text-sm mb-2">
-                          Dicke: {settings.innerLinesThickness}
-                        </label>
+                        <label className="block text-orange-200 text-sm mb-2">Hex-Code</label>
                         <input
-                          type="range"
-                          min="1"
-                          max="8"
-                          value={settings.innerLinesThickness}
-                          onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                          type="text"
+                          value={settings.customColor}
+                          onChange={(e) => {
+                            updateSetting('customColor', e.target.value);
+                            updateSetting('primaryColor', 'custom');
+                          }}
+                          className="w-full px-3 py-2 bg-black/30 border border-orange-500/30 rounded text-orange-100 placeholder-orange-400"
+                          placeholder="#FF0000"
                         />
-                      </div>
-
-                      <div>
-                        <label className="block text-cyan-200 text-sm mb-2">
-                          Abstand: {settings.innerLinesOffset}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="10"
-                          value={settings.innerLinesOffset}
-                          onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
-                          className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-cyan-200 text-sm mb-2">
-                          Transparenz: {settings.innerLinesOpacity}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
-                          value={settings.innerLinesOpacity}
-                          onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
-                          className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Inner Movement & Firing Error */}
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <div className="p-2 bg-cyan-700/20 border border-cyan-500/30 rounded">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Checkbox
-                            id="innerLinesMovementError"
-                            checked={settings.innerLinesMovementError}
-                            onCheckedChange={(checked) => updateSetting('innerLinesMovementError', checked)}
-                          />
-                          <label htmlFor="innerLinesMovementError" className="text-cyan-200 text-xs">
-                            🏃 Movement Error
-                          </label>
-                        </div>
-                        
-                        {settings.innerLinesMovementError && (
-                          <div>
-                            <label className="block text-cyan-200 text-xs mb-1">
-                              Multiplier: {settings.innerLinesMovementErrorMultiplier}
-                            </label>
-                            <input
-                              type="range"
-                              min="1"
-                              max="3"
-                              step="0.1"
-                              value={settings.innerLinesMovementErrorMultiplier}
-                              onChange={(e) => updateSetting('innerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
-                              className="w-full h-1 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
-                            />
+                        <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs text-yellow-300 font-medium">🔥 WICHTIGE ANLEITUNG:</p>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(settings.customColor);
+                                  showNotification(`Hex-Code ${settings.customColor} kopiert!`);
+                                } catch (err) {
+                                  showNotification("Kopieren fehlgeschlagen", "error");
+                                }
+                              }}
+                              className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-white text-xs font-medium"
+                              title="Hex-Code kopieren"
+                            >
+                              📋 {settings.customColor}
+                            </button>
                           </div>
-                        )}
-                      </div>
-
-                      <div className="p-2 bg-cyan-700/20 border border-cyan-500/30 rounded">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <Checkbox
-                            id="innerLinesFiringError"
-                            checked={settings.innerLinesFiringError}
-                            onCheckedChange={(checked) => updateSetting('innerLinesFiringError', checked)}
-                          />
-                          <label htmlFor="innerLinesFiringError" className="text-cyan-200 text-xs">
-                            🔫 Firing Error
-                          </label>
+                          <ol className="text-xs text-yellow-200 space-y-1">
+                            <li>1. Wähle deine Farbe (z.B. #F90606)</li>
+                            <li>2. Kopiere den generierten Code</li>
+                            <li>3. In Valorant: Code importieren</li>
+                            <li>4. In Valorant: Settings → Crosshair → Primary → Color → Custom → <span className="bg-black/30 px-1 rounded">{settings.customColor}</span></li>
+                          </ol>
+                          <p className="text-xs text-yellow-300 mt-2 font-medium">⚠️ Custom Color muss separat in Valorant gesetzt werden!</p>
                         </div>
-                        
-                        {settings.innerLinesFiringError && (
-                          <div>
-                            <label className="block text-cyan-200 text-xs mb-1">
-                              Multiplier: {settings.innerLinesFiringErrorMultiplier}
-                            </label>
-                            <input
-                              type="range"
-                              min="1"
-                              max="3"
-                              step="0.1"
-                              value={settings.innerLinesFiringErrorMultiplier}
-                              onChange={(e) => updateSetting('innerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
-                              className="w-full h-1 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -1238,40 +1104,22 @@ const CrosshairCreator = () => {
                   centerDotShow: true,
                   centerDotThickness: 2,
                   centerDotOpacity: 255,
-                  centerDotOutline: false,
-                  centerDotOutlineThickness: 1,
-                  centerDotOutlineOpacity: 255,
                   outerLinesShow: true,
                   outerLinesLength: 7,
                   outerLinesThickness: 2,
                   outerLinesOffset: 3,
                   outerLinesOpacity: 255,
-                  outerLinesOutline: false,
-                  outerLinesOutlineOpacity: 255,
-                  outerLinesOutlineThickness: 1,
-                  outerLinesMovementError: false,
-                  outerLinesMovementErrorMultiplier: 1,
-                  outerLinesFiringError: false,
-                  outerLinesFiringErrorMultiplier: 1,
                   innerLinesShow: false,
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
                   innerLinesOpacity: 255,
-                  innerLinesOutline: false,
-                  innerLinesOutlineOpacity: 255,
-                  innerLinesOutlineThickness: 1,
-                  innerLinesMovementError: false,
-                  innerLinesMovementErrorMultiplier: 1,
-                  innerLinesFiringError: false,
-                  innerLinesFiringErrorMultiplier: 1,
                   outlineShow: false,
-                  outlineOpacity: 0.5,
+                  outlineOpacity: 255,
                   outlineThickness: 1,
                   firingErrorShow: false,
                   movementErrorShow: false,
-                  fadeCrosshairWithFiringError: false,
-                  overrideFiringErrorOffsetWithCrosshairOffset: false
+                  fadeCrosshairWithFiringError: false
                 })}
                 variant="outline"
                 className="border-red-500 text-red-400 hover:bg-red-500/20"
@@ -1377,152 +1225,7 @@ const CrosshairCreator = () => {
             </div>
           )}
 
-          {/* Farbauswahl & Advanced Settings - Kompakt */}
-          <div className="animate-fade-in" style={{ animationDelay: '1200ms' }}>
-            <h3 className="text-xl font-bold text-pink-400 mb-6 flex items-center gap-2 animate-glow">
-              <Star className="w-5 h-5 animate-spin-slow" />
-              Farb- & Advanced Settings
-            </h3>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Farbauswahl */}
-              <div className="p-4 bg-gradient-to-r from-pink-500/10 to-purple-500/10 border border-pink-500/20 rounded-lg">
-                <h4 className="text-pink-300 font-medium mb-4">🎨 Crosshair Farbe</h4>
-                
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {presetColors.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => {
-                        updateSetting('primaryColor', color.value);
-                      }}
-                      className={`relative p-2 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
-                        settings.primaryColor === color.value
-                          ? 'border-pink-400 bg-pink-500/20 shadow-lg'
-                          : 'border-pink-600/30 hover:border-pink-400/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-6 h-6 rounded border-2 border-white/20"
-                          style={{ backgroundColor: color.color }}
-                        />
-                        <span className="text-pink-200 text-sm font-medium">{color.label}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
 
-                {/* Custom Color Picker - Kompakt */}
-                <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-orange-200 text-xs mb-2">Custom Color</label>
-                      <input
-                        type="color"
-                        value={settings.customColor}
-                        onChange={(e) => {
-                          updateSetting('customColor', e.target.value);
-                          updateSetting('primaryColor', 'custom');
-                        }}
-                        className="w-full h-8 rounded border border-orange-500/30 bg-transparent cursor-pointer"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-orange-200 text-xs mb-2">Hex-Code</label>
-                      <input
-                        type="text"
-                        value={settings.customColor}
-                        onChange={(e) => {
-                          updateSetting('customColor', e.target.value);
-                          updateSetting('primaryColor', 'custom');
-                        }}
-                        className="w-full px-2 py-1 bg-black/30 border border-orange-500/30 rounded text-orange-100 text-sm"
-                        placeholder="#FF0000"
-                      />
-                    </div>
-                  </div>
-                  
-                  {settings.primaryColor === 'custom' && (
-                    <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded">
-                      <p className="text-xs text-yellow-300 mb-2">⚠️ 2-Schritt Setup:</p>
-                      <p className="text-xs text-yellow-200">1. Code importieren → 2. In Valorant Custom Color auf <code className="bg-black/30 px-1 rounded">{settings.customColor}</code> setzen</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Advanced Settings */}
-              <div className="p-4 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-lg">
-                <h4 className="text-purple-300 font-medium mb-4">⚙️ Advanced Settings</h4>
-                
-                {/* Global Outline Controls - WICHTIG: Gilt für GESAMTES Crosshair! */}
-                <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Checkbox
-                      id="outlineShow"
-                      checked={settings.outlineShow}
-                      onCheckedChange={(checked) => updateSetting('outlineShow', checked)}
-                    />
-                    <label htmlFor="outlineShow" className="text-yellow-200 text-sm font-medium">
-                      💀 Global Crosshair Outline (gesamtes Crosshair)
-                    </label>
-                  </div>
-                  
-                  <div className="mb-3 p-2 bg-orange-900/20 border border-orange-500/30 rounded">
-                    <p className="text-xs text-orange-300">
-                      ⚠️ <strong>WICHTIG:</strong> Outline funktioniert in Valorant NUR global für das komplette Crosshair, 
-                      nicht separat für Outer/Inner Lines!
-                    </p>
-                  </div>
-                  
-                  {settings.outlineShow && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-yellow-200 text-xs mb-2">
-                          Global Opacity: {settings.outlineOpacity.toFixed(1)}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.1"
-                          value={settings.outlineOpacity}
-                          onChange={(e) => updateSetting('outlineOpacity', parseFloat(e.target.value))}
-                          className="w-full h-2 bg-yellow-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-yellow-200 text-xs mb-2">
-                          Global Thickness: {settings.outlineThickness}
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="6"
-                          value={settings.outlineThickness}
-                          onChange={(e) => updateSetting('outlineThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-yellow-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Override Setting */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="overrideFiringErrorOffsetWithCrosshairOffset"
-                    checked={settings.overrideFiringErrorOffsetWithCrosshairOffset}
-                    onCheckedChange={(checked) => updateSetting('overrideFiringErrorOffsetWithCrosshairOffset', checked)}
-                  />
-                  <label htmlFor="overrideFiringErrorOffsetWithCrosshairOffset" className="text-purple-200 text-sm">
-                    🎯 Override Firing Error Offset
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
