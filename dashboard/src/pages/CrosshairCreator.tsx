@@ -94,7 +94,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       'cyan': 4, 'pink': 5, 'red': 6, 'custom': 5
     };
     
-    const color = colorMap[settings.primaryColor] || 1;
+    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
     console.log(`🔍 CODE GEN: "${settings.primaryColor}" → Color Index: ${color}`);
     let code = "0"; // Start
     
