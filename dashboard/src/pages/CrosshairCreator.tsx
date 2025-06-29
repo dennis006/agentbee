@@ -69,54 +69,49 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     code += `;h;${settings.outlineShow ? 1 : 0}`; // Outline on/off
     code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`; // Firing error
     
-         // Center Dot
-     code += `;d;${settings.centerDotShow ? 1 : 0}`; // Dot on/off
-     if (settings.centerDotShow && settings.centerDotThickness > 0) {
-       code += `;z;${settings.centerDotThickness}`; // Dot size
-       code += `;a;${Math.round(settings.centerDotOpacity)}`; // Dot transparency (P:a)
-     }
+    // Center Dot
+    code += `;d;${settings.centerDotShow ? 1 : 0}`; // Dot on/off
+    if (settings.centerDotShow && settings.centerDotThickness > 0) {
+      code += `;z;${settings.centerDotThickness}`; // Dot size
+    }
     
     // Movement error (optional)
     if (settings.movementErrorShow) {
       code += ";m;1";
     }
     
-         // INNER LINES (0x) - IMMER alle Parameter setzen!
-     const innerShow = settings.innerLinesShow && settings.innerLinesLength > 0;
-     const innerLength = innerShow ? settings.innerLinesLength : 0;
-     const innerOffset = innerShow ? settings.innerLinesOffset : 0;
-     const innerAlpha = innerShow ? Math.round(settings.innerLinesOpacity) : 0;
-     const innerThickness = innerShow ? settings.innerLinesThickness : 0;
-     
-     code += `;0b;${innerShow ? 1 : 0}`; // P:0b - Inner Lines Aktivieren!
-     code += `;0t;${innerThickness}`;
-     code += `;0l;${innerLength}`;
-     code += `;0o;${innerOffset}`;
-     code += `;0a;${innerAlpha}`;
-     code += ";0m;0;0f;0"; // Movement + Fade immer 0
+    // INNER LINES (0x) - IMMER alle Parameter setzen!
+    const innerLength = (settings.innerLinesShow && settings.innerLinesLength > 0) ? settings.innerLinesLength : 0;
+    const innerOffset = settings.innerLinesShow ? settings.innerLinesOffset : 0;
+    const innerAlpha = settings.innerLinesShow ? Math.round(settings.innerLinesOpacity / 255) : 0;
+    const innerThickness = settings.innerLinesShow ? settings.innerLinesThickness : 0;
     
-         // OUTER LINES (1x) - IMMER alle Parameter setzen!
-     const outerShow = settings.outerLinesShow && settings.outerLinesLength > 0;
-     const outerLength = outerShow ? settings.outerLinesLength : 0;
-     const outerOffset = outerShow ? settings.outerLinesOffset : 0;
-     const outerAlpha = outerShow ? Math.round(settings.outerLinesOpacity) : 0;
-     const outerThickness = outerShow ? settings.outerLinesThickness : 0;
-     
-     code += `;1b;${outerShow ? 1 : 0}`; // P:1b - Outer Lines Aktivieren!
-     code += `;1t;${outerThickness}`;
-     code += `;1l;${outerLength}`;
-     code += `;1o;${outerOffset}`;
-     code += `;1a;${outerAlpha}`;
-     code += ";1m;0;1f;0"; // Movement + Fade immer 0
+    code += `;0l;${innerLength}`;
+    code += `;0o;${innerOffset}`;
+    code += `;0a;${innerAlpha}`;
+    code += `;0t;${innerThickness}`;
+    code += ";0m;0;0f;0"; // Movement + Fade immer 0
+    
+    // OUTER LINES (1x) - IMMER alle Parameter setzen!
+    const outerLength = (settings.outerLinesShow && settings.outerLinesLength > 0) ? settings.outerLinesLength : 0;
+    const outerOffset = settings.outerLinesShow ? settings.outerLinesOffset : 0;
+    const outerAlpha = settings.outerLinesShow ? Math.round(settings.outerLinesOpacity / 255) : 0;
+    const outerThickness = settings.outerLinesShow ? settings.outerLinesThickness : 0;
+    
+    code += `;1l;${outerLength}`;
+    code += `;1o;${outerOffset}`;
+    code += `;1a;${outerAlpha}`;
+    code += `;1t;${outerThickness}`;
+    code += ";1m;0;1f;0"; // Movement + Fade immer 0
     
     // Standard end
     code += ";1b;0";
     
     return code;
-      } catch (error) {
-      // Fallback: Funktionierender Code mit sichtbaren Outer Lines (korrekte P:0b und P:1b Parameter)
-      return "0;s;1;P;c;1;h;0;f;0;d;1;z;2;a;255;0b;0;0t;0;0l;0;0o;0;0a;0;0m;0;0f;0;1b;1;1t;2;1l;4;1o;3;1a;255;1m;0;1f;0;1b;0";
-    }
+  } catch (error) {
+    // Fallback: Funktionierender Code mit sichtbaren Outer Lines
+    return "0;s;1;P;c;1;h;0;f;0;d;1;z;2;0l;0;0o;0;0a;0;0t;0;0m;0;0f;0;1l;4;1o;3;1a;1;1t;2;1m;0;1f;0;1b;0";
+  }
 };
 
 interface CrosshairSettings {
