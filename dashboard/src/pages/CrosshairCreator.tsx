@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Copy, Download, Settings, Eye, Check, RotateCcw, Star, Sliders, AlertCircle } from 'lucide-react';
+import { Target, Copy, Download, Settings, Eye, Check, RotateCcw, Star, Sliders, AlertCircle, Share2, MessageSquare, ThumbsUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { useToast, ToastContainer } from '../components/ui/toast';
@@ -511,6 +511,85 @@ const CrosshairCreator = () => {
       }
     };
   }, []);
+
+  // 🔗 Share Crosshair to Discord
+  const shareCrosshair = async () => {
+    try {
+      setLoading(true);
+      
+      // Mock user data (in real app, get from Discord OAuth)
+      const mockUser = {
+        id: '123456789012345678',
+        username: 'TestUser',
+        avatar: 'https://cdn.discordapp.com/embed/avatars/0.png'
+      };
+
+      const mockGuild = {
+        id: '1234567890',
+        name: 'AgentBee Community'
+      };
+
+      // Detect crosshair type
+      const getCrosshairType = () => {
+        if (settings.centerDotShow && settings.innerLinesShow) return 'Hybrid';
+        if (settings.centerDotShow && !settings.innerLinesShow) return 'Center Dot';
+        if (!settings.centerDotShow && settings.innerLinesShow) return 'Compact';
+        return 'Custom';
+      };
+
+      // Get primary color
+      const getPrimaryColor = () => {
+        if (settings.primaryColor === 'custom') {
+          return settings.customColor;
+        }
+        return '#FFFFFF'; // Default white
+      };
+
+      const shareData = {
+        user_id: mockUser.id,
+        username: mockUser.username,
+        user_avatar: mockUser.avatar,
+        guild_id: mockGuild.id,
+        crosshair_code: crosshairCode || generateValorantCrosshairCode(settings),
+        crosshair_name: `${getCrosshairType()} Crosshair`,
+        description: `Created with AgentBee Crosshair Creator`,
+        crosshair_type: getCrosshairType(),
+        color_hex: getPrimaryColor(),
+        tags: [getCrosshairType().toLowerCase(), 'agentbee']
+      };
+
+      console.log('🎯 Sharing crosshair:', shareData);
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+      const response = await fetch(`${apiUrl}/api/crosshair/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(shareData)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showNotification(
+          `🎯 Crosshair erfolgreich geteilt! ${result.discord_posted ? '📤 In Discord gepostet!' : '💾 Gespeichert!'}`, 
+          'success'
+        );
+      } else {
+        throw new Error(result.message || 'Sharing failed');
+      }
+
+    } catch (error) {
+      console.error('❌ Share error:', error);
+      showNotification(
+        '❌ Fehler beim Teilen. Stelle sicher, dass Discord konfiguriert ist.',
+        'error'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Custom animations using inline styles
   useEffect(() => {
@@ -1275,6 +1354,23 @@ const CrosshairCreator = () => {
                   <>
                     <Eye className="w-4 h-4 mr-2" />
                     Bild Generieren
+                  </>
+                )}
+              </Button>
+              <Button 
+                onClick={shareCrosshair}
+                disabled={loading}
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/30"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Teilen...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    🔗 Discord Teilen
                   </>
                 )}
               </Button>

@@ -19,6 +19,7 @@ import TwitchNotifications from './pages/TwitchNotifications'
 import Valorant from './pages/Valorant'
 import ValorantNews from './pages/ValorantNews'
 import CrosshairCreator from './pages/CrosshairCreator'
+import CrosshairSharing from './pages/CrosshairSharing'
 
 import Gaming from './pages/Gaming'
 import APIKeys from './pages/APIKeys'
@@ -114,6 +115,8 @@ const Navigation = ({
         { id: 'twitch', icon: Play, label: 'Twitch Live', description: 'Live Stream Notifications' },
         { id: 'valorant', icon: Target, label: 'Valorant', description: 'Player Stats & MMR Tracking' },
         { id: 'valorant-news', icon: Newspaper, label: 'Valorant News', description: 'Automatische News Updates' },
+        { id: 'crosshair-creator', icon: Target, label: 'Crosshair Creator', description: 'Valorant Crosshair Generator' },
+        { id: 'crosshair-sharing', icon: Target, label: 'Crosshair Sharing', description: 'Discord Crosshair Community' },
     
       ]
     },
@@ -416,6 +419,10 @@ const DashboardLayout = () => {
         return <Valorant />
       case 'valorant-news':
         return <ValorantNews />
+      case 'crosshair-creator':
+        return <CrosshairCreator />
+      case 'crosshair-sharing':
+        return <CrosshairSharing />
 
       case 'verification':
         return <VerificationSettings />
@@ -499,6 +506,7 @@ const App = () => {
           {/* Public Routes */}
           <Route path="/verify" element={<VerifyPage />} />
           <Route path="/crosshair" element={<CrosshairCreator />} />
+          <Route path="/crosshair-sharing" element={<CrosshairSharing />} />
           <Route path="/login" element={<LoginPage />} />
           
           {/* Protected Dashboard Routes */}
