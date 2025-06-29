@@ -1,8 +1,60 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Card } from '../components/ui/card';
-import { Target, Settings, MessageSquare, Users, Vote, Copy, Check, X, ExternalLink, AlertCircle, Info } from 'lucide-react';
-import { useToast } from '../components/ui/toast';
+import { Input } from '../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useToast, ToastContainer } from '../components/ui/toast';
+import { Save, Target, MessageSquare, Users, Settings, Shield, BarChart3, ArrowUpDown, Copy, RefreshCw, AlertCircle, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
+
+// Matrix Blocks Komponente
+const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
+  const blocks = Array.from({ length: density }, (_, i) => (
+    <div
+      key={i}
+      className="matrix-block"
+      style={{
+        left: `${Math.random() * 100}%`,
+        animationDelay: `${Math.random() * 5}s`,
+        animationDuration: `${2 + Math.random() * 3}s`
+      }}
+    />
+  ));
+  return <div className="matrix-blocks">{blocks}</div>;
+};
+
+// Switch component
+const Switch: React.FC<{ checked: boolean; onCheckedChange: (checked: boolean) => void; className?: string; id?: string }> = ({ checked, onCheckedChange, className = '', id }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    id={id}
+    onClick={() => onCheckedChange(!checked)}
+    className={`peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 ${checked ? 'bg-purple-primary' : 'bg-dark-bg'} ${className}`}
+  >
+    <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+  </button>
+);
+
+// Tooltip component
+const Tooltip: React.FC<{ content: React.ReactNode; title?: string }> = ({ content, title }) => (
+  <div className="relative group">
+    <button
+      type="button"
+      className="text-blue-400 hover:text-blue-300 text-xs transition-colors duration-200"
+    >
+      ❓
+    </button>
+    
+    {/* Tooltip */}
+    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-dark-surface border border-purple-primary/30 rounded-lg text-xs text-dark-text opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 shadow-lg min-w-max">
+      {title && <div className="font-medium text-blue-400 mb-1">{title}</div>}
+      <div>{content}</div>
+      {/* Arrow */}
+      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-dark-surface"></div>
+    </div>
+  </div>
+);
 
 interface CrosshairSettings {
   guild_id: string;
@@ -248,30 +300,49 @@ const CrosshairSharing = () => {
 
   if (!selectedGuild) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center">
-          <Target className="w-16 h-16 text-purple-400 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-white mb-4">Crosshair Sharing Settings</h1>
-          <p className="text-gray-300 mb-8">Discord Server für Crosshair Sharing konfigurieren</p>
-          
-          <div className="max-w-md mx-auto">
-            <label className="block text-gray-300 text-sm font-medium mb-2">
+      <div className="space-y-8 p-6 animate-fade-in relative">
+        {/* Matrix Background Effects */}
+        <MatrixBlocks density={20} />
+        
+        {/* Page Header */}
+        <div className="text-center py-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Target className="w-12 h-12 text-purple-accent animate-pulse" />
+            <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
+              Crosshair Sharing System
+            </h1>
+          </div>
+          <div className="text-dark-text text-lg max-w-2xl mx-auto">
+            Konfiguriere das Discord Crosshair Sharing System für deinen Server wie ein Boss!
+          </div>
+          <div className="w-32 h-1 bg-gradient-neon mx-auto mt-4 rounded-full animate-glow"></div>
+        </div>
+
+        {/* Guild Selection */}
+        <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+              <Settings className="w-5 h-5 text-purple-accent" />
               Discord Server auswählen
-            </label>
-            
+            </CardTitle>
+            <CardDescription className="text-dark-muted">
+              Wähle den Server für das Crosshair Sharing System
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             {guildsLoading ? (
-              <div className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-gray-400 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400 mr-2"></div>
+              <div className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-muted rounded-lg p-3 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-accent mr-2"></div>
                 Lade Discord Server...
               </div>
             ) : guilds.length === 0 ? (
-              <div className="w-full px-4 py-3 bg-red-900/20 border border-red-500/30 rounded-lg text-red-300 text-center">
+              <div className="w-full bg-red-900/20 border border-red-500/30 text-red-300 rounded-lg p-3 text-center">
                 <AlertCircle className="w-5 h-5 mx-auto mb-2" />
                 Keine Discord Server gefunden oder Bot Token fehlt
               </div>
             ) : (
               <select 
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg p-3"
                 value={selectedGuild}
                 onChange={(e) => setSelectedGuild(e.target.value)}
               >
@@ -285,23 +356,35 @@ const CrosshairSharing = () => {
             )}
             
             {guilds.length > 0 && (
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-dark-muted mt-2">
                 {guilds.length} Server verfügbar • Nur Server mit Admin-Rechten
               </p> 
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* Toast Container */}
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto mb-4"></div>
-          <p className="text-gray-300">Einstellungen werden geladen...</p>
+      <div className="space-y-8 p-6 animate-fade-in relative">
+        {/* Matrix Background Effects */}
+        <MatrixBlocks density={20} />
+        
+        {/* Loading */}
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-accent mx-auto mb-4"></div>
+            <p className="text-dark-text text-lg">Einstellungen werden geladen...</p>
+          </div>
         </div>
+
+        {/* Toast Container */}
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
     );
   }
