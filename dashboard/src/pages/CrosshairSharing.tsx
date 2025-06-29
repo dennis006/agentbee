@@ -231,24 +231,52 @@ const CrosshairSharing = () => {
       const response = await fetch(`${apiUrl}/api/crosshair/settings/${selectedGuild}`);
       const data = await response.json();
       
-      if (data.success) {
-        setSettings(data.settings);
+      if (data.success && data.settings) {
+        // Nur laden, wenn noch keine Settings existieren oder sie explizit leer sind
+        if (!settings || !settings.crosshair_channel_id) {
+          console.log('📥 Loading settings from server:', data.settings);
+          setSettings(data.settings);
+        } else {
+          console.log('🔒 Keeping current settings to preserve user selection');
+          // Aktualisiere nur die Server-spezifischen Felder, behalte User-Auswahl
+          setSettings(prevSettings => ({
+            ...prevSettings,
+            guild_id: selectedGuild,
+            guild_name: data.settings.guild_name || prevSettings?.guild_name || 'Unknown Guild',
+            // Behalte die aktuellen Channel-Settings wenn User bereits etwas ausgewählt hat
+            crosshair_channel_id: prevSettings?.crosshair_channel_id || data.settings.crosshair_channel_id || '',
+            crosshair_channel_name: prevSettings?.crosshair_channel_name || data.settings.crosshair_channel_name || '',
+            // Aber lade andere Settings vom Server
+            auto_post_enabled: data.settings.auto_post_enabled ?? true,
+            voting_enabled: data.settings.voting_enabled ?? true,
+            require_approval: data.settings.require_approval ?? false,
+            moderator_role_id: data.settings.moderator_role_id || '',
+            featured_role_id: data.settings.featured_role_id || '',
+            min_votes_for_featured: data.settings.min_votes_for_featured || 10,
+            webhook_url: data.settings.webhook_url || '',
+            notification_settings: data.settings.notification_settings || {}
+          }));
+        }
       } else {
-        const selectedGuildData = guilds.find(g => g.id === selectedGuild);
-        setSettings({
-          guild_id: selectedGuild,
-          guild_name: selectedGuildData?.name || 'Unknown Guild',
-          crosshair_channel_id: '',
-          crosshair_channel_name: '',
-          auto_post_enabled: true,
-          voting_enabled: true,
-          require_approval: false,
-          moderator_role_id: '',
-          featured_role_id: '',
-          min_votes_for_featured: 10,
-          webhook_url: '',
-          notification_settings: {}
-        });
+        // Nur Default-Settings setzen, wenn noch keine existieren
+        if (!settings) {
+          const selectedGuildData = guilds.find(g => g.id === selectedGuild);
+          console.log('📝 Setting default settings for new guild');
+          setSettings({
+            guild_id: selectedGuild,
+            guild_name: selectedGuildData?.name || 'Unknown Guild',
+            crosshair_channel_id: '',
+            crosshair_channel_name: '',
+            auto_post_enabled: true,
+            voting_enabled: true,
+            require_approval: false,
+            moderator_role_id: '',
+            featured_role_id: '',
+            min_votes_for_featured: 10,
+            webhook_url: '',
+            notification_settings: {}
+          });
+        }
       }
     } catch (err) {
       error('Fehler beim Laden der Einstellungen');
@@ -304,10 +332,22 @@ const CrosshairSharing = () => {
 
   const updateSetting = (key: keyof CrosshairSettings, value: any) => {
     if (!settings) return;
-    setSettings({
+    
+    console.log(`🔄 Updating setting: ${key} = ${value}`);
+    const newSettings = {
       ...settings,
       [key]: value
-    });
+    };
+    
+    setSettings(newSettings);
+    
+    // Bei Channel-Auswahl sofort Debug-Info
+    if (key === 'crosshair_channel_id' || key === 'crosshair_channel_name') {
+      console.log('🎯 Channel updated:', { 
+        channel_id: newSettings.crosshair_channel_id, 
+        channel_name: newSettings.crosshair_channel_name 
+      });
+    }
   };
 
   if (!selectedGuild) {
