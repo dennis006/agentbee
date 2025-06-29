@@ -79,16 +79,11 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       code += `;u;${hex.toUpperCase()}FF`; // Add alpha FF
     }
     
-    // Outline/Border - NUR DIESE ZEILEN KORRIGIERT!
+    // Outline/Border - EINFACH wie in echten Pro-Codes
     if (settings.outlineShow) {
-      code += ";o;1"; // outline on
-      code += `;h;${settings.outlineThickness}`; // outline thickness 
-      // Outline opacity - nur wenn nicht 255
-      if (settings.outlineOpacity !== 255) {
-        code += `;oa;${(settings.outlineOpacity / 255).toFixed(3)}`;
-      }
+      code += ";o;1"; // outline on (wie aspas, Boaster, ScreaM etc.)
     } else {
-      code += ";h;0"; // no outline
+      code += ";h;0"; // h;0 = kein outline (wie yay, Shroud etc.)
     }
     
     // Center Dot
