@@ -69,7 +69,7 @@ const CrosshairSharing = () => {
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedGuild, setSelectedGuild] = useState('');
-  const { success, error } = useToast();
+  const { toasts, success, error, removeToast } = useToast();
 
   // Load Discord guilds on component mount
   useEffect(() => {
@@ -307,20 +307,67 @@ const CrosshairSharing = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <Target className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-        <h1 className="text-3xl font-bold text-white mb-2">Crosshair Sharing Settings</h1>
-        <p className="text-gray-300">
-          Konfiguration für <span className="text-purple-400 font-medium">{settings?.guild_name}</span>
-        </p>
+    <div className="space-y-8 p-6 animate-fade-in relative">
+      {/* Matrix Background Effects */}
+      <MatrixBlocks density={20} />
+      
+      {/* Page Header */}
+      <div className="text-center py-8">
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <Target className="w-12 h-12 text-purple-accent animate-pulse" />
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-neon">
+            Crosshair Sharing System
+          </h1>
+        </div>
+        <div className="text-dark-text text-lg max-w-2xl mx-auto">
+          Verwalte das Discord Crosshair Sharing System für deinen Server wie ein Boss! 
+          <span className="ml-2 inline-block relative">
+            <svg 
+              className="w-6 h-6 animate-pulse hover:animate-bounce text-purple-400 hover:text-purple-300 transition-all duration-300 hover:scale-110 drop-shadow-lg" 
+              fill="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            <div className="absolute inset-0 animate-ping">
+              <svg 
+                className="w-6 h-6 text-purple-500 opacity-30" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </div>
+          </span>
+        </div>
+        <div className="w-32 h-1 bg-gradient-neon mx-auto mt-4 rounded-full animate-glow"></div>
+        
+        {/* Guild Info */}
+        <div className="mt-6 p-4 bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow rounded-xl max-w-md mx-auto">
+          <p className="text-dark-text text-sm mb-2">
+            Konfiguration für
+          </p>
+          <p className="text-purple-accent font-medium text-lg">
+            {settings?.guild_name}
+          </p>
+          <Button
+            onClick={() => setSelectedGuild('')}
+            className="mt-3 bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-2 px-4 rounded-lg shadow-neon transition-all duration-300 hover:scale-105"
+          >
+            Server wechseln
+          </Button>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex justify-center gap-4">
         <Button
-          onClick={() => setSelectedGuild('')}
-          variant="outline"
-          className="mt-4 border-gray-600 text-gray-300 hover:bg-gray-700"
+          onClick={saveSettings}
+          disabled={saving}
+          className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
         >
-          Server wechseln
+          <Save className="h-5 w-5" />
+          <span>{saving ? 'Speichere...' : 'Einstellungen Speichern'}</span>
         </Button>
       </div>
 
@@ -328,21 +375,38 @@ const CrosshairSharing = () => {
         {/* Settings Panel */}
         <div className="space-y-6">
           {/* Basic Settings */}
-          <Card className="bg-gray-800 border-gray-700">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Settings className="w-6 h-6 text-purple-400" />
-                <h2 className="text-xl font-bold text-white">Grundeinstellungen</h2>
-              </div>
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <Settings className="w-5 h-5 text-purple-accent" />
+                Grundeinstellungen
+                <Tooltip 
+                  title="⚙️ Grundeinstellungen erklärt:"
+                  content={
+                    <div>
+                      <div>Basis-Konfiguration für das Crosshair Sharing:</div>
+                      <div>• Channel: Wo Crosshairs automatisch gepostet werden</div>
+                      <div>• Webhook: Für automatisches Posten ohne Bot-Status</div>
+                      <div>• Auto-Post: Crosshairs automatisch posten</div>
+                      <div>• Voting: Abstimmungssystem aktivieren</div>
+                    </div>
+                  }
+                />
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Basis-Konfiguration für das Crosshair-System
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                  <label className="text-sm font-medium text-dark-text mb-2 block">
                     Crosshair Channel
                   </label>
                   {channels.length > 0 ? (
                     <select
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg p-2"
                       value={settings?.crosshair_channel_id || ''}
                       onChange={(e) => {
                         const selectedChannel = channels.find(c => c.id === e.target.value);
@@ -358,98 +422,96 @@ const CrosshairSharing = () => {
                       ))}
                     </select>
                   ) : (
-                    <div className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400 mr-2"></div>
+                    <div className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-muted rounded-lg p-2 flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-accent mr-2"></div>
                       Lade Channels...
                     </div>
                   )}
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-dark-muted mt-1">
                     Channel wo Crosshairs automatisch gepostet werden
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                  <label className="text-sm font-medium text-dark-text mb-2 block">
                     Discord Webhook URL
                   </label>
-                  <input
+                  <Input
                     type="url"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-neon-purple"
                     placeholder="https://discord.com/api/webhooks/..."
                     value={settings?.webhook_url || ''}
                     onChange={(e) => updateSetting('webhook_url', e.target.value)}
                   />
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-dark-muted mt-1">
                     Webhook für das automatische Posten von Crosshairs
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-gray-300 text-sm font-medium mb-2">
-                      Auto-Post
-                    </label>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={settings?.auto_post_enabled || false}
-                        onChange={(e) => updateSetting('auto_post_enabled', e.target.checked)}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-300">Aktiviert</span>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-dark-text">Auto-Post aktiviert</label>
+                    <Switch
+                      checked={settings?.auto_post_enabled || false}
+                      onCheckedChange={(checked) => updateSetting('auto_post_enabled', checked)}
+                    />
                   </div>
 
-                  <div>
-                    <label className="block text-gray-300 text-sm font-medium mb-2">
-                      Voting
-                    </label>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={settings?.voting_enabled || false}
-                        onChange={(e) => updateSetting('voting_enabled', e.target.checked)}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-300">Aktiviert</span>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-dark-text">Voting System aktiviert</label>
+                    <Switch
+                      checked={settings?.voting_enabled || false}
+                      onCheckedChange={(checked) => updateSetting('voting_enabled', checked)}
+                    />
                   </div>
                 </div>
-              </div>
-            </div>
+            </CardContent>
           </Card>
 
           {/* Moderation Settings */}
-          <Card className="bg-gray-800 border-gray-700">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Users className="w-6 h-6 text-blue-400" />
-                <h2 className="text-xl font-bold text-white">Moderation</h2>
-              </div>
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-accent" />
+                Moderation
+                <Tooltip 
+                  title="🛡️ Moderation erklärt:"
+                  content={
+                    <div>
+                      <div>Moderations-Einstellungen für Crosshairs:</div>
+                      <div>• Approval: Crosshairs müssen genehmigt werden</div>
+                      <div>• Moderator Role: Rolle mit Moderations-Rechten</div>
+                      <div>• Featured Role: Rolle für Featured Crosshairs</div>
+                      <div>• Min Votes: Mindest-Votes für Auto-Featured</div>
+                    </div>
+                  }
+                />
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Moderations-Einstellungen und Rollen-Konfiguration
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Moderation erforderlich
-                  </label>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={settings?.require_approval || false}
-                      onChange={(e) => updateSetting('require_approval', e.target.checked)}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-300">Crosshairs müssen genehmigt werden</span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-dark-text">Moderation erforderlich</label>
+                    <p className="text-xs text-dark-muted">Crosshairs müssen genehmigt werden</p>
                   </div>
+                  <Switch
+                    checked={settings?.require_approval || false}
+                    onCheckedChange={(checked) => updateSetting('require_approval', checked)}
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                  <label className="text-sm font-medium text-dark-text mb-2 block">
                     Moderator Role
                   </label>
                   {roles.length > 0 ? (
                     <select
-                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg p-2"
                       value={settings?.moderator_role_id || ''}
                       onChange={(e) => updateSetting('moderator_role_id', e.target.value)}
                     >
@@ -461,8 +523,8 @@ const CrosshairSharing = () => {
                       ))}
                     </select>
                   ) : (
-                    <div className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-400 flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400 mr-2"></div>
+                    <div className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-muted rounded-lg p-2 flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-accent mr-2"></div>
                       Lade Rollen...
                     </div>
                   )}
@@ -655,6 +717,9 @@ const CrosshairSharing = () => {
           )}
         </div>
       </div>
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };
