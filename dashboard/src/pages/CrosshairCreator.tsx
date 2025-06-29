@@ -93,6 +93,11 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     if (settings.movementErrorShow) {
       code += ";m;1";
     }
+
+    // Override Firing Error Offset
+    if (settings.overrideFiringErrorOffsetWithCrosshairOffset) {
+      code += ";op;1";
+    }
     
     // Outer Lines (0x parameters)
     if (settings.outerLinesShow) {
@@ -113,8 +118,28 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       } else {
         code += `;0s;0`; // outer outline off
       }
+      
+      // Outer Lines Movement Error
+      if (settings.outerLinesMovementError) {
+        code += `;0m;1`; // outer movement error on
+        if (settings.outerLinesMovementErrorMultiplier !== 1) {
+          code += `;0mi;${settings.outerLinesMovementErrorMultiplier}`; // outer movement error multiplier
+        }
+      } else {
+        code += `;0m;0`; // outer movement error off
+      }
+      
+      // Outer Lines Firing Error
+      if (settings.outerLinesFiringError) {
+        code += `;0e;1`; // outer firing error on
+        if (settings.outerLinesFiringErrorMultiplier !== 1) {
+          code += `;0ei;${settings.outerLinesFiringErrorMultiplier}`; // outer firing error multiplier
+        }
+      } else {
+        code += `;0e;0`; // outer firing error off
+      }
     } else {
-      code += ";0l;0;0o;0;0a;0;0f;0;0s;0";
+      code += ";0l;0;0o;0;0a;0;0f;0;0s;0;0m;0;0e;0";
     }
     
     // Inner Lines (1x parameters)  
@@ -135,6 +160,26 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
         }
       } else {
         code += `;1s;0`; // inner outline off
+      }
+      
+      // Inner Lines Movement Error
+      if (settings.innerLinesMovementError) {
+        code += `;1m;1`; // inner movement error on
+        if (settings.innerLinesMovementErrorMultiplier !== 1) {
+          code += `;1mi;${settings.innerLinesMovementErrorMultiplier}`; // inner movement error multiplier
+        }
+      } else {
+        code += `;1m;0`; // inner movement error off
+      }
+      
+      // Inner Lines Firing Error
+      if (settings.innerLinesFiringError) {
+        code += `;1e;1`; // inner firing error on
+        if (settings.innerLinesFiringErrorMultiplier !== 1) {
+          code += `;1ei;${settings.innerLinesFiringErrorMultiplier}`; // inner firing error multiplier
+        }
+      } else {
+        code += `;1e;0`; // inner firing error off
       }
     }
     
@@ -162,6 +207,10 @@ interface CrosshairSettings {
   outerLinesOutline: boolean;
   outerLinesOutlineOpacity: number;
   outerLinesOutlineThickness: number;
+  outerLinesMovementError: boolean;
+  outerLinesMovementErrorMultiplier: number;
+  outerLinesFiringError: boolean;
+  outerLinesFiringErrorMultiplier: number;
   innerLinesShow: boolean;
   innerLinesLength: number;
   innerLinesThickness: number;
@@ -170,12 +219,17 @@ interface CrosshairSettings {
   innerLinesOutline: boolean;
   innerLinesOutlineOpacity: number;
   innerLinesOutlineThickness: number;
+  innerLinesMovementError: boolean;
+  innerLinesMovementErrorMultiplier: number;
+  innerLinesFiringError: boolean;
+  innerLinesFiringErrorMultiplier: number;
   outlineShow: boolean;
   outlineOpacity: number;
   outlineThickness: number;
   firingErrorShow: boolean;
   movementErrorShow: boolean;
   fadeCrosshairWithFiringError: boolean;
+  overrideFiringErrorOffsetWithCrosshairOffset: boolean;
 }
 
 const CrosshairCreator = () => {
@@ -202,6 +256,10 @@ const CrosshairCreator = () => {
     outerLinesOutline: false,
     outerLinesOutlineOpacity: 255,
     outerLinesOutlineThickness: 1,
+    outerLinesMovementError: false,
+    outerLinesMovementErrorMultiplier: 1,
+    outerLinesFiringError: false,
+    outerLinesFiringErrorMultiplier: 1,
     innerLinesShow: false,
     innerLinesLength: 4,
     innerLinesThickness: 2,
@@ -210,12 +268,17 @@ const CrosshairCreator = () => {
     innerLinesOutline: false,
     innerLinesOutlineOpacity: 255,
     innerLinesOutlineThickness: 1,
+    innerLinesMovementError: false,
+    innerLinesMovementErrorMultiplier: 1,
+    innerLinesFiringError: false,
+    innerLinesFiringErrorMultiplier: 1,
     outlineShow: false,
     outlineOpacity: 255,
     outlineThickness: 1,
     firingErrorShow: false,
     movementErrorShow: false,
-    fadeCrosshairWithFiringError: false
+    fadeCrosshairWithFiringError: false,
+    overrideFiringErrorOffsetWithCrosshairOffset: false
   });
 
   // 🎨 SIMPLIFIED COLOR SYSTEM - Nur Weiß und Custom
@@ -987,6 +1050,68 @@ const CrosshairCreator = () => {
                             </div>
                           )}
                         </div>
+
+                        {/* Movement Error */}
+                        <div className="p-3 bg-blue-700/20 border border-blue-500/30 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Checkbox
+                              id="outerLinesMovementError"
+                              checked={settings.outerLinesMovementError}
+                              onCheckedChange={(checked) => updateSetting('outerLinesMovementError', checked)}
+                            />
+                            <label htmlFor="outerLinesMovementError" className="text-blue-200 font-medium text-sm">
+                              🏃 Movement Error
+                            </label>
+                          </div>
+                          
+                          {settings.outerLinesMovementError && (
+                            <div>
+                              <label className="block text-blue-200 text-xs mb-2">
+                                Movement Error Multiplier: {settings.outerLinesMovementErrorMultiplier}
+                              </label>
+                              <input
+                                type="range"
+                                min="1"
+                                max="3"
+                                step="0.1"
+                                value={settings.outerLinesMovementErrorMultiplier}
+                                onChange={(e) => updateSetting('outerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
+                                className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Firing Error */}
+                        <div className="p-3 bg-blue-700/20 border border-blue-500/30 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Checkbox
+                              id="outerLinesFiringError"
+                              checked={settings.outerLinesFiringError}
+                              onCheckedChange={(checked) => updateSetting('outerLinesFiringError', checked)}
+                            />
+                            <label htmlFor="outerLinesFiringError" className="text-blue-200 font-medium text-sm">
+                              🔫 Firing Error
+                            </label>
+                          </div>
+                          
+                          {settings.outerLinesFiringError && (
+                            <div>
+                              <label className="block text-blue-200 text-xs mb-2">
+                                Firing Error Multiplier: {settings.outerLinesFiringErrorMultiplier}
+                              </label>
+                              <input
+                                type="range"
+                                min="1"
+                                max="3"
+                                step="0.1"
+                                value={settings.outerLinesFiringErrorMultiplier}
+                                onChange={(e) => updateSetting('outerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
+                                className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                 )}
               </div>
@@ -1108,6 +1233,68 @@ const CrosshairCreator = () => {
                             </div>
                           )}
                         </div>
+
+                        {/* Inner Movement Error */}
+                        <div className="p-3 bg-cyan-700/20 border border-cyan-500/30 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Checkbox
+                              id="innerLinesMovementError"
+                              checked={settings.innerLinesMovementError}
+                              onCheckedChange={(checked) => updateSetting('innerLinesMovementError', checked)}
+                            />
+                            <label htmlFor="innerLinesMovementError" className="text-cyan-200 font-medium text-sm">
+                              🏃 Movement Error
+                            </label>
+                          </div>
+                          
+                          {settings.innerLinesMovementError && (
+                            <div>
+                              <label className="block text-cyan-200 text-xs mb-2">
+                                Movement Error Multiplier: {settings.innerLinesMovementErrorMultiplier}
+                              </label>
+                              <input
+                                type="range"
+                                min="1"
+                                max="3"
+                                step="0.1"
+                                value={settings.innerLinesMovementErrorMultiplier}
+                                onChange={(e) => updateSetting('innerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
+                                className="w-full h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Inner Firing Error */}
+                        <div className="p-3 bg-cyan-700/20 border border-cyan-500/30 rounded-lg">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Checkbox
+                              id="innerLinesFiringError"
+                              checked={settings.innerLinesFiringError}
+                              onCheckedChange={(checked) => updateSetting('innerLinesFiringError', checked)}
+                            />
+                            <label htmlFor="innerLinesFiringError" className="text-cyan-200 font-medium text-sm">
+                              🔫 Firing Error
+                            </label>
+                          </div>
+                          
+                          {settings.innerLinesFiringError && (
+                            <div>
+                              <label className="block text-cyan-200 text-xs mb-2">
+                                Firing Error Multiplier: {settings.innerLinesFiringErrorMultiplier}
+                              </label>
+                              <input
+                                type="range"
+                                min="1"
+                                max="3"
+                                step="0.1"
+                                value={settings.innerLinesFiringErrorMultiplier}
+                                onChange={(e) => updateSetting('innerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
+                                className="w-full h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                 )}
               </div>
@@ -1211,6 +1398,24 @@ const CrosshairCreator = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Advanced Settings */}
+                    <div className="mt-4 p-4 bg-gradient-to-r from-purple-900/20 to-red-900/20 rounded-lg border border-purple-500/30">
+                      <h4 className="text-purple-300 font-medium mb-3">⚙️ Advanced Settings</h4>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="overrideFiringErrorOffsetWithCrosshairOffset"
+                          checked={settings.overrideFiringErrorOffsetWithCrosshairOffset}
+                          onCheckedChange={(checked) => updateSetting('overrideFiringErrorOffsetWithCrosshairOffset', checked)}
+                        />
+                        <label htmlFor="overrideFiringErrorOffsetWithCrosshairOffset" className="text-purple-200 text-sm">
+                          🎯 Override Firing Error Offset With Crosshair Offset
+                        </label>
+                      </div>
+                      <p className="text-xs text-purple-300 mt-2 opacity-70">
+                        Replaces firing error offset with crosshair offset for consistent behavior
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1238,6 +1443,10 @@ const CrosshairCreator = () => {
                   outerLinesOutline: false,
                   outerLinesOutlineOpacity: 255,
                   outerLinesOutlineThickness: 1,
+                  outerLinesMovementError: false,
+                  outerLinesMovementErrorMultiplier: 1,
+                  outerLinesFiringError: false,
+                  outerLinesFiringErrorMultiplier: 1,
                   innerLinesShow: false,
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
@@ -1246,12 +1455,17 @@ const CrosshairCreator = () => {
                   innerLinesOutline: false,
                   innerLinesOutlineOpacity: 255,
                   innerLinesOutlineThickness: 1,
+                  innerLinesMovementError: false,
+                  innerLinesMovementErrorMultiplier: 1,
+                  innerLinesFiringError: false,
+                  innerLinesFiringErrorMultiplier: 1,
                   outlineShow: false,
                   outlineOpacity: 255,
                   outlineThickness: 1,
                   firingErrorShow: false,
                   movementErrorShow: false,
-                  fadeCrosshairWithFiringError: false
+                  fadeCrosshairWithFiringError: false,
+                  overrideFiringErrorOffsetWithCrosshairOffset: false
                 })}
                 variant="outline"
                 className="border-red-500 text-red-400 hover:bg-red-500/20"
