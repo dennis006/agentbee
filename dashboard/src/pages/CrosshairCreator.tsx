@@ -111,7 +111,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       // Outer Lines Outline
       if (settings.outerLinesOutline) {
         code += `;0s;1`; // outer outline on
-        code += `;0o;${settings.outerLinesOutlineOpacity}`; // outer outline opacity
+        code += `;0so;${Math.round(settings.outerLinesOutlineOpacity / 255)}`; // outer outline opacity (0-1)
         if (settings.outerLinesOutlineThickness !== 1) {
           code += `;0st;${settings.outerLinesOutlineThickness}`; // outer outline thickness
         }
@@ -154,7 +154,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       // Inner Lines Outline
       if (settings.innerLinesOutline) {
         code += `;1s;1`; // inner outline on
-        code += `;1o;${settings.innerLinesOutlineOpacity}`; // inner outline opacity
+        code += `;1so;${Math.round(settings.innerLinesOutlineOpacity / 255)}`; // inner outline opacity (0-1)
         if (settings.innerLinesOutlineThickness !== 1) {
           code += `;1st;${settings.innerLinesOutlineThickness}`; // inner outline thickness
         }
