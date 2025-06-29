@@ -51,46 +51,12 @@ const COLORS = [
   { name: "Benutzerdefiniert", value: "custom", code: 7 }
 ];
 
-// ECHTE Pro-Crosshair-Codes aus der Community (garantiert funktionierend)
-const presets = [
-  { 
-    name: "TenZ Pro (Original)", 
-    code: "0;s;1;P;c;5;h;0;0l;5;0v;0;0g;1;0a;1;0f;0;1l;0;1v;4;1g;1;1o;2;1a;1;1m;0;1f;0;S;c;5;o;1",
-    description: "Echter TenZ Crosshair - eines der beliebtesten Setups"
-  },
-  { 
-    name: "ScreaM (Pink Dot)", 
-    code: "0;s;1;P;c;5;o;1;d;1;z;3;f;0;0t;6;0l;0;0a;1;0f;0;1b;0;S;c;6;s;0.949;o;1",
-    description: "ScreaM's berühmter Pink Dot - präzise und sichtbar"
-  },
-  { 
-    name: "Shroud Classic", 
-    code: "0;P;c;1;o;1;f;0;0t;1;0l;2;0o;2;0a;1;0f;0;1b;0",
-    description: "Shroud's klassisches Setup - bewährt und zuverlässig"
-  },
-  { 
-    name: "aspas (LOUD)", 
-    code: "0;P;c;5;o;1;d;1;z;3;f;0;0b;0;1b;0",
-    description: "aspas' Crosshair - einer der besten Duelisten weltweit"
-  },
-  { 
-    name: "Simple & Clean", 
-    code: "0;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0",
-    description: "Minimalistisch aber effektiv - perfekte Balance"
-  },
-  { 
-    name: "Dot Only (Pros)", 
-    code: "0;s;1;P;h;0;d;1;z;3;f;0;0t;3;0l;1;0o;1;0a;1;0f;0;1t;0;1l;0;1o;0;1a;0;1f;0",
-    description: "Nur Center Dot - für maximale Präzision"
-  }
-];
-
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
     // 🎨 CUSTOM COLOR SYSTEM - verwendet Index 5 für alle custom colors
     const colorMap: Record<string, number> = {
-      'white': 0, 'green': 1, 'custom': 5
+      'white': 0, 'custom': 5
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
@@ -190,8 +156,6 @@ const CrosshairCreator = () => {
   const [loading, setLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [crosshairCode, setCrosshairCode] = useState('');
-  const [currentPreset, setCurrentPreset] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'presets' | 'settings'>('presets');
   
   // Toast System
   const { toasts, success, error, removeToast } = useToast();
@@ -199,7 +163,7 @@ const CrosshairCreator = () => {
 
   // Erweiterte Crosshair Settings
   const [settings, setSettings] = useState<CrosshairSettings>({
-    primaryColor: 'custom',
+    primaryColor: 'white',
     customColor: '#FF0000',
     centerDotShow: true,
     centerDotThickness: 2,
@@ -222,14 +186,13 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // 🎨 CUSTOM COLOR SYSTEM (wie andere Valorant Generatoren)
+  // 🎨 SIMPLIFIED COLOR SYSTEM - Nur Weiß und Custom
   const colorMap: Record<string, number> = {
-    'white': 0, 'green': 1, 'custom': 5
+    'white': 0, 'custom': 5
   };
 
   const presetColors = [
     { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
-    { name: 'green', value: 'green', color: '#00FF41', label: 'Grün' },
     { name: 'custom', value: 'custom', color: settings.customColor || '#FF0000', label: '🎨 Custom Color' }
   ];
 
@@ -258,13 +221,6 @@ const CrosshairCreator = () => {
     } catch (err) {
       showNotification("Code konnte nicht kopiert werden.", "error");
     }
-  };
-
-  // Apply Preset
-  const applyPreset = (code: string, name: string) => {
-    setCrosshairCode(code);
-    setCurrentPreset(name);
-    showNotification(`Preset "${name}" angewendet! Funktioniert garantiert in Valorant.`);
   };
 
   // Generate Image via Railway Proxy
@@ -312,7 +268,6 @@ const CrosshairCreator = () => {
     }
     const colors: Record<string, string> = {
       'white': '#FFFFFF',
-      'green': '#00FF41'
     };
     const result = colors[colorName] || settings.customColor;
     return result;
@@ -337,124 +292,55 @@ const CrosshairCreator = () => {
             </h1>
           </div>
           <p className="text-xl text-purple-200 mb-6">
-            Erstelle dein perfektes Crosshair mit bewährten Presets
+            Erstelle dein perfektes Crosshair mit Custom Color System
           </p>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-8 bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-2 shadow-xl">
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setActiveTab('presets')}
-              variant={activeTab === 'presets' ? 'default' : 'ghost'}
-              className={cn(
-                "flex-1 flex items-center gap-2 text-lg py-3",
-                activeTab === 'presets' 
-                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" 
-                  : "text-purple-300 hover:bg-purple-500/20"
-              )}
-            >
-              <Star className="w-5 h-5" />
-              Bewährte Presets
-            </Button>
-            <Button
-              onClick={() => setActiveTab('settings')}
-              variant={activeTab === 'settings' ? 'default' : 'ghost'}
-              className={cn(
-                "flex-1 flex items-center gap-2 text-lg py-3",
-                activeTab === 'settings' 
-                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" 
-                  : "text-purple-300 hover:bg-purple-500/20"
-              )}
-            >
-              <Sliders className="w-5 h-5" />
-              Einstellungen
-            </Button>
-          </div>
-        </div>
-
-        {/* Tab Content */}
+        {/* Settings */}
         <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl">
-          {activeTab === 'presets' ? (
-            <div>
-              <h2 className="text-3xl font-bold text-purple-400 mb-6 flex items-center gap-3">
-                <Star className="w-8 h-8" />
-                Bewährte Presets
-              </h2>
-              <p className="text-purple-200 mb-8 text-lg">
-                Wähle aus bewährten Pro-Player Crosshairs - alle Codes sind getestet und funktionieren garantiert!
-              </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Settings Column */}
+            <div className="space-y-6">
+              {/* Primary Color */}
+              <div>
+                <label className="block text-purple-200 font-medium mb-3">
+                  Primärfarbe 
+                  <span className="text-sm text-purple-300 ml-2">
+                    (Aktuell: {settings.primaryColor} → {getColorValue(settings.primaryColor)})
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {presetColors.map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={() => {
+                        updateSetting('primaryColor', color.value);
+                      }}
+                      className={`relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
+                        settings.primaryColor === color.value
+                          ? 'border-purple-400 bg-purple-500/20 shadow-lg'
+                          : 'border-purple-600/30 hover:border-purple-400/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded border-2 border-white/20"
+                          style={{ backgroundColor: color.color }}
+                        />
+                        <span className="text-purple-200 font-medium">{color.label}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {presets.map((preset, index) => (
-                  <div 
-                    key={index} 
-                    className={cn(
-                      "border rounded-xl p-6 hover:bg-purple-500/10 transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:shadow-lg",
-                      currentPreset === preset.name && "border-purple-400 bg-purple-500/20 shadow-purple-400/25"
-                    )}
-                    onClick={() => applyPreset(preset.code, preset.name)}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-bold text-xl text-purple-300">{preset.name}</h3>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          applyPreset(preset.code, preset.name);
-                        }}
-                        className="border-purple-400 text-purple-300 hover:bg-purple-500/30 hover:scale-105 transition-all"
-                      >
-                        <Star className="w-4 h-4 mr-1" />
-                        Anwenden
-                      </Button>
-                    </div>
-                    <p className="text-purple-200 mb-4 leading-relaxed">{preset.description}</p>
-                    <div className="bg-black/40 p-3 rounded-lg text-xs font-mono break-all text-purple-100 border border-purple-500/20">
-                      {preset.code}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Settings Column */}
-              <div className="space-y-6">
-                {/* Primary Color */}
-                <div>
-                  <label className="block text-purple-200 font-medium mb-3">
-                    Primärfarbe 
-                    <span className="text-sm text-purple-300 ml-2">
-                      (Aktuell: {settings.primaryColor} → {getColorValue(settings.primaryColor)})
-                    </span>
+                {/* Custom Color Picker - Always visible */}
+                <div className="mt-4 p-4 bg-gradient-to-r from-pink-900/20 to-purple-900/20 rounded-lg border border-pink-500/30">
+                  <label className="block text-pink-300 font-medium mb-3">
+                    🎨 Custom Color Picker
                   </label>
-                  <div className="grid grid-cols-4 gap-3">
-                                          {presetColors.map((color) => (
-                      <button
-                        key={color.value}
-                        onClick={() => {
-                          updateSetting('primaryColor', color.value);
-                        }}
-                        className={cn(
-                          "w-12 h-12 rounded-lg border-2 transition-all duration-300 hover:scale-110",
-                          settings.primaryColor === color.value
-                            ? "border-purple-400 shadow-lg shadow-purple-400/25"
-                            : "border-transparent hover:border-purple-400/50"
-                        )}
-                        style={{ backgroundColor: color.color }}
-                        title={color.label}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Custom Color Picker - Immer sichtbar */}
-                  <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                    <label className="block text-sm font-medium text-purple-300 mb-3">
-                      🎨 Custom Color Picker
-                    </label>
-                    <div className="flex items-center gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-pink-200 text-sm mb-2">Farbe wählen</label>
                       <input
                         type="color"
                         value={settings.customColor}
@@ -462,18 +348,21 @@ const CrosshairCreator = () => {
                           updateSetting('customColor', e.target.value);
                           updateSetting('primaryColor', 'custom');
                         }}
-                        className="w-16 h-12 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
+                        className="w-full h-12 rounded border border-pink-500/30 bg-transparent cursor-pointer"
                       />
-                                              <input
+                    </div>
+                    <div>
+                      <label className="block text-pink-200 text-sm mb-2">Hex-Code</label>
+                      <div className="flex gap-2">
+                        <input
                           type="text"
                           value={settings.customColor}
                           onChange={(e) => {
                             updateSetting('customColor', e.target.value);
                             updateSetting('primaryColor', 'custom');
                           }}
-                          className="flex-1 px-3 py-2 bg-black/30 border border-purple-500/30 rounded text-white placeholder-gray-400"
+                          className="flex-1 px-3 py-2 bg-black/30 border border-pink-500/30 rounded text-pink-100 placeholder-pink-400"
                           placeholder="#FF0000"
-                          pattern="^#[0-9A-Fa-f]{6}$"
                         />
                         <button
                           onClick={async () => {
@@ -489,8 +378,8 @@ const CrosshairCreator = () => {
                         >
                           📋
                         </button>
-                    </div>
-                                          <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                      </div>
+                      <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
                         <p className="text-xs text-yellow-300 font-medium mb-2">🔥 WICHTIGE ANLEITUNG:</p>
                         <ol className="text-xs text-yellow-200 space-y-1">
                           <li>1. Wähle deine Farbe (z.B. #F90606)</li>
@@ -500,342 +389,343 @@ const CrosshairCreator = () => {
                         </ol>
                         <p className="text-xs text-yellow-300 mt-2 font-medium">⚠️ Custom Color muss separat in Valorant gesetzt werden!</p>
                       </div>
-                  </div>
-                </div>
-
-                {/* Center Dot */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="centerDotShow"
-                      checked={settings.centerDotShow}
-                      onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
-                    />
-                    <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
-                      Center Dot anzeigen
-                    </label>
-                  </div>
-
-                  {settings.centerDotShow && (
-                    <div className="ml-6 space-y-3">
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Dicke: {settings.centerDotThickness}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="6"
-                          value={settings.centerDotThickness}
-                          onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Transparenz: {settings.centerDotOpacity}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
-                          value={settings.centerDotOpacity}
-                          onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Outer Lines */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="outerLinesShow"
-                      checked={settings.outerLinesShow}
-                      onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
-                    />
-                    <label htmlFor="outerLinesShow" className="text-purple-200 font-medium">
-                      Äußere Linien anzeigen
-                    </label>
                   </div>
-
-                  {settings.outerLinesShow && (
-                    <div className="ml-6 space-y-3">
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Länge: {settings.outerLinesLength}
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="20"
-                          value={settings.outerLinesLength}
-                          onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Dicke: {settings.outerLinesThickness}
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="10"
-                          value={settings.outerLinesThickness}
-                          onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Abstand: {settings.outerLinesOffset}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="15"
-                          value={settings.outerLinesOffset}
-                          onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Transparenz: {settings.outerLinesOpacity}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
-                          value={settings.outerLinesOpacity}
-                          onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Inner Lines */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="innerLinesShow"
-                      checked={settings.innerLinesShow}
-                      onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
-                    />
-                    <label htmlFor="innerLinesShow" className="text-purple-200 font-medium">
-                      Innere Linien anzeigen
-                    </label>
-                  </div>
-
-                  {settings.innerLinesShow && (
-                    <div className="ml-6 space-y-3">
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Länge: {settings.innerLinesLength}
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="15"
-                          value={settings.innerLinesLength}
-                          onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Dicke: {settings.innerLinesThickness}
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="8"
-                          value={settings.innerLinesThickness}
-                          onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Abstand: {settings.innerLinesOffset}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="10"
-                          value={settings.innerLinesOffset}
-                          onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-purple-200 text-sm mb-2">
-                          Transparenz: {settings.innerLinesOpacity}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="255"
-                          value={settings.innerLinesOpacity}
-                          onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
-                          className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Live Preview Column */}
-              <div>
-                <div className="border border-purple-400/30 rounded-lg p-6 bg-black/20">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-purple-300 font-medium">Live Vorschau</h3>
-                    <div className="text-xs text-purple-400 bg-purple-900/30 px-2 py-1 rounded">
-                      ⚠️ Annäherung - Echtes Valorant kann abweichen
+              {/* Center Dot */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="centerDotShow"
+                    checked={settings.centerDotShow}
+                    onCheckedChange={(checked) => updateSetting('centerDotShow', checked)}
+                  />
+                  <label htmlFor="centerDotShow" className="text-purple-200 font-medium">
+                    Center Dot anzeigen
+                  </label>
+                </div>
+
+                {settings.centerDotShow && (
+                  <div className="ml-6 space-y-3">
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Dicke: {settings.centerDotThickness}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="6"
+                        value={settings.centerDotThickness}
+                        onChange={(e) => updateSetting('centerDotThickness', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Transparenz: {settings.centerDotOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.centerDotOpacity}
+                        onChange={(e) => updateSetting('centerDotOpacity', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
                   </div>
-                  <div className="w-full h-48 bg-gradient-to-b from-gray-900 to-black rounded-lg flex items-center justify-center relative overflow-hidden border border-gray-700">
-                    {/* Valorant-ähnlicher Hintergrund */}
-                    <div className="absolute inset-0 opacity-10">
-                      <div className="w-full h-full" style={{
-                        backgroundImage: `radial-gradient(circle at 25px 25px, rgba(255,255,255,0.1) 2px, transparent 0),
-                                         radial-gradient(circle at 75px 75px, rgba(255,255,255,0.05) 1px, transparent 0)`,
-                        backgroundSize: '100px 100px'
-                      }}></div>
+                )}
+              </div>
+
+              {/* Outer Lines */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="outerLinesShow"
+                    checked={settings.outerLinesShow}
+                    onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
+                  />
+                  <label htmlFor="outerLinesShow" className="text-purple-200 font-medium">
+                    Äußere Linien anzeigen
+                  </label>
+                </div>
+
+                {settings.outerLinesShow && (
+                  <div className="ml-6 space-y-3">
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Länge: {settings.outerLinesLength}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="20"
+                        value={settings.outerLinesLength}
+                        onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
-                    
-                    {/* Erweiterte Crosshair Preview */}
-                    <div className="relative w-32 h-32 z-10">
-                      {/* Outer Lines */}
-                      {settings.outerLinesShow && (
-                        <>
-                          {/* Horizontal Outer Lines */}
-                          <div 
-                            className="absolute top-1/2 transform -translate-y-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.outerLinesLength * 2}px`,
-                              height: `${settings.outerLinesThickness}px`,
-                              left: `${64 + settings.outerLinesOffset * 2}px`,
-                              opacity: settings.outerLinesOpacity / 255
-                            }}
-                          />
-                          <div 
-                            className="absolute top-1/2 transform -translate-y-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.outerLinesLength * 2}px`,
-                              height: `${settings.outerLinesThickness}px`,
-                              right: `${64 + settings.outerLinesOffset * 2}px`,
-                              opacity: settings.outerLinesOpacity / 255
-                            }}
-                          />
-                          
-                          {/* Vertical Outer Lines */}
-                          <div 
-                            className="absolute left-1/2 transform -translate-x-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.outerLinesThickness}px`,
-                              height: `${settings.outerLinesLength * 2}px`,
-                              top: `${64 + settings.outerLinesOffset * 2}px`,
-                              opacity: settings.outerLinesOpacity / 255
-                            }}
-                          />
-                          <div 
-                            className="absolute left-1/2 transform -translate-x-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.outerLinesThickness}px`,
-                              height: `${settings.outerLinesLength * 2}px`,
-                              bottom: `${64 + settings.outerLinesOffset * 2}px`,
-                              opacity: settings.outerLinesOpacity / 255
-                            }}
-                          />
-                        </>
-                      )}
 
-                      {/* Inner Lines */}
-                      {settings.innerLinesShow && (
-                        <>
-                          {/* Horizontal Inner Lines */}
-                          <div 
-                            className="absolute top-1/2 transform -translate-y-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.innerLinesLength * 2}px`,
-                              height: `${settings.innerLinesThickness}px`,
-                              left: `${64 + settings.innerLinesOffset * 2}px`,
-                              opacity: settings.innerLinesOpacity / 255
-                            }}
-                          />
-                          <div 
-                            className="absolute top-1/2 transform -translate-y-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.innerLinesLength * 2}px`,
-                              height: `${settings.innerLinesThickness}px`,
-                              right: `${64 + settings.innerLinesOffset * 2}px`,
-                              opacity: settings.innerLinesOpacity / 255
-                            }}
-                          />
-                          
-                          {/* Vertical Inner Lines */}
-                          <div 
-                            className="absolute left-1/2 transform -translate-x-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.innerLinesThickness}px`,
-                              height: `${settings.innerLinesLength * 2}px`,
-                              top: `${64 + settings.innerLinesOffset * 2}px`,
-                              opacity: settings.innerLinesOpacity / 255
-                            }}
-                          />
-                          <div 
-                            className="absolute left-1/2 transform -translate-x-1/2"
-                            style={{
-                              backgroundColor: getColorValue(settings.primaryColor),
-                              width: `${settings.innerLinesThickness}px`,
-                              height: `${settings.innerLinesLength * 2}px`,
-                              bottom: `${64 + settings.innerLinesOffset * 2}px`,
-                              opacity: settings.innerLinesOpacity / 255
-                            }}
-                          />
-                        </>
-                      )}
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Dicke: {settings.outerLinesThickness}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={settings.outerLinesThickness}
+                        onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
 
-                      {/* Center Dot */}
-                      {settings.centerDotShow && settings.centerDotThickness > 0 && (
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Abstand: {settings.outerLinesOffset}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="15"
+                        value={settings.outerLinesOffset}
+                        onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Transparenz: {settings.outerLinesOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.outerLinesOpacity}
+                        onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Inner Lines */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="innerLinesShow"
+                    checked={settings.innerLinesShow}
+                    onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
+                  />
+                  <label htmlFor="innerLinesShow" className="text-purple-200 font-medium">
+                    Innere Linien anzeigen
+                  </label>
+                </div>
+
+                {settings.innerLinesShow && (
+                  <div className="ml-6 space-y-3">
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Länge: {settings.innerLinesLength}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="15"
+                        value={settings.innerLinesLength}
+                        onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Dicke: {settings.innerLinesThickness}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="8"
+                        value={settings.innerLinesThickness}
+                        onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Abstand: {settings.innerLinesOffset}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={settings.innerLinesOffset}
+                        onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-purple-200 text-sm mb-2">
+                        Transparenz: {settings.innerLinesOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.innerLinesOpacity}
+                        onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
+                        className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Live Preview Column */}
+            <div>
+              <div className="border border-purple-400/30 rounded-lg p-6 bg-black/20">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-purple-300 font-medium">Live Vorschau</h3>
+                  <div className="text-xs text-purple-400 bg-purple-900/30 px-2 py-1 rounded">
+                    ⚠️ Annäherung - Echtes Valorant kann abweichen
+                  </div>
+                </div>
+                <div className="w-full h-48 bg-gradient-to-b from-gray-900 to-black rounded-lg flex items-center justify-center relative overflow-hidden border border-gray-700">
+                  {/* Valorant-ähnlicher Hintergrund */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="w-full h-full" style={{
+                      backgroundImage: `radial-gradient(circle at 25px 25px, rgba(255,255,255,0.1) 2px, transparent 0),
+                                       radial-gradient(circle at 75px 75px, rgba(255,255,255,0.05) 1px, transparent 0)`,
+                      backgroundSize: '100px 100px'
+                    }}></div>
+                  </div>
+                  
+                  {/* Erweiterte Crosshair Preview */}
+                  <div className="relative w-32 h-32 z-10">
+                    {/* Outer Lines */}
+                    {settings.outerLinesShow && (
+                      <>
+                        {/* Horizontal Outer Lines */}
                         <div 
-                          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full"
+                          className="absolute top-1/2 transform -translate-y-1/2"
                           style={{
                             backgroundColor: getColorValue(settings.primaryColor),
-                            width: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
-                            height: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
-                            opacity: settings.centerDotOpacity / 255,
-                            boxShadow: settings.outlineShow ? `0 0 0 1px rgba(0,0,0,0.8)` : 'none'
+                            width: `${settings.outerLinesLength * 2}px`,
+                            height: `${settings.outerLinesThickness}px`,
+                            left: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
                           }}
                         />
-                      )}
-                    </div>
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.outerLinesLength * 2}px`,
+                            height: `${settings.outerLinesThickness}px`,
+                            right: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
+                          }}
+                        />
+                        
+                        {/* Vertical Outer Lines */}
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.outerLinesThickness}px`,
+                            height: `${settings.outerLinesLength * 2}px`,
+                            top: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
+                          }}
+                        />
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.outerLinesThickness}px`,
+                            height: `${settings.outerLinesLength * 2}px`,
+                            bottom: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
+                          }}
+                        />
+                      </>
+                    )}
+
+                    {/* Inner Lines */}
+                    {settings.innerLinesShow && (
+                      <>
+                        {/* Horizontal Inner Lines */}
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesLength * 2}px`,
+                            height: `${settings.innerLinesThickness}px`,
+                            left: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesLength * 2}px`,
+                            height: `${settings.innerLinesThickness}px`,
+                            right: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                        
+                        {/* Vertical Inner Lines */}
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesThickness}px`,
+                            height: `${settings.innerLinesLength * 2}px`,
+                            top: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesThickness}px`,
+                            height: `${settings.innerLinesLength * 2}px`,
+                            bottom: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                      </>
+                    )}
+
+                    {/* Center Dot */}
+                    {settings.centerDotShow && settings.centerDotThickness > 0 && (
+                      <div 
+                        className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        style={{
+                          backgroundColor: getColorValue(settings.primaryColor),
+                          width: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
+                          height: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
+                          opacity: settings.centerDotOpacity / 255,
+                          boxShadow: settings.outlineShow ? `0 0 0 1px rgba(0,0,0,0.8)` : 'none'
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Code und Actions */}
@@ -845,7 +735,7 @@ const CrosshairCreator = () => {
             <div className="flex gap-3">
               <Button
                 onClick={() => setSettings({
-                  primaryColor: 'custom',
+                  primaryColor: 'white',
                   customColor: '#FF0000',
                   centerDotShow: true,
                   centerDotThickness: 2,
