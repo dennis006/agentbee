@@ -82,6 +82,18 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       code += ";o;1"; // outline on
       code += ";d;1"; // dot on
       code += `;z;${settings.centerDotThickness}`; // dot size
+      code += `;da;${Math.round(settings.centerDotOpacity / 255)}`; // dot alpha
+      
+      // Center Dot Outline
+      if (settings.centerDotOutline) {
+        code += ";ds;1"; // dot outline on
+        code += `;dso;${Math.round(settings.centerDotOutlineOpacity / 255)}`; // dot outline opacity
+        if (settings.centerDotOutlineThickness !== 1) {
+          code += `;dst;${settings.centerDotOutlineThickness}`; // dot outline thickness
+        }
+      } else {
+        code += ";ds;0"; // dot outline off
+      }
     } else {
       code += ";d;0"; // dot off
     }
@@ -199,6 +211,9 @@ interface CrosshairSettings {
   centerDotShow: boolean;
   centerDotThickness: number;
   centerDotOpacity: number;
+  centerDotOutline: boolean;
+  centerDotOutlineThickness: number;
+  centerDotOutlineOpacity: number;
   outerLinesShow: boolean;
   outerLinesLength: number;
   outerLinesThickness: number;
@@ -245,9 +260,12 @@ const CrosshairCreator = () => {
   const [settings, setSettings] = useState<CrosshairSettings>({
     primaryColor: 'white',
     customColor: '#FF0000',
-    centerDotShow: true,
+                          centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
+    centerDotOutline: false,
+    centerDotOutlineThickness: 1,
+    centerDotOutlineOpacity: 255,
     outerLinesShow: true,
     outerLinesLength: 7,
     outerLinesThickness: 2,
@@ -929,6 +947,51 @@ const CrosshairCreator = () => {
                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
+
+                    {/* Center Dot Outline */}
+                    <div className="mt-4 p-3 bg-purple-800/20 border border-purple-600/30 rounded-lg">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Checkbox
+                          id="centerDotOutline"
+                          checked={settings.centerDotOutline}
+                          onCheckedChange={(checked) => updateSetting('centerDotOutline', checked)}
+                        />
+                        <label htmlFor="centerDotOutline" className="text-purple-200 font-medium text-sm">
+                          💀 Center Dot Outline
+                        </label>
+                      </div>
+                      
+                      {settings.centerDotOutline && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-purple-200 text-xs mb-2">
+                              Outline Dicke: {settings.centerDotOutlineThickness}
+                            </label>
+                            <input
+                              type="range"
+                              min="1"
+                              max="5"
+                              value={settings.centerDotOutlineThickness}
+                              onChange={(e) => updateSetting('centerDotOutlineThickness', parseInt(e.target.value))}
+                              className="w-full h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-purple-200 text-xs mb-2">
+                              Outline Transparenz: {settings.centerDotOutlineOpacity}
+                            </label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="255"
+                              value={settings.centerDotOutlineOpacity}
+                              onChange={(e) => updateSetting('centerDotOutlineOpacity', parseInt(e.target.value))}
+                              className="w-full h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer slider"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1435,6 +1498,9 @@ const CrosshairCreator = () => {
                   centerDotShow: true,
                   centerDotThickness: 2,
                   centerDotOpacity: 255,
+                  centerDotOutline: false,
+                  centerDotOutlineThickness: 1,
+                  centerDotOutlineOpacity: 255,
                   outerLinesShow: true,
                   outerLinesLength: 7,
                   outerLinesThickness: 2,
