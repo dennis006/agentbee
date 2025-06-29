@@ -88,10 +88,10 @@ const presets = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Color Mapping (Debug: rot→gelb, also Index 3=gelb, rot→Index 4 testen)
+    // Color Mapping (Debug: Index 4 auch gelb! Rot→Index 6 probieren)
     const colorMap: Record<string, number> = {
       'white': 0, 'green': 1, 'yellow-green': 2, 'yellow': 3, 
-      'red': 4, 'cyan': 5, 'pink': 6, 'custom': 5
+      'cyan': 5, 'red': 6, 'pink': 4, 'custom': 5
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
@@ -222,20 +222,20 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // Color Mapping (Debug: rot→gelb, also Index 3=gelb, rot→Index 4 testen)
+  // Color Mapping (Debug: Index 4 auch gelb! Rot→Index 6 probieren)
   const colorMap: Record<string, number> = {
     'white': 0, 'green': 1, 'yellow-green': 2, 'yellow': 3,
-    'red': 4, 'cyan': 5, 'pink': 6, 'custom': 5
+    'cyan': 5, 'red': 6, 'pink': 4, 'custom': 5
   };
 
   const colorOptions = [
     { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
     { name: 'green', value: 'green', color: '#00FF00', label: 'Grün' },
     { name: 'yellow-green', value: 'yellow-green', color: '#9ACD32', label: 'Gelb-Grün' },
-    { name: 'red', value: 'red', color: '#FF0000', label: 'Rot' },
     { name: 'yellow', value: 'yellow', color: '#FFFF00', label: 'Gelb' },
+    { name: 'pink', value: 'pink', color: '#FF69B4', label: 'Pink' },
     { name: 'cyan', value: 'cyan', color: '#00ffdf', label: 'Cyan' },
-    { name: 'pink', value: 'pink', color: '#FF69B4', label: 'Pink' }
+    { name: 'red', value: 'red', color: '#FF0000', label: 'Rot' }
   ];
 
   // Update Setting
@@ -258,15 +258,15 @@ const CrosshairCreator = () => {
     const hexColor = getColorValue(settings.primaryColor);
     console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
     console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
-    console.log(`🧪 NEUE ZUORDNUNG (rot war gelb → Index 3=gelb, rot→Index 4):`);
+    console.log(`🔥 DRITTER VERSUCH (Index 4 auch gelb! rot→Index 6):`);
     console.log(`  📌 white → Index 0 (sollte WEISS zeigen) ✅`);
     console.log(`  📌 green → Index 1 (sollte GRÜN zeigen) ✅`);  
     console.log(`  📌 yellow-green → Index 2 (sollte GELB-GRÜN zeigen)`);
-    console.log(`  📌 yellow → Index 3 (rot zeigte gelb, also Index 3=gelb)`);
-    console.log(`  📌 red → Index 4 (verschoben von Index 3)`);
+    console.log(`  📌 yellow → Index 3 (Index 3+4 beide zeigen gelb!)`);
+    console.log(`  📌 pink → Index 4 (von Index 6 verschoben)`);
     console.log(`  📌 cyan → Index 5 (sollte CYAN zeigen)`);
-    console.log(`  📌 pink → Index 6 (sollte PINK zeigen)`);
-    console.log(`❗ TESTE ROT JETZT: sollte rot zeigen statt gelb!`);
+    console.log(`  📌 red → Index 6 (LETZTER VERSUCH für rot!)`);
+    console.log(`🙏 ROT MUSS JETZT ENDLICH ROT SEIN!`);
     
     setCrosshairCode(code);
     return code;
