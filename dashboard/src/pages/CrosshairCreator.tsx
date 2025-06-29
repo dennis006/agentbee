@@ -212,56 +212,55 @@ const CrosshairCreator = () => {
     };
 
     if (mode === 'pro') {
-      // ECHTE Pro-Player Konfigurationen (TenZ, Shroud, s1mple, etc.)
-      const realProConfigs = [
-        // TenZ Style
-        { name: 'TenZ', centerDotShow: true, centerDotThickness: 2, outerLinesShow: true, outerLinesLength: 7, outerLinesThickness: 2, outerLinesOffset: 3, innerLinesShow: false, color: '#00FF88' },
-        // Shroud Style  
-        { name: 'Shroud', centerDotShow: false, outerLinesShow: true, outerLinesLength: 5, outerLinesThickness: 1, outerLinesOffset: 2, innerLinesShow: true, innerLinesLength: 4, innerLinesThickness: 1, innerLinesOffset: 1, color: '#FFFFFF' },
-        // s1mple Style
-        { name: 's1mple', centerDotShow: true, centerDotThickness: 1, outerLinesShow: true, outerLinesLength: 6, outerLinesThickness: 1, outerLinesOffset: 2, innerLinesShow: false, color: '#FFFF00' },
-        // ScreaM Style
-        { name: 'ScreaM', centerDotShow: false, outerLinesShow: true, outerLinesLength: 4, outerLinesThickness: 2, outerLinesOffset: 1, innerLinesShow: false, color: '#FF0000' },
-        // Jett Mains
-        { name: 'Jett Pro', centerDotShow: true, centerDotThickness: 3, outerLinesShow: true, outerLinesLength: 8, outerLinesThickness: 2, outerLinesOffset: 4, innerLinesShow: false, color: '#00FFFF' },
-        // Entry Fragger
-        { name: 'Entry', centerDotShow: false, outerLinesShow: true, outerLinesLength: 3, outerLinesThickness: 1, outerLinesOffset: 1, innerLinesShow: true, innerLinesLength: 2, innerLinesThickness: 1, innerLinesOffset: 0, color: '#FF4656' },
-        // Minimal Pro
-        { name: 'Minimal', centerDotShow: true, centerDotThickness: 1, outerLinesShow: true, outerLinesLength: 4, outerLinesThickness: 1, outerLinesOffset: 2, innerLinesShow: false, color: '#FFFFFF' },
-        // AWP Style
-        { name: 'AWP Pro', centerDotShow: true, centerDotThickness: 2, outerLinesShow: false, innerLinesShow: false, color: '#FF6B6B' },
-        // Spray Control
-        { name: 'Spray', centerDotShow: true, centerDotThickness: 2, outerLinesShow: true, outerLinesLength: 6, outerLinesThickness: 1, outerLinesOffset: 3, innerLinesShow: true, innerLinesLength: 3, innerLinesThickness: 1, innerLinesOffset: 1, color: '#4ECDC4' }
-      ];
+      // Realistische Pro-Range Zufallswerte (keine vorgefertigten Settings)
+      const centerDotShow = Math.random() > 0.4; // 60% haben Center Dot
+      const outerLinesShow = Math.random() > 0.1; // 90% haben Outer Lines
+      const innerLinesShow = Math.random() > 0.7; // 30% haben Inner Lines (seltener bei Pros)
       
-      const selectedConfig = realProConfigs[Math.floor(Math.random() * realProConfigs.length)];
+      // Pro-typische Werte-Ranges
+      const centerDotThickness = centerDotShow ? Math.floor(Math.random() * 3) + 1 : 0; // 1-3
+      const outerLinesLength = Math.floor(Math.random() * 6) + 3; // 3-8 (realistische Längen)
+      const outerLinesThickness = Math.floor(Math.random() * 3) + 1; // 1-3 (meist dünn)
+      const outerLinesOffset = Math.floor(Math.random() * 5) + 1; // 1-5 (vernünftige Abstände)
+      const innerLinesLength = Math.floor(Math.random() * 4) + 2; // 2-5
+      const innerLinesThickness = Math.floor(Math.random() * 2) + 1; // 1-2 (dünn)
+      const innerLinesOffset = Math.floor(Math.random() * 3); // 0-2 (nah am Center)
+      
+      // Beschreibung des generierten Typs
+      let crosshairType = '';
+      if (centerDotShow && !innerLinesShow) crosshairType = 'Center Dot';
+      else if (!centerDotShow && innerLinesShow) crosshairType = 'Inner Lines';
+      else if (centerDotShow && innerLinesShow) crosshairType = 'Hybrid';
+      else if (outerLinesLength <= 4) crosshairType = 'Compact';
+      else if (outerLinesLength >= 7) crosshairType = 'Extended';
+      else crosshairType = 'Classic';
       
       setSettings(prev => ({
         ...prev,
-        primaryColor: Math.random() > 0.2 ? 'custom' : 'white', // 80% custom colors
-        customColor: selectedConfig.color || getRandomColor(),
-        centerDotShow: selectedConfig.centerDotShow,
-        centerDotThickness: selectedConfig.centerDotThickness || 2,
+        primaryColor: Math.random() > 0.3 ? 'custom' : 'white', // 70% custom colors
+        customColor: getRandomColor(),
+        centerDotShow,
+        centerDotThickness,
         centerDotOpacity: 255,
-        outerLinesShow: selectedConfig.outerLinesShow,
-        outerLinesLength: selectedConfig.outerLinesLength || 6,
-        outerLinesThickness: selectedConfig.outerLinesThickness || 2,
-        outerLinesOffset: selectedConfig.outerLinesOffset || 2,
+        outerLinesShow,
+        outerLinesLength,
+        outerLinesThickness,
+        outerLinesOffset,
         outerLinesOpacity: 255,
-        innerLinesShow: selectedConfig.innerLinesShow || false,
-        innerLinesLength: selectedConfig.innerLinesLength || 4,
-        innerLinesThickness: selectedConfig.innerLinesThickness || 1,
-        innerLinesOffset: selectedConfig.innerLinesOffset || 1,
+        innerLinesShow,
+        innerLinesLength,
+        innerLinesThickness,
+        innerLinesOffset,
         innerLinesOpacity: 255,
-        outlineShow: Math.random() > 0.7, // 30% outline
+        outlineShow: Math.random() > 0.8, // 20% outline (selten bei Pros)
         outlineOpacity: 255,
         outlineThickness: 1,
-        firingErrorShow: Math.random() > 0.5, // 50% firing error
-        movementErrorShow: Math.random() > 0.6, // 40% movement error
-        fadeCrosshairWithFiringError: Math.random() > 0.8 // 20% fade
+        firingErrorShow: Math.random() > 0.6, // 40% firing error
+        movementErrorShow: Math.random() > 0.7, // 30% movement error
+        fadeCrosshairWithFiringError: Math.random() > 0.9 // 10% fade (sehr selten)
       }));
       
-      showNotification(`🏆 ${selectedConfig.name} Pro Style generiert!`);
+      showNotification(`🏆 ${crosshairType} Pro Style generiert!`);
       
     } else {
       // Fun Mode - Ausgewogener aber trotzdem kreativ
