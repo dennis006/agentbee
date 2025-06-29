@@ -74,8 +74,8 @@ const CrosshairCreator = () => {
   const generateCrosshairCode = () => {
     const colorCode = colorMap[settings.primaryColor] || 1;
     
-    // Korrektes Valorant Crosshair Format basierend auf echten Codes
-    const code = `0;P;c;${colorCode};h;0;d;${settings.centerDotShow ? 1 : 0};z;${settings.centerDotThickness};f;0;0t;${settings.outerLinesThickness};0l;${settings.outerLinesLength};0o;${settings.outerLinesOffset};0a;${(settings.outerLinesOpacity/255).toFixed(3)};0f;0;1t;${settings.innerLinesThickness};1l;${settings.innerLinesLength};1o;${settings.innerLinesOffset};1a;${(settings.innerLinesOpacity/255).toFixed(3)};1m;0;1f;0`;
+    // Korrektes Valorant Crosshair Format - Exakt wie echte Codes
+    const code = `0;P;c;${colorCode};h;0;d;${settings.centerDotShow ? 1 : 0};z;${settings.centerDotThickness};f;0;0t;${settings.outerLinesThickness};0l;${settings.outerLinesLength};0o;${settings.outerLinesOffset};0a;${Math.round(settings.outerLinesOpacity/255)};0f;0;1t;${settings.innerLinesThickness};1l;${settings.innerLinesLength};1o;${settings.innerLinesOffset};1a;${Math.round(settings.innerLinesOpacity/255)};1f;0`;
     
     setCrosshairCode(code);
     return code;
