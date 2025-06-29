@@ -227,13 +227,13 @@ const CrosshairCreator = () => {
   };
 
   const colorOptions = [
-    { name: 'white', value: 'white', color: '#ffffff', label: 'Weiß' },
-    { name: 'green', value: 'green', color: '#00ff88', label: 'Grün' },
-    { name: 'yellowish-green', value: 'yellowish-green', color: '#88ff00', label: 'Gelb-Grün' },
-    { name: 'greenish-yellow', value: 'greenish-yellow', color: '#dfff00', label: 'Grün-Gelb' },
-    { name: 'cyan', value: 'cyan', color: '#00ffff', label: 'Cyan' },
-    { name: 'pink', value: 'pink', color: '#ff69b4', label: 'Pink' },
-    { name: 'red', value: 'red', color: '#ff4655', label: 'Rot' }
+    { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
+    { name: 'green', value: 'green', color: '#00FF00', label: 'Grün' },
+    { name: 'yellowish-green', value: 'yellowish-green', color: '#9ACD32', label: 'Gelb-Grün' },
+    { name: 'greenish-yellow', value: 'greenish-yellow', color: '#ADFF2F', label: 'Grün-Gelb' },
+    { name: 'cyan', value: 'cyan', color: '#00ffdf', label: 'Cyan' },
+    { name: 'pink', value: 'pink', color: '#FF69B4', label: 'Pink' },
+    { name: 'red', value: 'red', color: '#FF0000', label: 'Rot' }
   ];
 
   // Update Setting
@@ -306,18 +306,18 @@ const CrosshairCreator = () => {
     showNotification("Dein Crosshair wird heruntergeladen.");
   };
 
-  // Get Color Value - Optimiert für bessere Valorant-Ähnlichkeit
+  // Get Color Value - ECHTE Valorant-Farben (recherchiert)
   const getColorValue = (colorName: string) => {
     const colors: Record<string, string> = {
-      'white': '#ffffff', 
-      'green': '#00ff88', 
-      'yellowish-green': '#88ff00', 
-      'greenish-yellow': '#dfff00',
-      'cyan': '#00ffff', 
-      'pink': '#ff69b4', 
-      'red': '#ff4655'
+      'white': '#FFFFFF', 
+      'green': '#00FF00', 
+      'yellowish-green': '#9ACD32', 
+      'greenish-yellow': '#ADFF2F',
+      'cyan': '#00ffdf', 
+      'pink': '#FF69B4', 
+      'red': '#FF0000'
     };
-    return colors[colorName] || '#ffffff';
+    return colors[colorName] || '#FFFFFF';
   };
 
   // Update code when settings change
