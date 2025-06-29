@@ -95,6 +95,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     };
     
     const color = colorMap[settings.primaryColor] || 1;
+    console.log(`🔍 CODE GEN: "${settings.primaryColor}" → Color Index: ${color}`);
     let code = "0"; // Start
     
     // Scaling (optional, für modernere Codes)
@@ -251,6 +252,10 @@ const CrosshairCreator = () => {
   const generateCrosshairCode = () => {
     // Verwende die erweiterte Funktion mit allen Settings
     const code = generateValorantCrosshairCode(settings);
+    
+    // Debug: Zeige welcher Color-Index verwendet wird
+    const colorIndex = colorMap[settings.primaryColor] || 1;
+    console.log(`🎯 DEBUG: Color "${settings.primaryColor}" → Index ${colorIndex} → Code: ${code}`);
     
     setCrosshairCode(code);
     return code;
