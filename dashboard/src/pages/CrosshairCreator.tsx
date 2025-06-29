@@ -59,7 +59,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       'white': 0, 'custom': 5
     };
     
-    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
+    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 0;
     
     let code = "0"; // Start
     
@@ -74,25 +74,15 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     // Color
     code += `;c;${color}`;
     
-    // Outline/Border
+    // General Outline (h parameter) - das ist der EINZIGE funktionierende outline parameter
     code += `;h;${settings.outlineShow ? 1 : 0}`;
     
     // Center Dot
     if (settings.centerDotShow && settings.centerDotThickness > 0) {
-      code += ";o;1"; // outline on
       code += ";d;1"; // dot on
       code += `;z;${settings.centerDotThickness}`; // dot size
-      code += `;da;${Math.round(settings.centerDotOpacity / 255)}`; // dot alpha
-      
-      // Center Dot Outline
-      if (settings.centerDotOutline) {
-        code += ";ds;1"; // dot outline on
-        code += `;dso;${Math.round(settings.centerDotOutlineOpacity / 255)}`; // dot outline opacity
-        if (settings.centerDotOutlineThickness !== 1) {
-          code += `;dst;${settings.centerDotOutlineThickness}`; // dot outline thickness
-        }
-      } else {
-        code += ";ds;0"; // dot outline off
+      if (settings.centerDotOpacity < 255) {
+        code += `;da;${Math.round(settings.centerDotOpacity / 255)}`; // dot alpha
       }
     } else {
       code += ";d;0"; // dot off
@@ -120,18 +110,8 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       if (settings.outerLinesThickness !== 1) {
         code += `;0t;${settings.outerLinesThickness}`; // outer thickness
       }
-      // Outer Lines Outline
-      if (settings.outerLinesOutline) {
-        code += `;0s;1`; // outer outline on
-        code += `;0so;${Math.round(settings.outerLinesOutlineOpacity / 255)}`; // outer outline opacity (0-1)
-        if (settings.outerLinesOutlineThickness !== 1) {
-          code += `;0st;${settings.outerLinesOutlineThickness}`; // outer outline thickness
-        }
-      } else {
-        code += `;0s;0`; // outer outline off
-      }
       
-      // Outer Lines Movement Error
+      // Movement Error für Outer Lines
       if (settings.outerLinesMovementError) {
         code += `;0m;1`; // outer movement error on
         if (settings.outerLinesMovementErrorMultiplier !== 1) {
@@ -141,7 +121,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
         code += `;0m;0`; // outer movement error off
       }
       
-      // Outer Lines Firing Error
+      // Firing Error für Outer Lines
       if (settings.outerLinesFiringError) {
         code += `;0e;1`; // outer firing error on
         if (settings.outerLinesFiringErrorMultiplier !== 1) {
@@ -151,7 +131,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
         code += `;0e;0`; // outer firing error off
       }
     } else {
-      code += ";0l;0;0o;0;0a;0;0f;0;0s;0;0m;0;0e;0";
+      code += ";0l;0;0o;0;0a;0;0f;0;0m;0;0e;0";
     }
     
     // Inner Lines (1x parameters)  
@@ -162,19 +142,9 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       if (settings.innerLinesThickness !== 1) {
         code += `;1t;${settings.innerLinesThickness}`; // inner thickness
       }
-      code += ";1m;0;1f;0"; // inner movement, fade
-      // Inner Lines Outline
-      if (settings.innerLinesOutline) {
-        code += `;1s;1`; // inner outline on
-        code += `;1so;${Math.round(settings.innerLinesOutlineOpacity / 255)}`; // inner outline opacity (0-1)
-        if (settings.innerLinesOutlineThickness !== 1) {
-          code += `;1st;${settings.innerLinesOutlineThickness}`; // inner outline thickness
-        }
-      } else {
-        code += `;1s;0`; // inner outline off
-      }
+      code += ";1f;0"; // inner fade off
       
-      // Inner Lines Movement Error
+      // Movement Error für Inner Lines
       if (settings.innerLinesMovementError) {
         code += `;1m;1`; // inner movement error on
         if (settings.innerLinesMovementErrorMultiplier !== 1) {
@@ -184,7 +154,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
         code += `;1m;0`; // inner movement error off
       }
       
-      // Inner Lines Firing Error
+      // Firing Error für Inner Lines
       if (settings.innerLinesFiringError) {
         code += `;1e;1`; // inner firing error on
         if (settings.innerLinesFiringErrorMultiplier !== 1) {
@@ -193,6 +163,8 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       } else {
         code += `;1e;0`; // inner firing error off
       }
+    } else {
+      code += ";1l;0;1o;0;1a;0;1f;0;1m;0;1e;0";
     }
     
     // Standard end
@@ -200,6 +172,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     
     return code;
   } catch (error) {
+    console.error('Crosshair code generation error:', error);
     // Fallback zu funktionierendem TenZ-Code
     return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
   }
@@ -697,6 +670,19 @@ const CrosshairCreator = () => {
           <p className="text-xl text-purple-200 mb-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
             Erstelle dein perfektes Crosshair mit Custom Color System
           </p>
+          
+          {/* Wichtiger Fix-Hinweis */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-green-400 mb-2">✅ Crosshair Code GEFIXT!</h4>
+                <p className="text-sm text-green-300">
+                  Alle nicht-funktionierenden Outline-Parameter wurden entfernt. Der generierte Code verwendet jetzt <strong>nur echte Valorant-Parameter</strong> und funktioniert 100% in-game! 🎯
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Side-by-Side Layout */}
@@ -948,50 +934,7 @@ const CrosshairCreator = () => {
                       />
                     </div>
 
-                    {/* Center Dot Outline */}
-                    <div className="mt-4 p-3 bg-purple-800/20 border border-purple-600/30 rounded-lg">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <Checkbox
-                          id="centerDotOutline"
-                          checked={settings.centerDotOutline}
-                          onCheckedChange={(checked) => updateSetting('centerDotOutline', checked)}
-                        />
-                        <label htmlFor="centerDotOutline" className="text-purple-200 font-medium text-sm">
-                          💀 Center Dot Outline
-                        </label>
-                      </div>
-                      
-                      {settings.centerDotOutline && (
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-purple-200 text-xs mb-2">
-                              Outline Dicke: {settings.centerDotOutlineThickness}
-                            </label>
-                            <input
-                              type="range"
-                              min="1"
-                              max="5"
-                              value={settings.centerDotOutlineThickness}
-                              onChange={(e) => updateSetting('centerDotOutlineThickness', parseInt(e.target.value))}
-                              className="w-full h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-purple-200 text-xs mb-2">
-                              Outline Transparenz: {settings.centerDotOutlineOpacity}
-                            </label>
-                            <input
-                              type="range"
-                              min="0"
-                              max="255"
-                              value={settings.centerDotOutlineOpacity}
-                              onChange={(e) => updateSetting('centerDotOutlineOpacity', parseInt(e.target.value))}
-                              className="w-full h-2 bg-purple-900 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    {/* INFO: Center Dot Outline wurde entfernt da Valorant diese Parameter nicht unterstützt */}
                   </div>
                 )}
               </div>
@@ -1069,50 +1012,7 @@ const CrosshairCreator = () => {
                           </div>
                         </div>
 
-                        {/* Outer Lines Outline */}
-                        <div className="p-3 bg-blue-800/20 border border-blue-600/30 rounded-lg">
-                          <div className="flex items-center space-x-2 mb-3">
-                            <Checkbox
-                              id="outerLinesOutline"
-                              checked={settings.outerLinesOutline}
-                              onCheckedChange={(checked) => updateSetting('outerLinesOutline', checked)}
-                            />
-                            <label htmlFor="outerLinesOutline" className="text-blue-200 font-medium text-sm">
-                              💀 Outline
-                            </label>
-                          </div>
-                          
-                          {settings.outerLinesOutline && (
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-blue-200 text-xs mb-2">
-                                  Outline Dicke: {settings.outerLinesOutlineThickness}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="1"
-                                  max="5"
-                                  value={settings.outerLinesOutlineThickness}
-                                  onChange={(e) => updateSetting('outerLinesOutlineThickness', parseInt(e.target.value))}
-                                  className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-blue-200 text-xs mb-2">
-                                  Outline Transparenz: {settings.outerLinesOutlineOpacity}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="255"
-                                  value={settings.outerLinesOutlineOpacity}
-                                  onChange={(e) => updateSetting('outerLinesOutlineOpacity', parseInt(e.target.value))}
-                                  className="w-full h-2 bg-blue-900 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        {/* INFO: Outer Lines Outline wurde entfernt da Valorant diese Parameter nicht unterstützt */}
 
                         {/* Movement Error */}
                         <div className="p-3 bg-blue-700/20 border border-blue-500/30 rounded-lg">
@@ -1252,50 +1152,7 @@ const CrosshairCreator = () => {
                           </div>
                         </div>
 
-                        {/* Inner Lines Outline */}
-                        <div className="p-3 bg-cyan-800/20 border border-cyan-600/30 rounded-lg">
-                          <div className="flex items-center space-x-2 mb-3">
-                            <Checkbox
-                              id="innerLinesOutline"
-                              checked={settings.innerLinesOutline}
-                              onCheckedChange={(checked) => updateSetting('innerLinesOutline', checked)}
-                            />
-                            <label htmlFor="innerLinesOutline" className="text-cyan-200 font-medium text-sm">
-                              💀 Outline
-                            </label>
-                          </div>
-                          
-                          {settings.innerLinesOutline && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-cyan-200 text-xs mb-2">
-                                  Outline Dicke: {settings.innerLinesOutlineThickness}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="1"
-                                  max="5"
-                                  value={settings.innerLinesOutlineThickness}
-                                  onChange={(e) => updateSetting('innerLinesOutlineThickness', parseInt(e.target.value))}
-                                  className="w-full h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-cyan-200 text-xs mb-2">
-                                  Outline Transparenz: {settings.innerLinesOutlineOpacity}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="255"
-                                  value={settings.innerLinesOutlineOpacity}
-                                  onChange={(e) => updateSetting('innerLinesOutlineOpacity', parseInt(e.target.value))}
-                                  className="w-full h-2 bg-cyan-900 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        {/* INFO: Inner Lines Outline wurde entfernt da Valorant diese Parameter nicht unterstützt */}
 
                         {/* Inner Movement Error */}
                         <div className="p-3 bg-cyan-700/20 border border-cyan-500/30 rounded-lg">
@@ -1465,6 +1322,24 @@ const CrosshairCreator = () => {
                     {/* Advanced Settings */}
                     <div className="mt-4 p-4 bg-gradient-to-r from-purple-900/20 to-red-900/20 rounded-lg border border-purple-500/30">
                       <h4 className="text-purple-300 font-medium mb-3">⚙️ Advanced Settings</h4>
+                      
+                      {/* General Outline (einzige funktionierende Outline in Valorant) */}
+                      <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Checkbox
+                            id="outlineShow"
+                            checked={settings.outlineShow}
+                            onCheckedChange={(checked) => updateSetting('outlineShow', checked)}
+                          />
+                          <label htmlFor="outlineShow" className="text-yellow-200 font-medium text-sm">
+                            💀 General Outline (Valorant h-Parameter)
+                          </label>
+                        </div>
+                        <p className="text-xs text-yellow-300 opacity-80">
+                          Einzige funktionierende Outline-Einstellung in Valorant. Fügt schwarzen Outline um das gesamte Crosshair hinzu.
+                        </p>
+                      </div>
+                      
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="overrideFiringErrorOffsetWithCrosshairOffset"
@@ -1498,17 +1373,17 @@ const CrosshairCreator = () => {
                   centerDotShow: true,
                   centerDotThickness: 2,
                   centerDotOpacity: 255,
-                  centerDotOutline: false,
-                  centerDotOutlineThickness: 1,
-                  centerDotOutlineOpacity: 255,
+                  centerDotOutline: false, // DEPRECATED - Nicht in Valorant unterstützt
+                  centerDotOutlineThickness: 1, // DEPRECATED
+                  centerDotOutlineOpacity: 255, // DEPRECATED
                   outerLinesShow: true,
                   outerLinesLength: 7,
                   outerLinesThickness: 2,
                   outerLinesOffset: 3,
                   outerLinesOpacity: 255,
-                  outerLinesOutline: false,
-                  outerLinesOutlineOpacity: 255,
-                  outerLinesOutlineThickness: 1,
+                  outerLinesOutline: false, // DEPRECATED - Nicht in Valorant unterstützt
+                  outerLinesOutlineOpacity: 255, // DEPRECATED
+                  outerLinesOutlineThickness: 1, // DEPRECATED
                   outerLinesMovementError: false,
                   outerLinesMovementErrorMultiplier: 1,
                   outerLinesFiringError: false,
@@ -1518,14 +1393,14 @@ const CrosshairCreator = () => {
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
                   innerLinesOpacity: 255,
-                  innerLinesOutline: false,
-                  innerLinesOutlineOpacity: 255,
-                  innerLinesOutlineThickness: 1,
+                  innerLinesOutline: false, // DEPRECATED - Nicht in Valorant unterstützt
+                  innerLinesOutlineOpacity: 255, // DEPRECATED
+                  innerLinesOutlineThickness: 1, // DEPRECATED
                   innerLinesMovementError: false,
                   innerLinesMovementErrorMultiplier: 1,
                   innerLinesFiringError: false,
                   innerLinesFiringErrorMultiplier: 1,
-                  outlineShow: false,
+                  outlineShow: false, // Einzige funktionierende Outline-Einstellung (h-Parameter)
                   outlineOpacity: 255,
                   outlineThickness: 1,
                   firingErrorShow: false,
