@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Copy, Download, Settings, Eye, Check, RotateCcw } from 'lucide-react';
+import { Target, Copy, Download, Settings, Eye, Check, RotateCcw, Star, Sliders } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { useToast, ToastContainer } from '../components/ui/toast';
@@ -191,6 +191,7 @@ const CrosshairCreator = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [crosshairCode, setCrosshairCode] = useState('');
   const [currentPreset, setCurrentPreset] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'presets' | 'settings'>('presets');
   
   // Toast System
   const { toasts, success, error, removeToast } = useToast();
@@ -343,49 +344,95 @@ const CrosshairCreator = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Presets Panel */}
-          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl">
-            <h2 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2">
-              <Settings className="w-6 h-6" />
+        {/* Tab Navigation */}
+        <div className="mb-8 bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-2 shadow-xl">
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setActiveTab('presets')}
+              variant={activeTab === 'presets' ? 'default' : 'ghost'}
+              className={cn(
+                "flex-1 flex items-center gap-2 text-lg py-3",
+                activeTab === 'presets' 
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" 
+                  : "text-purple-300 hover:bg-purple-500/20"
+              )}
+            >
+              <Star className="w-5 h-5" />
               Bewährte Presets
-            </h2>
-
-            <div className="space-y-4">
-              {presets.map((preset, index) => (
-                <div 
-                  key={index} 
-                  className={cn(
-                    "border rounded-lg p-4 hover:bg-purple-500/10 transition-colors cursor-pointer",
-                    currentPreset === preset.name && "border-purple-400 bg-purple-500/20"
-                  )}
-                  onClick={() => applyPreset(preset.code, preset.name)}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-purple-300">{preset.name}</h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        applyPreset(preset.code, preset.name);
-                      }}
-                      className="border-purple-400 text-purple-300 hover:bg-purple-500/20"
-                    >
-                      Anwenden
-                    </Button>
-                  </div>
-                  <p className="text-sm text-purple-200 mb-3">{preset.description}</p>
-                  <div className="bg-black/30 p-2 rounded text-xs font-mono break-all text-purple-100">
-                    {preset.code}
-                  </div>
-                </div>
-              ))}
-            </div>
+            </Button>
+            <Button
+              onClick={() => setActiveTab('settings')}
+              variant={activeTab === 'settings' ? 'default' : 'ghost'}
+              className={cn(
+                "flex-1 flex items-center gap-2 text-lg py-3",
+                activeTab === 'settings' 
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white" 
+                  : "text-purple-300 hover:bg-purple-500/20"
+              )}
+            >
+              <Sliders className="w-5 h-5" />
+              Einstellungen
+            </Button>
           </div>
+        </div>
 
-          {/* Settings Panel */}
-          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl">
+        {/* Tab Content */}
+        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 rounded-2xl p-8 shadow-xl">
+          {activeTab === 'presets' ? (
+            <div>
+              <h2 className="text-3xl font-bold text-purple-400 mb-6 flex items-center gap-3">
+                <Star className="w-8 h-8" />
+                Bewährte Presets
+              </h2>
+              <p className="text-purple-200 mb-8 text-lg">
+                Wähle aus bewährten Pro-Player Crosshairs - alle Codes sind getestet und funktionieren garantiert!
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {presets.map((preset, index) => (
+                  <div 
+                    key={index} 
+                    className={cn(
+                      "border rounded-xl p-6 hover:bg-purple-500/10 transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:shadow-lg",
+                      currentPreset === preset.name && "border-purple-400 bg-purple-500/20 shadow-purple-400/25"
+                    )}
+                    onClick={() => applyPreset(preset.code, preset.name)}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-xl text-purple-300">{preset.name}</h3>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          applyPreset(preset.code, preset.name);
+                        }}
+                        className="border-purple-400 text-purple-300 hover:bg-purple-500/30 hover:scale-105 transition-all"
+                      >
+                        <Star className="w-4 h-4 mr-1" />
+                        Anwenden
+                      </Button>
+                    </div>
+                    <p className="text-purple-200 mb-4 leading-relaxed">{preset.description}</p>
+                    <div className="bg-black/40 p-3 rounded-lg text-xs font-mono break-all text-purple-100 border border-purple-500/20">
+                      {preset.code}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h2 className="text-3xl font-bold text-purple-400 mb-6 flex items-center gap-3">
+                <Sliders className="w-8 h-8" />
+                Crosshair Einstellungen
+              </h2>
+              <p className="text-purple-200 mb-8 text-lg">
+                Passe dein Crosshair individuell an oder nutze die Live-Vorschau
+              </p>
+
+                {/* Settings Content */}
+                <div className="space-y-6">
             <h2 className="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-2">
               <Target className="w-6 h-6" />
               Crosshair Einstellungen
@@ -830,7 +877,7 @@ const CrosshairCreator = () => {
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Code und Actions */}
