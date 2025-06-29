@@ -95,27 +95,27 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     }
     
     // Inner Lines (0x parameters) - VCRDB korrekt!
-    if (settings.innerLinesShow) {
+    if (settings.innerLinesShow && settings.innerLinesLength > 0) {
       code += `;0l;${settings.innerLinesLength}`; // inner length
       code += `;0o;${settings.innerLinesOffset}`; // inner offset
       code += `;0a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
-      if (settings.innerLinesThickness !== 1) {
-        code += `;0t;${settings.innerLinesThickness}`; // inner thickness
-      }
+      code += `;0t;${settings.innerLinesThickness}`; // inner thickness (immer setzen!)
       code += ";0m;0;0f;0"; // inner movement, fade
     } else {
-      code += ";0l;0;0o;0;0a;0;0f;0";
+      // Inner Lines ausgeschaltet - Parameter müssen trotzdem da sein!
+      code += ";0l;0;0o;0;0a;0;0t;0;0m;0;0f;0";
     }
     
     // Outer Lines (1x parameters) - VCRDB korrekt!
-    if (settings.outerLinesShow) {
+    if (settings.outerLinesShow && settings.outerLinesLength > 0) {
       code += `;1l;${settings.outerLinesLength}`; // outer length
       code += `;1o;${settings.outerLinesOffset}`; // outer offset
       code += `;1a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha
-      if (settings.outerLinesThickness !== 1) {
-        code += `;1t;${settings.outerLinesThickness}`; // outer thickness
-      }
+      code += `;1t;${settings.outerLinesThickness}`; // outer thickness (immer setzen!)
       code += ";1m;0;1f;0"; // outer movement, fade
+    } else {
+      // Outer Lines ausgeschaltet - Parameter müssen trotzdem da sein!
+      code += ";1l;0;1o;0;1a;0;1t;0;1m;0;1f;0";
     }
     
     // Standard end
@@ -222,8 +222,8 @@ const CrosshairCreator = () => {
       const centerDotThickness = centerDotShow ? Math.floor(Math.random() * 6) + 1 : 0; // 1-6 (VCRDB)
       const centerDotOpacity = centerDotShow ? Math.floor((Math.random() * 0.5 + 0.5) * 255) : 255; // 0.5-1.0 alpha
       
-      const outerLinesLength = Math.floor(Math.random() * 11); // 0-10 (VCRDB)
-      const outerLinesThickness = Math.floor(Math.random() * 11); // 0-10 (VCRDB 1:1)
+      const outerLinesLength = Math.floor(Math.random() * 10) + 1; // 1-10 (VCRDB, min 1 für Sichtbarkeit)
+      const outerLinesThickness = Math.floor(Math.random() * 10) + 1; // 1-10 (VCRDB, min 1 für Sichtbarkeit)
       const outerLinesOffset = Math.floor(Math.random() * 41); // 0-40 (VCRDB 1:1)
       const outerLinesOpacity = Math.floor((Math.random() * 0.6 + 0.4) * 255); // 0.4-1.0 alpha
       
@@ -299,7 +299,7 @@ const CrosshairCreator = () => {
             centerDotThickness: Math.floor(Math.random() * 3) + 1, // 1-3
             outerLinesShow: true,
             outerLinesLength: Math.floor(Math.random() * 5) + 6, // 6-10 (VCRDB max)
-            outerLinesThickness: Math.floor(Math.random() * 3), // 0-2 (thin retro, VCRDB)
+            outerLinesThickness: Math.floor(Math.random() * 2) + 1, // 1-2 (thin retro, min 1)
             outerLinesOffset: Math.floor(Math.random() * 31) + 10, // 10-40 (wide spacing, VCRDB)
             innerLinesShow: false,
             color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FECA57'][Math.floor(Math.random() * 4)]
@@ -310,8 +310,8 @@ const CrosshairCreator = () => {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 2) + 1, // 1-2
             outerLinesShow: Math.random() > 0.3,
-            outerLinesLength: Math.floor(Math.random() * 5), // 0-4 (VCRDB min range)
-            outerLinesThickness: Math.floor(Math.random() * 3), // 0-2 (minimal, VCRDB)
+            outerLinesLength: Math.floor(Math.random() * 4) + 1, // 1-4 (VCRDB min range, min 1)
+            outerLinesThickness: Math.floor(Math.random() * 2) + 1, // 1-2 (minimal, min 1)
             outerLinesOffset: Math.floor(Math.random() * 16), // 0-15 (VCRDB range)
             innerLinesShow: false,
             color: getRandomColor()
@@ -334,8 +334,8 @@ const CrosshairCreator = () => {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 3) + 4, // 4-6 (VCRDB max)
             outerLinesShow: Math.random() > 0.5,
-            outerLinesLength: Math.floor(Math.random() * 5), // 0-4 (small lines, VCRDB)
-            outerLinesThickness: Math.floor(Math.random() * 4), // 0-3 (VCRDB range)
+            outerLinesLength: Math.floor(Math.random() * 4) + 1, // 1-4 (small lines, min 1)
+            outerLinesThickness: Math.floor(Math.random() * 3) + 1, // 1-3 (min 1 für Sichtbarkeit)
             outerLinesOffset: Math.floor(Math.random() * 36) + 5, // 5-40 (VCRDB range)
             innerLinesShow: false,
             color: getRandomColor()
@@ -346,8 +346,8 @@ const CrosshairCreator = () => {
             centerDotShow: Math.random() > 0.4,
             centerDotThickness: Math.floor(Math.random() * 6) + 1, // 1-6 (VCRDB full range)
             outerLinesShow: Math.random() > 0.2,
-            outerLinesLength: Math.floor(Math.random() * 11), // 0-10 (VCRDB full)
-            outerLinesThickness: Math.floor(Math.random() * 11), // 0-10 (VCRDB 1:1)
+            outerLinesLength: Math.floor(Math.random() * 10) + 1, // 1-10 (VCRDB, min 1)
+            outerLinesThickness: Math.floor(Math.random() * 10) + 1, // 1-10 (VCRDB, min 1)
             outerLinesOffset: Math.floor(Math.random() * 41), // 0-40 (VCRDB 1:1)
             innerLinesShow: Math.random() > 0.5,
             innerLinesLength: Math.floor(Math.random() * 18) + 2, // 2-20 (VCRDB)
