@@ -88,10 +88,9 @@ const presets = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // ✨ SAUBERE VALORANT FARB-ZUORDNUNG (Standard Valorant-System)
+    // 🎨 CUSTOM COLOR SYSTEM - verwendet Index 5 für alle custom colors
     const colorMap: Record<string, number> = {
-      'white': 0, 'green': 1, 'yellow': 2, 'blue': 3,
-      'cyan': 4, 'red': 5, 'pink': 6, 'custom': 5
+      'white': 0, 'green': 1, 'custom': 5
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
@@ -166,6 +165,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
 
 interface CrosshairSettings {
   primaryColor: string;
+  customColor: string;
   centerDotShow: boolean;
   centerDotThickness: number;
   centerDotOpacity: number;
@@ -200,7 +200,8 @@ const CrosshairCreator = () => {
 
   // Erweiterte Crosshair Settings
   const [settings, setSettings] = useState<CrosshairSettings>({
-    primaryColor: 'white',
+    primaryColor: 'custom',
+    customColor: '#FF0000',
     centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
@@ -222,20 +223,15 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // ✨ SAUBERE VALORANT FARB-ZUORDNUNG (Standard Valorant-System)
+  // 🎨 CUSTOM COLOR SYSTEM (wie andere Valorant Generatoren)
   const colorMap: Record<string, number> = {
-    'white': 0, 'green': 1, 'yellow': 2, 'blue': 3,
-    'cyan': 4, 'red': 5, 'pink': 6, 'custom': 5
+    'white': 0, 'green': 1, 'custom': 5
   };
 
-  const colorOptions = [
+  const presetColors = [
     { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
     { name: 'green', value: 'green', color: '#00FF41', label: 'Grün' },
-    { name: 'yellow', value: 'yellow', color: '#FFFF00', label: 'Gelb' },
-    { name: 'blue', value: 'blue', color: '#0080FF', label: 'Blau' },
-    { name: 'cyan', value: 'cyan', color: '#00FFFF', label: 'Cyan' },
-    { name: 'red', value: 'red', color: '#FF0040', label: 'Rot' },
-    { name: 'pink', value: 'pink', color: '#FF69B4', label: 'Pink' }
+    { name: 'custom', value: 'custom', color: settings.customColor || '#FF0000', label: '🎨 Custom Color' }
   ];
 
   // Update Setting
@@ -258,15 +254,11 @@ const CrosshairCreator = () => {
     const hexColor = getColorValue(settings.primaryColor);
     console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
     console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
-    console.log(`✨ SAUBERES VALORANT FARB-SYSTEM:`);
-    console.log(`  📌 Weiß → Index 0`);
-    console.log(`  📌 Grün → Index 1`);  
-    console.log(`  📌 Gelb → Index 2`);
-    console.log(`  📌 Blau → Index 3`);
-    console.log(`  📌 Cyan → Index 4`);
-    console.log(`  📌 Rot → Index 5`);
-    console.log(`  📌 Pink → Index 6`);
-    console.log(`🎯 Standard Valorant-Farben mit korrekten Hex-Codes!`);
+    console.log(`🎨 CUSTOM COLOR SYSTEM wie andere Valorant Generatoren:`);
+    console.log(`  📌 Weiß → Index 0 (#FFFFFF)`);
+    console.log(`  📌 Grün → Index 1 (#00FF41)`);  
+    console.log(`  📌 Custom → Index 5 (${settings.customColor})`);
+    console.log(`🎯 Custom Color Picker für beliebige Hex-Codes aktiv!`);
     
     setCrosshairCode(code);
     return code;
@@ -328,18 +320,16 @@ const CrosshairCreator = () => {
     showNotification("Dein Crosshair wird heruntergeladen.");
   };
 
-  // Get Color Value - Standard Valorant-Farben
+  // Get Color Value - Custom Color System
   const getColorValue = (colorName: string) => {
+    if (colorName === 'custom') {
+      return settings.customColor;
+    }
     const colors: Record<string, string> = {
       'white': '#FFFFFF',
-      'green': '#00FF41', 
-      'yellow': '#FFFF00',
-      'blue': '#0080FF',
-      'cyan': '#00FFFF',
-      'red': '#FF0040',
-      'pink': '#FF69B4'
+      'green': '#00FF41'
     };
-    const result = colors[colorName] || '#FFFFFF';
+    const result = colors[colorName] || settings.customColor;
     console.log(`Getting color for '${colorName}': ${result}`);
     return result;
   };
@@ -457,7 +447,7 @@ const CrosshairCreator = () => {
                     </span>
                   </label>
                   <div className="grid grid-cols-4 gap-3">
-                    {colorOptions.map((color) => (
+                                          {presetColors.map((color) => (
                       <button
                         key={color.value}
                         onClick={() => {
@@ -475,6 +465,34 @@ const CrosshairCreator = () => {
                       />
                     ))}
                   </div>
+                  
+                  {/* Custom Color Picker */}
+                  {settings.primaryColor === 'custom' && (
+                    <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                      <label className="block text-sm font-medium text-purple-300 mb-3">
+                        🎨 Custom Color Picker
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="color"
+                          value={settings.customColor}
+                          onChange={(e) => updateSetting('customColor', e.target.value)}
+                          className="w-16 h-12 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={settings.customColor}
+                          onChange={(e) => updateSetting('customColor', e.target.value)}
+                          className="flex-1 px-3 py-2 bg-black/30 border border-purple-500/30 rounded text-white placeholder-gray-400"
+                          placeholder="#FF0000"
+                          pattern="^#[0-9A-Fa-f]{6}$"
+                        />
+                      </div>
+                      <p className="text-xs text-purple-400 mt-2">
+                        Verwende jeden beliebigen Hex-Code (z.B. #F90606 wie im Bild)
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Center Dot */}
@@ -819,7 +837,8 @@ const CrosshairCreator = () => {
             <div className="flex gap-3">
               <Button
                 onClick={() => setSettings({
-                  primaryColor: 'white',
+                  primaryColor: 'custom',
+                  customColor: '#FF0000',
                   centerDotShow: true,
                   centerDotThickness: 2,
                   centerDotOpacity: 255,
