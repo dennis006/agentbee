@@ -228,12 +228,12 @@ const CrosshairCreator = () => {
 
   const colorOptions = [
     { name: 'white', value: 'white', color: '#ffffff', label: 'Weiß' },
-    { name: 'green', value: 'green', color: '#00ff41', label: 'Grün (Valorant)' },
-    { name: 'yellowish-green', value: 'yellowish-green', color: '#ccff00', label: 'Gelb-Grün' },
-    { name: 'greenish-yellow', value: 'greenish-yellow', color: '#ffff00', label: 'Gelb' },
+    { name: 'green', value: 'green', color: '#00ff88', label: 'Grün' },
+    { name: 'yellowish-green', value: 'yellowish-green', color: '#88ff00', label: 'Gelb-Grün' },
+    { name: 'greenish-yellow', value: 'greenish-yellow', color: '#dfff00', label: 'Grün-Gelb' },
     { name: 'cyan', value: 'cyan', color: '#00ffff', label: 'Cyan' },
-    { name: 'pink', value: 'pink', color: '#ff00ff', label: 'Pink/Magenta' },
-    { name: 'red', value: 'red', color: '#ff0044', label: 'Rot' }
+    { name: 'pink', value: 'pink', color: '#ff69b4', label: 'Pink' },
+    { name: 'red', value: 'red', color: '#ff4655', label: 'Rot' }
   ];
 
   // Update Setting
@@ -306,16 +306,16 @@ const CrosshairCreator = () => {
     showNotification("Dein Crosshair wird heruntergeladen.");
   };
 
-  // Get Color Value - Angepasst an echte Valorant-Farben
+  // Get Color Value - Optimiert für bessere Valorant-Ähnlichkeit
   const getColorValue = (colorName: string) => {
     const colors: Record<string, string> = {
       'white': '#ffffff', 
-      'green': '#00ff41', 
-      'yellowish-green': '#ccff00', 
-      'greenish-yellow': '#ffff00',
+      'green': '#00ff88', 
+      'yellowish-green': '#88ff00', 
+      'greenish-yellow': '#dfff00',
       'cyan': '#00ffff', 
-      'pink': '#ff00ff', 
-      'red': '#ff0044'
+      'pink': '#ff69b4', 
+      'red': '#ff4655'
     };
     return colors[colorName] || '#ffffff';
   };
@@ -697,10 +697,24 @@ const CrosshairCreator = () => {
 
                {/* Live Preview */}
                <div className="border border-purple-400/30 rounded-lg p-6 bg-black/20">
-                 <h3 className="text-purple-300 font-medium mb-4">Live Vorschau</h3>
-                <div className="w-full h-48 bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden">
+                 <div className="flex items-center justify-between mb-4">
+                   <h3 className="text-purple-300 font-medium">Live Vorschau</h3>
+                   <div className="text-xs text-purple-400 bg-purple-900/30 px-2 py-1 rounded">
+                     ⚠️ Annäherung - Echtes Valorant kann abweichen
+                   </div>
+                 </div>
+                <div className="w-full h-48 bg-gradient-to-b from-gray-900 to-black rounded-lg flex items-center justify-center relative overflow-hidden border border-gray-700">
+                  {/* Valorant-ähnlicher Hintergrund */}
+                  <div className="absolute inset-0 opacity-10">
+                    <div className="w-full h-full" style={{
+                      backgroundImage: `radial-gradient(circle at 25px 25px, rgba(255,255,255,0.1) 2px, transparent 0),
+                                       radial-gradient(circle at 75px 75px, rgba(255,255,255,0.05) 1px, transparent 0)`,
+                      backgroundSize: '100px 100px'
+                    }}></div>
+                  </div>
+                  
                   {/* Erweiterte Crosshair Preview */}
-                  <div className="relative w-32 h-32">
+                  <div className="relative w-32 h-32 z-10">
                     {/* Outer Lines */}
                     {settings.outerLinesShow && (
                       <>
@@ -800,14 +814,15 @@ const CrosshairCreator = () => {
                     )}
 
                     {/* Center Dot */}
-                    {settings.centerDotShow && (
+                    {settings.centerDotShow && settings.centerDotThickness > 0 && (
                       <div 
                         className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full"
                         style={{
                           backgroundColor: getColorValue(settings.primaryColor),
-                          width: `${settings.centerDotThickness * 2}px`,
-                          height: `${settings.centerDotThickness * 2}px`,
-                          opacity: settings.centerDotOpacity / 255
+                          width: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
+                          height: `${Math.max(1, settings.centerDotThickness * 1.5)}px`,
+                          opacity: settings.centerDotOpacity / 255,
+                          boxShadow: settings.outlineShow ? `0 0 0 1px rgba(0,0,0,0.8)` : 'none'
                         }}
                       />
                     )}
@@ -908,6 +923,19 @@ const CrosshairCreator = () => {
                 <p className="text-sm text-green-300">
                   Alle Presets sind von der Community getestet und funktionieren garantiert in Valorant. 
                   Kopiere den Code und füge ihn unter Einstellungen → Fadenkreuz → Importieren ein.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Eye className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-blue-400 mb-2">Wichtiger Hinweis</h4>
+                <p className="text-sm text-blue-300">
+                  Die Browser-Vorschau ist nur eine <strong>Annäherung</strong>. Das echte Crosshair in Valorant 
+                  kann anders aussehen. Verwende die <strong>generierten Codes</strong> für das genaue Ergebnis!
                 </p>
               </div>
             </div>
