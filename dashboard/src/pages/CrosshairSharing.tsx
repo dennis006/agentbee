@@ -172,17 +172,30 @@ const CrosshairSharing = () => {
       setLoadingChannels(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
+      console.log('🔄 Loading channels for guild:', selectedGuild);
       const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/channels`);
       const data = await response.json();
       
-      if (data.success && data.channels) {
-        setChannels(data.channels);
+      console.log('📡 Channels response:', data);
+      
+      if (data.success && data.channels && Array.isArray(data.channels)) {
+        // Filter nur Text-Channels (type 0)
+        const textChannels = data.channels.filter(channel => channel.type === 0);
+        setChannels(textChannels);
+        console.log('✅ Channels loaded:', textChannels.length);
+        
+        if (textChannels.length === 0) {
+          error('Keine Text-Channels gefunden. Bot benötigt "View Channels" Permission.');
+        }
       } else {
+        console.warn('❌ Channel loading failed:', data.message || 'Unknown error');
         setChannels([]);
+        error(data.message || 'Fehler beim Laden der Channels. Prüfe Bot Token und Permissions.');
       }
     } catch (err) {
       console.error('❌ Channel loading error:', err);
       setChannels([]);
+      error('Netzwerkfehler beim Laden der Channels. Prüfe API-Verbindung.');
     } finally {
       setLoadingChannels(false);
     }
@@ -469,30 +482,79 @@ const CrosshairSharing = () => {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-dark-text mb-2 block">
-                    Crosshair Channel
-                  </label>
-                  {channels.length > 0 ? (
-                    <select
-                      className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg p-2"
-                      value={settings?.crosshair_channel_id || ''}
-                      onChange={(e) => {
-                        const selectedChannel = channels.find(c => c.id === e.target.value);
-                        updateSetting('crosshair_channel_id', e.target.value);
-                        updateSetting('crosshair_channel_name', selectedChannel?.name || '');
+                  <label className="text-sm font-medium text-dark-text mb-2 block flex items-center justify-between">
+                    <span>Crosshair Channel</span>
+                    <button
+                      onClick={() => {
+                        if (selectedGuild) {
+                          loadDiscordChannels();
+                          success('Channels werden neu geladen...');
+                        }
                       }}
+                      className="text-xs px-2 py-1 bg-purple-600 hover:bg-purple-700 rounded text-white transition-colors"
+                      disabled={loadingChannels}
                     >
-                      <option value="">-- Channel auswählen --</option>
-                      {channels.map(channel => (
-                        <option key={channel.id} value={channel.id}>
-                          #{channel.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
+                      {loadingChannels ? '🔄' : '🔄 Refresh'}
+                    </button>
+                  </label>
+                  
+                  {loadingChannels ? (
                     <div className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-muted rounded-lg p-2 flex items-center">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-accent mr-2"></div>
-                      Lade Channels...
+                      Lade Channels... (Guild: {selectedGuild?.slice(-4)})
+                    </div>
+                  ) : channels.length > 0 ? (
+                    <div>
+                      <select
+                        className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg p-2"
+                        value={settings?.crosshair_channel_id || ''}
+                        onChange={(e) => {
+                          const selectedChannel = channels.find(c => c.id === e.target.value);
+                          updateSetting('crosshair_channel_id', e.target.value);
+                          updateSetting('crosshair_channel_name', selectedChannel?.name || '');
+                          if (selectedChannel) {
+                            success(`Channel #${selectedChannel.name} ausgewählt!`);
+                          }
+                        }}
+                      >
+                        <option value="">-- Channel auswählen --</option>
+                        {channels.map(channel => (
+                          <option key={channel.id} value={channel.id}>
+                            #{channel.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-dark-muted mt-1">
+                        {channels.length} Text-Channels verfügbar • Bot benötigt "View Channels" Permission
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="w-full bg-orange-900/20 border border-orange-500/30 text-orange-300 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="font-medium">Keine Channels gefunden</span>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <div>• Bot Token konfiguriert?</div>
+                          <div>• Bot im Server hinzugefügt?</div>
+                          <div>• "View Channels" Permission?</div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          if (selectedGuild) {
+                            loadDiscordChannels();
+                          } else {
+                            error('Bitte wähle zuerst einen Discord Server aus.');
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        disabled={loadingChannels}
+                      >
+                        🔄 Channels erneut laden
+                      </button>
                     </div>
                   )}
                 </div>
