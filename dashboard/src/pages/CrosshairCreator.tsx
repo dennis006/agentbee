@@ -54,70 +54,77 @@ const COLORS = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Color mapping für Valorant
+    // 🎨 CUSTOM COLOR SYSTEM - verwendet Index 5 für alle custom colors
     const colorMap: Record<string, number> = {
       'white': 0, 'custom': 5
     };
     
-    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 0;
+    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
     
-    // KORREKTE Valorant Crosshair Code Struktur
-    let code = "0;s;1;P"; // Basic start
+    let code = "0"; // Start
     
-    // Primary Color
+    // Scaling (optional, für modernere Codes)
+    if (settings.centerDotShow || settings.outerLinesShow || settings.innerLinesShow) {
+      code += ";s;1";
+    }
+    
+    // Primary Crosshair Marker
+    code += ";P";
+    
+    // Color
     code += `;c;${color}`;
     
-    // Custom Color (wenn custom gewählt)
-    if (settings.primaryColor === 'custom') {
-      const hexColor = settings.customColor.replace('#', '').toUpperCase() + 'FF'; // Add alpha
-      code += `;u;${hexColor}`;
-    }
-    
-    // Outline
+    // Outline/Border
     code += `;h;${settings.outlineShow ? 1 : 0}`;
     
-    // Firing Error
-    code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`;
-    
-    // Movement Error (muss VOR den Linien stehen!)
-    code += `;m;${settings.movementErrorShow ? 1 : 0}`;
-    
-    // Outer Lines
-    code += `;0l;${settings.outerLinesShow ? settings.outerLinesLength : 0}`;
-    code += `;0v;${settings.outerLinesShow ? 1 : 0}`; // outer visible
-    code += `;0g;${settings.outerLinesShow ? 1 : 0}`; // outer gap
-    code += `;0o;${settings.outerLinesShow ? settings.outerLinesOffset : 0}`;
-    code += `;0a;${settings.outerLinesShow ? Math.round(settings.outerLinesOpacity / 255) : 0}`;
-    code += `;0f;0`; // outer fade
-    code += `;0s;0`; // outer static
-    code += `;0t;${settings.outerLinesShow ? settings.outerLinesThickness : 1}`;
-    
-    // Inner Lines
-    code += `;1l;${settings.innerLinesShow ? settings.innerLinesLength : 0}`;
-    code += `;1v;${settings.innerLinesShow ? 1 : 0}`; // inner visible  
-    code += `;1g;${settings.innerLinesShow ? 1 : 0}`; // inner gap
-    code += `;1o;${settings.innerLinesShow ? settings.innerLinesOffset : 0}`;
-    code += `;1a;${settings.innerLinesShow ? Math.round(settings.innerLinesOpacity / 255) : 0}`;
-    code += `;1f;0`; // inner fade
-    code += `;1s;0`; // inner static
-    code += `;1t;${settings.innerLinesShow ? settings.innerLinesThickness : 1}`;
-    
-    // Center Dot (kommt nach den Lines!)
+    // Center Dot
     if (settings.centerDotShow && settings.centerDotThickness > 0) {
-      code += ";d;1"; // dot enabled
-      code += `;z;${settings.centerDotThickness}`; // dot thickness
-      code += `;a;${Math.round(settings.centerDotOpacity / 255)}`; // dot alpha
+      code += ";o;1"; // outline on
+      code += ";d;1"; // dot on
+      code += `;z;${settings.centerDotThickness}`; // dot size
     } else {
-      code += ";d;0"; // dot disabled
+      code += ";d;0"; // dot off
     }
     
-    // End marker
+    // Firing error fade
+    code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`;
+    
+    // Movement error
+    if (settings.movementErrorShow) {
+      code += ";m;1";
+    }
+    
+    // Outer Lines (0x parameters)
+    if (settings.outerLinesShow) {
+      code += `;0l;${settings.outerLinesLength}`; // outer length
+      code += `;0o;${settings.outerLinesOffset}`; // outer offset
+      code += `;0a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha (0 or 1)
+      code += `;0f;0`; // outer fade
+      if (settings.outerLinesThickness !== 1) {
+        code += `;0t;${settings.outerLinesThickness}`; // outer thickness
+      }
+    } else {
+      code += ";0l;0;0o;0;0a;0;0f;0";
+    }
+    
+    // Inner Lines (1x parameters)  
+    if (settings.innerLinesShow) {
+      code += `;1l;${settings.innerLinesLength}`; // inner length
+      code += `;1o;${settings.innerLinesOffset}`; // inner offset
+      code += `;1a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
+      if (settings.innerLinesThickness !== 1) {
+        code += `;1t;${settings.innerLinesThickness}`; // inner thickness
+      }
+      code += ";1m;0;1f;0"; // inner movement, fade
+    }
+    
+    // Standard end
     code += ";1b;0";
     
     return code;
   } catch (error) {
-    // Funktionierender Fallback mit Inner Lines
-    return "0;s;1;P;c;0;h;0;m;0;0l;5;0v;1;0g;1;0o;2;0a;1;0f;0;0s;0;0t;2;1l;3;1v;1;1g;1;1o;1;1a;1;1f;0;1s;0;1t;2;d;1;z;2;a;1;1b;0";
+    // Fallback zu funktionierendem TenZ-Code
+    return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
   }
 };
 
@@ -166,7 +173,7 @@ const CrosshairCreator = () => {
     outerLinesThickness: 2,
     outerLinesOffset: 3,
     outerLinesOpacity: 255,
-    innerLinesShow: true, // Standardmäßig aktiviert für bessere Sichtbarkeit
+    innerLinesShow: false,
     innerLinesLength: 4,
     innerLinesThickness: 2,
     innerLinesOffset: 1,
@@ -869,18 +876,7 @@ const CrosshairCreator = () => {
                           {/* Inner Lines */}
                           {settings.innerLinesShow && (
                             <>
-                              {/* Horizontal Inner Lines - KORRIGIERTE POSITIONIERUNG */}
-                              <div 
-                                className="absolute top-1/2 transform -translate-y-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.innerLinesLength * 2}px`,
-                                  height: `${settings.innerLinesThickness}px`,
-                                  left: `${64 - settings.innerLinesOffset * 2 - settings.innerLinesLength * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  zIndex: 10
-                                }}
-                              />
+                              {/* Horizontal Inner Lines */}
                               <div 
                                 className="absolute top-1/2 transform -translate-y-1/2"
                                 style={{
@@ -888,23 +884,21 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesLength * 2}px`,
                                   height: `${settings.innerLinesThickness}px`,
                                   left: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  zIndex: 10
+                                  opacity: settings.innerLinesOpacity / 255
+                                }}
+                              />
+                              <div 
+                                className="absolute top-1/2 transform -translate-y-1/2"
+                                style={{
+                                  backgroundColor: getColorValue(settings.primaryColor),
+                                  width: `${settings.innerLinesLength * 2}px`,
+                                  height: `${settings.innerLinesThickness}px`,
+                                  right: `${64 + settings.innerLinesOffset * 2}px`,
+                                  opacity: settings.innerLinesOpacity / 255
                                 }}
                               />
                               
-                              {/* Vertical Inner Lines - KORRIGIERTE POSITIONIERUNG */}
-                              <div 
-                                className="absolute left-1/2 transform -translate-x-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.innerLinesThickness}px`,
-                                  height: `${settings.innerLinesLength * 2}px`,
-                                  top: `${64 - settings.innerLinesOffset * 2 - settings.innerLinesLength * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  zIndex: 10
-                                }}
-                              />
+                              {/* Vertical Inner Lines */}
                               <div 
                                 className="absolute left-1/2 transform -translate-x-1/2"
                                 style={{
@@ -912,8 +906,17 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesThickness}px`,
                                   height: `${settings.innerLinesLength * 2}px`,
                                   top: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255,
-                                  zIndex: 10
+                                  opacity: settings.innerLinesOpacity / 255
+                                }}
+                              />
+                              <div 
+                                className="absolute left-1/2 transform -translate-x-1/2"
+                                style={{
+                                  backgroundColor: getColorValue(settings.primaryColor),
+                                  width: `${settings.innerLinesThickness}px`,
+                                  height: `${settings.innerLinesLength * 2}px`,
+                                  bottom: `${64 + settings.innerLinesOffset * 2}px`,
+                                  opacity: settings.innerLinesOpacity / 255
                                 }}
                               />
                             </>
@@ -1340,7 +1343,7 @@ const CrosshairCreator = () => {
                   outerLinesThickness: 2,
                   outerLinesOffset: 3,
                   outerLinesOpacity: 255,
-                  innerLinesShow: true, // Korrigiert: standardmäßig aktiviert
+                  innerLinesShow: false,
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
