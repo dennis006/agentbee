@@ -32,6 +32,8 @@ interface DiscordChannel {
   name: string;
   type: number;
   position: number;
+  guildId: string;
+  guildName: string;
 }
 
 interface DiscordRole {
@@ -40,6 +42,8 @@ interface DiscordRole {
   color: number;
   position: number;
   permissions: string;
+  guildId: string;
+  guildName: string;
 }
 
 interface CrosshairShare {
@@ -65,6 +69,8 @@ const CrosshairSharing = () => {
   const [roles, setRoles] = useState<DiscordRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [guildsLoading, setGuildsLoading] = useState(true);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [loadingRoles, setLoadingRoles] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedGuild, setSelectedGuild] = useState('');
   const { success, error } = useToast();
@@ -88,38 +94,52 @@ const CrosshairSharing = () => {
     try {
       setGuildsLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
+      
+      // Use standard guilds endpoint like Music.tsx
+      const response = await fetch(`${apiUrl}/api/guilds`);
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.guilds) {
         setGuilds(data.guilds);
-        console.log('✅ Discord Guilds loaded:', data.guilds.length);
       } else {
-        error(data.message || 'Fehler beim Laden der Discord Server');
+        console.warn('❌ Guild loading failed:', data.message);
+        setGuilds([]);
+        error('Discord Server konnten nicht geladen werden. Stelle sicher, dass der Bot Token konfiguriert ist.');
       }
     } catch (err) {
-      error('Fehler beim Laden der Discord Server');
-      console.error('Discord Guilds Error:', err);
-    } finally {
-      setGuildsLoading(false);
-    }
+      console.error('❌ Guild loading error:', err);
+      setGuilds([]);
+      error('Fehler beim Laden der Discord Server. Prüfe die Bot-Konfiguration.');
+          } finally {
+        setGuildsLoading(false);
+      }
   };
 
   const loadDiscordChannels = async () => {
     if (!selectedGuild) return;
     
     try {
+      setLoadingChannels(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/channels`);
+      
+      // Use standard channels endpoint like other pages
+      const response = await fetch(`${apiUrl}/api/discord/channels`);
       const data = await response.json();
       
-      if (data.success) {
-        setChannels(data.channels);
+      if (data.success && data.channels) {
+        // Filter channels for selected guild (text channels only)
+        const guildChannels = data.channels.filter((channel: DiscordChannel) => 
+          channel.guildId === selectedGuild && channel.type === 0
+        );
+        setChannels(guildChannels);
       } else {
-        console.warn('Channel loading failed:', data.message);
+        setChannels([]);
       }
     } catch (err) {
-      console.error('Channel loading error:', err);
+      console.error('❌ Channel loading error:', err);
+      setChannels([]);
+    } finally {
+      setLoadingChannels(false);
     }
   };
 
@@ -127,17 +147,27 @@ const CrosshairSharing = () => {
     if (!selectedGuild) return;
     
     try {
+      setLoadingRoles(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/roles`);
+      
+      // Use standard roles endpoint like other pages
+      const response = await fetch(`${apiUrl}/api/discord/roles`);
       const data = await response.json();
       
-      if (data.success) {
-        setRoles(data.roles);
+      if (data.success && data.roles) {
+        // Filter roles for selected guild and sort by position
+        const guildRoles = data.roles.filter((role: DiscordRole) => 
+          role.guildId === selectedGuild && role.name !== '@everyone'
+        ).sort((a: DiscordRole, b: DiscordRole) => b.position - a.position);
+        setRoles(guildRoles);
       } else {
-        console.warn('Role loading failed:', data.message);
+        setRoles([]);
       }
     } catch (err) {
-      console.error('Role loading error:', err);
+      console.error('❌ Role loading error:', err);
+      setRoles([]);
+    } finally {
+      setLoadingRoles(false);
     }
   };
 

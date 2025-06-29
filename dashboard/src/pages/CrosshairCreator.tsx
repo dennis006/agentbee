@@ -517,13 +517,13 @@ const CrosshairCreator = () => {
     try {
       setLoading(true);
       
-      // Get available guilds first
+      // Get available guilds first using standard endpoint
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const guildsResponse = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
+      const guildsResponse = await fetch(`${apiUrl}/api/guilds`);
       const guildsData = await guildsResponse.json();
       
-      if (!guildsData.success || guildsData.guilds.length === 0) {
-        throw new Error('Keine Discord Server verfügbar. Stelle sicher, dass der Bot konfiguriert ist.');
+      if (!guildsData.success || !guildsData.guilds || guildsData.guilds.length === 0) {
+        throw new Error('Keine Discord Server verfügbar. Stelle sicher, dass der Bot Token konfiguriert ist.');
       }
 
       // Use first available guild for now (TODO: Let user choose)
