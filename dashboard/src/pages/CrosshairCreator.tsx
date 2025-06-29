@@ -54,84 +54,70 @@ const COLORS = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // 🎨 CUSTOM COLOR SYSTEM - verwendet Index 5 für alle custom colors
+    // Color mapping für Valorant
     const colorMap: Record<string, number> = {
       'white': 0, 'custom': 5
     };
     
-    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
+    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 0;
     
-    let code = "0"; // Start
+    // KORREKTE Valorant Crosshair Code Struktur
+    let code = "0;s;1;P"; // Basic start
     
-    // Scaling (optional, für modernere Codes)
-    if (settings.centerDotShow || settings.outerLinesShow || settings.innerLinesShow) {
-      code += ";s;1";
-    }
-    
-    // Primary Crosshair Marker
-    code += ";P";
-    
-    // Color
+    // Primary Color
     code += `;c;${color}`;
     
-    // Outline/Border
+    // Custom Color (wenn custom gewählt)
+    if (settings.primaryColor === 'custom') {
+      const hexColor = settings.customColor.replace('#', '').toUpperCase() + 'FF'; // Add alpha
+      code += `;u;${hexColor}`;
+    }
+    
+    // Outline
     code += `;h;${settings.outlineShow ? 1 : 0}`;
     
-    // Center Dot
-    if (settings.centerDotShow && settings.centerDotThickness > 0) {
-      code += ";o;1"; // outline on
-      code += ";d;1"; // dot on
-      code += `;z;${settings.centerDotThickness}`; // dot size
-    } else {
-      code += ";d;0"; // dot off
-    }
-    
-    // Firing error fade
+    // Firing Error
     code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`;
     
-    // Movement error
-    if (settings.movementErrorShow) {
-      code += ";m;1";
-    }
+    // Movement Error (muss VOR den Linien stehen!)
+    code += `;m;${settings.movementErrorShow ? 1 : 0}`;
     
-    // Outer Lines (0x parameters)
-    if (settings.outerLinesShow) {
-      code += `;0l;${settings.outerLinesLength}`; // outer length
-      code += `;0o;${settings.outerLinesOffset}`; // outer offset
-      code += `;0a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha (0 or 1)
-      code += `;0f;0`; // outer fade
-      if (settings.outerLinesThickness !== 1) {
-        code += `;0t;${settings.outerLinesThickness}`; // outer thickness
-      }
+    // Outer Lines
+    code += `;0l;${settings.outerLinesShow ? settings.outerLinesLength : 0}`;
+    code += `;0v;${settings.outerLinesShow ? 1 : 0}`; // outer visible
+    code += `;0g;${settings.outerLinesShow ? 1 : 0}`; // outer gap
+    code += `;0o;${settings.outerLinesShow ? settings.outerLinesOffset : 0}`;
+    code += `;0a;${settings.outerLinesShow ? Math.round(settings.outerLinesOpacity / 255) : 0}`;
+    code += `;0f;0`; // outer fade
+    code += `;0s;0`; // outer static
+    code += `;0t;${settings.outerLinesShow ? settings.outerLinesThickness : 1}`;
+    
+    // Inner Lines
+    code += `;1l;${settings.innerLinesShow ? settings.innerLinesLength : 0}`;
+    code += `;1v;${settings.innerLinesShow ? 1 : 0}`; // inner visible  
+    code += `;1g;${settings.innerLinesShow ? 1 : 0}`; // inner gap
+    code += `;1o;${settings.innerLinesShow ? settings.innerLinesOffset : 0}`;
+    code += `;1a;${settings.innerLinesShow ? Math.round(settings.innerLinesOpacity / 255) : 0}`;
+    code += `;1f;0`; // inner fade
+    code += `;1s;0`; // inner static
+    code += `;1t;${settings.innerLinesShow ? settings.innerLinesThickness : 1}`;
+    
+    // Center Dot (kommt nach den Lines!)
+    if (settings.centerDotShow && settings.centerDotThickness > 0) {
+      code += ";d;1"; // dot enabled
+      code += `;z;${settings.centerDotThickness}`; // dot thickness
+      code += `;a;${Math.round(settings.centerDotOpacity / 255)}`; // dot alpha
     } else {
-      code += ";0l;0;0o;0;0a;0;0f;0";
+      code += ";d;0"; // dot disabled
     }
     
-    // Inner Lines (1x parameters) - IMMER setzen, auch wenn deaktiviert
-    if (settings.innerLinesShow) {
-      code += `;1l;${settings.innerLinesLength}`; // inner length
-      code += `;1o;${settings.innerLinesOffset}`; // inner offset
-      code += `;1a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha (0 oder 1)
-      code += `;1t;${settings.innerLinesThickness}`; // inner thickness (immer setzen)
-      code += ";1m;0"; // inner movement error
-      code += ";1f;0"; // inner fade
-    } else {
-      // Auch bei deaktivierten Inner Lines müssen Parameter gesetzt werden
-      code += ";1l;0"; // length = 0
-      code += ";1o;0"; // offset = 0  
-      code += ";1a;0"; // alpha = 0 (unsichtbar)
-      code += ";1t;1"; // thickness = 1 (default)
-      code += ";1m;0"; // movement = 0
-      code += ";1f;0"; // fade = 0
-    }
-    
-    // Standard end
+    // End marker
     code += ";1b;0";
     
     return code;
   } catch (error) {
-    // Fallback zu funktionierendem TenZ-Code
-    return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
+    // Funktionierender Fallback mit Inner Lines
+    return "0;s;1;P;c;0;h;0;m;0;0l;5;0v;1;0g;1;0o;2;0a;1;0f;0;0s;0;0t;2;1l;3;1v;1;1g;1;1o;1;1a;1;1f;0;1s;0;1t;2;d;1;z;2;a;1;1b;0";
   }
 };
 
