@@ -352,6 +352,162 @@ async function loadLFGStatistics(guildId) {
 }
 
 // ================================================================
+// ACTIVE LFG POSTS MANAGEMENT
+// ================================================================
+
+// Speichere aktiven LFG Post in Supabase
+async function saveActiveLFGPost(lfgPost, guildId, channelId, authorUsername) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, LFG Post nicht gespeichert');
+            return false;
+        }
+
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24); // 24 Stunden Standard
+
+        const postData = {
+            guild_id: guildId,
+            channel_id: channelId,
+            message_id: lfgPost.messageId,
+            author_id: lfgPost.authorId,
+            author_username: authorUsername,
+            game: lfgPost.game,
+            description: lfgPost.description,
+            max_players: lfgPost.maxPlayers,
+            joined_players: JSON.stringify(lfgPost.joinedPlayers),
+            status: lfgPost.status,
+            expires_at: expiresAt.toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('lfg_active_posts')
+            .upsert(postData, { onConflict: 'message_id' })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Fehler beim Speichern des aktiven LFG Posts:', error);
+            return false;
+        }
+
+        console.log('✅ Aktiver LFG Post in Supabase gespeichert:', lfgPost.messageId);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern des aktiven LFG Posts:', error);
+        return false;
+    }
+}
+
+// Aktualisiere aktiven LFG Post in Supabase
+async function updateActiveLFGPost(messageId, joinedPlayers, status = null) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, LFG Post nicht aktualisiert');
+            return false;
+        }
+
+        const updateData = {
+            joined_players: JSON.stringify(joinedPlayers),
+            updated_at: new Date().toISOString()
+        };
+
+        if (status) {
+            updateData.status = status;
+        }
+
+        const { data, error } = await supabase
+            .from('lfg_active_posts')
+            .update(updateData)
+            .eq('message_id', messageId)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Fehler beim Aktualisieren des aktiven LFG Posts:', error);
+            return false;
+        }
+
+        console.log('✅ Aktiver LFG Post aktualisiert:', messageId);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren des aktiven LFG Posts:', error);
+        return false;
+    }
+}
+
+// Lösche aktiven LFG Post aus Supabase
+async function deleteActiveLFGPost(messageId) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, LFG Post nicht gelöscht');
+            return false;
+        }
+
+        const { error } = await supabase
+            .from('lfg_active_posts')
+            .delete()
+            .eq('message_id', messageId);
+
+        if (error) {
+            console.error('❌ Fehler beim Löschen des aktiven LFG Posts:', error);
+            return false;
+        }
+
+        console.log('✅ Aktiver LFG Post gelöscht:', messageId);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Fehler beim Löschen des aktiven LFG Posts:', error);
+        return false;
+    }
+}
+
+// Lade alle aktiven LFG Posts für eine Guild
+async function loadActiveLFGPosts(guildId) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, keine aktiven LFG Posts geladen');
+            return [];
+        }
+
+        const { data, error } = await supabase
+            .rpc('get_active_lfg_posts', { p_guild_id: guildId });
+
+        if (error) {
+            console.error('❌ Fehler beim Laden der aktiven LFG Posts:', error);
+            return [];
+        }
+
+        if (!data || data.length === 0) {
+            console.log('📝 Keine aktiven LFG Posts gefunden für Guild:', guildId);
+            return [];
+        }
+
+        console.log(`✅ ${data.length} aktive LFG Posts geladen für Guild:`, guildId);
+        return data.map(post => ({
+            messageId: post.message_id,
+            channelId: post.channel_id,
+            authorId: post.author_id,
+            authorUsername: post.author_username,
+            game: post.game,
+            description: post.description,
+            maxPlayers: post.max_players,
+            joinedPlayers: JSON.parse(post.joined_players || '[]'),
+            status: post.status,
+            createdAt: new Date(post.created_at),
+            expiresAt: post.expires_at ? new Date(post.expires_at) : null
+        }));
+
+    } catch (error) {
+        console.error('❌ Fehler beim Laden der aktiven LFG Posts:', error);
+        return [];
+    }
+}
+
+// ================================================================
 // API ROUTES
 // ================================================================
 
@@ -998,5 +1154,9 @@ module.exports = {
     initializeSupabaseForLFG,
     loadLFGSettings,
     saveLFGSettings,
-    loadLFGStatistics
+    loadLFGStatistics,
+    saveActiveLFGPost,
+    updateActiveLFGPost,
+    deleteActiveLFGPost,
+    loadActiveLFGPosts
 }; 

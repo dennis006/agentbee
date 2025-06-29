@@ -112,6 +112,10 @@ async function handleLFGMessageWithResponses(message) {
         activeLFGPosts.set(message.id, lfgPost);
         console.log(`💾 LFG Post gespeichert - ID: ${message.id}, Active Posts: ${activeLFGPosts.size}`);
         
+        // Speichere auch in Supabase für Persistenz
+        const { saveActiveLFGPost } = require('./lfg-supabase-api');
+        await saveActiveLFGPost(lfgPost, message.guild.id, message.channel.id, message.author.displayName);
+        
         // Erstelle Interactive Embed mit Buttons
         const embed = createLFGEmbed(lfgPost, message.author, settings);
         const buttons = settings.enableButtons ? createLFGButtons(lfgPost, settings) : null;
@@ -370,6 +374,10 @@ async function handleLFGJoin(interaction, lfgPost, userId) {
     // Füge Spieler hinzu
     lfgPost.addPlayer(userId);
     
+    // Aktualisiere auch in Supabase
+    const { updateActiveLFGPost } = require('./lfg-supabase-api');
+    await updateActiveLFGPost(lfgPost.messageId, lfgPost.joinedPlayers, lfgPost.status);
+    
     // Aktualisiere Embed und Buttons
     const author = await interaction.client.users.fetch(lfgPost.authorId);
     const settings = await require('./lfg-supabase-api').loadLFGSettings(interaction.guild.id);
@@ -545,6 +553,10 @@ async function handleLFGLeave(interaction, lfgPost, userId) {
     
     // Entferne Spieler
     lfgPost.removePlayer(userId);
+    
+    // Aktualisiere auch in Supabase
+    const { updateActiveLFGPost } = require('./lfg-supabase-api');
+    await updateActiveLFGPost(lfgPost.messageId, lfgPost.joinedPlayers, lfgPost.status);
     
     // Aktualisiere Embed und Buttons
     const author = await interaction.client.users.fetch(lfgPost.authorId);
@@ -728,8 +740,12 @@ async function handleLFGClose(interaction, lfgPost, userId) {
         components: [] // Entferne alle Buttons
     });
     
-    // Entferne aus aktivem Cache
+    // Entferne aus aktivem Cache und Supabase
     activeLFGPosts.delete(lfgPost.messageId);
+    
+    // Lösche auch aus Supabase
+    const { deleteActiveLFGPost } = require('./lfg-supabase-api');
+    await deleteActiveLFGPost(lfgPost.messageId);
 }
 
 // ================================================================
@@ -765,12 +781,104 @@ setInterval(() => {
 }, 30 * 60 * 1000);
 
 // ================================================================
+// LFG POSTS RESTORATION
+// ================================================================
+
+// Lade aktive LFG Posts beim Bot-Start
+async function restoreActiveLFGPosts(discordClient) {
+    try {
+        console.log('🔄 Starte Wiederherstellung der aktiven LFG Posts...');
+        
+        if (!discordClient || !discordClient.guilds) {
+            console.log('⚠️ Discord Client nicht verfügbar');
+            return;
+        }
+
+        const { loadActiveLFGPosts } = require('./lfg-supabase-api');
+        let totalRestored = 0;
+        let totalFailed = 0;
+
+        // Für jede Guild die aktiven Posts laden
+        for (const [guildId, guild] of discordClient.guilds.cache) {
+            try {
+                console.log(`🔍 Lade aktive LFG Posts für Guild: ${guild.name} (${guildId})`);
+                
+                const activePosts = await loadActiveLFGPosts(guildId);
+                
+                if (activePosts.length === 0) {
+                    console.log(`📝 Keine aktiven LFG Posts für Guild ${guild.name}`);
+                    continue;
+                }
+
+                console.log(`📦 ${activePosts.length} aktive Posts gefunden für Guild ${guild.name}`);
+
+                // Jeder Post in den Cache laden
+                for (const postData of activePosts) {
+                    try {
+                        // Prüfe ob Discord Message noch existiert
+                        const channel = guild.channels.cache.get(postData.channelId);
+                        if (!channel) {
+                            console.log(`⚠️ Channel ${postData.channelId} nicht gefunden, überspringe Post ${postData.messageId}`);
+                            continue;
+                        }
+
+                        const message = await channel.messages.fetch(postData.messageId).catch(() => null);
+                        if (!message) {
+                            console.log(`⚠️ Message ${postData.messageId} nicht gefunden, überspringe Post`);
+                            // Lösche aus Supabase da Message nicht mehr existiert
+                            const { deleteActiveLFGPost } = require('./lfg-supabase-api');
+                            await deleteActiveLFGPost(postData.messageId);
+                            continue;
+                        }
+
+                        // Erstelle LFG Post Object
+                        const lfgPost = new LFGPost(
+                            postData.messageId,
+                            postData.authorId,
+                            postData.game,
+                            postData.description,
+                            postData.maxPlayers
+                        );
+
+                        // Setze gespeicherte Daten
+                        lfgPost.joinedPlayers = postData.joinedPlayers || [postData.authorId];
+                        lfgPost.status = postData.status || 'open';
+                        lfgPost.createdAt = postData.createdAt || new Date();
+
+                        // Füge zum Cache hinzu
+                        activeLFGPosts.set(postData.messageId, lfgPost);
+                        totalRestored++;
+
+                        console.log(`✅ LFG Post wiederhergestellt: ${postData.messageId} (${postData.game}, ${lfgPost.joinedPlayers.length} Spieler)`);
+
+                    } catch (error) {
+                        console.error(`❌ Fehler beim Wiederherstellen von Post ${postData.messageId}:`, error);
+                        totalFailed++;
+                    }
+                }
+
+            } catch (error) {
+                console.error(`❌ Fehler beim Laden der Posts für Guild ${guildId}:`, error);
+                totalFailed++;
+            }
+        }
+
+        console.log(`🎉 LFG Post Wiederherstellung abgeschlossen: ${totalRestored} erfolgreich, ${totalFailed} fehlgeschlagen`);
+        console.log(`📊 Aktive LFG Posts im Cache: ${activeLFGPosts.size}`);
+
+    } catch (error) {
+        console.error('❌ Fehler bei der LFG Post Wiederherstellung:', error);
+    }
+}
+
+// ================================================================
 // EXPORTS
 // ================================================================
 
 module.exports = {
     handleLFGMessageWithResponses,
     handleLFGButtonInteraction,
+    restoreActiveLFGPosts,
     activeLFGPosts,
     LFGPost
 }; 

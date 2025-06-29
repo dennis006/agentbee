@@ -2793,6 +2793,28 @@ try {
         }
     }, 7000);
     
+    // LFG System - Aktive Posts wiederherstellen nach 8 Sekunden
+    setTimeout(async () => {
+        try {
+            console.log('🎮 Initialisiere LFG System und stelle aktive Posts wieder her...');
+            
+            // LFG-Supabase-API initialisieren
+            const { initializeSupabaseForLFG } = require('./lfg-supabase-api');
+            if (global.supabaseClient) {
+                initializeSupabaseForLFG(global.supabaseClient);
+                console.log('✅ LFG-Supabase-API initialisiert');
+            }
+            
+            // Aktive LFG Posts wiederherstellen
+            const { restoreActiveLFGPosts } = require('./gaming');
+            await restoreActiveLFGPosts(client);
+            console.log('✅ LFG System bereit - Aktive Posts wiederhergestellt');
+            
+        } catch (error) {
+            console.error('❌ Fehler bei LFG System Initialisierung:', error);
+        }
+    }, 8000);
+    
     // Discord Native AFK - wird über Dashboard konfiguriert
     setTimeout(async () => {
         console.log('💤 Discord Native AFK verfügbar - konfiguriere über Dashboard');
