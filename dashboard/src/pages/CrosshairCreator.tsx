@@ -239,7 +239,12 @@ const CrosshairCreator = () => {
 
   // Update Setting
   const updateSetting = (key: keyof CrosshairSettings, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    console.log(`Updating ${key} to:`, value);
+    setSettings(prev => {
+      const newSettings = { ...prev, [key]: value };
+      console.log('New settings:', newSettings);
+      return newSettings;
+    });
   };
 
   // Generate Crosshair Code - Nutzt alle erweiterten Einstellungen
@@ -318,7 +323,9 @@ const CrosshairCreator = () => {
       'pink': '#FF69B4', 
       'red': '#FF0000'
     };
-    return colors[colorName] || '#FFFFFF';
+    const result = colors[colorName] || '#FFFFFF';
+    console.log(`Getting color for '${colorName}': ${result}`);
+    return result;
   };
 
   // Update code when settings change
@@ -427,12 +434,20 @@ const CrosshairCreator = () => {
               <div className="space-y-6">
                 {/* Primary Color */}
                 <div>
-                  <label className="block text-purple-200 font-medium mb-3">Primärfarbe</label>
+                  <label className="block text-purple-200 font-medium mb-3">
+                    Primärfarbe 
+                    <span className="text-sm text-purple-300 ml-2">
+                      (Aktuell: {settings.primaryColor} → {getColorValue(settings.primaryColor)})
+                    </span>
+                  </label>
                   <div className="grid grid-cols-4 gap-3">
                     {colorOptions.map((color) => (
                       <button
                         key={color.value}
-                        onClick={() => updateSetting('primaryColor', color.value)}
+                        onClick={() => {
+                          console.log('Color button clicked:', color.value);
+                          updateSetting('primaryColor', color.value);
+                        }}
                         className={cn(
                           "w-12 h-12 rounded-lg border-2 transition-all duration-300 hover:scale-110",
                           settings.primaryColor === color.value
