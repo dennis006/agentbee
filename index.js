@@ -34,6 +34,7 @@ const AIOptimizationAPI = require('./ai-optimization-api');
 const { setupAIOptimizationRoutes } = require('./ai-optimization-routes');
 const { setupRulesSupabaseRoutes } = require('./rules-supabase-api');
 const { setupModerationSupabaseRoutes } = require('./moderation-supabase-api');
+const { setupValorantCrosshairAPI } = require('./valorant-crosshair-api');
 const { 
     initializeSupabaseForWelcome,
     loadWelcomeSettings,
@@ -4334,6 +4335,11 @@ client.on(Events.InteractionCreate, async interaction => {
         await handleValorantButtonInteraction(interaction);
     }
 
+    // Behandle Crosshair-Buttons
+    if (interaction.customId.startsWith('crosshair_')) {
+        await valorantCrosshairSystem.handleCrosshairButton(interaction);
+    }
+
     // Behandle Bot-Introduction-Buttons
     if (interaction.customId.startsWith('bot_')) {
         await handleIntroductionButtonInteraction(interaction);
@@ -5108,6 +5114,11 @@ client.on(Events.InteractionCreate, async interaction => {
     // Behandle Valorant-Modal-Submissions
     if (interaction.customId.startsWith('valorant_modal_')) {
         await handleValorantModalSubmission(interaction);
+    }
+
+    // Behandle Crosshair-Modal-Submissions
+    if (interaction.customId === 'crosshair_input_modal') {
+        await valorantCrosshairSystem.handleCrosshairModal(interaction);
     }
 
     // Behandle Ticket-Modal-Submissions
@@ -7354,6 +7365,9 @@ setupAIOptimizationRoutes(app);
 // Supabase API Routen registrieren
 setupRulesSupabaseRoutes(app);
 setupModerationSupabaseRoutes(app);
+
+// Valorant Crosshair API Routen registrieren
+setupValorantCrosshairAPI(app, client);
 
 // ================== ANOMALY DETECTION & SERVER HEALTH ==================
 // API-Endpunkte für Anomalie-Erkennung und Server-Health

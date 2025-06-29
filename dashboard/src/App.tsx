@@ -18,6 +18,7 @@ import XP from './pages/XP'
 import TwitchNotifications from './pages/TwitchNotifications'
 import Valorant from './pages/Valorant'
 import ValorantNews from './pages/ValorantNews'
+import ValorantCrosshair from './pages/ValorantCrosshair'
 import Gaming from './pages/Gaming'
 import APIKeys from './pages/APIKeys'
 import Security from './pages/Security'
@@ -111,7 +112,8 @@ const Navigation = ({
         // AFK System entfernt - verwende Discord Native AFK
         { id: 'twitch', icon: Play, label: 'Twitch Live', description: 'Live Stream Notifications' },
         { id: 'valorant', icon: Target, label: 'Valorant', description: 'Player Stats & MMR Tracking' },
-        { id: 'valorant-news', icon: Newspaper, label: 'Valorant News', description: 'Automatische News Updates' }
+        { id: 'valorant-news', icon: Newspaper, label: 'Valorant News', description: 'Automatische News Updates' },
+        { id: 'valorant-crosshair', icon: Target, label: 'Valorant Crosshair', description: 'Crosshair Generator & Management' }
       ]
     },
     {
@@ -413,6 +415,8 @@ const DashboardLayout = () => {
         return <Valorant />
       case 'valorant-news':
         return <ValorantNews />
+      case 'valorant-crosshair':
+        return <ValorantCrosshair />
       case 'verification':
         return <VerificationSettings />
       case 'logs':
