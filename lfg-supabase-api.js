@@ -48,6 +48,7 @@ const defaultLFGSettings = {
     enableVoiceCreation: true,
     enableDmNotifications: true,
     enableAutoVoiceCleanup: true,
+    enableAutoVoiceJoin: true,
     voiceCleanupHours: 2,
     
     // 🏗️ Voice Channel Configuration
@@ -143,6 +144,7 @@ async function loadLFGSettings(guildId = null) {
             enableVoiceCreation: data.enable_voice_creation ?? true,
             enableDmNotifications: data.enable_dm_notifications ?? true,
             enableAutoVoiceCleanup: data.enable_auto_voice_cleanup ?? true,
+            enableAutoVoiceJoin: data.enable_auto_voice_join ?? true,
             voiceCleanupHours: data.voice_cleanup_hours || 2,
             
             // 🏗️ Voice Channel Configuration
@@ -250,6 +252,7 @@ async function saveLFGSettings(settings, guildId = null) {
             enable_voice_creation: settings.enableVoiceCreation !== undefined ? settings.enableVoiceCreation : settings.enable_voice_creation,
             enable_dm_notifications: settings.enableDmNotifications !== undefined ? settings.enableDmNotifications : settings.enable_dm_notifications,
             enable_auto_voice_cleanup: settings.enableAutoVoiceCleanup !== undefined ? settings.enableAutoVoiceCleanup : settings.enable_auto_voice_cleanup,
+            enable_auto_voice_join: settings.enableAutoVoiceJoin !== undefined ? settings.enableAutoVoiceJoin : settings.enable_auto_voice_join,
             voice_cleanup_hours: settings.voiceCleanupHours || settings.voice_cleanup_hours,
             
             // 🏗️ Voice Channel Configuration

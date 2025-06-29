@@ -410,9 +410,114 @@ async function handleLFGJoin(interaction, lfgPost, userId) {
         }
     }
     
+    // Prüfe Auto Voice Join (wenn Owner bereits in Voice Channel ist)
+    if (settings.enableAutoVoiceJoin) {
+        await checkAndJoinOwnerVoiceChannel(interaction, lfgPost, userId);
+    }
+    
     // Wenn Team voll ist, erstelle automatisch Voice Channel
     if (lfgPost.isFull()) {
         await createAutoVoiceChannel(interaction, lfgPost);
+    }
+}
+
+// ================================================================
+// AUTO VOICE JOIN HANDLER
+// ================================================================
+
+async function checkAndJoinOwnerVoiceChannel(interaction, lfgPost, newUserId) {
+    try {
+        const guild = interaction.guild;
+        
+        // Finde den Team Owner (Creator) im Guild
+        const ownerMember = await guild.members.fetch(lfgPost.authorId).catch(() => null);
+        if (!ownerMember) {
+            console.log('🔍 Team Owner nicht im Server gefunden');
+            return;
+        }
+        
+        // Prüfe ob Owner in einem Voice Channel ist
+        const ownerVoiceChannel = ownerMember.voice.channel;
+        if (!ownerVoiceChannel) {
+            console.log('🔍 Team Owner ist nicht in einem Voice Channel');
+            return;
+        }
+        
+        // Finde den neuen Spieler im Guild
+        const newMember = await guild.members.fetch(newUserId).catch(() => null);
+        if (!newMember) {
+            console.log('🔍 Neuer Spieler nicht im Server gefunden');
+            return;
+        }
+        
+        // Prüfe ob neuer Spieler bereits in einem Voice Channel ist
+        if (newMember.voice.channel) {
+            console.log('🔍 Neuer Spieler ist bereits in einem Voice Channel');
+            return;
+        }
+        
+        // Prüfe ob der neue Spieler dem Voice Channel beitreten kann
+        const permissions = ownerVoiceChannel.permissionsFor(newMember);
+        if (!permissions || !permissions.has('Connect')) {
+            console.log('🔍 Neuer Spieler hat keine Berechtigung für Owner Voice Channel');
+            
+            // Sende Nachricht an neuen Spieler
+            await interaction.followUp({
+                content: `🎤 **Voice Channel Info**\n\nDer Team Owner **${ownerMember.displayName}** ist bereits in **${ownerVoiceChannel.name}**, aber du hast keine Berechtigung diesem Channel beizutreten.\n\n*Bitte den Owner um Einladung oder nutze den Voice Channel Button.*`,
+                ephemeral: true
+            });
+            return;
+        }
+        
+        // Versuche den neuen Spieler zu verschieben
+        await newMember.voice.setChannel(ownerVoiceChannel, 
+            `Auto-Join: ${newMember.displayName} ist ${lfgPost.game} Team beigetreten`
+        );
+        
+        console.log(`✅ ${newMember.displayName} automatisch zu ${ownerVoiceChannel.name} verschoben`);
+        
+        // Sende Erfolgs-Nachricht an neuen Spieler
+        await interaction.followUp({
+            content: `🎤 **Automatisch verbunden!**\n\nDu wurdest automatisch zu **${ownerVoiceChannel.name}** verschoben, da der Team Owner **${ownerMember.displayName}** bereits dort ist.\n\n*Viel Spaß beim Gaming! 🎮*`,
+            ephemeral: true
+        });
+        
+        // Optional: Benachrichtige auch den Owner
+        try {
+            const ownerUser = await interaction.client.users.fetch(lfgPost.authorId);
+            const ownerNotification = new EmbedBuilder()
+                .setColor(0x00FF00)
+                .setTitle('🎤 Auto Voice Join!')
+                .setDescription(`**${newMember.displayName}** wurde automatisch zu deinem Voice Channel verschoben!`)
+                .addFields(
+                    {
+                        name: '📍 Voice Channel',
+                        value: ownerVoiceChannel.name,
+                        inline: true
+                    },
+                    {
+                        name: '🎮 Team',
+                        value: `${lfgPost.game} (${lfgPost.getPlayerCount()} Spieler)`,
+                        inline: true
+                    }
+                )
+                .setTimestamp();
+            
+            await ownerUser.send({ embeds: [ownerNotification] });
+        } catch (error) {
+            console.log('Konnte Owner über Auto Voice Join nicht benachrichtigen:', error.message);
+        }
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Auto Voice Join:', error);
+        
+        // Sende Fehler-Nachricht an neuen Spieler
+        await interaction.followUp({
+            content: `🎤 **Voice Channel Info**\n\nDer Team Owner ist in einem Voice Channel, aber ich konnte dich nicht automatisch verschieben.\n\n*Nutze den Voice Channel Button oder tritt manuell bei.*`,
+            ephemeral: true
+        }).catch(() => {
+            console.log('Konnte Fehler-Nachricht nicht senden');
+        });
     }
 }
 

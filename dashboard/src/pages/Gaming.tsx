@@ -73,6 +73,7 @@ interface LFGSettings {
   enableVoiceCreation: boolean;
   enableDmNotifications: boolean;
   enableAutoVoiceCleanup: boolean;
+  enableAutoVoiceJoin: boolean;
   voiceCleanupHours: number;
   
   // 🏗️ Voice Channel Configuration
@@ -804,6 +805,17 @@ const LFGSystem: React.FC = () => {
                     <Switch
                       checked={settings.enableAutoVoiceCleanup}
                       onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableAutoVoiceCleanup: checked }))}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-dark-bg/50 rounded-lg">
+                    <div>
+                      <label className="text-sm font-medium text-dark-text">Auto Voice Join</label>
+                      <p className="text-xs text-dark-muted">Neue Spieler automatisch zu Owner Voice Channel verschieben</p>
+                    </div>
+                    <Switch
+                      checked={settings.enableAutoVoiceJoin}
+                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enableAutoVoiceJoin: checked }))}
                     />
                   </div>
 
