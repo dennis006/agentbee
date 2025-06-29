@@ -90,7 +90,7 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
     // Color Mapping (korrekte Valorant-Werte)
     const colorMap: Record<string, number> = {
-      'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
+      'green': 0, 'white': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
       'cyan': 4, 'pink': 5, 'red': 6, 'custom': 7
     };
     
@@ -199,7 +199,7 @@ const CrosshairCreator = () => {
 
   // Erweiterte Crosshair Settings
   const [settings, setSettings] = useState<CrosshairSettings>({
-    primaryColor: 'white',
+    primaryColor: 'green',
     centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
@@ -221,15 +221,15 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // Color Mapping
+  // Color Mapping (Korrekte Valorant-Farbindices)
   const colorMap: Record<string, number> = {
-    'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
+    'green': 0, 'white': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
     'cyan': 4, 'pink': 5, 'red': 6, 'custom': 7
   };
 
   const colorOptions = [
-    { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
     { name: 'green', value: 'green', color: '#00FF00', label: 'Grün' },
+    { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
     { name: 'yellowish-green', value: 'yellowish-green', color: '#9ACD32', label: 'Gelb-Grün' },
     { name: 'greenish-yellow', value: 'greenish-yellow', color: '#ADFF2F', label: 'Grün-Gelb' },
     { name: 'cyan', value: 'cyan', color: '#00ffdf', label: 'Cyan' },
