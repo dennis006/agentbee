@@ -24,6 +24,7 @@ const TicketSystem = require('./ticket-system');
 const ServerStats = require('./server-stats-api');
 const settingsAPI = require('./settings-api');
 const ValorantNewsSystem = require('./valorant-news-system');
+const ValorantCrosshairSystem = require('./valorant-crosshair-system');
 // GELÖSCHT: Analytics-APIs entfernt (verursachten Bot-Crashes)
 const BulkServerActionsAPI = require('./bulk-server-actions-api');
 const MassMemberManagementAPI = require('./mass-member-management-api');
@@ -139,6 +140,11 @@ loadAPIKeys();
 // Erstelle globale Instanz des Simple Music Panel Systems
 const simpleMusicPanel = new SimpleMusicPanel();
 console.log('🎵 Simple Music Panel System initialisiert');
+
+// ================== VALORANT CROSSHAIR SYSTEM ==================
+// Erstelle globale Instanz des Valorant Crosshair Systems
+const valorantCrosshairSystem = new ValorantCrosshairSystem();
+console.log('🎯 Valorant Crosshair System initialisiert');
 
 // ================== VALORANT SYSTEM ==================
 
@@ -2909,6 +2915,12 @@ try {
                 console.error('❌ Fehler bei Simple Music Commands:', error);
             });
             
+            registerValorantCrosshairCommands().then(() => {
+                console.log('✅ Valorant Crosshair Commands registriert');
+            }).catch(error => {
+                console.error('❌ Fehler bei Valorant Crosshair Commands:', error);
+            });
+            
             registerGamingCommands().then(() => {
                 console.log('✅ Gaming System Commands registriert');
             }).catch(error => {
@@ -4248,6 +4260,24 @@ client.on(Events.InteractionCreate, async interaction => {
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: `❌ **Music Command Fehler:** ${error.message}`,
+                        ephemeral: true
+                    });
+                }
+            }
+            return;
+        }
+
+        // 🎯 Valorant Crosshair Commands
+        if (commandName === 'crosshair') {
+            try {
+                console.log(`🎯 Valorant Crosshair Command: ${commandName}`);
+                await valorantCrosshairSystem.handleCrosshairCommand(interaction);
+            } catch (error) {
+                console.error('❌ Crosshair Command Error:', error);
+                
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: `❌ **Crosshair Command Fehler:** ${error.message}`,
                         ephemeral: true
                     });
                 }
@@ -6937,6 +6967,42 @@ async function registerSimpleMusicCommands() {
         console.log('✅ Simple Music Slash Commands registriert:', commandsJSON.map(c => c.name).join(', '));
     } catch (error) {
         console.error('❌ Fehler beim Registrieren der Simple Music Commands:', error);
+    }
+}
+
+// Registriere Valorant Crosshair Slash Commands
+async function registerValorantCrosshairCommands() {
+    try {
+        const commands = valorantCrosshairSystem.getSlashCommands();
+        
+        for (const guild of client.guilds.cache.values()) {
+            // Hole bestehende Commands
+            const existingCommands = await guild.commands.fetch();
+            
+            // Erstelle Crosshair Commands einzeln
+            for (const commandData of commands) {
+                try {
+                    // Prüfe ob Command bereits existiert
+                    const existing = existingCommands.find(cmd => cmd.name === commandData.name);
+                    
+                    if (existing) {
+                        // Aktualisiere existierenden Command
+                        await existing.edit(commandData);
+                        console.log(`🔄 Updated crosshair command: ${commandData.name}`);
+                    } else {
+                        // Erstelle neuen Command
+                        await guild.commands.create(commandData);
+                        console.log(`✅ Created crosshair command: ${commandData.name}`);
+                    }
+                } catch (cmdError) {
+                    console.error(`❌ Fehler bei Crosshair Command ${commandData.name}:`, cmdError.message);
+                }
+            }
+        }
+        
+        console.log('✅ Valorant Crosshair Slash Commands registriert:', commands.map(c => c.name).join(', '));
+    } catch (error) {
+        console.error('❌ Fehler beim Registrieren der Valorant Crosshair Commands:', error);
     }
 }
 
