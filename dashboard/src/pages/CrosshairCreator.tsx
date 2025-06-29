@@ -107,15 +107,22 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       code += ";0l;0;0o;0;0a;0;0f;0";
     }
     
-    // Inner Lines (1x parameters)  
+    // Inner Lines (1x parameters) - IMMER setzen, auch wenn deaktiviert
     if (settings.innerLinesShow) {
       code += `;1l;${settings.innerLinesLength}`; // inner length
       code += `;1o;${settings.innerLinesOffset}`; // inner offset
-      code += `;1a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
-      if (settings.innerLinesThickness !== 1) {
-        code += `;1t;${settings.innerLinesThickness}`; // inner thickness
-      }
-      code += ";1m;0;1f;0"; // inner movement, fade
+      code += `;1a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha (0 oder 1)
+      code += `;1t;${settings.innerLinesThickness}`; // inner thickness (immer setzen)
+      code += ";1m;0"; // inner movement error
+      code += ";1f;0"; // inner fade
+    } else {
+      // Auch bei deaktivierten Inner Lines müssen Parameter gesetzt werden
+      code += ";1l;0"; // length = 0
+      code += ";1o;0"; // offset = 0  
+      code += ";1a;0"; // alpha = 0 (unsichtbar)
+      code += ";1t;1"; // thickness = 1 (default)
+      code += ";1m;0"; // movement = 0
+      code += ";1f;0"; // fade = 0
     }
     
     // Standard end
