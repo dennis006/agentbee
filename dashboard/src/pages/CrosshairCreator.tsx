@@ -207,99 +207,172 @@ const CrosshairCreator = () => {
   // Random Crosshair Generator
   const generateRandomCrosshair = (mode: 'pro' | 'fun' = 'pro') => {
     const getRandomColor = () => {
-      const colors = ['#FF4656', '#00D4AA', '#FFBC40', '#B19CD9', '#FE8C8A', '#50FA7B', '#FF79C6', '#8BE9FD', '#F1FA8C'];
+      const colors = ['#FF4656', '#00D4AA', '#FFBC40', '#B19CD9', '#FE8C8A', '#50FA7B', '#FF79C6', '#8BE9FD', '#F1FA8C', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF'];
       return colors[Math.floor(Math.random() * colors.length)];
     };
 
     if (mode === 'pro') {
-      // Pro player inspired settings
-      const proConfigs = [
-        {
-          centerDotShow: Math.random() > 0.6,
-          centerDotThickness: Math.floor(Math.random() * 3) + 1, // 1-3
-          outerLinesShow: true,
-          outerLinesLength: Math.floor(Math.random() * 6) + 4, // 4-9
-          outerLinesThickness: Math.floor(Math.random() * 2) + 1, // 1-2
-          outerLinesOffset: Math.floor(Math.random() * 4) + 2, // 2-5
-          innerLinesShow: Math.random() > 0.7,
-          innerLinesLength: Math.floor(Math.random() * 4) + 2, // 2-5
-        },
-        {
-          centerDotShow: true,
-          centerDotThickness: 2,
-          outerLinesShow: true,
-          outerLinesLength: 7,
-          outerLinesThickness: 2,
-          outerLinesOffset: 3,
-          innerLinesShow: false,
-        },
-        {
-          centerDotShow: false,
-          outerLinesShow: true,
-          outerLinesLength: 5,
-          outerLinesThickness: 1,
-          outerLinesOffset: 2,
-          innerLinesShow: true,
-          innerLinesLength: 3,
-          innerLinesThickness: 1,
-        }
+      // ECHTE Pro-Player Konfigurationen (TenZ, Shroud, s1mple, etc.)
+      const realProConfigs = [
+        // TenZ Style
+        { name: 'TenZ', centerDotShow: true, centerDotThickness: 2, outerLinesShow: true, outerLinesLength: 7, outerLinesThickness: 2, outerLinesOffset: 3, innerLinesShow: false, color: '#00FF88' },
+        // Shroud Style  
+        { name: 'Shroud', centerDotShow: false, outerLinesShow: true, outerLinesLength: 5, outerLinesThickness: 1, outerLinesOffset: 2, innerLinesShow: true, innerLinesLength: 4, innerLinesThickness: 1, innerLinesOffset: 1, color: '#FFFFFF' },
+        // s1mple Style
+        { name: 's1mple', centerDotShow: true, centerDotThickness: 1, outerLinesShow: true, outerLinesLength: 6, outerLinesThickness: 1, outerLinesOffset: 2, innerLinesShow: false, color: '#FFFF00' },
+        // ScreaM Style
+        { name: 'ScreaM', centerDotShow: false, outerLinesShow: true, outerLinesLength: 4, outerLinesThickness: 2, outerLinesOffset: 1, innerLinesShow: false, color: '#FF0000' },
+        // Jett Mains
+        { name: 'Jett Pro', centerDotShow: true, centerDotThickness: 3, outerLinesShow: true, outerLinesLength: 8, outerLinesThickness: 2, outerLinesOffset: 4, innerLinesShow: false, color: '#00FFFF' },
+        // Entry Fragger
+        { name: 'Entry', centerDotShow: false, outerLinesShow: true, outerLinesLength: 3, outerLinesThickness: 1, outerLinesOffset: 1, innerLinesShow: true, innerLinesLength: 2, innerLinesThickness: 1, innerLinesOffset: 0, color: '#FF4656' },
+        // Minimal Pro
+        { name: 'Minimal', centerDotShow: true, centerDotThickness: 1, outerLinesShow: true, outerLinesLength: 4, outerLinesThickness: 1, outerLinesOffset: 2, innerLinesShow: false, color: '#FFFFFF' },
+        // AWP Style
+        { name: 'AWP Pro', centerDotShow: true, centerDotThickness: 2, outerLinesShow: false, innerLinesShow: false, color: '#FF6B6B' },
+        // Spray Control
+        { name: 'Spray', centerDotShow: true, centerDotThickness: 2, outerLinesShow: true, outerLinesLength: 6, outerLinesThickness: 1, outerLinesOffset: 3, innerLinesShow: true, innerLinesLength: 3, innerLinesThickness: 1, innerLinesOffset: 1, color: '#4ECDC4' }
       ];
       
-      const baseConfig = proConfigs[Math.floor(Math.random() * proConfigs.length)];
+      const selectedConfig = realProConfigs[Math.floor(Math.random() * realProConfigs.length)];
       
       setSettings(prev => ({
         ...prev,
-        primaryColor: Math.random() > 0.3 ? 'custom' : 'white',
-        customColor: getRandomColor(),
-        centerDotShow: baseConfig.centerDotShow,
-        centerDotThickness: baseConfig.centerDotThickness || 2,
+        primaryColor: Math.random() > 0.2 ? 'custom' : 'white', // 80% custom colors
+        customColor: selectedConfig.color || getRandomColor(),
+        centerDotShow: selectedConfig.centerDotShow,
+        centerDotThickness: selectedConfig.centerDotThickness || 2,
         centerDotOpacity: 255,
-        outerLinesShow: baseConfig.outerLinesShow,
-        outerLinesLength: baseConfig.outerLinesLength || 7,
-        outerLinesThickness: baseConfig.outerLinesThickness || 2,
-        outerLinesOffset: baseConfig.outerLinesOffset || 3,
+        outerLinesShow: selectedConfig.outerLinesShow,
+        outerLinesLength: selectedConfig.outerLinesLength || 6,
+        outerLinesThickness: selectedConfig.outerLinesThickness || 2,
+        outerLinesOffset: selectedConfig.outerLinesOffset || 2,
         outerLinesOpacity: 255,
-        innerLinesShow: baseConfig.innerLinesShow || false,
-        innerLinesLength: baseConfig.innerLinesLength || 4,
-        innerLinesThickness: baseConfig.innerLinesThickness || 2,
-        innerLinesOffset: Math.floor(Math.random() * 3) + 1,
+        innerLinesShow: selectedConfig.innerLinesShow || false,
+        innerLinesLength: selectedConfig.innerLinesLength || 4,
+        innerLinesThickness: selectedConfig.innerLinesThickness || 1,
+        innerLinesOffset: selectedConfig.innerLinesOffset || 1,
         innerLinesOpacity: 255,
-        outlineShow: Math.random() > 0.8,
+        outlineShow: Math.random() > 0.7, // 30% outline
         outlineOpacity: 255,
         outlineThickness: 1,
+        firingErrorShow: Math.random() > 0.5, // 50% firing error
+        movementErrorShow: Math.random() > 0.6, // 40% movement error
+        fadeCrosshairWithFiringError: Math.random() > 0.8 // 20% fade
+      }));
+      
+      showNotification(`🏆 ${selectedConfig.name} Pro Style generiert!`);
+      
+    } else {
+      // Fun Mode - Ausgewogener aber trotzdem kreativ
+      const creativeModes = ['Neon', 'Retro', 'Minimal', 'Thick', 'Dotty', 'Lines', 'Glow'];
+      const selectedMode = creativeModes[Math.floor(Math.random() * creativeModes.length)];
+      
+      let funConfig;
+      
+      switch(selectedMode) {
+        case 'Neon':
+          funConfig = {
+            centerDotShow: true,
+            centerDotThickness: Math.floor(Math.random() * 3) + 2, // 2-4
+            outerLinesShow: true,
+            outerLinesLength: Math.floor(Math.random() * 8) + 6, // 6-13
+            outerLinesThickness: Math.floor(Math.random() * 3) + 2, // 2-4
+            outerLinesOffset: Math.floor(Math.random() * 3) + 1, // 1-3
+            innerLinesShow: Math.random() > 0.3,
+            innerLinesLength: Math.floor(Math.random() * 5) + 3, // 3-7
+            color: getRandomColor()
+          };
+          break;
+        case 'Retro':
+          funConfig = {
+            centerDotShow: Math.random() > 0.5,
+            centerDotThickness: Math.floor(Math.random() * 2) + 1, // 1-2
+            outerLinesShow: true,
+            outerLinesLength: Math.floor(Math.random() * 4) + 8, // 8-11
+            outerLinesThickness: 1,
+            outerLinesOffset: Math.floor(Math.random() * 4) + 3, // 3-6
+            innerLinesShow: false,
+            color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FECA57'][Math.floor(Math.random() * 4)]
+          };
+          break;
+        case 'Minimal':
+          funConfig = {
+            centerDotShow: true,
+            centerDotThickness: 1,
+            outerLinesShow: Math.random() > 0.3,
+            outerLinesLength: Math.floor(Math.random() * 3) + 2, // 2-4
+            outerLinesThickness: 1,
+            outerLinesOffset: Math.floor(Math.random() * 2) + 1, // 1-2
+            innerLinesShow: false,
+            color: getRandomColor()
+          };
+          break;
+        case 'Thick':
+          funConfig = {
+            centerDotShow: Math.random() > 0.4,
+            centerDotThickness: Math.floor(Math.random() * 3) + 3, // 3-5
+            outerLinesShow: true,
+            outerLinesLength: Math.floor(Math.random() * 5) + 4, // 4-8
+            outerLinesThickness: Math.floor(Math.random() * 4) + 3, // 3-6
+            outerLinesOffset: Math.floor(Math.random() * 3) + 2, // 2-4
+            innerLinesShow: Math.random() > 0.6,
+            color: getRandomColor()
+          };
+          break;
+        case 'Dotty':
+          funConfig = {
+            centerDotShow: true,
+            centerDotThickness: Math.floor(Math.random() * 4) + 3, // 3-6
+            outerLinesShow: Math.random() > 0.5,
+            outerLinesLength: Math.floor(Math.random() * 3) + 2, // 2-4
+            outerLinesThickness: Math.floor(Math.random() * 2) + 1, // 1-2
+            outerLinesOffset: Math.floor(Math.random() * 5) + 1, // 1-5
+            innerLinesShow: false,
+            color: getRandomColor()
+          };
+          break;
+        default:
+          funConfig = {
+            centerDotShow: Math.random() > 0.4,
+            centerDotThickness: Math.floor(Math.random() * 4) + 1, // 1-4
+            outerLinesShow: Math.random() > 0.2,
+            outerLinesLength: Math.floor(Math.random() * 10) + 4, // 4-13
+            outerLinesThickness: Math.floor(Math.random() * 4) + 1, // 1-4
+            outerLinesOffset: Math.floor(Math.random() * 6) + 1, // 1-6
+            innerLinesShow: Math.random() > 0.5,
+            innerLinesLength: Math.floor(Math.random() * 6) + 2, // 2-7
+            color: getRandomColor()
+          };
+      }
+      
+      setSettings(prev => ({
+        ...prev,
+        primaryColor: 'custom',
+        customColor: funConfig.color,
+        centerDotShow: funConfig.centerDotShow,
+        centerDotThickness: funConfig.centerDotThickness,
+        centerDotOpacity: Math.floor(Math.random() * 100) + 155, // 155-255 (sichtbar)
+        outerLinesShow: funConfig.outerLinesShow,
+        outerLinesLength: funConfig.outerLinesLength,
+        outerLinesThickness: funConfig.outerLinesThickness,
+        outerLinesOffset: funConfig.outerLinesOffset,
+        outerLinesOpacity: Math.floor(Math.random() * 100) + 155, // 155-255
+        innerLinesShow: funConfig.innerLinesShow || false,
+        innerLinesLength: funConfig.innerLinesLength || 3,
+        innerLinesThickness: Math.floor(Math.random() * 3) + 1, // 1-3
+        innerLinesOffset: Math.floor(Math.random() * 4) + 1, // 1-4
+        innerLinesOpacity: Math.floor(Math.random() * 100) + 155,
+        outlineShow: Math.random() > 0.6, // 40% outline
+        outlineOpacity: Math.floor(Math.random() * 100) + 155,
+        outlineThickness: Math.floor(Math.random() * 2) + 1, // 1-2
         firingErrorShow: Math.random() > 0.6,
         movementErrorShow: Math.random() > 0.7,
         fadeCrosshairWithFiringError: Math.random() > 0.8
       }));
-    } else {
-      // Fun/Crazy mode
-      setSettings(prev => ({
-        ...prev,
-        primaryColor: 'custom',
-        customColor: getRandomColor(),
-        centerDotShow: Math.random() > 0.3,
-        centerDotThickness: Math.floor(Math.random() * 6) + 1, // 1-6
-        centerDotOpacity: Math.floor(Math.random() * 156) + 100, // 100-255
-        outerLinesShow: Math.random() > 0.2,
-        outerLinesLength: Math.floor(Math.random() * 15) + 3, // 3-17
-        outerLinesThickness: Math.floor(Math.random() * 8) + 1, // 1-8
-        outerLinesOffset: Math.floor(Math.random() * 10), // 0-9
-        outerLinesOpacity: Math.floor(Math.random() * 156) + 100,
-        innerLinesShow: Math.random() > 0.4,
-        innerLinesLength: Math.floor(Math.random() * 12) + 2, // 2-13
-        innerLinesThickness: Math.floor(Math.random() * 6) + 1, // 1-6
-        innerLinesOffset: Math.floor(Math.random() * 8), // 0-7
-        innerLinesOpacity: Math.floor(Math.random() * 156) + 100,
-        outlineShow: Math.random() > 0.5,
-        outlineOpacity: Math.floor(Math.random() * 156) + 100,
-        outlineThickness: Math.floor(Math.random() * 3) + 1,
-        firingErrorShow: Math.random() > 0.5,
-        movementErrorShow: Math.random() > 0.5,
-        fadeCrosshairWithFiringError: Math.random() > 0.5
-      }));
+      
+      showNotification(`🎨 ${selectedMode} Style generiert!`);
     }
-    
-    showNotification(`🎲 ${mode === 'pro' ? 'Pro' : 'Fun'} Random Crosshair generiert!`);
   };
 
   // Generate Crosshair Code - Nutzt alle erweiterten Einstellungen
