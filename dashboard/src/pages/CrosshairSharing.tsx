@@ -303,30 +303,95 @@ const CrosshairSharing = () => {
   const saveSettings = async () => {
     if (!settings) return;
 
-    try {
-      setSaving(true);
-      const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const response = await fetch(`${apiUrl}/api/crosshair/settings/${selectedGuild}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(settings)
-      });
+    const MAX_RETRIES = 3;
+    let attempt = 0;
 
-      const data = await response.json();
+    const trySaveSettings = async (): Promise<boolean> => {
+      try {
+        attempt++;
+        setSaving(true);
+        
+        const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
+        console.log(`💾 Saving settings (Attempt ${attempt}/${MAX_RETRIES})...`);
+        
+        const response = await fetch(`${apiUrl}/api/crosshair/settings/${selectedGuild}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(settings),
+          // Timeout nach 10 Sekunden
+          signal: AbortSignal.timeout(10000)
+        });
 
-      if (data.success) {
-        success('Einstellungen erfolgreich gespeichert!');
-        setSettings(data.settings);
-      } else {
-        error(data.message || 'Fehler beim Speichern');
+        console.log(`📡 Save response: ${response.status} ${response.statusText}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            success('✅ Einstellungen erfolgreich gespeichert!');
+            setSettings(data.settings);
+            return true;
+          } else {
+            throw new Error(data.message || 'Unbekannter Server-Fehler');
+          }
+        } else {
+          // Spezielle Behandlung für verschiedene HTTP-Status-Codes
+          if (response.status === 503) {
+            throw new Error('Server temporär nicht verfügbar (503). Railway.app könnte Wartungsarbeiten durchführen.');
+          } else if (response.status === 500) {
+            throw new Error('Interner Server-Fehler (500). Backend hat ein Problem.');
+          } else if (response.status === 404) {
+            throw new Error('API-Endpoint nicht gefunden (404). Falscher Server?');
+          } else if (response.status === 429) {
+            throw new Error('Zu viele Anfragen (429). Bitte warte einen Moment.');
+          } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+        }
+      } catch (err: any) {
+        console.error(`❌ Save attempt ${attempt} failed:`, err);
+        
+        if (err.name === 'TimeoutError') {
+          throw new Error('Anfrage-Timeout nach 10 Sekunden. Server antwortet nicht.');
+        }
+        
+        throw err;
       }
-    } catch (err) {
-      error('Fehler beim Speichern der Einstellungen');
-      console.error(err);
-    } finally {
-      setSaving(false);
+    };
+
+    // Retry-Logik
+    while (attempt < MAX_RETRIES) {
+      try {
+        const success = await trySaveSettings();
+        if (success) {
+          return; // Erfolgreich gespeichert
+        }
+      } catch (err: any) {
+        console.error(`💥 Save attempt ${attempt} failed:`, err.message);
+        
+        if (attempt < MAX_RETRIES) {
+          // Warte zwischen Versuchen (Exponential Backoff)
+          const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+          console.log(`⏳ Retry in ${delay}ms...`);
+          error(`Versuch ${attempt} fehlgeschlagen. Retry in ${delay/1000}s...`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else {
+          // Alle Versuche fehlgeschlagen
+          const errorMessage = err.message || 'Unbekannter Fehler';
+          error(`❌ Speichern fehlgeschlagen nach ${MAX_RETRIES} Versuchen: ${errorMessage}`);
+          
+          // Zeige hilfreiche Tipps
+          if (errorMessage.includes('503') || errorMessage.includes('Service Unavailable')) {
+            setTimeout(() => {
+              error('💡 Tipp: Railway.app könnte Wartungsarbeiten haben. Versuche es in 5-10 Minuten erneut.');
+            }, 2000);
+          }
+        }
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
