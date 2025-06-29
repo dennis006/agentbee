@@ -36,21 +36,44 @@ function setupCrosshairProxyAPI(app) {
 
             console.log('🎯 Generating crosshair for code:', code);
 
-            // Henrik API Request
-            const response = await fetch(`https://api.henrikdev.xyz/valorant/v1/crosshair/generate?id=${encodeURIComponent(code)}`, {
+            // Henrik API Key aus Environment Variables
+            const henrikApiKey = process.env.HENRIK_API_KEY || process.env.VALORANT_API_TOKEN;
+            
+            if (!henrikApiKey) {
+                console.error('❌ Henrik API Key fehlt! Bitte HENRIK_API_KEY oder VALORANT_API_TOKEN setzen.');
+                return res.status(500).json({
+                    error: 'API Configuration Error',
+                    message: 'Henrik API Key nicht konfiguriert. Bitte kontaktiere den Administrator.'
+                });
+            }
+
+            // Henrik API Request mit API Key
+            const apiUrl = `https://api.henrikdev.xyz/valorant/v1/crosshair/generate?id=${encodeURIComponent(code)}&api_key=${encodeURIComponent(henrikApiKey)}`;
+            const response = await fetch(apiUrl, {
                 method: 'GET',
                 headers: {
-                    'User-Agent': 'AgentBee-Bot/1.0'
+                    'User-Agent': 'AgentBee-Bot/1.0',
+                    'Authorization': henrikApiKey
                 }
             });
 
             if (!response.ok) {
                 console.error('❌ Henrik API Error:', response.status, response.statusText);
                 
+                let errorMessage = 'Fehler beim Generieren des Crosshairs';
+                
+                if (response.status === 401) {
+                    errorMessage = 'Henrik API Key ungültig oder abgelaufen. Bitte kontaktiere den Administrator.';
+                } else if (response.status === 429) {
+                    errorMessage = 'Henrik API Rate Limit erreicht. Bitte versuche es später erneut.';
+                } else if (response.status === 400) {
+                    errorMessage = 'Ungültiger Crosshair-Code. Bitte überprüfe den Code.';
+                }
+                
                 return res.status(response.status).json({
                     error: 'Henrik API Error',
                     status: response.status,
-                    message: 'Fehler beim Generieren des Crosshairs'
+                    message: errorMessage
                 });
             }
 
