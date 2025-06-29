@@ -88,10 +88,10 @@ const presets = [
 // KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Color Mapping (Debug: Index 4 auch gelb! Rot→Index 6 probieren)
+    // 🧪 SYSTEMATISCHES FARB-DEBUGGING: Teste jeden Index einzeln
     const colorMap: Record<string, number> = {
-      'white': 0, 'green': 1, 'yellow-green': 2, 'yellow': 3, 
-      'cyan': 5, 'red': 6, 'pink': 4, 'custom': 5
+      'test-index-0': 0, 'test-index-1': 1, 'test-index-2': 2, 'test-index-3': 3,
+      'test-index-4': 4, 'test-index-5': 5, 'test-index-6': 6, 'custom': 5
     };
     
     const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
@@ -222,20 +222,20 @@ const CrosshairCreator = () => {
     fadeCrosshairWithFiringError: false
   });
 
-  // Color Mapping (Debug: Index 4 auch gelb! Rot→Index 6 probieren)
+  // 🧪 SYSTEMATISCHES FARB-DEBUGGING: Teste jeden Index einzeln
   const colorMap: Record<string, number> = {
-    'white': 0, 'green': 1, 'yellow-green': 2, 'yellow': 3,
-    'cyan': 5, 'red': 6, 'pink': 4, 'custom': 5
+    'test-index-0': 0, 'test-index-1': 1, 'test-index-2': 2, 'test-index-3': 3,
+    'test-index-4': 4, 'test-index-5': 5, 'test-index-6': 6, 'custom': 5
   };
 
   const colorOptions = [
-    { name: 'white', value: 'white', color: '#FFFFFF', label: 'Weiß' },
-    { name: 'green', value: 'green', color: '#00FF00', label: 'Grün' },
-    { name: 'yellow-green', value: 'yellow-green', color: '#9ACD32', label: 'Gelb-Grün' },
-    { name: 'yellow', value: 'yellow', color: '#FFFF00', label: 'Gelb' },
-    { name: 'pink', value: 'pink', color: '#FF69B4', label: 'Pink' },
-    { name: 'cyan', value: 'cyan', color: '#00ffdf', label: 'Cyan' },
-    { name: 'red', value: 'red', color: '#FF0000', label: 'Rot' }
+    { name: 'test-index-0', value: 'test-index-0', color: '#FFFFFF', label: '🧪 TEST Index 0 (weiß bekannt)' },
+    { name: 'test-index-1', value: 'test-index-1', color: '#00FF00', label: '🧪 TEST Index 1 (grün bekannt)' },
+    { name: 'test-index-2', value: 'test-index-2', color: '#FF0000', label: '🧪 TEST Index 2 (unbekannt)' },
+    { name: 'test-index-3', value: 'test-index-3', color: '#FFFF00', label: '🧪 TEST Index 3 (gelb vermutet)' },
+    { name: 'test-index-4', value: 'test-index-4', color: '#FF69B4', label: '🧪 TEST Index 4 (gelb vermutet)' },
+    { name: 'test-index-5', value: 'test-index-5', color: '#00ffdf', label: '🧪 TEST Index 5 (unbekannt)' },
+    { name: 'test-index-6', value: 'test-index-6', color: '#FF1493', label: '🧪 TEST Index 6 (pink vermutet)' }
   ];
 
   // Update Setting
@@ -258,15 +258,16 @@ const CrosshairCreator = () => {
     const hexColor = getColorValue(settings.primaryColor);
     console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
     console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
-    console.log(`🔥 DRITTER VERSUCH (Index 4 auch gelb! rot→Index 6):`);
-    console.log(`  📌 white → Index 0 (sollte WEISS zeigen) ✅`);
-    console.log(`  📌 green → Index 1 (sollte GRÜN zeigen) ✅`);  
-    console.log(`  📌 yellow-green → Index 2 (sollte GELB-GRÜN zeigen)`);
-    console.log(`  📌 yellow → Index 3 (Index 3+4 beide zeigen gelb!)`);
-    console.log(`  📌 pink → Index 4 (von Index 6 verschoben)`);
-    console.log(`  📌 cyan → Index 5 (sollte CYAN zeigen)`);
-    console.log(`  📌 red → Index 6 (LETZTER VERSUCH für rot!)`);
-    console.log(`🙏 ROT MUSS JETZT ENDLICH ROT SEIN!`);
+    console.log(`🔬 SYSTEMATISCHER INDEX-TEST - Reverse Engineering:`);
+    console.log(`  📌 Index 0 → weiß ✅ (bestätigt)`);
+    console.log(`  📌 Index 1 → grün ✅ (bestätigt)`);  
+    console.log(`  📌 Index 2 → ??? (TESTE das!)`);
+    console.log(`  📌 Index 3 → gelb ❓ (vermutet)`);
+    console.log(`  📌 Index 4 → gelb ❓ (User: "pink ist gelb")`);
+    console.log(`  📌 Index 5 → ??? (TESTE das!)`);
+    console.log(`  📌 Index 6 → pink ❓ (User: "rot ist jetzt pink")`);
+    console.log(`📋 TESTE JEDEN INDEX und sage mir welche Farbe du siehst!`);
+    console.log(`🎯 Format: "Index X zeigt [farbe]"`);
     
     setCrosshairCode(code);
     return code;
@@ -328,16 +329,16 @@ const CrosshairCreator = () => {
     showNotification("Dein Crosshair wird heruntergeladen.");
   };
 
-  // Get Color Value - Korrigierte Valorant-Farben
+  // Get Color Value - Test-Farben für systematisches Debugging
   const getColorValue = (colorName: string) => {
     const colors: Record<string, string> = {
-      'white': '#FFFFFF', 
-      'green': '#00FF00', 
-      'yellow-green': '#9ACD32', 
-      'red': '#FF0000',
-      'yellow': '#FFFF00',
-      'cyan': '#00ffdf', 
-      'pink': '#FF69B4'
+      'test-index-0': '#FFFFFF', // weiß
+      'test-index-1': '#00FF00', // grün
+      'test-index-2': '#FF0000', // rot (test)
+      'test-index-3': '#FFFF00', // gelb (vermutet)
+      'test-index-4': '#FF69B4', // pink (test)
+      'test-index-5': '#00ffdf', // cyan (test)
+      'test-index-6': '#FF1493'  // deep pink (vermutet)
     };
     const result = colors[colorName] || '#FFFFFF';
     console.log(`Getting color for '${colorName}': ${result}`);
@@ -347,7 +348,7 @@ const CrosshairCreator = () => {
   // Update code when settings change
   useEffect(() => {
     generateCrosshairCode();
-  }, [settings]);
+    }, [settings]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white relative overflow-hidden">
