@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Copy, Download, Settings, Eye, Check, RotateCcw, Star, Sliders, AlertCircle, Hash } from 'lucide-react';
+import { Target, Copy, Download, Settings, Eye, Check, RotateCcw, Star, Sliders, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { useToast, ToastContainer } from '../components/ui/toast';
@@ -51,111 +51,80 @@ const COLORS = [
   { name: "Benutzerdefiniert", value: "custom", code: 7 }
 ];
 
-// KORREKTE Valorant Code-Generierung basierend auf echter Struktur
-// Vollständige Code-Generierung mit ALLEN Valorant-Parametern (FUNKTIONIEREND)
+// KORREKTE Valorant Code-Generierung basierend auf echten Pro-Codes
 const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Ein einziges Array für die gesamte Parameterliste - EXAKTE Reihenfolge ist entscheidend
-    const params = [];
-    
-    // Basis beginnt immer mit 0 - diese Reihenfolge basiert auf der Recherche
-    params.push("0");
-    
-    // Allgemeine Einstellungen
-    params.push("s;1"); // Advanced options
-    
-    // "P" als Haupt-Parameter-Marker für primäres Fadenkreuz
-    params.push("P");
-    
-    // Color mapping - Custom color uses index 5
+    // 🎨 CUSTOM COLOR SYSTEM - verwendet Index 5 für alle custom colors
     const colorMap: Record<string, number> = {
       'white': 0, 'custom': 5
     };
-    const color = colorMap[settings.primaryColor] || 5;
     
-    // Farbe - WICHTIG: Benutzerdefinierte Farben verwenden Index 5!
-    if (settings.primaryColor === 'custom') {
-      params.push(`c;5`); // Index 5 für benutzerdefinierte Farbe
-      
-      // Entferne # und füge FF für Alpha hinzu, konvertiere zu Großbuchstaben
-      const hex = settings.customColor.replace('#', '').toUpperCase();
-      params.push(`u;${hex}FF`);
-    } else {
-      // Für Standard-Farben (0-4)
-      params.push(`c;${color}`);
+    const color = colorMap.hasOwnProperty(settings.primaryColor) ? colorMap[settings.primaryColor] : 1;
+    
+    let code = "0"; // Start
+    
+    // Scaling (optional, für modernere Codes)
+    if (settings.centerDotShow || settings.outerLinesShow || settings.innerLinesShow) {
+      code += ";s;1";
     }
     
-    // Outline Parameter - KORREKT wie in deinem funktionierenden Code
-    if (settings.outlineShow) {
-      params.push("h;1"); // outline enabled
-      params.push(`o;${settings.outlineOpacity / 255}`); // outline opacity
-      params.push(`t;${Math.max(1, Math.round(settings.outlineThickness))}`); // outline thickness
+    // Primary Crosshair Marker
+    code += ";P";
+    
+    // Color
+    code += `;c;${color}`;
+    
+    // Outline/Border
+    code += `;h;${settings.outlineShow ? 1 : 0}`;
+    
+    // Center Dot
+    if (settings.centerDotShow && settings.centerDotThickness > 0) {
+      code += ";o;1"; // outline on
+      code += ";d;1"; // dot on
+      code += `;z;${settings.centerDotThickness}`; // dot size
     } else {
-      params.push("h;0"); // outline disabled
+      code += ";d;0"; // dot off
     }
     
-    // Center Dot Parameter
-    if (settings.centerDotShow) {
-      params.push("d;1");
-      params.push(`a;${settings.centerDotOpacity / 255}`);
-      params.push(`z;${Math.max(1, Math.round(settings.centerDotThickness))}`);
-    } else {
-      params.push("d;0");
+    // Firing error fade
+    code += `;f;${settings.fadeCrosshairWithFiringError ? 1 : 0}`;
+    
+    // Movement error
+    if (settings.movementErrorShow) {
+      code += ";m;1";
     }
     
-    // Firing error
-    params.push("f;0");
-    
-    // Inner Lines Parameter (0x parameters in Valorant)
-    if (settings.outerLinesShow) { // Note: UI shows as "outer" but these are 0x params (inner in Valorant)
-      params.push("0b;1");
-      params.push(`0a;${settings.outerLinesOpacity / 255}`);
-      params.push(`0l;${Math.max(0, Math.round(settings.outerLinesLength))}`);
-      params.push(`0o;${Math.max(0, Math.round(settings.outerLinesOffset))}`);
-      params.push(`0t;${Math.max(0, Math.round(settings.outerLinesThickness))}`);
-      
-      // Movement and Firing Error für inner lines
-      params.push(settings.outerLinesMovementError ? "0m;1" : "0m;0");
-      params.push(settings.outerLinesFiringError ? "0f;1" : "0f;0");
-      
-      if (settings.outerLinesMovementError) {
-        params.push(`0s;${settings.outerLinesMovementErrorMultiplier.toFixed(1)}`);
-      }
-      if (settings.outerLinesFiringError) {
-        params.push(`0e;${settings.outerLinesFiringErrorMultiplier.toFixed(1)}`);
+    // Outer Lines (0x parameters)
+    if (settings.outerLinesShow) {
+      code += `;0l;${settings.outerLinesLength}`; // outer length
+      code += `;0o;${settings.outerLinesOffset}`; // outer offset
+      code += `;0a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha (0 or 1)
+      code += `;0f;0`; // outer fade
+      if (settings.outerLinesThickness !== 1) {
+        code += `;0t;${settings.outerLinesThickness}`; // outer thickness
       }
     } else {
-      params.push("0b;0");
+      code += ";0l;0;0o;0;0a;0;0f;0";
     }
     
-    // Outer Lines Parameter (1x parameters in Valorant)
-    if (settings.innerLinesShow) { // Note: UI shows as "inner" but these are 1x params (outer in Valorant)
-      params.push("1b;1");
-      params.push(`1a;${settings.innerLinesOpacity / 255}`);
-      params.push(`1l;${Math.max(0, Math.round(settings.innerLinesLength))}`);
-      params.push(`1o;${Math.max(0, Math.round(settings.innerLinesOffset))}`);
-      params.push(`1t;${Math.max(0, Math.round(settings.innerLinesThickness))}`);
-      
-      // Movement and Firing Error für outer lines
-      params.push(settings.innerLinesMovementError ? "1m;1" : "1m;0");
-      params.push(settings.innerLinesFiringError ? "1f;1" : "1f;0");
-      
-      if (settings.innerLinesMovementError) {
-        params.push(`1s;${settings.innerLinesMovementErrorMultiplier.toFixed(1)}`);
+    // Inner Lines (1x parameters)  
+    if (settings.innerLinesShow) {
+      code += `;1l;${settings.innerLinesLength}`; // inner length
+      code += `;1o;${settings.innerLinesOffset}`; // inner offset
+      code += `;1a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
+      if (settings.innerLinesThickness !== 1) {
+        code += `;1t;${settings.innerLinesThickness}`; // inner thickness
       }
-      if (settings.innerLinesFiringError) {
-        params.push(`1e;${settings.innerLinesFiringErrorMultiplier.toFixed(1)}`);
-      }
-    } else {
-      params.push("1b;0");
+      code += ";1m;0;1f;0"; // inner movement, fade
     }
     
-    // Verbinde alle Parameter mit Strichpunkten
-    return params.join(';');
+    // Standard end
+    code += ";1b;0";
+    
+    return code;
   } catch (error) {
-    console.error("Fehler bei der Codegenerierung:", error);
-    // Fallback zum funktionierenden Preset
-    return "0;s;1;P;c;1;h;1;d;1;z;3;a;0.5;f;0;0b;1;0l;4;0o;2;0a;1;0f;0;1b;0";
+    // Fallback zu funktionierendem TenZ-Code
+    return "0;s;1;P;c;1;h;0;f;0;0l;4;0o;2;0a;1;0f;0;1b;0";
   }
 };
 
@@ -170,19 +139,11 @@ interface CrosshairSettings {
   outerLinesThickness: number;
   outerLinesOffset: number;
   outerLinesOpacity: number;
-  outerLinesFiringError: boolean;
-  outerLinesMovementError: boolean;
-  outerLinesFiringErrorMultiplier: number;
-  outerLinesMovementErrorMultiplier: number;
   innerLinesShow: boolean;
   innerLinesLength: number;
   innerLinesThickness: number;
   innerLinesOffset: number;
   innerLinesOpacity: number;
-  innerLinesFiringError: boolean;
-  innerLinesMovementError: boolean;
-  innerLinesFiringErrorMultiplier: number;
-  innerLinesMovementErrorMultiplier: number;
   outlineShow: boolean;
   outlineOpacity: number;
   outlineThickness: number;
@@ -200,33 +161,25 @@ const CrosshairCreator = () => {
   const { toasts, success, error, removeToast } = useToast();
   const { showNotification, NotificationComponent } = useNotification();
 
-  // Erweiterte Crosshair Settings - Standard: Weiß + einfache Einstellungen
+  // Erweiterte Crosshair Settings
   const [settings, setSettings] = useState<CrosshairSettings>({
-    primaryColor: 'white', // Standard: Weiß
-    customColor: '#00FF41', // Valorant-Grün für Custom
+    primaryColor: 'white',
+    customColor: '#FF0000',
     centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
-    outerLinesShow: true, // Zeigt als "Äußere Linien" aber sind 0x params (inner in Valorant)
-    outerLinesLength: 6,
+    outerLinesShow: true,
+    outerLinesLength: 7,
     outerLinesThickness: 2,
     outerLinesOffset: 3,
     outerLinesOpacity: 255,
-    outerLinesFiringError: false,
-    outerLinesMovementError: false,
-    outerLinesFiringErrorMultiplier: 1,
-    outerLinesMovementErrorMultiplier: 1,
-    innerLinesShow: false, // Standard: Aus
+    innerLinesShow: true, // Standardmäßig aktiviert für bessere Sichtbarkeit
     innerLinesLength: 4,
     innerLinesThickness: 2,
-    innerLinesOffset: 2,
+    innerLinesOffset: 1,
     innerLinesOpacity: 255,
-    innerLinesFiringError: false,
-    innerLinesMovementError: false,
-    innerLinesFiringErrorMultiplier: 1,
-    innerLinesMovementErrorMultiplier: 1,
-    outlineShow: true, // Outline an
-    outlineOpacity: 180,
+    outlineShow: false,
+    outlineOpacity: 255,
     outlineThickness: 1,
     firingErrorShow: false,
     movementErrorShow: false,
@@ -294,22 +247,14 @@ const CrosshairCreator = () => {
         outerLinesThickness,
         outerLinesOffset,
         outerLinesOpacity: 255,
-        outerLinesFiringError: Math.random() > 0.8, // 20% outer firing error
-        outerLinesMovementError: Math.random() > 0.8, // 20% outer movement error  
-        outerLinesFiringErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
-        outerLinesMovementErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
         innerLinesShow,
         innerLinesLength,
         innerLinesThickness,
         innerLinesOffset,
         innerLinesOpacity: 255,
-        innerLinesFiringError: Math.random() > 0.9, // 10% inner firing error (selten)
-        innerLinesMovementError: Math.random() > 0.9, // 10% inner movement error (selten)
-        innerLinesFiringErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
-        innerLinesMovementErrorMultiplier: Math.random() * 1.5 + 0.5, // 0.5-2.0
         outlineShow: Math.random() > 0.8, // 20% outline (selten bei Pros)
-        outlineOpacity: Math.floor(Math.random() * 100) + 155, // 155-255
-        outlineThickness: Math.floor(Math.random() * 3) + 1, // 1-3
+        outlineOpacity: 255,
+        outlineThickness: 1,
         firingErrorShow: Math.random() > 0.6, // 40% firing error
         movementErrorShow: Math.random() > 0.7, // 30% movement error
         fadeCrosshairWithFiringError: Math.random() > 0.9 // 10% fade (sehr selten)
@@ -412,22 +357,14 @@ const CrosshairCreator = () => {
         outerLinesThickness: funConfig.outerLinesThickness,
         outerLinesOffset: funConfig.outerLinesOffset,
         outerLinesOpacity: Math.floor(Math.random() * 100) + 155, // 155-255
-        outerLinesFiringError: Math.random() > 0.5, // 50% für Fun Mode
-        outerLinesMovementError: Math.random() > 0.5, // 50% für Fun Mode
-        outerLinesFiringErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
-        outerLinesMovementErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
         innerLinesShow: funConfig.innerLinesShow || false,
         innerLinesLength: funConfig.innerLinesLength || 3,
         innerLinesThickness: Math.floor(Math.random() * 3) + 1, // 1-3
         innerLinesOffset: Math.floor(Math.random() * 4) + 1, // 1-4
         innerLinesOpacity: Math.floor(Math.random() * 100) + 155,
-        innerLinesFiringError: Math.random() > 0.6, // 40% für Fun Mode
-        innerLinesMovementError: Math.random() > 0.6, // 40% für Fun Mode  
-        innerLinesFiringErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
-        innerLinesMovementErrorMultiplier: Math.random() * 2 + 0.5, // 0.5-2.5 (extremer)
         outlineShow: Math.random() > 0.6, // 40% outline
         outlineOpacity: Math.floor(Math.random() * 100) + 155,
-        outlineThickness: Math.floor(Math.random() * 4) + 1, // 1-4 (extremer für Fun)
+        outlineThickness: Math.floor(Math.random() * 2) + 1, // 1-2
         firingErrorShow: Math.random() > 0.6,
         movementErrorShow: Math.random() > 0.7,
         fadeCrosshairWithFiringError: Math.random() > 0.8
@@ -453,17 +390,6 @@ const CrosshairCreator = () => {
       showNotification("Crosshair-Code wurde kopiert! In Valorant: Einstellungen → Fadenkreuz → Importieren");
     } catch (err) {
       showNotification("Code konnte nicht kopiert werden.", "error");
-    }
-  };
-
-  // Einfache Hex-Code kopieren Funktion - VIEL EINFACHER!
-  const copyHexCode = async () => {
-    try {
-      const hexCode = settings.primaryColor === 'custom' ? settings.customColor : '#FFFFFF';
-      await navigator.clipboard.writeText(hexCode);
-      showNotification(`✅ Hex-Code ${hexCode} kopiert! Einfach in Valorant unter "Custom" einfügen.`);
-    } catch (err) {
-      showNotification("Hex-Code konnte nicht kopiert werden.", "error");
     }
   };
 
@@ -950,7 +876,18 @@ const CrosshairCreator = () => {
                           {/* Inner Lines */}
                           {settings.innerLinesShow && (
                             <>
-                              {/* Horizontal Inner Lines */}
+                              {/* Horizontal Inner Lines - KORRIGIERTE POSITIONIERUNG */}
+                              <div 
+                                className="absolute top-1/2 transform -translate-y-1/2"
+                                style={{
+                                  backgroundColor: getColorValue(settings.primaryColor),
+                                  width: `${settings.innerLinesLength * 2}px`,
+                                  height: `${settings.innerLinesThickness}px`,
+                                  left: `${64 - settings.innerLinesOffset * 2 - settings.innerLinesLength * 2}px`,
+                                  opacity: settings.innerLinesOpacity / 255,
+                                  zIndex: 10
+                                }}
+                              />
                               <div 
                                 className="absolute top-1/2 transform -translate-y-1/2"
                                 style={{
@@ -958,21 +895,23 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesLength * 2}px`,
                                   height: `${settings.innerLinesThickness}px`,
                                   left: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255
-                                }}
-                              />
-                              <div 
-                                className="absolute top-1/2 transform -translate-y-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.innerLinesLength * 2}px`,
-                                  height: `${settings.innerLinesThickness}px`,
-                                  right: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255
+                                  opacity: settings.innerLinesOpacity / 255,
+                                  zIndex: 10
                                 }}
                               />
                               
-                              {/* Vertical Inner Lines */}
+                              {/* Vertical Inner Lines - KORRIGIERTE POSITIONIERUNG */}
+                              <div 
+                                className="absolute left-1/2 transform -translate-x-1/2"
+                                style={{
+                                  backgroundColor: getColorValue(settings.primaryColor),
+                                  width: `${settings.innerLinesThickness}px`,
+                                  height: `${settings.innerLinesLength * 2}px`,
+                                  top: `${64 - settings.innerLinesOffset * 2 - settings.innerLinesLength * 2}px`,
+                                  opacity: settings.innerLinesOpacity / 255,
+                                  zIndex: 10
+                                }}
+                              />
                               <div 
                                 className="absolute left-1/2 transform -translate-x-1/2"
                                 style={{
@@ -980,17 +919,8 @@ const CrosshairCreator = () => {
                                   width: `${settings.innerLinesThickness}px`,
                                   height: `${settings.innerLinesLength * 2}px`,
                                   top: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255
-                                }}
-                              />
-                              <div 
-                                className="absolute left-1/2 transform -translate-x-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.innerLinesThickness}px`,
-                                  height: `${settings.innerLinesLength * 2}px`,
-                                  bottom: `${64 + settings.innerLinesOffset * 2}px`,
-                                  opacity: settings.innerLinesOpacity / 255
+                                  opacity: settings.innerLinesOpacity / 255,
+                                  zIndex: 10
                                 }}
                               />
                             </>
@@ -1078,52 +1008,6 @@ const CrosshairCreator = () => {
                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
-
-                        {/* Outline Settings - WIEDER AKTIVIERT */}
-                        <div className="pt-2 border-t border-purple-700/30">
-                          <div className="flex items-center space-x-2 mb-3">
-                            <Checkbox
-                              id="outlineShow"
-                              checked={settings.outlineShow}
-                              onCheckedChange={(checked) => updateSetting('outlineShow', checked)}
-                            />
-                            <label htmlFor="outlineShow" className="text-purple-200 text-sm font-medium">
-                              Outline/Umrandung
-                            </label>
-                          </div>
-                          
-                          {settings.outlineShow && (
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-purple-200 text-xs mb-1">
-                                  Outline Dicke: {settings.outlineThickness}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="1"
-                                  max="5"
-                                  value={settings.outlineThickness}
-                                  onChange={(e) => updateSetting('outlineThickness', parseInt(e.target.value))}
-                                  className="w-full h-1 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-purple-200 text-xs mb-1">
-                                  Outline Transparenz: {settings.outlineOpacity}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="0"
-                                  max="255"
-                                  value={settings.outlineOpacity}
-                                  onChange={(e) => updateSetting('outlineOpacity', parseInt(e.target.value))}
-                                  className="w-full h-1 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
                   </div>
                 )}
               </div>
@@ -1142,10 +1026,9 @@ const CrosshairCreator = () => {
                 </div>
 
                 {settings.outerLinesShow && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                     <div>
-                            <label className="block text-blue-200 text-sm mb-2">
+                          <label className="block text-blue-200 text-sm mb-2">
                         Länge: {settings.outerLinesLength}
                       </label>
                       <input
@@ -1154,12 +1037,12 @@ const CrosshairCreator = () => {
                         max="20"
                         value={settings.outerLinesLength}
                         onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
-                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
 
                     <div>
-                            <label className="block text-blue-200 text-sm mb-2">
+                          <label className="block text-blue-200 text-sm mb-2">
                         Dicke: {settings.outerLinesThickness}
                       </label>
                       <input
@@ -1168,12 +1051,12 @@ const CrosshairCreator = () => {
                         max="10"
                         value={settings.outerLinesThickness}
                         onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
 
                     <div>
-                            <label className="block text-blue-200 text-sm mb-2">
+                          <label className="block text-blue-200 text-sm mb-2">
                         Abstand: {settings.outerLinesOffset}
                       </label>
                       <input
@@ -1182,12 +1065,12 @@ const CrosshairCreator = () => {
                         max="15"
                         value={settings.outerLinesOffset}
                         onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
 
                     <div>
-                            <label className="block text-blue-200 text-sm mb-2">
+                          <label className="block text-blue-200 text-sm mb-2">
                         Transparenz: {settings.outerLinesOpacity}
                       </label>
                       <input
@@ -1196,72 +1079,9 @@ const CrosshairCreator = () => {
                         max="255"
                         value={settings.outerLinesOpacity}
                         onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
-                              className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
-                        </div>
-
-                        {/* Error Settings für Outer Lines */}
-                        <div className="pt-3 border-t border-blue-700/30">
-                          <h4 className="text-blue-300 font-medium mb-3">Movement & Firing Error</h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="outerMovementError"
-                                checked={settings.outerLinesMovementError}
-                                onCheckedChange={(checked) => updateSetting('outerLinesMovementError', checked)}
-                              />
-                              <label htmlFor="outerMovementError" className="text-blue-200 text-sm">
-                                Movement Error
-                              </label>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="outerFiringError"
-                                checked={settings.outerLinesFiringError}
-                                onCheckedChange={(checked) => updateSetting('outerLinesFiringError', checked)}
-                              />
-                              <label htmlFor="outerFiringError" className="text-blue-200 text-sm">
-                                Firing Error
-                              </label>
-                            </div>
-
-                            {settings.outerLinesMovementError && (
-                              <div>
-                                <label className="block text-blue-200 text-xs mb-1">
-                                  Movement Error Multiplier: {settings.outerLinesMovementErrorMultiplier}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="0.1"
-                                  max="3"
-                                  step="0.1"
-                                  value={settings.outerLinesMovementErrorMultiplier}
-                                  onChange={(e) => updateSetting('outerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
-                                  className="w-full h-1 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                            )}
-
-                            {settings.outerLinesFiringError && (
-                              <div>
-                                <label className="block text-blue-200 text-xs mb-1">
-                                  Firing Error Multiplier: {settings.outerLinesFiringErrorMultiplier}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="0.1"
-                                  max="3"
-                                  step="0.1"
-                                  value={settings.outerLinesFiringErrorMultiplier}
-                                  onChange={(e) => updateSetting('outerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
-                                  className="w-full h-1 bg-blue-800 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
                   </div>
                 )}
               </div>
@@ -1280,10 +1100,9 @@ const CrosshairCreator = () => {
                 </div>
 
                 {settings.innerLinesShow && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
-                            <label className="block text-cyan-200 text-sm mb-2">
+                          <label className="block text-cyan-200 text-sm mb-2">
                         Länge: {settings.innerLinesLength}
                       </label>
                       <input
@@ -1292,12 +1111,12 @@ const CrosshairCreator = () => {
                         max="15"
                         value={settings.innerLinesLength}
                         onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
-                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
 
                     <div>
-                            <label className="block text-cyan-200 text-sm mb-2">
+                          <label className="block text-cyan-200 text-sm mb-2">
                         Dicke: {settings.innerLinesThickness}
                       </label>
                       <input
@@ -1306,12 +1125,12 @@ const CrosshairCreator = () => {
                         max="8"
                         value={settings.innerLinesThickness}
                         onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
-                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
 
                     <div>
-                            <label className="block text-cyan-200 text-sm mb-2">
+                          <label className="block text-cyan-200 text-sm mb-2">
                         Abstand: {settings.innerLinesOffset}
                       </label>
                       <input
@@ -1320,12 +1139,12 @@ const CrosshairCreator = () => {
                         max="10"
                         value={settings.innerLinesOffset}
                         onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
-                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
 
                     <div>
-                            <label className="block text-cyan-200 text-sm mb-2">
+                          <label className="block text-cyan-200 text-sm mb-2">
                         Transparenz: {settings.innerLinesOpacity}
                       </label>
                       <input
@@ -1334,73 +1153,10 @@ const CrosshairCreator = () => {
                         max="255"
                         value={settings.innerLinesOpacity}
                         onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
-                              className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
                       />
                     </div>
                   </div>
-
-                        {/* Error Settings für Inner Lines */}
-                        <div className="pt-3 border-t border-cyan-700/30">
-                          <h4 className="text-cyan-300 font-medium mb-3">Movement & Firing Error</h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="innerMovementError"
-                                checked={settings.innerLinesMovementError}
-                                onCheckedChange={(checked) => updateSetting('innerLinesMovementError', checked)}
-                              />
-                              <label htmlFor="innerMovementError" className="text-cyan-200 text-sm">
-                                Movement Error
-                              </label>
-              </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="innerFiringError"
-                                checked={settings.innerLinesFiringError}
-                                onCheckedChange={(checked) => updateSetting('innerLinesFiringError', checked)}
-                              />
-                              <label htmlFor="innerFiringError" className="text-cyan-200 text-sm">
-                                Firing Error
-                              </label>
-            </div>
-
-                            {settings.innerLinesMovementError && (
-            <div>
-                                <label className="block text-cyan-200 text-xs mb-1">
-                                  Movement Error Multiplier: {settings.innerLinesMovementErrorMultiplier}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="0.1"
-                                  max="3"
-                                  step="0.1"
-                                  value={settings.innerLinesMovementErrorMultiplier}
-                                  onChange={(e) => updateSetting('innerLinesMovementErrorMultiplier', parseFloat(e.target.value))}
-                                  className="w-full h-1 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                  </div>
-                            )}
-
-                            {settings.innerLinesFiringError && (
-                              <div>
-                                <label className="block text-cyan-200 text-xs mb-1">
-                                  Firing Error Multiplier: {settings.innerLinesFiringErrorMultiplier}
-                                </label>
-                                <input
-                                  type="range"
-                                  min="0.1"
-                                  max="3"
-                                  step="0.1"
-                                  value={settings.innerLinesFiringErrorMultiplier}
-                                  onChange={(e) => updateSetting('innerLinesFiringErrorMultiplier', parseFloat(e.target.value))}
-                                  className="w-full h-1 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
                 )}
               </div>
             </div>
@@ -1492,7 +1248,7 @@ const CrosshairCreator = () => {
                             >
                               📋 {settings.customColor}
                             </button>
-                  </div>
+                          </div>
                           <ol className="text-xs text-yellow-200 space-y-1">
                             <li>1. Wähle deine Farbe (z.B. #F90606)</li>
                             <li>2. Kopiere den generierten Code</li>
@@ -1520,7 +1276,7 @@ const CrosshairCreator = () => {
               <p className="text-amber-200 text-sm">
                 Lass den Zufall entscheiden! Generiere automatisch neue Crosshair-Designs.
               </p>
-            </div>
+                  </div>
             <div className="flex flex-col sm:flex-row gap-3 animate-slide-in-right" style={{ animationDelay: '1600ms' }}>
               <div className="group relative">
                 <Button
@@ -1591,19 +1347,11 @@ const CrosshairCreator = () => {
                   outerLinesThickness: 2,
                   outerLinesOffset: 3,
                   outerLinesOpacity: 255,
-                  outerLinesFiringError: false,
-                  outerLinesMovementError: false,
-                  outerLinesFiringErrorMultiplier: 1,
-                  outerLinesMovementErrorMultiplier: 1,
-                  innerLinesShow: false,
+                  innerLinesShow: true, // Korrigiert: standardmäßig aktiviert
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
                   innerLinesOffset: 1,
                   innerLinesOpacity: 255,
-                  innerLinesFiringError: false,
-                  innerLinesMovementError: false,
-                  innerLinesFiringErrorMultiplier: 1,
-                  innerLinesMovementErrorMultiplier: 1,
                   outlineShow: false,
                   outlineOpacity: 255,
                   outlineThickness: 1,
@@ -1642,10 +1390,6 @@ const CrosshairCreator = () => {
               <Button onClick={copyCode} className="bg-green-600 hover:bg-green-700">
                 <Copy className="w-4 h-4 mr-2" />
                 Code Kopieren
-              </Button>
-              <Button onClick={copyHexCode} className="bg-orange-600 hover:bg-orange-700">
-                <Hash className="w-4 h-4 mr-2" />
-                Nur Hex-Code
               </Button>
             </div>
           </div>
