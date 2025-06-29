@@ -229,6 +229,30 @@ function setupValorantCrosshairAPI(app, client) {
         }
     });
 
+    // Generate crosshair from custom config
+    app.post('/api/valorant/crosshair/create', (req, res) => {
+        try {
+            const { config } = req.body;
+            
+            if (!config) {
+                return res.status(400).json({ error: 'Crosshair-Konfiguration erforderlich' });
+            }
+
+            // Build crosshair code from config
+            const code = `0;p=${config.primaryColor};o=${config.outlineOpacity ? 1 : 0};f=${config.fadeWithFiring ? 1 : 0};0t=${config.centerDot ? 1 : 0};0l=${config.centerDotThickness};0o=${config.centerDotOpacity || 1};0a=1;0f=0;1b=${config.innerLines ? 1 : 0};1s=${config.innerLineOpacity || 1};1l=${config.innerLineLength};1t=${config.innerLineThickness};1o=${config.innerLineOffset};1a=1;1m=0;1f=0;2b=${config.outerLines ? 1 : 0};2s=${config.outerLineOpacity || 1};2l=${config.outerLineLength};2t=${config.outerLineThickness};2o=${config.outerLineOffset};2a=1;2m=0;2f=0`;
+
+            res.json({ 
+                success: true,
+                code: code,
+                message: 'Crosshair-Code erfolgreich erstellt'
+            });
+
+        } catch (error) {
+            console.error('Fehler beim Erstellen des Crosshair-Codes:', error);
+            res.status(500).json({ error: 'Interner Server-Fehler beim Erstellen' });
+        }
+    });
+
     console.log('✅ Valorant Crosshair API-Routen registriert');
 }
 

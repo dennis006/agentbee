@@ -301,6 +301,15 @@ class ValorantCrosshairSystem {
                     await interaction.showModal(modal);
                     break;
 
+                case 'crosshair_creator':
+                    await this.handleCrosshairCreator(interaction);
+                    break;
+
+                case 'crosshair_code_input':
+                    const codeModal = this.createCrosshairModal();
+                    await interaction.showModal(codeModal);
+                    break;
+
                 case 'crosshair_help':
                     await this.showCrosshairHelp(interaction);
                     break;
@@ -461,18 +470,244 @@ class ValorantCrosshairSystem {
     }
 
     /**
-     * Send crosshair panel to a channel
+     * Erstellt ein verbessertes Crosshair-Panel mit Creator-Modal
+     * @param {string} channelName - Name des Channels
+     * @returns {Object} - Ergebnis des Panel-Sendens
      */
-    async sendCrosshairPanel(channel) {
+    async sendCrosshairPanel(channelName) {
         try {
-            const panelData = this.createCrosshairPanel();
-            const message = await channel.send(panelData);
+            const channel = this.findChannelByName(channelName);
             
-            console.log(`✅ Crosshair-Panel gesendet in Channel: ${channel.name}`);
-            return message;
+            if (!channel) {
+                throw new Error(`Channel "${channelName}" nicht gefunden`);
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle('🎯 Valorant Crosshair Generator')
+                .setDescription('**Erstelle und generiere deine perfekten Valorant Crosshairs!**\n\n' +
+                               '• **🎨 Crosshair Creator**: Erstelle dein eigenes Crosshair\n' +
+                               '• **📋 Code eingeben**: Nutze bereits vorhandene Codes\n' +
+                               '• **🔄 Sofort-Generierung**: 1024x1024px PNG-Bilder\n' +
+                               '• **📱 Einfache Bedienung**: Alles mit wenigen Klicks')
+                .setColor(0x00FF7F)
+                .addFields(
+                    {
+                        name: '🎨 Crosshair Creator',
+                        value: 'Erstelle dein individuelles Crosshair mit allen Einstellungen:\n• Farbe, Dicke, Länge\n• Punkt-Optionen\n• Innere/Äußere Linien\n• Transparenz-Einstellungen',
+                        inline: true
+                    },
+                    {
+                        name: '📋 Code Generator',
+                        value: 'Gib deinen bestehenden Valorant Code ein:\n• Aus den Spiel-Einstellungen kopieren\n• Automatische Code-Validierung\n• Sofort-Vorschau verfügbar',
+                        inline: true
+                    },
+                    {
+                        name: '🔧 Pro Features',
+                        value: '• HenrikDev API Integration\n• Hochauflösende Bilder\n• Schnelle Generierung\n• Unbegrenzte Erstellungen',
+                        inline: false
+                    }
+                )
+                .setTimestamp()
+                .setFooter({ 
+                    text: 'Powered by AgentBee Bot',
+                    iconURL: 'https://i.imgur.com/8QpCQx8.png'
+                });
+
+            const actionRow = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('crosshair_creator')
+                        .setLabel('🎨 Crosshair Creator')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('🎨'),
+                    new ButtonBuilder()
+                        .setCustomId('crosshair_code_input')
+                        .setLabel('📋 Code eingeben')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('📋'),
+                    new ButtonBuilder()
+                        .setCustomId('crosshair_help')
+                        .setLabel('❓ Hilfe')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('❓')
+                );
+
+            await channel.send({ embeds: [embed], components: [actionRow] });
+            
+            this.log(`✅ Verbessertes Crosshair-Panel in #${channelName} gesendet`);
+            return { success: true, channel: channelName };
+
         } catch (error) {
-            console.error('Fehler beim Senden des Crosshair-Panels:', error);
+            this.log(`❌ Fehler beim Senden des Crosshair-Panels: ${error.message}`);
             throw error;
+        }
+    }
+
+    /**
+     * Behandelt das Crosshair Creator Modal
+     * @param {Interaction} interaction - Discord Interaction
+     */
+    async handleCrosshairCreator(interaction) {
+        try {
+            const modal = new ModalBuilder()
+                .setCustomId('crosshair_creator_modal')
+                .setTitle('🎨 Crosshair Creator');
+
+            // Creator Optionen als Text-Inputs (vereinfacht für Modal)
+            const primaryColorInput = new TextInputBuilder()
+                .setCustomId('primary_color')
+                .setLabel('Primärfarbe (0-7)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('0=Weiß, 1=Rot, 2=Grün, 3=Gelb, 4=Blau, 5=Cyan, 6=Pink, 7=Orange')
+                .setValue('0')
+                .setMaxLength(1)
+                .setRequired(true);
+
+            const centerDotInput = new TextInputBuilder()
+                .setCustomId('center_dot')
+                .setLabel('Mittelpunkt (0=Aus, 1=An)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('0 oder 1')
+                .setValue('1')
+                .setMaxLength(1)
+                .setRequired(true);
+
+            const thicknessInput = new TextInputBuilder()
+                .setCustomId('thickness')
+                .setLabel('Linienstärke (1-8)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('1-8')
+                .setValue('2')
+                .setMaxLength(1)
+                .setRequired(true);
+
+            const lengthInput = new TextInputBuilder()
+                .setCustomId('length')
+                .setLabel('Linienlänge (1-50)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('1-50')
+                .setValue('6')
+                .setMaxLength(2)
+                .setRequired(true);
+
+            const offsetInput = new TextInputBuilder()
+                .setCustomId('offset')
+                .setLabel('Linienabstand (0-50)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('0-50')
+                .setValue('3')
+                .setMaxLength(2)
+                .setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(primaryColorInput),
+                new ActionRowBuilder().addComponents(centerDotInput),
+                new ActionRowBuilder().addComponents(thicknessInput),
+                new ActionRowBuilder().addComponents(lengthInput),
+                new ActionRowBuilder().addComponents(offsetInput)
+            );
+
+            await interaction.showModal(modal);
+
+        } catch (error) {
+            this.log(`❌ Fehler beim Crosshair Creator: ${error.message}`);
+            await interaction.reply({ 
+                content: '❌ Fehler beim Öffnen des Crosshair Creators!', 
+                ephemeral: true 
+            });
+        }
+    }
+
+    /**
+     * Behandelt das eingereichte Crosshair Creator Modal
+     * @param {Interaction} interaction - Modal Submit Interaction
+     */
+    async handleCrosshairCreatorSubmit(interaction) {
+        try {
+            await interaction.deferReply();
+
+            // Werte aus Modal extrahieren
+            const primaryColor = parseInt(interaction.fields.getTextInputValue('primary_color')) || 0;
+            const centerDot = parseInt(interaction.fields.getTextInputValue('center_dot')) || 0;
+            const thickness = parseInt(interaction.fields.getTextInputValue('thickness')) || 2;
+            const length = parseInt(interaction.fields.getTextInputValue('length')) || 6;
+            const offset = parseInt(interaction.fields.getTextInputValue('offset')) || 3;
+
+            // Validierung
+            if (primaryColor < 0 || primaryColor > 7) {
+                throw new Error('Primärfarbe muss zwischen 0-7 sein');
+            }
+            if (centerDot < 0 || centerDot > 1) {
+                throw new Error('Mittelpunkt muss 0 oder 1 sein');
+            }
+            if (thickness < 1 || thickness > 8) {
+                throw new Error('Linienstärke muss zwischen 1-8 sein');
+            }
+            if (length < 1 || length > 50) {
+                throw new Error('Linienlänge muss zwischen 1-50 sein');
+            }
+            if (offset < 0 || offset > 50) {
+                throw new Error('Linienabstand muss zwischen 0-50 sein');
+            }
+
+            // Crosshair-Code generieren
+            const crosshairCode = `0;p=${primaryColor};o=1;f=0;0t=${centerDot};0l=${thickness};0o=1;0a=1;0f=0;1b=0;1s=1;1l=${length};1t=${thickness};1o=${offset};1a=1;1m=0;1f=0;2b=1;2s=1;2l=${length};2t=${thickness};2o=${offset};2a=1;2m=0;2f=0`;
+
+            this.log(`🎨 Generiere Custom Crosshair für ${interaction.user.tag}: ${crosshairCode}`);
+
+            // Crosshair generieren
+            const result = await this.generateCrosshair(crosshairCode, interaction.user.id);
+
+            if (result.success) {
+                const colorNames = ['Weiß', 'Rot', 'Grün', 'Gelb', 'Blau', 'Cyan', 'Pink', 'Orange'];
+                
+                const embed = new EmbedBuilder()
+                    .setTitle('🎨 Dein Custom Crosshair')
+                    .setDescription(`**Erfolgreich erstellt!**\n\n**Einstellungen:**\n• Farbe: ${colorNames[primaryColor]}\n• Mittelpunkt: ${centerDot ? 'An' : 'Aus'}\n• Stärke: ${thickness}\n• Länge: ${length}\n• Abstand: ${offset}`)
+                    .setColor(0x00FF7F)
+                    .addFields(
+                        {
+                            name: '📋 Crosshair Code',
+                            value: `\`\`\`${crosshairCode}\`\`\``,
+                            inline: false
+                        }
+                    )
+                    .setImage('attachment://crosshair.png')
+                    .setTimestamp()
+                    .setFooter({ 
+                        text: `Erstellt von ${interaction.user.tag}`,
+                        iconURL: interaction.user.displayAvatarURL()
+                    });
+
+                await interaction.editReply({
+                    embeds: [embed],
+                    files: [result.attachment]
+                });
+
+                // Statistiken aktualisieren
+                this.updateStats('generated');
+
+            } else {
+                throw new Error(result.error);
+            }
+
+        } catch (error) {
+            this.log(`❌ Fehler beim Verarbeiten des Custom Crosshairs: ${error.message}`);
+            
+            const errorEmbed = new EmbedBuilder()
+                .setTitle('❌ Fehler beim Erstellen')
+                .setDescription(`**Fehler:** ${error.message}`)
+                .setColor(0xFF0000)
+                .addFields(
+                    {
+                        name: '💡 Tipps',
+                        value: '• Überprüfe deine Eingaben\n• Alle Werte müssen in den angegebenen Bereichen liegen\n• Verwende nur Zahlen',
+                        inline: false
+                    }
+                )
+                .setTimestamp();
+
+            await interaction.editReply({ embeds: [errorEmbed] });
         }
     }
 

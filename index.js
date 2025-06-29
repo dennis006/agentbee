@@ -5120,6 +5120,10 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.customId === 'crosshair_input_modal') {
         await valorantCrosshairSystem.handleCrosshairModal(interaction);
     }
+    
+    if (interaction.customId === 'crosshair_creator_modal') {
+        await valorantCrosshairSystem.handleCrosshairCreatorSubmit(interaction);
+    }
 
     // Behandle Ticket-Modal-Submissions
     if (interaction.customId.startsWith('ticket_modal_')) {

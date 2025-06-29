@@ -139,12 +139,146 @@ interface CrosshairHistory {
 const ValorantCrosshair: React.FC = () => {
   const { toasts, success, error, removeToast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  
+  // States
+  const [stats, setStats] = useState<CrosshairStats | null>(null);
+  const [settings, setSettings] = useState<CrosshairSettings>({
+    enabled: true,
+    rateLimitWarning: true,
+    defaultChannel: '',
+    saveHistory: true,
+    maxHistoryEntries: 100
+  });
+  const [channels, setChannels] = useState<{ text: Array<{ id: string; name: string; guildName: string }> }>({ text: [] });
   
   // Preview Funktionalität
   const [previewCode, setPreviewCode] = useState('0;p=0;o=1;f=0;0t=1;0l=2;0o=2;0a=1;0f=0;1b=0');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  
+  // Crosshair Creator
+  const [crosshairConfig, setCrosshairConfig] = useState({
+    primaryColor: 0, // 0-7 (Weiß, Rot, Grün, Gelb, Blau, Cyan, Pink, Orange)
+    outlineOpacity: 1,
+    fadeWithFiring: false,
+    centerDot: true,
+    centerDotThickness: 2,
+    centerDotOpacity: 1,
+    innerLines: false,
+    innerLineOpacity: 1,
+    innerLineLength: 6,
+    innerLineThickness: 2,
+    innerLineOffset: 3,
+    outerLines: true,
+    outerLineOpacity: 1,
+    outerLineLength: 6,
+    outerLineThickness: 2,
+    outerLineOffset: 3
+  });
+  
+  const [sendChannelName, setSendChannelName] = useState('');
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      const [statsRes, settingsRes, channelsRes] = await Promise.all([
+        fetch('/api/valorant/crosshair/stats'),
+        fetch('/api/valorant/crosshair/settings'),
+        fetch('/api/xp/channels') // Reuse channels from XP API
+      ]);
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      }
+
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        setSettings(settingsData);
+      }
+
+      if (channelsRes.ok) {
+        const channelsData = await channelsRes.json();
+        setChannels(channelsData);
+      }
+
+    } catch (error) {
+      console.error('Fehler beim Laden der Crosshair-Daten:', error);
+      showMessage('error', 'Fehler beim Laden der Daten');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch('/api/valorant/crosshair/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+
+      if (response.ok) {
+        showMessage('success', '✅ Crosshair-Einstellungen gespeichert!');
+        loadData(); // Reload to get updated stats
+      } else {
+        showMessage('error', '❌ Fehler beim Speichern der Einstellungen');
+      }
+    } catch (err) {
+      showMessage('error', '❌ Fehler beim Speichern der Einstellungen');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    if (type === 'success') {
+      success(text);
+    } else {
+      error(text);
+    }
+  };
+
+  // Generate Crosshair Code from Config
+  const generateCrosshairCode = () => {
+    const code = `0;p=${crosshairConfig.primaryColor};o=${crosshairConfig.outlineOpacity ? 1 : 0};f=${crosshairConfig.fadeWithFiring ? 1 : 0};0t=${crosshairConfig.centerDot ? 1 : 0};0l=${crosshairConfig.centerDotThickness};0o=${crosshairConfig.centerDotOpacity};0a=1;0f=0;1b=${crosshairConfig.innerLines ? 1 : 0};1s=${crosshairConfig.innerLineOpacity};1l=${crosshairConfig.innerLineLength};1t=${crosshairConfig.innerLineThickness};1o=${crosshairConfig.innerLineOffset};1a=1;1m=0;1f=0`;
+    setPreviewCode(code);
+    return code;
+  };
+
+  const sendPanel = async () => {
+    if (!sendChannelName) {
+      showMessage('error', 'Bitte wähle einen Channel aus');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/valorant/crosshair/send-panel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelName: sendChannelName
+        })
+      });
+
+      if (response.ok) {
+        showMessage('success', `Crosshair-Panel erfolgreich in #${sendChannelName} gesendet!`);
+      } else {
+        const errorData = await response.json();
+        showMessage('error', errorData.error || 'Fehler beim Senden des Panels');
+      }
+    } catch (error) {
+      showMessage('error', 'Fehler beim Senden des Panels');
+    }
+  };
 
   const generatePreview = async () => {
     if (!previewCode.trim()) {
@@ -428,7 +562,7 @@ const ValorantCrosshair: React.FC = () => {
         )}
       </div>
 
-      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 };
