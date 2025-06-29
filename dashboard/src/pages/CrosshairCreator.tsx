@@ -466,33 +466,37 @@ const CrosshairCreator = () => {
                     ))}
                   </div>
                   
-                  {/* Custom Color Picker */}
-                  {settings.primaryColor === 'custom' && (
-                    <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                      <label className="block text-sm font-medium text-purple-300 mb-3">
-                        🎨 Custom Color Picker
-                      </label>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="color"
-                          value={settings.customColor}
-                          onChange={(e) => updateSetting('customColor', e.target.value)}
-                          className="w-16 h-12 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
-                        />
-                        <input
-                          type="text"
-                          value={settings.customColor}
-                          onChange={(e) => updateSetting('customColor', e.target.value)}
-                          className="flex-1 px-3 py-2 bg-black/30 border border-purple-500/30 rounded text-white placeholder-gray-400"
-                          placeholder="#FF0000"
-                          pattern="^#[0-9A-Fa-f]{6}$"
-                        />
-                      </div>
-                      <p className="text-xs text-purple-400 mt-2">
-                        Verwende jeden beliebigen Hex-Code (z.B. #F90606 wie im Bild)
-                      </p>
+                  {/* Custom Color Picker - Immer sichtbar */}
+                  <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                    <label className="block text-sm font-medium text-purple-300 mb-3">
+                      🎨 Custom Color Picker
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="color"
+                        value={settings.customColor}
+                        onChange={(e) => {
+                          updateSetting('customColor', e.target.value);
+                          updateSetting('primaryColor', 'custom');
+                        }}
+                        className="w-16 h-12 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={settings.customColor}
+                        onChange={(e) => {
+                          updateSetting('customColor', e.target.value);
+                          updateSetting('primaryColor', 'custom');
+                        }}
+                        className="flex-1 px-3 py-2 bg-black/30 border border-purple-500/30 rounded text-white placeholder-gray-400"
+                        placeholder="#FF0000"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                      />
                     </div>
-                  )}
+                    <p className="text-xs text-purple-400 mt-2">
+                      Verwende jeden beliebigen Hex-Code (z.B. #F90606) - wird automatisch als Custom Color verwendet
+                    </p>
+                  </div>
                 </div>
 
                 {/* Center Dot */}
