@@ -383,47 +383,21 @@ const CrosshairCreator = () => {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
       }
-      @keyframes bg-gradient-move {
-        0%, 100% { background-position: 0% 50%; }
-        25% { background-position: 100% 50%; }
-        50% { background-position: 100% 100%; }
-        75% { background-position: 0% 100%; }
+      @keyframes valorant-grid {
+        0%, 100% { opacity: 0.02; }
+        50% { opacity: 0.08; }
       }
-      @keyframes particle-float-1 {
-        0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
-        25% { transform: translateY(-20px) translateX(10px) rotate(90deg); }
-        50% { transform: translateY(-40px) translateX(-10px) rotate(180deg); }
-        75% { transform: translateY(-20px) translateX(-15px) rotate(270deg); }
+      @keyframes subtle-glow {
+        0%, 100% { opacity: 0.1; }
+        50% { opacity: 0.3; }
       }
-      @keyframes particle-float-2 {
-        0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
-        33% { transform: translateY(-30px) translateX(-20px) rotate(120deg); }
-        66% { transform: translateY(-60px) translateX(20px) rotate(240deg); }
+      @keyframes corner-scan {
+        0% { transform: scaleX(0); }
+        50% { transform: scaleX(1); }
+        100% { transform: scaleX(0); }
       }
-      @keyframes particle-float-3 {
-        0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
-        50% { transform: translateY(-25px) translateX(25px) rotate(180deg); }
-      }
-      @keyframes grid-pulse {
-        0%, 100% { opacity: 0.1; transform: scale(1); }
-        50% { opacity: 0.3; transform: scale(1.05); }
-      }
-      @keyframes orb-glow {
-        0%, 100% { 
-          box-shadow: 0 0 20px rgba(168, 85, 247, 0.3),
-                      0 0 40px rgba(168, 85, 247, 0.1),
-                      0 0 60px rgba(168, 85, 247, 0.05);
-        }
-        50% { 
-          box-shadow: 0 0 30px rgba(168, 85, 247, 0.6),
-                      0 0 60px rgba(168, 85, 247, 0.3),
-                      0 0 90px rgba(168, 85, 247, 0.1);
-        }
-      }
-      .bg-animated {
-        background: linear-gradient(-45deg, #1e1b4b, #581c87, #7c2d12, #1e293b, #312e81);
-        background-size: 400% 400%;
-        animation: bg-gradient-move 15s ease infinite;
+      .valorant-bg {
+        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #111827 100%);
       }
       .animate-float { animation: crosshair-float 3s ease-in-out infinite; }
       .animate-glow { animation: crosshair-glow 2s ease-in-out infinite; }
@@ -436,11 +410,9 @@ const CrosshairCreator = () => {
       .animate-slide-in-left { animation: crosshair-slide-left 0.6s ease-out forwards; }
       .animate-slide-in-right { animation: crosshair-slide-right 0.6s ease-out forwards; }
       .animate-spin-slow { animation: crosshair-spin-slow 4s linear infinite; }
-      .particle-1 { animation: particle-float-1 8s ease-in-out infinite; }
-      .particle-2 { animation: particle-float-2 10s ease-in-out infinite; }
-      .particle-3 { animation: particle-float-3 6s ease-in-out infinite; }
-      .grid-pulse { animation: grid-pulse 4s ease-in-out infinite; }
-      .orb-glow { animation: orb-glow 3s ease-in-out infinite; }
+      .valorant-grid { animation: valorant-grid 8s ease-in-out infinite; }
+      .subtle-glow { animation: subtle-glow 6s ease-in-out infinite; }
+      .corner-scan { animation: corner-scan 4s ease-in-out infinite; }
     `;
     document.head.appendChild(style);
     return () => {
@@ -449,56 +421,39 @@ const CrosshairCreator = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-animated text-white relative overflow-hidden">
-      {/* Animated Background Elements */}
+    <div className="min-h-screen valorant-bg text-white relative overflow-hidden">
+      {/* Clean Valorant-Style Background */}
       <div className="absolute inset-0 z-0">
-        {/* Floating Particles */}
-        <div className="absolute top-10 left-10 w-4 h-4 bg-purple-500/30 rounded-full particle-1"></div>
-        <div className="absolute top-32 right-20 w-6 h-6 bg-pink-500/20 rounded-full particle-2"></div>
-        <div className="absolute top-64 left-1/4 w-3 h-3 bg-cyan-400/40 rounded-full particle-3"></div>
-        <div className="absolute top-20 right-1/3 w-5 h-5 bg-purple-400/25 rounded-full particle-1" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-32 left-16 w-4 h-4 bg-pink-400/30 rounded-full particle-2" style={{ animationDelay: '3s' }}></div>
-        <div className="absolute bottom-48 right-12 w-7 h-7 bg-cyan-300/20 rounded-full particle-3" style={{ animationDelay: '1s' }}></div>
-        
-        {/* Crosshair-themed Particles */}
-        <div className="absolute top-40 left-1/3 w-8 h-1 bg-purple-400/20 particle-1" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute top-96 right-1/4 w-1 h-8 bg-pink-400/20 particle-2" style={{ animationDelay: '5s' }}></div>
-        <div className="absolute bottom-40 left-1/2 w-6 h-1 bg-cyan-400/25 particle-3" style={{ animationDelay: '2.5s' }}></div>
-        
-        {/* Glowing Orbs */}
-        <div className="absolute top-1/4 right-1/4 w-16 h-16 rounded-full orb-glow" style={{ 
-          background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%)',
-          animationDelay: '1s' 
-        }}></div>
-        <div className="absolute bottom-1/3 left-1/3 w-20 h-20 rounded-full orb-glow" style={{ 
-          background: 'radial-gradient(circle, rgba(236, 72, 153, 0.08) 0%, transparent 70%)',
-          animationDelay: '3s' 
-        }}></div>
-        <div className="absolute top-2/3 right-1/3 w-12 h-12 rounded-full orb-glow" style={{ 
-          background: 'radial-gradient(circle, rgba(34, 211, 238, 0.12) 0%, transparent 70%)',
-          animationDelay: '2s' 
-        }}></div>
-        
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="grid grid-cols-12 grid-rows-8 h-full w-full gap-4">
-            {Array.from({ length: 96 }, (_, i) => (
+        {/* Subtle Grid Pattern */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="grid grid-cols-24 grid-rows-16 h-full w-full">
+            {Array.from({ length: 384 }, (_, i) => (
               <div 
                 key={i} 
-                className="border border-purple-400/20 grid-pulse" 
+                className="border-r border-b border-gray-600/10 valorant-grid" 
                 style={{ 
-                  animationDelay: `${(i % 6) * 0.5}s` 
+                  animationDelay: `${(i % 12) * 0.2}s` 
                 }}
               ></div>
             ))}
           </div>
         </div>
         
-        {/* Gaming HUD Elements */}
-        <div className="absolute top-8 left-8 w-32 h-1 bg-gradient-to-r from-purple-500/30 to-transparent particle-1"></div>
-        <div className="absolute bottom-8 right-8 w-32 h-1 bg-gradient-to-l from-cyan-500/30 to-transparent particle-2"></div>
-        <div className="absolute top-8 right-8 w-1 h-32 bg-gradient-to-b from-pink-500/30 to-transparent particle-3"></div>
-        <div className="absolute bottom-8 left-8 w-1 h-32 bg-gradient-to-t from-purple-500/30 to-transparent particle-1" style={{ animationDelay: '1.5s' }}></div>
+        {/* Corner UI Elements (Valorant Style) */}
+        <div className="absolute top-0 left-0 w-16 h-16 border-l-2 border-t-2 border-gray-400/20"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 border-r-2 border-t-2 border-gray-400/20"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 border-l-2 border-b-2 border-gray-400/20"></div>
+        <div className="absolute bottom-0 right-0 w-16 h-16 border-r-2 border-b-2 border-gray-400/20"></div>
+        
+        {/* Subtle Accent Lines */}
+        <div className="absolute top-8 left-8 w-12 h-0.5 bg-cyan-400/20 subtle-glow"></div>
+        <div className="absolute top-8 right-8 w-12 h-0.5 bg-cyan-400/20 subtle-glow" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute bottom-8 left-8 w-12 h-0.5 bg-cyan-400/20 subtle-glow" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute bottom-8 right-8 w-12 h-0.5 bg-cyan-400/20 subtle-glow" style={{ animationDelay: '6s' }}></div>
+        
+        {/* Scanning Lines (Minimal) */}
+        <div className="absolute top-1/4 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/10 to-transparent corner-scan"></div>
+        <div className="absolute bottom-1/4 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-white/10 to-transparent corner-scan" style={{ animationDelay: '2s' }}></div>
       </div>
       
       <ToastContainer toasts={toasts} removeToast={removeToast} />
