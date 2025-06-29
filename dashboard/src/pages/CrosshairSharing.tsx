@@ -32,8 +32,6 @@ interface DiscordChannel {
   name: string;
   type: number;
   position: number;
-  guildId: string;
-  guildName: string;
 }
 
 interface DiscordRole {
@@ -42,8 +40,6 @@ interface DiscordRole {
   color: number;
   position: number;
   permissions: string;
-  guildId: string;
-  guildName: string;
 }
 
 interface CrosshairShare {
@@ -95,8 +91,8 @@ const CrosshairSharing = () => {
       setGuildsLoading(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      // Use standard guilds endpoint like Music.tsx
-      const response = await fetch(`${apiUrl}/api/guilds`);
+      // Use repaired crosshair-specific guilds endpoint
+      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
       const data = await response.json();
       
       if (data.success && data.guilds) {
@@ -122,16 +118,12 @@ const CrosshairSharing = () => {
       setLoadingChannels(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      // Use standard channels endpoint like other pages
-      const response = await fetch(`${apiUrl}/api/discord/channels`);
+      // Use crosshair-specific channels endpoint
+      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/channels`);
       const data = await response.json();
       
       if (data.success && data.channels) {
-        // Filter channels for selected guild (text channels only)
-        const guildChannels = data.channels.filter((channel: DiscordChannel) => 
-          channel.guildId === selectedGuild && channel.type === 0
-        );
-        setChannels(guildChannels);
+        setChannels(data.channels);
       } else {
         setChannels([]);
       }
@@ -150,16 +142,12 @@ const CrosshairSharing = () => {
       setLoadingRoles(true);
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
       
-      // Use standard roles endpoint like other pages
-      const response = await fetch(`${apiUrl}/api/discord/roles`);
+      // Use crosshair-specific roles endpoint
+      const response = await fetch(`${apiUrl}/api/crosshair/discord/guilds/${selectedGuild}/roles`);
       const data = await response.json();
       
       if (data.success && data.roles) {
-        // Filter roles for selected guild and sort by position
-        const guildRoles = data.roles.filter((role: DiscordRole) => 
-          role.guildId === selectedGuild && role.name !== '@everyone'
-        ).sort((a: DiscordRole, b: DiscordRole) => b.position - a.position);
-        setRoles(guildRoles);
+        setRoles(data.roles);
       } else {
         setRoles([]);
       }

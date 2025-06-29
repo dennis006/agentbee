@@ -517,9 +517,9 @@ const CrosshairCreator = () => {
     try {
       setLoading(true);
       
-      // Get available guilds first using standard endpoint
+      // Get available guilds first using repaired crosshair endpoint
       const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
-      const guildsResponse = await fetch(`${apiUrl}/api/guilds`);
+      const guildsResponse = await fetch(`${apiUrl}/api/crosshair/discord/guilds`);
       const guildsData = await guildsResponse.json();
       
       if (!guildsData.success || !guildsData.guilds || guildsData.guilds.length === 0) {
