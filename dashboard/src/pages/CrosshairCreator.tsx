@@ -86,9 +86,15 @@ const presets = [
 ];
 
 // Vollständige Code-Generierung mit ALLEN Valorant-Parametern
-const generateValorantCrosshairCode = (color: number, centerDot: boolean, thickness: number): string => {
+const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
   try {
-    // Verwende das bewährte Format aus den Presets
+    // Color Mapping innerhalb der Funktion
+    const colorMap: Record<string, number> = {
+      'white': 0, 'green': 1, 'yellowish-green': 2, 'greenish-yellow': 3,
+      'cyan': 4, 'pink': 5, 'red': 6, 'custom': 7
+    };
+    
+    const color = colorMap[settings.primaryColor] || 1;
     const params = [];
     
     // Basis beginnt immer mit 0
@@ -104,20 +110,40 @@ const generateValorantCrosshairCode = (color: number, centerDot: boolean, thickn
     params.push("h;0");
     
     // Center Dot Parameter
-    if (centerDot) {
+    if (settings.centerDotShow) {
       params.push("d;1");
-      params.push(`z;${thickness}`);
+      params.push(`z;${settings.centerDotThickness}`);
       params.push("a;1");
     } else {
       params.push("d;0");
     }
     
-    // Standard Fadenkreuz-Parameter
+    // Outer Lines Parameter
+    if (settings.outerLinesShow) {
+      params.push(`0l;${settings.outerLinesLength}`);
+      params.push(`0o;${settings.outerLinesOffset}`);
+      params.push(`0a;${Math.round(settings.outerLinesOpacity / 255)}`); // 0 oder 1
+      params.push(`0t;${settings.outerLinesThickness}`);
+    } else {
+      params.push("0l;0");
+      params.push("0o;0");
+      params.push("0a;0");
+    }
+    
+    // Inner Lines Parameter  
+    if (settings.innerLinesShow) {
+      params.push(`1l;${settings.innerLinesLength}`);
+      params.push(`1o;${settings.innerLinesOffset}`);
+      params.push(`1a;${Math.round(settings.innerLinesOpacity / 255)}`); // 0 oder 1
+      params.push(`1t;${settings.innerLinesThickness}`);
+    } else {
+      params.push("1l;0");
+      params.push("1o;0");
+      params.push("1a;0");
+    }
+    
+    // Standard-Parameter
     params.push("f;0");
-    params.push("0l;4");
-    params.push("0o;2");
-    params.push("0a;1");
-    params.push("0f;0");
     params.push("1b;0");
     
     // Verbinde alle Parameter mit Strichpunkten
@@ -195,16 +221,10 @@ const CrosshairCreator = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  // Generate Crosshair Code - Vereinfacht aber funktionierend
+  // Generate Crosshair Code - Nutzt alle erweiterten Einstellungen
   const generateCrosshairCode = () => {
-    const colorCode = colorMap[settings.primaryColor] || 1;
-    
-    // Verwende die bewährte Funktion
-    const code = generateValorantCrosshairCode(
-      colorCode,
-      settings.centerDotShow,
-      settings.centerDotThickness
-    );
+    // Verwende die erweiterte Funktion mit allen Settings
+    const code = generateValorantCrosshairCode(settings);
     
     setCrosshairCode(code);
     return code;
@@ -400,66 +420,270 @@ const CrosshairCreator = () => {
                 )}
               </div>
 
-              {/* Live Preview */}
-              <div className="border border-purple-400/30 rounded-lg p-6 bg-black/20">
-                <h3 className="text-purple-300 font-medium mb-4">Live Vorschau</h3>
+                             {/* Outer Lines */}
+               <div className="space-y-4">
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="outerLinesShow"
+                     checked={settings.outerLinesShow}
+                     onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
+                   />
+                   <label htmlFor="outerLinesShow" className="text-purple-200 font-medium">
+                     Äußere Linien anzeigen
+                   </label>
+                 </div>
+
+                 {settings.outerLinesShow && (
+                   <div className="ml-6 space-y-3">
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Länge: {settings.outerLinesLength}
+                       </label>
+                       <input
+                         type="range"
+                         min="1"
+                         max="20"
+                         value={settings.outerLinesLength}
+                         onChange={(e) => updateSetting('outerLinesLength', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Dicke: {settings.outerLinesThickness}
+                       </label>
+                       <input
+                         type="range"
+                         min="1"
+                         max="10"
+                         value={settings.outerLinesThickness}
+                         onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Abstand: {settings.outerLinesOffset}
+                       </label>
+                       <input
+                         type="range"
+                         min="0"
+                         max="15"
+                         value={settings.outerLinesOffset}
+                         onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Transparenz: {settings.outerLinesOpacity}
+                       </label>
+                       <input
+                         type="range"
+                         min="0"
+                         max="255"
+                         value={settings.outerLinesOpacity}
+                         onChange={(e) => updateSetting('outerLinesOpacity', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+                   </div>
+                 )}
+               </div>
+
+               {/* Inner Lines */}
+               <div className="space-y-4">
+                 <div className="flex items-center space-x-2">
+                   <Checkbox
+                     id="innerLinesShow"
+                     checked={settings.innerLinesShow}
+                     onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
+                   />
+                   <label htmlFor="innerLinesShow" className="text-purple-200 font-medium">
+                     Innere Linien anzeigen
+                   </label>
+                 </div>
+
+                 {settings.innerLinesShow && (
+                   <div className="ml-6 space-y-3">
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Länge: {settings.innerLinesLength}
+                       </label>
+                       <input
+                         type="range"
+                         min="1"
+                         max="15"
+                         value={settings.innerLinesLength}
+                         onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Dicke: {settings.innerLinesThickness}
+                       </label>
+                       <input
+                         type="range"
+                         min="1"
+                         max="10"
+                         value={settings.innerLinesThickness}
+                         onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Abstand: {settings.innerLinesOffset}
+                       </label>
+                       <input
+                         type="range"
+                         min="0"
+                         max="10"
+                         value={settings.innerLinesOffset}
+                         onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+
+                     <div>
+                       <label className="block text-purple-200 text-sm mb-2">
+                         Transparenz: {settings.innerLinesOpacity}
+                       </label>
+                       <input
+                         type="range"
+                         min="0"
+                         max="255"
+                         value={settings.innerLinesOpacity}
+                         onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
+                         className="w-full h-2 bg-purple-800 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                     </div>
+                   </div>
+                 )}
+               </div>
+
+               {/* Live Preview */}
+               <div className="border border-purple-400/30 rounded-lg p-6 bg-black/20">
+                 <h3 className="text-purple-300 font-medium mb-4">Live Vorschau</h3>
                 <div className="w-full h-48 bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden">
-                  {/* Crosshair Preview */}
-                  <div className="relative">
+                  {/* Erweiterte Crosshair Preview */}
+                  <div className="relative w-32 h-32">
+                    {/* Outer Lines */}
+                    {settings.outerLinesShow && (
+                      <>
+                        {/* Horizontal Outer Lines */}
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.outerLinesLength * 2}px`,
+                            height: `${settings.outerLinesThickness}px`,
+                            left: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
+                          }}
+                        />
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.outerLinesLength * 2}px`,
+                            height: `${settings.outerLinesThickness}px`,
+                            right: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
+                          }}
+                        />
+                        
+                        {/* Vertical Outer Lines */}
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.outerLinesThickness}px`,
+                            height: `${settings.outerLinesLength * 2}px`,
+                            top: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
+                          }}
+                        />
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.outerLinesThickness}px`,
+                            height: `${settings.outerLinesLength * 2}px`,
+                            bottom: `${64 + settings.outerLinesOffset * 2}px`,
+                            opacity: settings.outerLinesOpacity / 255
+                          }}
+                        />
+                      </>
+                    )}
+
+                    {/* Inner Lines */}
+                    {settings.innerLinesShow && (
+                      <>
+                        {/* Horizontal Inner Lines */}
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesLength * 2}px`,
+                            height: `${settings.innerLinesThickness}px`,
+                            left: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                        <div 
+                          className="absolute top-1/2 transform -translate-y-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesLength * 2}px`,
+                            height: `${settings.innerLinesThickness}px`,
+                            right: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                        
+                        {/* Vertical Inner Lines */}
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesThickness}px`,
+                            height: `${settings.innerLinesLength * 2}px`,
+                            top: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                        <div 
+                          className="absolute left-1/2 transform -translate-x-1/2"
+                          style={{
+                            backgroundColor: getColorValue(settings.primaryColor),
+                            width: `${settings.innerLinesThickness}px`,
+                            height: `${settings.innerLinesLength * 2}px`,
+                            bottom: `${64 + settings.innerLinesOffset * 2}px`,
+                            opacity: settings.innerLinesOpacity / 255
+                          }}
+                        />
+                      </>
+                    )}
+
                     {/* Center Dot */}
                     {settings.centerDotShow && (
                       <div 
                         className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rounded-full"
                         style={{
                           backgroundColor: getColorValue(settings.primaryColor),
-                          width: `${settings.centerDotThickness * 3}px`,
-                          height: `${settings.centerDotThickness * 3}px`,
+                          width: `${settings.centerDotThickness * 2}px`,
+                          height: `${settings.centerDotThickness * 2}px`,
+                          opacity: settings.centerDotOpacity / 255
                         }}
                       />
                     )}
-                    
-                    {/* Crosshair Lines */}
-                    <div className="relative w-16 h-16">
-                      {/* Horizontal Lines */}
-                      <div 
-                        className="absolute top-1/2 left-0 transform -translate-y-1/2"
-                        style={{
-                          backgroundColor: getColorValue(settings.primaryColor),
-                          width: '20px',
-                          height: '2px',
-                          marginRight: '20px'
-                        }}
-                      />
-                      <div 
-                        className="absolute top-1/2 right-0 transform -translate-y-1/2"
-                        style={{
-                          backgroundColor: getColorValue(settings.primaryColor),
-                          width: '20px',
-                          height: '2px',
-                          marginLeft: '20px'
-                        }}
-                      />
-                      
-                      {/* Vertical Lines */}
-                      <div 
-                        className="absolute left-1/2 top-0 transform -translate-x-1/2"
-                        style={{
-                          backgroundColor: getColorValue(settings.primaryColor),
-                          width: '2px',
-                          height: '20px',
-                          marginBottom: '20px'
-                        }}
-                      />
-                      <div 
-                        className="absolute left-1/2 bottom-0 transform -translate-x-1/2"
-                        style={{
-                          backgroundColor: getColorValue(settings.primaryColor),
-                          width: '2px',
-                          height: '20px',
-                          marginTop: '20px'
-                        }}
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
