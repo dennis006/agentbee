@@ -94,28 +94,28 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
       code += ";m;1";
     }
     
-    // Outer Lines (0x parameters)
-    if (settings.outerLinesShow) {
-      code += `;0l;${settings.outerLinesLength}`; // outer length
-      code += `;0o;${settings.outerLinesOffset}`; // outer offset
-      code += `;0a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha (0 or 1)
-      code += `;0f;0`; // outer fade
-      if (settings.outerLinesThickness !== 1) {
-        code += `;0t;${settings.outerLinesThickness}`; // outer thickness
+    // Inner Lines (0x parameters) - VCRDB korrekt!
+    if (settings.innerLinesShow) {
+      code += `;0l;${settings.innerLinesLength}`; // inner length
+      code += `;0o;${settings.innerLinesOffset}`; // inner offset
+      code += `;0a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
+      if (settings.innerLinesThickness !== 1) {
+        code += `;0t;${settings.innerLinesThickness}`; // inner thickness
       }
+      code += ";0m;0;0f;0"; // inner movement, fade
     } else {
       code += ";0l;0;0o;0;0a;0;0f;0";
     }
     
-    // Inner Lines (1x parameters)  
-    if (settings.innerLinesShow) {
-      code += `;1l;${settings.innerLinesLength}`; // inner length
-      code += `;1o;${settings.innerLinesOffset}`; // inner offset
-      code += `;1a;${Math.round(settings.innerLinesOpacity / 255)}`; // inner alpha
-      if (settings.innerLinesThickness !== 1) {
-        code += `;1t;${settings.innerLinesThickness}`; // inner thickness
+    // Outer Lines (1x parameters) - VCRDB korrekt!
+    if (settings.outerLinesShow) {
+      code += `;1l;${settings.outerLinesLength}`; // outer length
+      code += `;1o;${settings.outerLinesOffset}`; // outer offset
+      code += `;1a;${Math.round(settings.outerLinesOpacity / 255)}`; // outer alpha
+      if (settings.outerLinesThickness !== 1) {
+        code += `;1t;${settings.outerLinesThickness}`; // outer thickness
       }
-      code += ";1m;0;1f;0"; // inner movement, fade
+      code += ";1m;0;1f;0"; // outer movement, fade
     }
     
     // Standard end

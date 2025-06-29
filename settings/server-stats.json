@@ -4,19 +4,19 @@
   "channels": {
     "memberCount": {
       "enabled": true,
-      "channelId": "1388752987400441906",
+      "channelId": "1388755357609754764",
       "name": "👥 Mitglieder: {count}",
       "position": 0
     },
     "onlineCount": {
       "enabled": true,
-      "channelId": "1388752993243103284",
+      "channelId": "1388755363540635813",
       "name": "🟢 Online: {count}",
       "position": 1
     },
     "boostCount": {
       "enabled": true,
-      "channelId": "1388752999391694849",
+      "channelId": "1388755369764978738",
       "name": "🚀 Boosts: {count}",
       "position": 2
     },
@@ -52,12 +52,12 @@
     },
     "valorantSeason": {
       "enabled": true,
-      "channelId": "1388753004911661147",
+      "channelId": "1388755375670558741",
       "name": "🎮 Valorant Season Start: {countdown}",
       "position": 8
     }
   },
-  "categoryId": "1388752985223331891",
+  "categoryId": "1388755354724339773",
   "categoryName": "📊 Server Statistiken",
   "permissions": {
     "viewChannel": true,
@@ -73,7 +73,7 @@
   },
   "_metadata": {
     "module": "server-stats",
-    "lastSaved": "2025-06-29T05:37:54.945Z",
+    "lastSaved": "2025-06-29T19:32:57.806Z",
     "version": "2.0"
   }
 }
