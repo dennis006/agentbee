@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Copy, Download, Settings, Eye, Check, RotateCcw, Star, Sliders } from 'lucide-react';
+import { Target, Copy, Download, Settings, Eye, Check, RotateCcw, Star, Sliders, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { useToast, ToastContainer } from '../components/ui/toast';
@@ -254,11 +254,14 @@ const CrosshairCreator = () => {
     const hexColor = getColorValue(settings.primaryColor);
     console.log(`🎯 MEGA DEBUG: "${settings.primaryColor}" → Index: ${colorIndex} → Hex: ${hexColor} → Code: ${code}`);
     console.log(`📋 VOLLSTÄNDIGER CODE ZUM TESTEN: ${code}`);
-    console.log(`🎨 CUSTOM COLOR SYSTEM wie andere Valorant Generatoren:`);
+    console.log(`🎨 VALORANT CUSTOM COLOR SYSTEM:`);
     console.log(`  📌 Weiß → Index 0 (#FFFFFF)`);
     console.log(`  📌 Grün → Index 1 (#00FF41)`);  
     console.log(`  📌 Custom → Index 5 (${settings.customColor})`);
-    console.log(`🎯 Custom Color Picker für beliebige Hex-Codes aktiv!`);
+    console.log(`🎯 WICHTIG: In Valorant musst du zusätzlich die Custom Color setzen!`);
+    console.log(`📋 1. Code importieren mit Index 5`);
+    console.log(`📋 2. In Valorant: Settings → Crosshair → Primary → Color → Custom → ${settings.customColor}`);
+    console.log(`❗ Der Crosshair-Code und Custom Color müssen SEPARAT gesetzt werden!`);
     
     setCrosshairCode(code);
     return code;
@@ -481,21 +484,42 @@ const CrosshairCreator = () => {
                         }}
                         className="w-16 h-12 rounded border-2 border-purple-500/30 bg-transparent cursor-pointer"
                       />
-                      <input
-                        type="text"
-                        value={settings.customColor}
-                        onChange={(e) => {
-                          updateSetting('customColor', e.target.value);
-                          updateSetting('primaryColor', 'custom');
-                        }}
-                        className="flex-1 px-3 py-2 bg-black/30 border border-purple-500/30 rounded text-white placeholder-gray-400"
-                        placeholder="#FF0000"
-                        pattern="^#[0-9A-Fa-f]{6}$"
-                      />
+                                              <input
+                          type="text"
+                          value={settings.customColor}
+                          onChange={(e) => {
+                            updateSetting('customColor', e.target.value);
+                            updateSetting('primaryColor', 'custom');
+                          }}
+                          className="flex-1 px-3 py-2 bg-black/30 border border-purple-500/30 rounded text-white placeholder-gray-400"
+                          placeholder="#FF0000"
+                          pattern="^#[0-9A-Fa-f]{6}$"
+                        />
+                        <button
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(settings.customColor);
+                              showNotification(`Hex-Code ${settings.customColor} kopiert!`);
+                            } catch (err) {
+                              showNotification("Kopieren fehlgeschlagen", "error");
+                            }
+                          }}
+                          className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white text-sm"
+                          title="Hex-Code kopieren"
+                        >
+                          📋
+                        </button>
                     </div>
-                    <p className="text-xs text-purple-400 mt-2">
-                      Verwende jeden beliebigen Hex-Code (z.B. #F90606) - wird automatisch als Custom Color verwendet
-                    </p>
+                                          <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                        <p className="text-xs text-yellow-300 font-medium mb-2">🔥 WICHTIGE ANLEITUNG:</p>
+                        <ol className="text-xs text-yellow-200 space-y-1">
+                          <li>1. Wähle deine Farbe (z.B. #F90606)</li>
+                          <li>2. Kopiere den generierten Code</li>
+                          <li>3. In Valorant: Code importieren</li>
+                          <li>4. In Valorant: Settings → Crosshair → Primary → Color → Custom → <span className="bg-black/30 px-1 rounded">{settings.customColor}</span></li>
+                        </ol>
+                        <p className="text-xs text-yellow-300 mt-2 font-medium">⚠️ Custom Color muss separat in Valorant gesetzt werden!</p>
+                      </div>
                   </div>
                 </div>
 
@@ -913,6 +937,40 @@ const CrosshairCreator = () => {
                   <Download className="w-4 h-4 mr-2" />
                   Bild Herunterladen
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {settings.primaryColor === 'custom' && (
+            <div className="mt-6 p-4 bg-orange-900/20 border border-orange-500/30 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-orange-400 mb-2">Custom Color - Zwei Schritte erforderlich!</h4>
+                  <div className="text-sm text-orange-300 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-orange-500 text-white px-2 py-1 rounded text-xs font-bold">1</span>
+                      <span>Code oben kopieren und in Valorant importieren</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-orange-500 text-white px-2 py-1 rounded text-xs font-bold">2</span>
+                      <span>In Valorant: Settings → Crosshair → Primary → Color → Custom → <code className="bg-black/30 px-1 rounded">{settings.customColor}</code></span>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(settings.customColor);
+                            showNotification(`Hex-Code ${settings.customColor} für Valorant kopiert!`);
+                          } catch (err) {
+                            showNotification("Kopieren fehlgeschlagen", "error");
+                          }
+                        }}
+                        className="text-xs bg-orange-500 hover:bg-orange-600 px-2 py-1 rounded text-white"
+                      >
+                        📋 Kopieren
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
