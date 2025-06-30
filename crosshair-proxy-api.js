@@ -156,6 +156,49 @@ function setupCrosshairProxyAPI(app) {
 
     // ==================== DISCORD SHARING SYSTEM ====================
 
+    // Helper function to add automatic reactions to Discord message
+    async function addAutomaticReactions(channelId, webhookResponse) {
+        try {
+            // Use global client to add reactions
+            if (!global.client || !global.client.isReady()) {
+                console.warn('⚠️ Bot client not ready for reactions');
+                return;
+            }
+
+            // Get the channel and find the message
+            const channel = await global.client.channels.fetch(channelId);
+            if (!channel) {
+                console.warn('⚠️ Channel not found for reactions:', channelId);
+                return;
+            }
+
+            // Wait a bit for the webhook message to appear
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Get recent messages and find the crosshair post
+            const messages = await channel.messages.fetch({ limit: 5 });
+            const crosshairMessage = messages.find(msg => 
+                msg.author.webhook && 
+                msg.embeds.length > 0 && 
+                msg.embeds[0].title?.includes('🎯')
+            );
+
+            if (!crosshairMessage) {
+                console.warn('⚠️ Crosshair message not found for reactions');
+                return;
+            }
+
+            // Add thumbs up and thumbs down reactions
+            await crosshairMessage.react('👍');
+            await crosshairMessage.react('👎');
+            
+            console.log('✅ Added automatic reactions to crosshair post');
+
+        } catch (error) {
+            console.error('❌ Error adding automatic reactions:', error);
+        }
+    }
+
     // Helper function to post to Discord
     async function postToDiscord(crosshairData, settings) {
         try {
@@ -234,7 +277,12 @@ function setupCrosshairProxyAPI(app) {
 
             if (response.ok) {
                 console.log('✅ Posted crosshair to Discord successfully');
-                return await response.json();
+                const webhookResponse = await response.json();
+                
+                // Add automatic reactions using bot client
+                await addAutomaticReactions(settings.crosshair_channel_id, webhookResponse);
+                
+                return webhookResponse;
             } else {
                 console.error('❌ Discord webhook failed:', response.status, response.statusText);
                 return null;

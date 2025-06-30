@@ -529,7 +529,7 @@ const CrosshairCreator = () => {
       // TODO: Replace with real Discord OAuth user data
       const mockUser = {
         id: '123456789012345678',
-        username: 'TestUser',
+        username: 'Anonymous User',
         avatar: 'https://cdn.discordapp.com/embed/avatars/0.png'
       };
 
