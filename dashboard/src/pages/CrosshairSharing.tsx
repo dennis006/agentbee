@@ -313,8 +313,8 @@ const CrosshairSharing = () => {
     }
   };
 
-  const saveSettings = async () => {
-    if (!settings) return;
+  const saveSettings = async (): Promise<boolean> => {
+    if (!settings) return false;
 
     const MAX_RETRIES = 3;
     let attempt = 0;
@@ -377,7 +377,7 @@ const CrosshairSharing = () => {
       try {
         const success = await trySaveSettings();
         if (success) {
-          return; // Erfolgreich gespeichert
+          return true; // Erfolgreich gespeichert - Boolean zurückgeben!
         }
       } catch (err: any) {
         console.error(`💥 Save attempt ${attempt} failed:`, err.message);
@@ -400,11 +400,15 @@ const CrosshairSharing = () => {
               error('💡 Tipp: Backend könnte neu starten. Versuche es in 1-2 Minuten erneut.');
             }, 2000);
           }
+          
+          return false; // Fehlgeschlagen - Boolean zurückgeben!
         }
       } finally {
         setSaving(false);
       }
     }
+    
+    return false; // Fallback: Falls alle Versuche fehlschlagen
   };
 
   const updateSetting = (key: keyof CrosshairSettings, value: any) => {
