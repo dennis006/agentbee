@@ -165,9 +165,9 @@ const CrosshairSharing = () => {
       console.error('❌ Guild loading error:', err);
       setGuilds([]);
       error('Fehler beim Laden der Discord Server. Prüfe die Bot-Konfiguration.');
-    } finally {
-      setGuildsLoading(false);
-    }
+          } finally {
+        setGuildsLoading(false);
+      }
   };
 
   const loadDiscordChannels = async () => {
@@ -237,8 +237,8 @@ const CrosshairSharing = () => {
         // Nur laden, wenn noch keine Settings existieren oder sie explizit leer sind
         if (!settings || !settings.crosshair_channel_id) {
           console.log('📥 Loading settings from server:', data.settings);
-          setSettings(data.settings);
-        } else {
+        setSettings(data.settings);
+      } else {
           console.log('🔒 Keeping current settings to preserve user selection');
           // Aktualisiere nur die Server-spezifischen Felder, behalte User-Auswahl
           setSettings(prevSettings => ({
@@ -268,28 +268,28 @@ const CrosshairSharing = () => {
       } else {
         // Nur Default-Settings setzen, wenn noch keine existieren
         if (!settings) {
-          const selectedGuildData = guilds.find(g => g.id === selectedGuild);
+        const selectedGuildData = guilds.find(g => g.id === selectedGuild);
           console.log('📝 Setting default settings for new guild');
-          setSettings({
-            guild_id: selectedGuild,
-            guild_name: selectedGuildData?.name || 'Unknown Guild',
-            crosshair_channel_id: '',
-            crosshair_channel_name: '',
+        setSettings({
+          guild_id: selectedGuild,
+          guild_name: selectedGuildData?.name || 'Unknown Guild',
+          crosshair_channel_id: '',
+          crosshair_channel_name: '',
             // Panel Settings
             panel_enabled: false,
             panel_channel_id: '',
             panel_channel_name: '',
             panel_message_id: '',
             panel_embed_color: '#00D4AA',
-            auto_post_enabled: true,
-            voting_enabled: true,
-            require_approval: false,
-            moderator_role_id: '',
-            featured_role_id: '',
-            min_votes_for_featured: 10,
-            webhook_url: '',
-            notification_settings: {}
-          });
+          auto_post_enabled: true,
+          voting_enabled: true,
+          require_approval: false,
+          moderator_role_id: '',
+          featured_role_id: '',
+          min_votes_for_featured: 10,
+          webhook_url: '',
+          notification_settings: {}
+        });
         }
       }
     } catch (err) {
@@ -320,31 +320,31 @@ const CrosshairSharing = () => {
     let attempt = 0;
 
     const trySaveSettings = async (): Promise<boolean> => {
-      try {
+    try {
         attempt++;
-        setSaving(true);
+      setSaving(true);
         
         console.log(`💾 Saving settings (Attempt ${attempt}/${MAX_RETRIES})...`);
         
         const response = await fetch(`/api/crosshair/settings/${selectedGuild}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
           body: JSON.stringify(settings),
           // Timeout nach 10 Sekunden
           signal: AbortSignal.timeout(10000)
-        });
+      });
 
         console.log(`📡 Save response: ${response.status} ${response.statusText}`);
 
         if (response.ok) {
           const data = await response.json();
-          if (data.success) {
+      if (data.success) {
             success('✅ Einstellungen erfolgreich gespeichert!');
-            setSettings(data.settings);
+        setSettings(data.settings);
             return true;
-          } else {
+      } else {
             throw new Error(data.message || 'Unbekannter Server-Fehler');
           }
         } else {
@@ -403,9 +403,9 @@ const CrosshairSharing = () => {
           
           return false; // Fehlgeschlagen - Boolean zurückgeben!
         }
-      } finally {
-        setSaving(false);
-      }
+    } finally {
+      setSaving(false);
+    }
     }
     
     return false; // Fallback: Falls alle Versuche fehlschlagen
@@ -710,11 +710,11 @@ const CrosshairSharing = () => {
                     </div>
                   ) : channels.length > 0 ? (
                     <div>
-                      <select
-                        className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg p-2"
-                        value={settings?.crosshair_channel_id || ''}
-                        onChange={(e) => {
-                          const selectedChannel = channels.find(c => c.id === e.target.value);
+                    <select
+                      className="w-full bg-dark-bg/70 border border-purple-primary/30 text-dark-text focus:border-neon-purple rounded-lg p-2"
+                      value={settings?.crosshair_channel_id || ''}
+                      onChange={(e) => {
+                        const selectedChannel = channels.find(c => c.id === e.target.value);
                           const channelName = selectedChannel?.name || '';
                           
                           // Verwende die neue Funktion für beide Werte gleichzeitig
@@ -723,15 +723,15 @@ const CrosshairSharing = () => {
                           if (selectedChannel) {
                             success(`Channel #${selectedChannel.name} ausgewählt!`);
                           }
-                        }}
-                      >
-                        <option value="">-- Channel auswählen --</option>
-                        {channels.map(channel => (
-                          <option key={channel.id} value={channel.id}>
-                            #{channel.name}
-                          </option>
-                        ))}
-                      </select>
+                      }}
+                    >
+                      <option value="">-- Channel auswählen --</option>
+                      {channels.map(channel => (
+                        <option key={channel.id} value={channel.id}>
+                          #{channel.name}
+                        </option>
+                      ))}
+                    </select>
                       <p className="text-xs text-dark-muted mt-1">
                         {channels.length} Text-Channels verfügbar • Bot benötigt "View Channels" Permission
                       </p>
@@ -780,22 +780,22 @@ const CrosshairSharing = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-dark-text">Auto-Post aktiviert</label>
-                  <Switch
-                    checked={settings?.auto_post_enabled || false}
-                    onCheckedChange={(checked) => updateSetting('auto_post_enabled', checked)}
-                  />
-                </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-dark-text">Auto-Post aktiviert</label>
+                    <Switch
+                      checked={settings?.auto_post_enabled || false}
+                      onCheckedChange={(checked) => updateSetting('auto_post_enabled', checked)}
+                    />
+                  </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-dark-text">Voting System aktiviert</label>
-                  <Switch
-                    checked={settings?.voting_enabled || false}
-                    onCheckedChange={(checked) => updateSetting('voting_enabled', checked)}
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-dark-text">Voting System aktiviert</label>
+                    <Switch
+                      checked={settings?.voting_enabled || false}
+                      onCheckedChange={(checked) => updateSetting('voting_enabled', checked)}
+                    />
+                  </div>
                 </div>
-              </div>
             </CardContent>
           </Card>
 
