@@ -930,66 +930,46 @@ function setupCrosshairProxyAPI(app) {
 
             // Create Interactive Panel Embed
             const panelEmbed = {
-                title: '🎯 Crosshair Creator & Community Hub',
-                description: 'Willkommen im Crosshair Hub! Hier kannst du Crosshairs erstellen, teilen und entdecken.',
+                title: '🎯 Valorant Crosshair Creator',
+                description: 'Erstelle dein perfektes Valorant Crosshair mit unserem Creator! Nutze das Web-Interface für alle Anpassungen.',
                 color: parseInt(embedColor?.replace('#', '') || '00D4AA', 16),
                 fields: [
                     {
-                        name: '🎨 Crosshair Creator',
-                        value: 'Erstelle dein perfektes Crosshair mit unserem Creator',
-                        inline: true
-                    },
-                    {
-                        name: '👥 Community Sharing',
-                        value: 'Teile und entdecke Crosshairs der Community',
-                        inline: true
-                    },
-                    {
-                        name: '⭐ Featured Crosshairs',
-                        value: 'Sieh dir die besten Community-Crosshairs an',
-                        inline: true
-                    },
-                    {
-                        name: '📊 Voting System',
-                        value: 'Vote für deine Lieblings-Crosshairs mit 👍 und 👎',
+                        name: '🎨 Web Crosshair Creator',
+                        value: 'Vollständiger Crosshair-Editor mit Live-Vorschau und Custom Colors',
                         inline: false
+                    },
+                    {
+                        name: '⚡ Features',
+                        value: '• Echtzeit Vorschau\n• Custom Color System\n• VCRDB-kompatible Codes\n• Sofortiger Download',
+                        inline: true
+                    },
+                    {
+                        name: '🎯 Einfach zu nutzen',
+                        value: '1. Creator öffnen\n2. Crosshair anpassen\n3. Code kopieren\n4. In Valorant importieren',
+                        inline: true
                     }
                 ],
                 thumbnail: {
-                    url: 'https://cdn.discordapp.com/attachments/1234567890/crosshair-icon.png' // Placeholder
+                    url: guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png'
                 },
                 footer: {
-                    text: 'AgentBee Crosshair System • Powered by Community',
+                    text: 'AgentBee Crosshair Creator • Powered by Web Technology',
                     icon_url: guild.iconURL() || undefined
                 },
                 timestamp: new Date().toISOString()
             };
 
-            // Create Action Row with Buttons
+            // Create Action Row with Single Button
             const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
             
             const actionRow = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
                         .setCustomId('crosshair_create')
-                        .setLabel('🎯 Crosshair Creator')
+                        .setLabel('🎯 Web Crosshair Creator öffnen')
                         .setStyle(ButtonStyle.Primary)
-                        .setEmoji('🎯'),
-                    new ButtonBuilder()
-                        .setCustomId('crosshair_browse')
-                        .setLabel('👥 Browse Community')
-                        .setStyle(ButtonStyle.Secondary)
-                        .setEmoji('👥'),
-                    new ButtonBuilder()
-                        .setCustomId('crosshair_featured')
-                        .setLabel('⭐ Featured')
-                        .setStyle(ButtonStyle.Success)
-                        .setEmoji('⭐'),
-                    new ButtonBuilder()
-                        .setCustomId('crosshair_help')
-                        .setLabel('❓ Help')
-                        .setStyle(ButtonStyle.Secondary)
-                        .setEmoji('❓')
+                        .setEmoji('🎯')
                 );
 
             // Check if we need to update existing panel or create new one
