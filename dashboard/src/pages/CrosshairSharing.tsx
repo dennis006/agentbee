@@ -64,6 +64,12 @@ interface CrosshairSettings {
   guild_name: string;
   crosshair_channel_id: string;
   crosshair_channel_name: string;
+  // Interactive Panel Settings
+  panel_enabled: boolean;
+  panel_channel_id: string;
+  panel_channel_name: string;
+  panel_message_id?: string;
+  panel_embed_color: string;
   auto_post_enabled: boolean;
   voting_enabled: boolean;
   require_approval: boolean;
@@ -242,6 +248,12 @@ const CrosshairSharing = () => {
             // Behalte die aktuellen Channel-Settings wenn User bereits etwas ausgewählt hat
             crosshair_channel_id: prevSettings?.crosshair_channel_id || data.settings.crosshair_channel_id || '',
             crosshair_channel_name: prevSettings?.crosshair_channel_name || data.settings.crosshair_channel_name || '',
+            // Panel Settings
+            panel_enabled: data.settings.panel_enabled ?? false,
+            panel_channel_id: prevSettings?.panel_channel_id || data.settings.panel_channel_id || '',
+            panel_channel_name: prevSettings?.panel_channel_name || data.settings.panel_channel_name || '',
+            panel_message_id: data.settings.panel_message_id || '',
+            panel_embed_color: data.settings.panel_embed_color || '#00D4AA',
             // Aber lade andere Settings vom Server
             auto_post_enabled: data.settings.auto_post_enabled ?? true,
             voting_enabled: data.settings.voting_enabled ?? true,
@@ -263,6 +275,12 @@ const CrosshairSharing = () => {
             guild_name: selectedGuildData?.name || 'Unknown Guild',
             crosshair_channel_id: '',
             crosshair_channel_name: '',
+            // Panel Settings
+            panel_enabled: false,
+            panel_channel_id: '',
+            panel_channel_name: '',
+            panel_message_id: '',
+            panel_embed_color: '#00D4AA',
             auto_post_enabled: true,
             voting_enabled: true,
             require_approval: false,
@@ -426,6 +444,71 @@ const CrosshairSharing = () => {
       channel_id: newSettings.crosshair_channel_id, 
       channel_name: newSettings.crosshair_channel_name 
     });
+  };
+
+  // Panel Channel Update
+  const updatePanelChannelSelection = (channelId: string, channelName: string) => {
+    if (!settings) return;
+    
+    console.log(`🎛️ Updating panel channel selection: ID=${channelId}, Name=${channelName}`);
+    const newSettings = {
+      ...settings,
+      panel_channel_id: channelId,
+      panel_channel_name: channelName
+    };
+    
+    setSettings(newSettings);
+    
+    console.log('✅ Panel channel selection updated:', { 
+      panel_channel_id: newSettings.panel_channel_id, 
+      panel_channel_name: newSettings.panel_channel_name 
+    });
+  };
+
+  // Post Interactive Panel to Discord
+  const [postingPanel, setPostingPanel] = useState(false);
+  const postInteractivePanel = async () => {
+    if (!settings?.panel_channel_id?.trim()) {
+      error('❌ Bitte zuerst einen Channel für das Interactive Panel konfigurieren!');
+      return;
+    }
+
+    setPostingPanel(true);
+    try {
+      // First save settings
+      const saveSuccess = await saveSettings();
+      if (!saveSuccess) {
+        error('❌ Einstellungen konnten nicht gespeichert werden. Panel wird nicht gepostet.');
+        return;
+      }
+
+      const response = await fetch('/api/crosshair/interactive-panel/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guildId: selectedGuild,
+          channelId: settings.panel_channel_id,
+          embedColor: settings.panel_embed_color || '#00D4AA'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const actionText = settings.panel_message_id ? 'aktualisiert' : 'erstellt';
+        success(`✅ Crosshair Interactive Panel erfolgreich ${actionText}!`);
+        
+        // Reload settings to get potential new message ID
+        loadSettings();
+      } else {
+        const data = await response.json().catch(() => ({ error: 'Unbekannter Server-Fehler' }));
+        error(data.error || 'Fehler beim Verwalten des Interactive Panels');
+      }
+    } catch (err) {
+      console.error('❌ Panel posting error:', err);
+      error('Verbindungsfehler beim Erstellen des Interactive Panels');
+    } finally {
+      setPostingPanel(false);
+    }
   };
 
   if (!selectedGuild) {
@@ -708,6 +791,155 @@ const CrosshairSharing = () => {
                     onCheckedChange={(checked) => updateSetting('voting_enabled', checked)}
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-cyan-500/30 shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-cyan-400" />
+                Interactive Panel
+                <Tooltip 
+                  title="🎛️ Interactive Panel erklärt:"
+                  content={
+                    <div>
+                      <div>Discord Panel mit interaktiven Buttons:</div>
+                      <div>• 🎯 Crosshair Creator direkt in Discord</div>
+                      <div>• 👥 Community Voting & Sharing</div>
+                      <div>• 📤 Direktes Posten in separatem Channel</div>
+                      <div>• 🔄 Real-time Updates</div>
+                    </div>
+                  }
+                />
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Interaktives Discord Panel für Crosshair-Management
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium text-dark-text">Panel aktiviert</label>
+                    <p className="text-xs text-dark-muted">Interactive Discord Panel einschalten</p>
+                  </div>
+                  <Switch
+                    checked={settings?.panel_enabled || false}
+                    onCheckedChange={(checked) => updateSetting('panel_enabled', checked)}
+                  />
+                </div>
+
+                {settings?.panel_enabled && (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-dark-text mb-2 block flex items-center justify-between">
+                        <span>Panel Channel</span>
+                        <button
+                          onClick={() => {
+                            if (selectedGuild) {
+                              loadDiscordChannels();
+                              success('Channels werden neu geladen...');
+                            }
+                          }}
+                          className="text-xs px-2 py-1 bg-cyan-600 hover:bg-cyan-700 rounded text-white transition-colors"
+                          disabled={loadingChannels}
+                        >
+                          {loadingChannels ? '🔄' : '🔄 Refresh'}
+                        </button>
+                      </label>
+                      
+                      {loadingChannels ? (
+                        <div className="w-full bg-dark-bg/70 border border-cyan-500/30 text-dark-muted rounded-lg p-2 flex items-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cyan-400 mr-2"></div>
+                          Lade Channels...
+                        </div>
+                      ) : channels.length > 0 ? (
+                        <div>
+                          <select
+                            className="w-full bg-dark-bg/70 border border-cyan-500/30 text-dark-text focus:border-cyan-400 rounded-lg p-2"
+                            value={settings?.panel_channel_id || ''}
+                            onChange={(e) => {
+                              const selectedChannel = channels.find(c => c.id === e.target.value);
+                              const channelName = selectedChannel?.name || '';
+                              
+                              updatePanelChannelSelection(e.target.value, channelName);
+                              
+                              if (selectedChannel) {
+                                success(`Panel Channel #${selectedChannel.name} ausgewählt!`);
+                              }
+                            }}
+                          >
+                            <option value="">-- Panel Channel auswählen --</option>
+                            {channels.map(channel => (
+                              <option key={channel.id} value={channel.id}>
+                                #{channel.name}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-dark-muted mt-1">
+                            {channels.length} Text-Channels verfügbar • Panel wird hier gepostet
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="w-full bg-orange-900/20 border border-orange-500/30 text-orange-300 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="font-medium">Keine Channels gefunden</span>
+                          </div>
+                          <div className="text-xs">Bot benötigt "View Channels" Permission</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-dark-text mb-2 block">
+                        Panel Farbe
+                      </label>
+                      <input
+                        type="color"
+                        value={settings?.panel_embed_color || '#00D4AA'}
+                        onChange={(e) => updateSetting('panel_embed_color', e.target.value)}
+                        className="w-full h-10 rounded-lg cursor-pointer"
+                      />
+                      <p className="text-xs text-dark-muted mt-1">
+                        Farbe für das Discord Embed des Panels
+                      </p>
+                    </div>
+
+                    {settings?.panel_message_id && (
+                      <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                          <span className="text-green-400 font-medium">Panel aktiv</span>
+                        </div>
+                        <p className="text-xs text-green-300">
+                          Message ID: {settings.panel_message_id}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={postInteractivePanel}
+                        disabled={postingPanel || !settings?.panel_channel_id}
+                        className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-neon transition-all duration-300 hover:scale-105"
+                      >
+                        {postingPanel ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Poste Panel...
+                          </>
+                        ) : (
+                          <>
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            {settings?.panel_message_id ? 'Panel aktualisieren' : 'Panel posten'}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -890,9 +890,216 @@ function setupCrosshairProxyAPI(app) {
         }
     });
 
+    // ==================== INTERACTIVE PANEL SYSTEM ====================
+
+    // POST: Interactive Panel to Discord
+    app.post('/api/crosshair/interactive-panel/post', cors(corsOptions), async (req, res) => {
+        try {
+            const { guildId, channelId, embedColor } = req.body;
+
+            if (!guildId || !channelId) {
+                return res.status(400).json({
+                    error: 'Missing required parameters',
+                    message: 'Guild ID und Channel ID sind erforderlich'
+                });
+            }
+
+            // Use global client for posting
+            if (!global.client || !global.client.isReady()) {
+                return res.status(503).json({
+                    error: 'Discord Bot not ready',
+                    message: 'Discord Bot ist nicht verbunden'
+                });
+            }
+
+            const guild = global.client.guilds.cache.get(guildId);
+            if (!guild) {
+                return res.status(404).json({
+                    error: 'Guild not found',
+                    message: 'Discord Server nicht gefunden'
+                });
+            }
+
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel) {
+                return res.status(404).json({
+                    error: 'Channel not found',
+                    message: 'Discord Channel nicht gefunden'
+                });
+            }
+
+            // Create Interactive Panel Embed
+            const panelEmbed = {
+                title: '🎯 Crosshair Creator & Community Hub',
+                description: 'Willkommen im Crosshair Hub! Hier kannst du Crosshairs erstellen, teilen und entdecken.',
+                color: parseInt(embedColor?.replace('#', '') || '00D4AA', 16),
+                fields: [
+                    {
+                        name: '🎨 Crosshair Creator',
+                        value: 'Erstelle dein perfektes Crosshair mit unserem Creator',
+                        inline: true
+                    },
+                    {
+                        name: '👥 Community Sharing',
+                        value: 'Teile und entdecke Crosshairs der Community',
+                        inline: true
+                    },
+                    {
+                        name: '⭐ Featured Crosshairs',
+                        value: 'Sieh dir die besten Community-Crosshairs an',
+                        inline: true
+                    },
+                    {
+                        name: '📊 Voting System',
+                        value: 'Vote für deine Lieblings-Crosshairs mit 👍 und 👎',
+                        inline: false
+                    }
+                ],
+                thumbnail: {
+                    url: 'https://cdn.discordapp.com/attachments/1234567890/crosshair-icon.png' // Placeholder
+                },
+                footer: {
+                    text: 'AgentBee Crosshair System • Powered by Community',
+                    icon_url: guild.iconURL() || undefined
+                },
+                timestamp: new Date().toISOString()
+            };
+
+            // Create Action Row with Buttons
+            const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+            
+            const actionRow = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('crosshair_create')
+                        .setLabel('🎯 Crosshair Creator')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('🎯'),
+                    new ButtonBuilder()
+                        .setCustomId('crosshair_browse')
+                        .setLabel('👥 Browse Community')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('👥'),
+                    new ButtonBuilder()
+                        .setCustomId('crosshair_featured')
+                        .setLabel('⭐ Featured')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('⭐'),
+                    new ButtonBuilder()
+                        .setCustomId('crosshair_help')
+                        .setLabel('❓ Help')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('❓')
+                );
+
+            // Check if we need to update existing panel or create new one
+            let messageId = null;
+            
+            if (supabase) {
+                // Check for existing panel
+                const { data: existingSettings } = await supabase
+                    .from('crosshair_settings')
+                    .select('panel_message_id')
+                    .eq('guild_id', guildId)
+                    .single();
+
+                if (existingSettings?.panel_message_id) {
+                    try {
+                        // Try to edit existing message
+                        const existingMessage = await channel.messages.fetch(existingSettings.panel_message_id);
+                        await existingMessage.edit({
+                            embeds: [panelEmbed],
+                            components: [actionRow]
+                        });
+                        messageId = existingSettings.panel_message_id;
+                        console.log('✅ Updated existing interactive panel');
+                    } catch (editError) {
+                        console.warn('⚠️ Could not edit existing panel, creating new one:', editError.message);
+                        // Fall through to create new panel
+                    }
+                }
+            }
+
+            // Create new panel if update failed or no existing panel
+            if (!messageId) {
+                const panelMessage = await channel.send({
+                    embeds: [panelEmbed],
+                    components: [actionRow]
+                });
+                messageId = panelMessage.id;
+                console.log('✅ Created new interactive panel');
+            }
+
+            // Save panel message ID to database
+            if (supabase && messageId) {
+                await supabase
+                    .from('crosshair_settings')
+                    .upsert({
+                        guild_id: guildId,
+                        panel_message_id: messageId,
+                        panel_channel_id: channelId,
+                        panel_embed_color: embedColor || '#00D4AA',
+                        updated_at: new Date().toISOString()
+                    }, {
+                        onConflict: 'guild_id'
+                    });
+            }
+
+            res.json({
+                success: true,
+                message: 'Interactive Panel erfolgreich gepostet!',
+                messageId,
+                channelId,
+                guildId
+            });
+
+        } catch (error) {
+            console.error('❌ Panel posting error:', error);
+            res.status(500).json({
+                error: 'Internal Server Error',
+                message: 'Fehler beim Posten des Interactive Panels',
+                details: error.message
+            });
+        }
+    });
+
+    // GET: Panel Status
+    app.get('/api/crosshair/interactive-panel/:guild_id/status', cors(corsOptions), async (req, res) => {
+        try {
+            const { guild_id } = req.params;
+
+            if (!supabase) {
+                return res.status(503).json({
+                    error: 'Service Unavailable',
+                    message: 'Database not configured'
+                });
+            }
+
+            const { data: settings } = await supabase
+                .from('crosshair_settings')
+                .select('panel_enabled, panel_channel_id, panel_message_id, panel_embed_color')
+                .eq('guild_id', guild_id)
+                .single();
+
+            res.json({
+                success: true,
+                panelActive: !!settings?.panel_message_id,
+                settings: settings || {}
+            });
+
+        } catch (error) {
+            console.error('❌ Panel status error:', error);
+            res.status(500).json({
+                error: 'Internal Server Error',
+                message: 'Fehler beim Laden des Panel-Status'
+            });
+        }
+    });
+
     console.log('✅ Crosshair Proxy API routes registered');
     console.log('✅ Discord Crosshair Sharing System initialized');
     console.log('✅ Discord Real Data Integration enabled');
+    console.log('✅ Interactive Panel System initialized');
 }
 
 module.exports = { setupCrosshairProxyAPI }; 

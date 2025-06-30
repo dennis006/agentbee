@@ -480,6 +480,207 @@ async function postValorantInteractiveMessage(channelName) {
 }
 
 // Valorant Button-Interaktionen behandeln
+async function handleCrosshairPanelInteraction(interaction) {
+    try {
+        const { customId, user, guild } = interaction;
+        
+        console.log(`🎯 Crosshair Panel Interaction: ${customId} by ${user.username}`);
+
+        switch (customId) {
+            case 'crosshair_create':
+                await interaction.reply({
+                    embeds: [{
+                        title: '🎯 Crosshair Creator',
+                        description: '**Erstelle dein perfektes Valorant Crosshair!**\n\nKlicke auf den Link unten, um den AgentBee Crosshair Creator zu öffnen:',
+                        color: 0x00D4AA,
+                        fields: [
+                            {
+                                name: '🎨 Features',
+                                value: '• Real-time Vorschau\n• Custom Color System\n• Pro & Fun Random Generator\n• Direkter Discord Export',
+                                inline: true
+                            },
+                            {
+                                name: '⚡ Einfach zu nutzen',
+                                value: '• Drag & Drop Einstellungen\n• Sofortiges Feedback\n• Code kopieren & in Valorant einfügen',
+                                inline: true
+                            }
+                        ],
+                        thumbnail: {
+                            url: guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png'
+                        },
+                        footer: {
+                            text: 'AgentBee Crosshair Creator • Powered by Community'
+                        },
+                        timestamp: new Date().toISOString()
+                    }],
+                    components: [{
+                        type: 1, // ActionRow
+                        components: [{
+                            type: 2, // Button
+                            style: 5, // Link
+                            label: '🎯 Creator öffnen',
+                            url: `${process.env.FRONTEND_URL || 'https://agentbee.netlify.app'}/crosshair-creator`,
+                            emoji: { name: '🎯' }
+                        }]
+                    }],
+                    ephemeral: true
+                });
+                break;
+
+            case 'crosshair_browse':
+                await interaction.reply({
+                    embeds: [{
+                        title: '👥 Community Crosshairs',
+                        description: '**Entdecke Crosshairs der Community!**\n\nDurchstöbere geteilte Crosshairs von anderen Spielern:',
+                        color: 0x5865F2,
+                        fields: [
+                            {
+                                name: '🔍 Was du findest',
+                                value: '• Community geteilte Crosshairs\n• Pro Player Setups\n• Verschiedene Stile & Farben\n• Vote für deine Favoriten',
+                                inline: true
+                            },
+                            {
+                                name: '📊 Voting System',
+                                value: '• 👍 Upvote für gute Crosshairs\n• 👎 Downvote für schlechte\n• Featured Crosshairs entdecken',
+                                inline: true
+                            }
+                        ],
+                        thumbnail: {
+                            url: guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png'
+                        },
+                        footer: {
+                            text: 'AgentBee Community Hub • Teile deine Kreationen'
+                        },
+                        timestamp: new Date().toISOString()
+                    }],
+                    components: [{
+                        type: 1, // ActionRow
+                        components: [{
+                            type: 2, // Button
+                            style: 5, // Link
+                            label: '👥 Community durchstöbern',
+                            url: `${process.env.FRONTEND_URL || 'https://agentbee.netlify.app'}/crosshair-sharing`,
+                            emoji: { name: '👥' }
+                        }]
+                    }],
+                    ephemeral: true
+                });
+                break;
+
+            case 'crosshair_featured':
+                await interaction.reply({
+                    embeds: [{
+                        title: '⭐ Featured Crosshairs',
+                        description: '**Die besten Community-Crosshairs!**\n\nEntdecke von der Community gewählte Top-Crosshairs:',
+                        color: 0xFFD700,
+                        fields: [
+                            {
+                                name: '🏆 Was macht sie special',
+                                value: '• Höchste Community-Bewertungen\n• Von Moderatoren ausgewählt\n• Proven in Competitive Matches\n• Unique Designs',
+                                inline: true
+                            },
+                            {
+                                name: '⚡ Sofort nutzen',
+                                value: '• Copy & Paste in Valorant\n• Getestet von der Community\n• Verschiedene Spielstile\n• Regelmäßig aktualisiert',
+                                inline: true
+                            }
+                        ],
+                        thumbnail: {
+                            url: guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png'
+                        },
+                        footer: {
+                            text: 'AgentBee Featured Collection • Curated by Community'
+                        },
+                        timestamp: new Date().toISOString()
+                    }],
+                    components: [{
+                        type: 1, // ActionRow
+                        components: [{
+                            type: 2, // Button
+                            style: 5, // Link
+                            label: '⭐ Featured ansehen',
+                            url: `${process.env.FRONTEND_URL || 'https://agentbee.netlify.app'}/crosshair-sharing?filter=featured`,
+                            emoji: { name: '⭐' }
+                        }]
+                    }],
+                    ephemeral: true
+                });
+                break;
+
+            case 'crosshair_help':
+                await interaction.reply({
+                    embeds: [{
+                        title: '❓ Crosshair System Hilfe',
+                        description: '**Hilfe & Anleitungen für das Crosshair System**\n\nHier findest du alles was du wissen musst:',
+                        color: 0x9CA3AF,
+                        fields: [
+                            {
+                                name: '🎯 Crosshair Creator nutzen',
+                                value: '1. Öffne den Creator\n2. Passe Einstellungen an\n3. Kopiere den generierten Code\n4. In Valorant: Settings → Crosshair → Import',
+                                inline: false
+                            },
+                            {
+                                name: '👥 Community Features',
+                                value: '• Crosshairs teilen in Discord\n• Vote mit 👍/👎 Reactions\n• Featured Crosshairs entdecken\n• Pro Player Setups kopieren',
+                                inline: false
+                            },
+                            {
+                                name: '🔧 Troubleshooting',
+                                value: '• Code funktioniert nicht? → Prüfe Format\n• Farben falsch? → Custom Color separat setzen\n• Fragen? → Frag im Chat nach Hilfe',
+                                inline: false
+                            }
+                        ],
+                        thumbnail: {
+                            url: guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png'
+                        },
+                        footer: {
+                            text: 'AgentBee Support • Bei Fragen frag einfach im Chat!'
+                        },
+                        timestamp: new Date().toISOString()
+                    }],
+                    components: [{
+                        type: 1, // ActionRow
+                        components: [
+                            {
+                                type: 2, // Button
+                                style: 5, // Link
+                                label: '📖 Vollständige Anleitung',
+                                url: `${process.env.FRONTEND_URL || 'https://agentbee.netlify.app'}/crosshair-creator`,
+                                emoji: { name: '📖' }
+                            },
+                            {
+                                type: 2, // Button
+                                style: 2, // Secondary
+                                custom_id: 'crosshair_create',
+                                label: 'Creator starten',
+                                emoji: { name: '🎯' }
+                            }
+                        ]
+                    }],
+                    ephemeral: true
+                });
+                break;
+
+            default:
+                await interaction.reply({
+                    content: '❌ Unbekannte Crosshair-Aktion. Bitte versuche es erneut.',
+                    ephemeral: true
+                });
+                break;
+        }
+
+    } catch (error) {
+        console.error('❌ Crosshair Panel Interaction Error:', error);
+        
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: '❌ Es gab einen Fehler beim Verarbeiten deiner Anfrage. Bitte versuche es erneut.',
+                ephemeral: true
+            }).catch(console.error);
+        }
+    }
+}
+
 async function handleValorantButtonInteraction(interaction) {
     try {
         const { customId, user } = interaction;
@@ -4338,6 +4539,12 @@ client.on(Events.InteractionCreate, async interaction => {
 
     // Giveaway-Button-Interaktionen werden jetzt von GiveawayInteractions behandelt
     // (automatisch über event listener)
+
+    // Crosshair Panel Button Handlers
+    if (interaction.customId.startsWith('crosshair_')) {
+        await handleCrosshairPanelInteraction(interaction);
+        return;
+    }
 
     // YouTube Radio Button Handlers
     if (interaction.customId === 'radio_select') {
