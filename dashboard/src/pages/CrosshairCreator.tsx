@@ -403,7 +403,7 @@ const CrosshairCreator = () => {
       const code = crosshairCode || generateCrosshairCode();
       
       // Use Railway Backend as Proxy (CORS-Safe)
-      const response = await fetch('/api/crosshair/generate?code=${encodeURIComponent(code)}');
+      const response = await fetch(`/api/crosshair/generate?code=${encodeURIComponent(code)}`);
       
       if (response.ok) {
         const blob = await response.blob();
@@ -474,7 +474,7 @@ const CrosshairCreator = () => {
     try {
       const code = generateValorantCrosshairCode(settings);
       
-      const response = await fetch('/api/crosshair/generate?code=${encodeURIComponent(code)}');
+      const response = await fetch(`/api/crosshair/generate?code=${encodeURIComponent(code)}`);
       
       if (response.ok) {
         const blob = await response.blob();
