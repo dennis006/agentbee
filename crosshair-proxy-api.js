@@ -156,54 +156,19 @@ function setupCrosshairProxyAPI(app) {
 
     // ==================== DISCORD SHARING SYSTEM ====================
 
-    // Helper function to add automatic reactions to Discord message
-    async function addAutomaticReactions(channelId, webhookResponse) {
+    // Helper function to post via Bot Client (with automatic reactions)
+    async function postViaBotClient(crosshairData, settings) {
         try {
-            // Use global client to add reactions
+            // Use global client to post message
             if (!global.client || !global.client.isReady()) {
-                console.warn('⚠️ Bot client not ready for reactions');
-                return;
+                console.warn('⚠️ Bot client not ready for posting');
+                return null;
             }
 
-            // Get the channel and find the message
-            const channel = await global.client.channels.fetch(channelId);
+            // Get the channel
+            const channel = await global.client.channels.fetch(settings.crosshair_channel_id);
             if (!channel) {
-                console.warn('⚠️ Channel not found for reactions:', channelId);
-                return;
-            }
-
-            // Wait a bit for the webhook message to appear
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Get recent messages and find the crosshair post
-            const messages = await channel.messages.fetch({ limit: 5 });
-            const crosshairMessage = messages.find(msg => 
-                msg.author.webhook && 
-                msg.embeds.length > 0 && 
-                msg.embeds[0].title?.includes('🎯')
-            );
-
-            if (!crosshairMessage) {
-                console.warn('⚠️ Crosshair message not found for reactions');
-                return;
-            }
-
-            // Add thumbs up and thumbs down reactions
-            await crosshairMessage.react('👍');
-            await crosshairMessage.react('👎');
-            
-            console.log('✅ Added automatic reactions to crosshair post');
-
-        } catch (error) {
-            console.error('❌ Error adding automatic reactions:', error);
-        }
-    }
-
-    // Helper function to post to Discord
-    async function postToDiscord(crosshairData, settings) {
-        try {
-            if (!settings.webhook_url) {
-                console.log('⚠️ No webhook URL configured for guild:', settings.guild_id);
+                console.warn('⚠️ Channel not found for bot posting:', settings.crosshair_channel_id);
                 return null;
             }
 
@@ -237,56 +202,101 @@ function setupCrosshairProxyAPI(app) {
                 },
                 footer: {
                     text: 'AgentBee Crosshair Sharing • React with 👍 or 👎 to vote!',
-                    icon_url: 'https://cdn.discordapp.com/avatars/1234567890/avatar.png'
+                    icon_url: global.client.user.displayAvatarURL()
                 },
                 timestamp: new Date().toISOString()
             };
 
-            const webhookBody = {
-                embeds: [embed],
-                components: [
-                    {
-                        type: 1, // ACTION_ROW
-                        components: [
-                            {
-                                type: 2, // BUTTON
-                                style: 3, // SUCCESS (green)
-                                label: 'Copy Code',
-                                custom_id: `copy_crosshair_${crosshairData.id}`,
-                                emoji: { name: '📋' }
-                            },
-                            {
-                                type: 2, // BUTTON
-                                style: 1, // PRIMARY (blue)
-                                label: 'View Stats',
-                                custom_id: `stats_crosshair_${crosshairData.id}`,
-                                emoji: { name: '📊' }
-                            }
-                        ]
-                    }
-                ]
-            };
+            // Post message via bot client
+            const message = await channel.send({ embeds: [embed] });
+            
+            // Add automatic reactions immediately
+            await message.react('👍');
+            await message.react('👎');
+            
+            console.log('✅ Posted crosshair via Bot Client with automatic reactions');
+            return { id: message.id, channel_id: message.channelId };
 
-            const response = await fetch(settings.webhook_url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(webhookBody)
-            });
+        } catch (error) {
+            console.error('❌ Bot client posting error:', error);
+            return null;
+        }
+    }
 
-            if (response.ok) {
-                console.log('✅ Posted crosshair to Discord successfully');
-                const webhookResponse = await response.json();
-                
-                // Add automatic reactions using bot client
-                await addAutomaticReactions(settings.crosshair_channel_id, webhookResponse);
-                
-                return webhookResponse;
-            } else {
-                console.error('❌ Discord webhook failed:', response.status, response.statusText);
+    // Helper function to post to Discord
+    async function postToDiscord(crosshairData, settings) {
+        try {
+            // Check if crosshair channel is configured
+            if (!settings.crosshair_channel_id) {
+                console.log('⚠️ No crosshair channel configured for guild:', settings.guild_id);
                 return null;
             }
+
+            // Try Bot Client posting first (preferred - includes automatic reactions)
+            if (global.client && global.client.isReady()) {
+                console.log('🤖 Using Bot Client for crosshair posting with auto-reactions');
+                return await postViaBotClient(crosshairData, settings);
+            }
+
+            // Fallback to webhook if bot client not available
+            if (settings.webhook_url) {
+                console.log('🌐 Bot client not ready, falling back to webhook posting');
+                
+                const embed = {
+                    title: `🎯 ${crosshairData.crosshair_name || 'New Crosshair Shared!'}`,
+                    description: crosshairData.description || 'Check out this crosshair!',
+                    color: 0x00d4aa, // AgentBee green
+                    fields: [
+                        {
+                            name: '📋 Crosshair Code',
+                            value: `\`\`\`${crosshairData.crosshair_code}\`\`\``,
+                            inline: false
+                        },
+                        {
+                            name: '🎨 Type',
+                            value: crosshairData.crosshair_type || 'Custom',
+                            inline: true
+                        },
+                        {
+                            name: '🌈 Color',
+                            value: crosshairData.color_hex || '#FFFFFF',
+                            inline: true
+                        }
+                    ],
+                    author: {
+                        name: crosshairData.username,
+                        icon_url: crosshairData.user_avatar || undefined
+                    },
+                    image: {
+                        url: crosshairData.image_url
+                    },
+                    footer: {
+                        text: 'AgentBee Crosshair Sharing • Please add your own 👍 or 👎 reactions!',
+                        icon_url: 'https://cdn.discordapp.com/avatars/1234567890/avatar.png'
+                    },
+                    timestamp: new Date().toISOString()
+                };
+
+                const webhookBody = { embeds: [embed] };
+
+                const response = await fetch(settings.webhook_url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(webhookBody)
+                });
+
+                if (response.ok) {
+                    console.log('✅ Posted crosshair via webhook (no auto-reactions)');
+                    return await response.json();
+                } else {
+                    console.error('❌ Discord webhook failed:', response.status, response.statusText);
+                    return null;
+                }
+            }
+
+            console.error('❌ No posting method available (neither bot client nor webhook)');
+            return null;
+
         } catch (error) {
             console.error('❌ Discord posting error:', error);
             return null;
