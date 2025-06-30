@@ -95,9 +95,58 @@ async function handleLFGMessageWithResponses(message) {
         
         console.log(`🎮 LFG Request erkannt von ${message.author.tag}: ${message.content}`);
         
+        // HINZUGEFÜGT: Prüfe Cooldown für User
+        const { checkLFGCooldown, updateLFGCooldown } = require('./lfg-supabase-api');
+        const cooldownResult = await checkLFGCooldown(message.guild.id, message.author.id, settings);
+        
+        if (!cooldownResult.allowed) {
+            console.log(`⏰ Cooldown aktiv für ${message.author.tag}: ${cooldownResult.reason}`);
+            
+            // Sende Cooldown-Nachricht
+            const cooldownEmbed = new EmbedBuilder()
+                .setColor(0xFF6B35)
+                .setTitle('⏰ LFG Cooldown')
+                .setDescription(`Hey ${message.author}! Du musst noch warten bevor du einen neuen LFG Post erstellen kannst.`)
+                .addFields([
+                    {
+                        name: '❌ Grund',
+                        value: cooldownResult.reason,
+                        inline: false
+                    },
+                    {
+                        name: '📝 Hinweis',
+                        value: cooldownResult.remainingMinutes 
+                            ? `Versuche es in **${cooldownResult.remainingMinutes} Minuten** nochmal.`
+                            : 'Daily Limit erreicht - versuche es morgen nochmal.',
+                        inline: false
+                    }
+                ])
+                .setTimestamp();
+            
+            const cooldownMessage = await message.channel.send({ embeds: [cooldownEmbed] });
+            
+            // Lösche Original-Nachricht
+            await message.delete();
+            
+            // Auto-Delete Cooldown-Nachricht nach 10 Sekunden
+            setTimeout(async () => {
+                try {
+                    await cooldownMessage.delete();
+                } catch (error) {
+                    console.log('Cooldown-Nachricht bereits gelöscht');
+                }
+            }, 10000);
+            
+            return;
+        }
+        
         // Parse LFG Message für Spiel-Info
         const gameInfo = parseLFGMessage(message.content, settings.allowedGames, settings);
         console.log(`🎯 Parsed Game Info:`, gameInfo);
+        
+        // Update Cooldown NACH erfolgreichem Parse
+        await updateLFGCooldown(message.guild.id, message.author.id);
+        console.log(`✅ Cooldown aktualisiert für ${message.author.tag}`);
         
         // Erstelle LFG Post Object
         const lfgPost = new LFGPost(

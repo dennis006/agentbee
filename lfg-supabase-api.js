@@ -392,6 +392,11 @@ async function saveActiveLFGPost(lfgPost, guildId, channelId, authorUsername) {
         }
 
         console.log('✅ Aktiver LFG Post in Supabase gespeichert:', lfgPost.messageId);
+        
+        // HINZUGEFÜGT: Speichere auch in History und update Statistics
+        await saveLFGHistory(lfgPost, guildId, channelId, authorUsername);
+        await updateLFGStatistics(guildId, lfgPost.game);
+        
         return true;
 
     } catch (error) {
@@ -488,22 +493,260 @@ async function loadActiveLFGPosts(guildId) {
 
         console.log(`✅ ${data.length} aktive LFG Posts geladen für Guild:`, guildId);
         return data.map(post => ({
-            messageId: post.message_id,
-            channelId: post.channel_id,
-            authorId: post.author_id,
-            authorUsername: post.author_username,
+            message_id: post.message_id,
+            channel_id: post.channel_id,
+            author_id: post.author_id,
+            author_username: post.author_username,
             game: post.game,
             description: post.description,
-            maxPlayers: post.max_players,
-            joinedPlayers: JSON.parse(post.joined_players || '[]'),
+            max_players: post.max_players,
+            joined_players: JSON.parse(post.joined_players || '[]'),
             status: post.status,
-            createdAt: new Date(post.created_at),
-            expiresAt: post.expires_at ? new Date(post.expires_at) : null
+            created_at: new Date(post.created_at),
+            expires_at: post.expires_at ? new Date(post.expires_at) : null
         }));
 
     } catch (error) {
         console.error('❌ Fehler beim Laden der aktiven LFG Posts:', error);
         return [];
+    }
+}
+
+// ================================================================
+// LFG HISTORY MANAGEMENT
+// ================================================================
+
+// Speichere LFG Post in History
+async function saveLFGHistory(lfgPost, guildId, channelId, authorUsername) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, LFG History nicht gespeichert');
+            return false;
+        }
+
+        const historyData = {
+            guild_id: guildId,
+            user_id: lfgPost.authorId,
+            username: authorUsername,
+            channel_id: channelId,
+            message_id: lfgPost.messageId,
+            game: lfgPost.game,
+            content: lfgPost.description,
+            ping_count: 1 // Initial ping
+        };
+
+        const { data, error } = await supabase
+            .from('lfg_history')
+            .insert(historyData)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Fehler beim Speichern der LFG History:', error);
+            return false;
+        }
+
+        console.log('✅ LFG History gespeichert für:', lfgPost.messageId);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern der LFG History:', error);
+        return false;
+    }
+}
+
+// ================================================================
+// LFG STATISTICS MANAGEMENT  
+// ================================================================
+
+// Aktualisiere LFG Statistiken
+async function updateLFGStatistics(guildId, game) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, LFG Statistics nicht aktualisiert');
+            return false;
+        }
+
+        // Erste: Prüfe ob Statistics Eintrag für Guild existiert
+        const { data: existingStats, error: selectError } = await supabase
+            .from('lfg_statistics')
+            .select('*')
+            .eq('guild_id', guildId)
+            .single();
+
+        if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = No rows found
+            console.error('❌ Fehler beim Abrufen der LFG Statistics:', selectError);
+            return false;
+        }
+
+        const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD Format
+
+        if (!existingStats) {
+            // Erstelle neuen Statistics Eintrag
+            const newStats = {
+                guild_id: guildId,
+                total_lfg_posts: 1,
+                active_players: 1,
+                today_posts: 1,
+                popular_game: game,
+                daily_reset_date: currentDate
+            };
+
+            const { data, error } = await supabase
+                .from('lfg_statistics')
+                .insert(newStats)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Fehler beim Erstellen der LFG Statistics:', error);
+                return false;
+            }
+
+            console.log('✅ Neue LFG Statistics erstellt für Guild:', guildId);
+            return true;
+        } else {
+            // Update existierende Statistics
+            const today = new Date().toISOString().split('T')[0];
+            const isNewDay = existingStats.daily_reset_date !== today;
+
+            const updateData = {
+                total_lfg_posts: existingStats.total_lfg_posts + 1,
+                today_posts: isNewDay ? 1 : existingStats.today_posts + 1,
+                popular_game: game, // Einfache Implementierung: letztes Spiel
+                daily_reset_date: today,
+                last_updated: new Date().toISOString()
+            };
+
+            const { data, error } = await supabase
+                .from('lfg_statistics')
+                .update(updateData)
+                .eq('guild_id', guildId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Fehler beim Aktualisieren der LFG Statistics:', error);
+                return false;
+            }
+
+            console.log(`✅ LFG Statistics aktualisiert für Guild ${guildId}: Total: ${updateData.total_lfg_posts}, Today: ${updateData.today_posts}`);
+            return true;
+        }
+
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren der LFG Statistics:', error);
+        return false;
+    }
+}
+
+// ================================================================
+// LFG COOLDOWN MANAGEMENT
+// ================================================================
+
+// Prüfe LFG Cooldown für User
+async function checkLFGCooldown(guildId, userId, settings) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, Cooldown nicht geprüft');
+            return { allowed: true, reason: 'Supabase nicht verfügbar' };
+        }
+
+        const { data: cooldownData, error } = await supabase
+            .from('lfg_cooldowns')
+            .select('*')
+            .eq('guild_id', guildId)
+            .eq('user_id', userId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
+            console.error('❌ Fehler beim Abrufen der LFG Cooldowns:', error);
+            return { allowed: true, reason: 'Fehler beim Cooldown-Check' };
+        }
+
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+
+        if (!cooldownData) {
+            // Erster LFG Post für diesen User
+            return { allowed: true, isFirstPost: true };
+        }
+
+        // Check Daily Limit
+        const isNewDay = cooldownData.daily_reset_date !== today;
+        const currentPingsToday = isNewDay ? 0 : cooldownData.pings_today;
+
+        if (currentPingsToday >= settings.maxPingsPerDay) {
+            return { 
+                allowed: false, 
+                reason: `Daily limit erreicht (${settings.maxPingsPerDay} LFG Posts pro Tag)`,
+                resetTime: 'Morgen'
+            };
+        }
+
+        // Check Cooldown
+        const lastPing = new Date(cooldownData.last_ping_at);
+        const cooldownMs = settings.cooldownMinutes * 60 * 1000;
+        const timeSinceLastPing = now - lastPing;
+
+        if (timeSinceLastPing < cooldownMs) {
+            const remainingMs = cooldownMs - timeSinceLastPing;
+            const remainingMinutes = Math.ceil(remainingMs / (60 * 1000));
+            
+            return { 
+                allowed: false, 
+                reason: `Cooldown aktiv noch ${remainingMinutes} Minuten`,
+                remainingMinutes
+            };
+        }
+
+        return { allowed: true };
+
+    } catch (error) {
+        console.error('❌ Fehler beim Cooldown-Check:', error);
+        return { allowed: true, reason: 'Fehler beim Cooldown-Check' };
+    }
+}
+
+// Update LFG Cooldown nach Post
+async function updateLFGCooldown(guildId, userId) {
+    try {
+        if (!supabase) {
+            console.log('⚠️ Supabase nicht verfügbar, Cooldown nicht aktualisiert');
+            return false;
+        }
+
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+
+        const cooldownData = {
+            guild_id: guildId,
+            user_id: userId,
+            last_ping_at: now.toISOString(),
+            pings_today: 1,
+            daily_reset_date: today
+        };
+
+        const { data, error } = await supabase
+            .from('lfg_cooldowns')
+            .upsert(cooldownData, { 
+                onConflict: 'guild_id,user_id',
+                ignoreDuplicates: false 
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Fehler beim Aktualisieren des LFG Cooldowns:', error);
+            return false;
+        }
+
+        console.log('✅ LFG Cooldown aktualisiert für User:', userId);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren des LFG Cooldowns:', error);
+        return false;
     }
 }
 
@@ -1158,5 +1401,9 @@ module.exports = {
     saveActiveLFGPost,
     updateActiveLFGPost,
     deleteActiveLFGPost,
-    loadActiveLFGPosts
+    loadActiveLFGPosts,
+    saveLFGHistory,
+    updateLFGStatistics,
+    checkLFGCooldown,
+    updateLFGCooldown
 }; 
