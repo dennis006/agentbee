@@ -493,45 +493,59 @@ async function checkAndJoinOwnerVoiceChannel(interaction, lfgPost, newUserId) {
             return;
         }
         
-        // FIXED: Prüfe ob neuer Spieler bereits in einem Voice Channel ist
-        if (newMember.voice.channel) {
-            console.log(`🔍 Neuer Spieler ist bereits in Voice Channel: ${newMember.voice.channel.name}`);
+        // DISCORD API LIMITATION: User muss bereits in einem Voice Channel sein um verschoben zu werden
+        const newMemberVoiceChannel = newMember.voice.channel;
+        
+        if (!newMemberVoiceChannel) {
+            console.log(`🔍 Neuer Spieler ist nicht in einem Voice Channel - kann nicht automatisch verschieben`);
             
-            // Sende Info-Nachricht dass User bereits in Voice ist
+            // Sende Info-Nachricht mit Einladung
             await interaction.followUp({
-                content: `🎤 **Voice Channel Info**\n\nDu bist bereits in **${newMember.voice.channel.name}**.\nDer Team Owner **${ownerMember.displayName}** ist in **${ownerVoiceChannel.name}**.\n\n*Du kannst manuell wechseln oder den Voice Channel Button nutzen.*`,
+                content: `🎤 **Voice Channel Einladung**\n\nDer Team Owner **${ownerMember.displayName}** ist bereits in **${ownerVoiceChannel.name}**!\n\n**📍 Tritt dem Voice Channel bei:**\n- Klicke auf **${ownerVoiceChannel.name}** in der Channel-Liste\n- Oder nutze den 🎤 Voice Channel Button\n\n*Discord erlaubt nur das Verschieben zwischen Voice Channels, nicht das direkte "Hineinziehen".*`,
                 ephemeral: true
             }).catch(() => {});
             return;
         }
         
-        // Prüfe ob der neue Spieler dem Voice Channel beitreten kann
+        // User ist bereits in einem Voice Channel
+        if (newMemberVoiceChannel.id === ownerVoiceChannel.id) {
+            console.log(`✅ Neuer Spieler ist bereits im gleichen Voice Channel wie der Owner`);
+            
+            await interaction.followUp({
+                content: `🎤 **Bereits verbunden!**\n\nDu bist bereits im gleichen Voice Channel wie der Team Owner **${ownerMember.displayName}**!\n\n*Viel Spaß beim Gaming! 🎮*`,
+                ephemeral: true
+            }).catch(() => {});
+            return;
+        }
+        
+        console.log(`🔄 Versuche User von ${newMemberVoiceChannel.name} zu ${ownerVoiceChannel.name} zu verschieben`);
+        
+        // Prüfe ob der neue Spieler dem Ziel-Voice Channel beitreten kann
         const permissions = ownerVoiceChannel.permissionsFor(newMember);
         if (!permissions || !permissions.has('Connect')) {
             console.log('🔍 Neuer Spieler hat keine Berechtigung für Owner Voice Channel');
             
-            // Sende Nachricht an neuen Spieler
             await interaction.followUp({
-                content: `🎤 **Voice Channel Info**\n\nDer Team Owner **${ownerMember.displayName}** ist bereits in **${ownerVoiceChannel.name}**, aber du hast keine Berechtigung diesem Channel beizutreten.\n\n*Bitte den Owner um Einladung oder nutze den Voice Channel Button.*`,
+                content: `🎤 **Voice Channel Info**\n\nDer Team Owner **${ownerMember.displayName}** ist in **${ownerVoiceChannel.name}**, aber du hast keine Berechtigung diesem Channel beizutreten.\n\nDu bist aktuell in: **${newMemberVoiceChannel.name}**\n\n*Bitte den Owner um Einladung oder nutze den Voice Channel Button.*`,
                 ephemeral: true
             }).catch(() => {});
             return;
         }
         
-        // Versuche den neuen Spieler zu verschieben
+        // Versuche den User zu verschieben (zwischen Voice Channels)
         await newMember.voice.setChannel(ownerVoiceChannel, 
             `LFG Auto-Join: ${newMember.displayName} ist ${lfgPost.game} Team beigetreten`
         );
         
-        console.log(`✅ ${newMember.displayName} automatisch zu ${ownerVoiceChannel.name} verschoben`);
+        console.log(`✅ ${newMember.displayName} erfolgreich von ${newMemberVoiceChannel.name} zu ${ownerVoiceChannel.name} verschoben`);
         
         // Sende Erfolgs-Nachricht an neuen Spieler
         await interaction.followUp({
-            content: `🎤 **Automatisch verbunden!**\n\nDu wurdest automatisch zu **${ownerVoiceChannel.name}** verschoben, da der Team Owner **${ownerMember.displayName}** bereits dort ist.\n\n*Viel Spaß beim Gaming! 🎮*`,
+            content: `🎤 **Automatisch verschoben!**\n\nDu wurdest von **${newMemberVoiceChannel.name}** zu **${ownerVoiceChannel.name}** verschoben, da der Team Owner **${ownerMember.displayName}** dort ist.\n\n*Viel Spaß beim Gaming! 🎮*`,
             ephemeral: true
         }).catch(() => {});
         
-        // Optional: Benachrichtige auch den Owner
+        // Benachrichtige auch den Owner
         try {
             const ownerUser = await interaction.client.users.fetch(lfgPost.authorId);
             const ownerNotification = new EmbedBuilder()
@@ -540,8 +554,8 @@ async function checkAndJoinOwnerVoiceChannel(interaction, lfgPost, newUserId) {
                 .setDescription(`**${newMember.displayName}** wurde automatisch zu deinem Voice Channel verschoben!`)
                 .addFields(
                     {
-                        name: '📍 Voice Channel',
-                        value: ownerVoiceChannel.name,
+                        name: '📍 Von → Zu',
+                        value: `${newMemberVoiceChannel.name} → ${ownerVoiceChannel.name}`,
                         inline: true
                     },
                     {
@@ -561,9 +575,9 @@ async function checkAndJoinOwnerVoiceChannel(interaction, lfgPost, newUserId) {
     } catch (error) {
         console.error('❌ Fehler beim Auto Voice Join:', error);
         
-        // Sende Fehler-Nachricht an neuen Spieler
+        // Sende Fehler-Nachricht an neuen Spieler mit mehr Details
         await interaction.followUp({
-            content: `🎤 **Voice Channel Info**\n\nDer Team Owner ist in einem Voice Channel, aber ich konnte dich nicht automatisch verschieben.\n\n*Nutze den Voice Channel Button oder tritt manuell bei.*\n\n**Fehler:** ${error.message}`,
+            content: `🎤 **Voice Channel Info**\n\nDer Team Owner ist in einem Voice Channel, aber automatisches Verschieben ist fehlgeschlagen.\n\n**Grund:** ${error.code === 40032 ? 'Du musst zuerst einem beliebigen Voice Channel beitreten' : error.message}\n\n*Tritt erst einem Voice Channel bei, dann kann ich dich automatisch verschieben.*`,
             ephemeral: true
         }).catch(() => {
             console.log('Konnte Fehler-Nachricht nicht senden');
