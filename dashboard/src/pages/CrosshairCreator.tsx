@@ -92,24 +92,18 @@ const generateValorantCrosshairCode = (settings: CrosshairSettings): string => {
     code += `;0t;${innerThickness}`;
     code += ";0m;0;0f;0"; // Movement + Fade immer 0
     
-    // OUTER LINES (1x) - NOW PROPERLY IMPLEMENTED with real Valorant parameters
-    const outerLinesOpacity = settings.outerLinesShow ? settings.outerLinesOpacity : 0;
-    const outerLinesHorizontalLength = settings.outerLinesShow ? settings.outerLinesHorizontalLength : 0;
-    const outerLinesVerticalLength = settings.outerLinesShow ? settings.outerLinesVerticalLength : 0;
-    const outerLinesThickness = settings.outerLinesShow ? settings.outerLinesThickness : 0;
-    const outerLinesOffset = settings.outerLinesShow ? settings.outerLinesOffset : 0;
+    // OUTER LINES (1x) - TEMPORARILY DISABLED (Coming Soon)
+    // TODO: Fix outer lines parameter compatibility
+    const outerLength = 0; // Temporarily disabled
+    const outerOffset = 0;
+    const outerAlpha = 0;
+    const outerThickness = 0;
     
-    code += `;1b;${settings.outerLinesShow ? 1 : 0}`; // showOuterLines
-    code += `;1a;${outerLinesOpacity.toFixed(3)}`; // outerLineOpacity (0-1, 3 decimals)
-    code += `;1l;${outerLinesHorizontalLength}`; // horizontalOuterLineLength (0-20)
-    code += `;1v;${outerLinesVerticalLength}`; // verticalOuterLinesLength (0-20)
-    code += `;1g;${settings.outerLinesIndependent ? 1 : 0}`; // independantOuterLineLength
-    code += `;1t;${outerLinesThickness}`; // outerLineThickness (0-10)
-    code += `;1o;${outerLinesOffset}`; // outerLineOffset (0-20)
-    code += `;1m;${settings.outerLinesMovementError ? 1 : 0}`; // toggleMovementError
-    code += `;1s;${settings.outerLinesMovementMultiplier.toFixed(3)}`; // movementErrorMultiplier (0-3, 3 decimals)
-    code += `;1f;${settings.outerLinesFiringError ? 1 : 0}`; // firingError
-    code += `;1e;${settings.outerLinesFiringMultiplier.toFixed(3)}`; // firingErrorMultiplier (0-3, 3 decimals)
+    code += `;1l;${outerLength}`;
+    code += `;1o;${outerOffset}`;
+    code += `;1a;${outerAlpha}`;
+    code += `;1t;${outerThickness}`;
+    code += ";1m;0;1f;0"; // Movement + Fade immer 0
     
     // Standard end
     code += ";1b;0";
@@ -128,16 +122,10 @@ interface CrosshairSettings {
   centerDotThickness: number;
   centerDotOpacity: number;
   outerLinesShow: boolean;
-  outerLinesOpacity: number; // 1a (0-1, 3 decimals)
-  outerLinesHorizontalLength: number; // 1l (0-20)
-  outerLinesVerticalLength: number; // 1v (0-20)
-  outerLinesIndependent: boolean; // 1g (0,1)
-  outerLinesThickness: number; // 1t (0-10)
-  outerLinesOffset: number; // 1o (0-20)
-  outerLinesMovementError: boolean; // 1m (0,1)
-  outerLinesMovementMultiplier: number; // 1s (0-3, 3 decimals)
-  outerLinesFiringError: boolean; // 1f (0,1)
-  outerLinesFiringMultiplier: number; // 1e (0-3, 3 decimals)
+  outerLinesLength: number;
+  outerLinesThickness: number;
+  outerLinesOffset: number;
+  outerLinesOpacity: number;
   innerLinesShow: boolean;
   innerLinesLength: number;
   innerLinesThickness: number;
@@ -167,17 +155,11 @@ const CrosshairCreator = () => {
     centerDotShow: true,
     centerDotThickness: 2,
     centerDotOpacity: 255,
-    outerLinesShow: true, // NOW ENABLED with real parameters
-    outerLinesOpacity: 0.8, // 1a default
-    outerLinesHorizontalLength: 6, // 1l default
-    outerLinesVerticalLength: 6, // 1v default
-    outerLinesIndependent: false, // 1g default
-    outerLinesThickness: 2, // 1t default
-    outerLinesOffset: 3, // 1o default
-    outerLinesMovementError: false, // 1m default
-    outerLinesMovementMultiplier: 1.0, // 1s default
-    outerLinesFiringError: true, // 1f default
-    outerLinesFiringMultiplier: 1.0, // 1e default
+    outerLinesShow: false, // Disabled - Coming Soon
+    outerLinesLength: 0,
+    outerLinesThickness: 0,
+    outerLinesOffset: 0,
+    outerLinesOpacity: 255,
     innerLinesShow: true, // Enable Inner Lines instead
     innerLinesLength: 4,
     innerLinesThickness: 2,
@@ -209,7 +191,7 @@ const CrosshairCreator = () => {
     });
   };
 
-  // Random Crosshair Generator - NOW WITH FULL OUTER LINES SUPPORT
+  // Random Crosshair Generator
   const generateRandomCrosshair = (mode: 'pro' | 'fun' = 'pro') => {
     const getRandomColor = () => {
       const colors = ['#FF4656', '#00D4AA', '#FFBC40', '#B19CD9', '#FE8C8A', '#50FA7B', '#FF79C6', '#8BE9FD', '#F1FA8C', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF'];
@@ -217,27 +199,20 @@ const CrosshairCreator = () => {
     };
 
     if (mode === 'pro') {
-      // VCRDB-basierte realistische Pro-Range Zufallswerte mit vollständigen Outer Lines
+      // VCRDB-basierte realistische Pro-Range Zufallswerte
       const centerDotShow = Math.random() > 0.4; // 60% haben Center Dot
-      const outerLinesShow = Math.random() > 0.3; // 70% haben jetzt Outer Lines - VOLLSTÄNDIG
-      const innerLinesShow = Math.random() > 0.5; // 50% haben Inner Lines
+      const outerLinesShow = false; // Temporarily disabled - Coming Soon
+      const innerLinesShow = Math.random() > 0.5; // 50% haben Inner Lines (mehr wegen Outer Lines disabled)
       const outlineShow = Math.random() > 0.7; // 30% outline
       
       // VCRDB Pro-Ranges (basierend auf echten Valorant Parameter)
       const centerDotThickness = centerDotShow ? Math.floor(Math.random() * 6) + 1 : 0; // 1-6 (VCRDB)
       const centerDotOpacity = centerDotShow ? Math.floor((Math.random() * 0.5 + 0.5) * 255) : 255; // 0.5-1.0 alpha
       
-      // VOLLSTÄNDIGE OUTER LINES PARAMETER
-      const outerLinesOpacity = parseFloat((Math.random() * 0.6 + 0.4).toFixed(3)); // 0.4-1.0 (3 decimals)
-      const outerLinesHorizontalLength = Math.floor(Math.random() * 15) + 2; // 2-16 (min 2 für Sichtbarkeit)
-      const outerLinesVerticalLength = Math.floor(Math.random() * 15) + 2; // 2-16 (min 2 für Sichtbarkeit)
-      const outerLinesIndependent = Math.random() > 0.7; // 30% independent
-      const outerLinesThickness = Math.floor(Math.random() * 8) + 1; // 1-8 (0-10 aber praktischer)
-      const outerLinesOffset = Math.floor(Math.random() * 15) + 1; // 1-15 (min 1 für Abstand)
-      const outerLinesMovementError = Math.random() > 0.6; // 40% movement error
-      const outerLinesMovementMultiplier = parseFloat((Math.random() * 2 + 0.5).toFixed(3)); // 0.5-2.5
-      const outerLinesFiringError = Math.random() > 0.4; // 60% firing error
-      const outerLinesFiringMultiplier = parseFloat((Math.random() * 2 + 0.5).toFixed(3)); // 0.5-2.5
+      const outerLinesLength = Math.floor(Math.random() * 10) + 1; // 1-10 (VCRDB, min 1 für Sichtbarkeit)
+      const outerLinesThickness = Math.floor(Math.random() * 10) + 1; // 1-10 (VCRDB, min 1 für Sichtbarkeit)
+      const outerLinesOffset = Math.floor(Math.random() * 41); // 0-40 (VCRDB 1:1)
+      const outerLinesOpacity = Math.floor((Math.random() * 0.6 + 0.4) * 255); // 0.4-1.0 alpha
       
       const innerLinesLength = Math.floor(Math.random() * 16) + 2; // 2-17 (0-20 aber min 2)
       const innerLinesThickness = Math.floor(Math.random() * 6) + 1; // 1-6 (0-10 aber praktischer)
@@ -248,13 +223,9 @@ const CrosshairCreator = () => {
       const outlineThickness = Math.floor(Math.random() * 6) + 1; // 1-6 (VCRDB)
       const outlineOpacity = Math.floor((Math.random() * 0.4 + 0.3) * 255); // 0.3-0.7 alpha
       
-      // Beschreibung des generierten Typs - jetzt mit Outer Lines
+      // Beschreibung des generierten Typs (Outer Lines disabled)
       let crosshairType = '';
-      if (outerLinesShow && centerDotShow && innerLinesShow) crosshairType = 'Full Featured Pro';
-      else if (outerLinesShow && !centerDotShow && !innerLinesShow) crosshairType = 'Outer Lines Only';
-      else if (outerLinesShow && centerDotShow) crosshairType = 'Outer + Dot Hybrid';
-      else if (outerLinesShow && innerLinesShow) crosshairType = 'Outer + Inner Lines';
-      else if (centerDotShow && !innerLinesShow) crosshairType = 'Center Dot';
+      if (centerDotShow && !innerLinesShow) crosshairType = 'Center Dot';
       else if (!centerDotShow && innerLinesShow) crosshairType = 'Inner Lines';
       else if (centerDotShow && innerLinesShow) crosshairType = 'Hybrid Dot+Inner';
       else crosshairType = 'Minimal';
@@ -267,16 +238,10 @@ const CrosshairCreator = () => {
         centerDotThickness,
         centerDotOpacity,
         outerLinesShow,
-        outerLinesOpacity,
-        outerLinesHorizontalLength,
-        outerLinesVerticalLength,
-        outerLinesIndependent,
+        outerLinesLength,
         outerLinesThickness,
         outerLinesOffset,
-        outerLinesMovementError,
-        outerLinesMovementMultiplier,
-        outerLinesFiringError,
-        outerLinesFiringMultiplier,
+        outerLinesOpacity,
         innerLinesShow,
         innerLinesLength,
         innerLinesThickness,
@@ -293,8 +258,8 @@ const CrosshairCreator = () => {
       showNotification(`🏆 ${crosshairType} Pro Style generiert!`);
       
     } else {
-      // Fun Mode - Ausgewogener aber trotzdem kreativ - jetzt mit Outer Lines
-      const creativeModes = ['Neon', 'Retro', 'Minimal', 'Thick', 'Dotty', 'Lines', 'OuterLines', 'FullPower'];
+      // Fun Mode - Ausgewogener aber trotzdem kreativ
+      const creativeModes = ['Neon', 'Retro', 'Minimal', 'Thick', 'Dotty', 'Lines', 'Glow'];
       const selectedMode = creativeModes[Math.floor(Math.random() * creativeModes.length)];
       
       let funConfig;
@@ -304,11 +269,10 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 4) + 3, // 3-6 (VCRDB max)
-            outerLinesShow: true, // Neon hat leuchtende Outer Lines
-            outerLinesOpacity: parseFloat((Math.random() * 0.4 + 0.6).toFixed(3)), // 0.6-1.0 (hell)
-            outerLinesHorizontalLength: Math.floor(Math.random() * 8) + 4, // 4-11
-            outerLinesVerticalLength: Math.floor(Math.random() * 8) + 4, // 4-11
-            outerLinesFiringError: true, // Neon hat Firing Effects
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
             innerLinesShow: true, // Focus on Inner Lines
             innerLinesLength: Math.floor(Math.random() * 10) + 6, // 6-15 (VCRDB)
             color: getRandomColor()
@@ -318,8 +282,10 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: Math.random() > 0.5,
             centerDotThickness: Math.floor(Math.random() * 3) + 1, // 1-3
-            outerLinesShow: Math.random() > 0.6, // Sometimes Outer Lines
-            outerLinesOpacity: parseFloat((Math.random() * 0.4 + 0.4).toFixed(3)), // 0.4-0.8
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
             innerLinesShow: Math.random() > 0.3, // More Inner Lines usage
             color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FECA57'][Math.floor(Math.random() * 4)]
           };
@@ -328,7 +294,10 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 2) + 1, // 1-2
-            outerLinesShow: false, // Minimal hat keine Outer Lines
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
             innerLinesShow: Math.random() > 0.6, // Sometimes Inner Lines
             color: getRandomColor()
           };
@@ -337,9 +306,10 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: Math.random() > 0.4,
             centerDotThickness: Math.floor(Math.random() * 3) + 4, // 4-6 (VCRDB max)
-            outerLinesShow: true, // Thick hat dicke Outer Lines
-            outerLinesThickness: Math.floor(Math.random() * 5) + 5, // 5-9 (dick)
-            outerLinesOpacity: parseFloat((Math.random() * 0.3 + 0.7).toFixed(3)), // 0.7-1.0
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
             innerLinesShow: true, // Focus on thick Inner Lines
             color: getRandomColor()
           };
@@ -348,36 +318,11 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: true,
             centerDotThickness: Math.floor(Math.random() * 3) + 4, // 4-6 (VCRDB max)
-            outerLinesShow: false, // Focus nur auf center dot
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
             innerLinesShow: false, // Focus on center dot only
-            color: getRandomColor()
-          };
-          break;
-        case 'OuterLines':
-          funConfig = {
-            centerDotShow: false,
-            outerLinesShow: true, // Nur Outer Lines
-            outerLinesOpacity: parseFloat((Math.random() * 0.6 + 0.4).toFixed(3)), // 0.4-1.0
-            outerLinesHorizontalLength: Math.floor(Math.random() * 12) + 6, // 6-17
-            outerLinesVerticalLength: Math.floor(Math.random() * 12) + 6, // 6-17
-            outerLinesThickness: Math.floor(Math.random() * 6) + 2, // 2-7
-            outerLinesMovementError: true,
-            outerLinesFiringError: true,
-            innerLinesShow: false,
-            color: getRandomColor()
-          };
-          break;
-        case 'FullPower':
-          funConfig = {
-            centerDotShow: true,
-            centerDotThickness: Math.floor(Math.random() * 4) + 3, // 3-6
-            outerLinesShow: true, // Alles an
-            outerLinesOpacity: parseFloat((Math.random() * 0.5 + 0.5).toFixed(3)), // 0.5-1.0
-            outerLinesHorizontalLength: Math.floor(Math.random() * 10) + 5, // 5-14
-            outerLinesVerticalLength: Math.floor(Math.random() * 10) + 5, // 5-14
-            outerLinesMovementError: true,
-            outerLinesFiringError: true,
-            innerLinesShow: true,
             color: getRandomColor()
           };
           break;
@@ -385,38 +330,15 @@ const CrosshairCreator = () => {
           funConfig = {
             centerDotShow: Math.random() > 0.4,
             centerDotThickness: Math.floor(Math.random() * 6) + 1, // 1-6 (VCRDB full range)
-            outerLinesShow: Math.random() > 0.5, // 50% Outer Lines
-            outerLinesOpacity: parseFloat((Math.random() * 0.6 + 0.4).toFixed(3)), // 0.4-1.0
+            outerLinesShow: false, // Disabled - Coming Soon
+            outerLinesLength: 0,
+            outerLinesThickness: 0,
+            outerLinesOffset: 0,
             innerLinesShow: Math.random() > 0.3, // More Inner Lines
             innerLinesLength: Math.floor(Math.random() * 18) + 2, // 2-20 (VCRDB)
             color: getRandomColor()
           };
       }
-      
-      // Generiere vollständige Settings mit allen Outer Lines Parametern
-      const outerLinesSettings = funConfig.outerLinesShow ? {
-        outerLinesOpacity: funConfig.outerLinesOpacity || parseFloat((Math.random() * 0.6 + 0.4).toFixed(3)),
-        outerLinesHorizontalLength: funConfig.outerLinesHorizontalLength || Math.floor(Math.random() * 12) + 3,
-        outerLinesVerticalLength: funConfig.outerLinesVerticalLength || Math.floor(Math.random() * 12) + 3,
-        outerLinesIndependent: Math.random() > 0.7,
-        outerLinesThickness: funConfig.outerLinesThickness || Math.floor(Math.random() * 6) + 1,
-        outerLinesOffset: Math.floor(Math.random() * 12) + 1,
-        outerLinesMovementError: funConfig.outerLinesMovementError || Math.random() > 0.5,
-        outerLinesMovementMultiplier: parseFloat((Math.random() * 2 + 0.5).toFixed(3)),
-        outerLinesFiringError: funConfig.outerLinesFiringError || Math.random() > 0.4,
-        outerLinesFiringMultiplier: parseFloat((Math.random() * 2 + 0.5).toFixed(3))
-      } : {
-        outerLinesOpacity: 0.5,
-        outerLinesHorizontalLength: 0,
-        outerLinesVerticalLength: 0,
-        outerLinesIndependent: false,
-        outerLinesThickness: 0,
-        outerLinesOffset: 0,
-        outerLinesMovementError: false,
-        outerLinesMovementMultiplier: 1.0,
-        outerLinesFiringError: false,
-        outerLinesFiringMultiplier: 1.0
-      };
       
       setSettings(prev => ({
         ...prev,
@@ -425,8 +347,11 @@ const CrosshairCreator = () => {
         centerDotShow: funConfig.centerDotShow,
         centerDotThickness: funConfig.centerDotThickness,
         centerDotOpacity: Math.floor((Math.random() * 0.5 + 0.5) * 255), // 0.5-1.0 alpha (sichtbar)
-        outerLinesShow: funConfig.outerLinesShow || false,
-        ...outerLinesSettings,
+        outerLinesShow: funConfig.outerLinesShow,
+        outerLinesLength: funConfig.outerLinesLength,
+        outerLinesThickness: funConfig.outerLinesThickness,
+        outerLinesOffset: funConfig.outerLinesOffset,
+        outerLinesOpacity: Math.floor((Math.random() * 0.6 + 0.4) * 255), // 0.4-1.0 alpha
         innerLinesShow: funConfig.innerLinesShow || false,
         innerLinesLength: funConfig.innerLinesLength || Math.floor(Math.random() * 12) + 3, // 3-14 (VCRDB range)
         innerLinesThickness: Math.floor(Math.random() * 6) + 1, // 1-6 (VCRDB)
@@ -975,54 +900,8 @@ const CrosshairCreator = () => {
 
                         {/* CSS Fallback Preview */}
                         <div className="relative w-32 h-32 z-10">
-                          {/* Outer Lines - VOLLSTÄNDIG IMPLEMENTIERT */}
-                          {settings.outerLinesShow && (
-                            <>
-                              {/* Horizontal Outer Lines */}
-                              <div 
-                                className="absolute top-1/2 transform -translate-y-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesHorizontalLength * 3}px`,
-                                  height: `${settings.outerLinesThickness}px`,
-                                  left: `${64 + settings.outerLinesOffset * 3}px`,
-                                  opacity: settings.outerLinesOpacity
-                                }}
-                              />
-                              <div 
-                                className="absolute top-1/2 transform -translate-y-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesHorizontalLength * 3}px`,
-                                  height: `${settings.outerLinesThickness}px`,
-                                  right: `${64 + settings.outerLinesOffset * 3}px`,
-                                  opacity: settings.outerLinesOpacity
-                                }}
-                              />
-                              
-                              {/* Vertical Outer Lines */}
-                              <div 
-                                className="absolute left-1/2 transform -translate-x-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesThickness}px`,
-                                  height: `${settings.outerLinesVerticalLength * 3}px`,
-                                  top: `${64 + settings.outerLinesOffset * 3}px`,
-                                  opacity: settings.outerLinesOpacity
-                                }}
-                              />
-                              <div 
-                                className="absolute left-1/2 transform -translate-x-1/2"
-                                style={{
-                                  backgroundColor: getColorValue(settings.primaryColor),
-                                  width: `${settings.outerLinesThickness}px`,
-                                  height: `${settings.outerLinesVerticalLength * 3}px`,
-                                  bottom: `${64 + settings.outerLinesOffset * 3}px`,
-                                  opacity: settings.outerLinesOpacity
-                                }}
-                              />
-                            </>
-                          )}
+                          {/* Outer Lines - DISABLED (Coming Soon) */}
+                          {/* TODO: Re-enable when parameter compatibility is fixed */}
 
                           {/* Inner Lines */}
                           {settings.innerLinesShow && (
@@ -1159,181 +1038,95 @@ const CrosshairCreator = () => {
                 )}
               </div>
 
-              {/* Outer Lines - NOW FULLY FUNCTIONAL */}
-              <div className="lg:col-span-2 p-4 bg-orange-600/10 border border-orange-500/20 rounded-lg hover:bg-orange-600/20 hover:border-orange-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 animate-fade-in" style={{ animationDelay: '1000ms' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="outerLinesShow"
-                      checked={settings.outerLinesShow}
-                      onCheckedChange={(checked) => updateSetting('outerLinesShow', checked)}
-                    />
-                    <label htmlFor="outerLinesShow" className="text-orange-200 font-medium">
-                      Äußere Linien
-                    </label>
-                  </div>
-                  <div className="bg-green-500/20 border border-green-400/30 px-3 py-1 rounded-full">
-                    <span className="text-green-300 text-xs font-medium">✅ Vollständig</span>
-                  </div>
+              {/* Outer Lines - COMING SOON */}
+                  <div className="p-4 bg-gray-600/10 border border-gray-500/20 rounded-lg opacity-60 animate-fade-in" style={{ animationDelay: '1000ms' }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 bg-gray-400 rounded opacity-30"></div>
+                        <label className="text-gray-400 font-medium">
+                          Äußere Linien
+                        </label>
+                      </div>
+                      <div className="bg-orange-500/20 border border-orange-400/30 px-3 py-1 rounded-full">
+                        <span className="text-orange-300 text-xs font-medium">🚧 Coming Soon</span>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center py-6">
+                      <div className="text-gray-400 text-sm mb-2">⚠️ Äußere Linien werden aktuell überarbeitet</div>
+                      <div className="text-gray-500 text-xs">Parameter-Kompatibilität wird optimiert...</div>
+                    </div>
+              </div>
+
+              {/* Inner Lines */}
+                  <div className="lg:col-span-2 p-4 bg-cyan-600/10 border border-cyan-500/20 rounded-lg hover:bg-cyan-600/20 hover:border-cyan-400/40 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 animate-fade-in" style={{ animationDelay: '1100ms' }}>
+                    <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="innerLinesShow"
+                    checked={settings.innerLinesShow}
+                    onCheckedChange={(checked) => updateSetting('innerLinesShow', checked)}
+                  />
+                      <label htmlFor="innerLinesShow" className="text-cyan-200 font-medium">
+                        Innere Linien
+                  </label>
                 </div>
 
-                {settings.outerLinesShow && (
-                  <div className="space-y-4">
-                    {/* Grundeinstellungen */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div>
-                        <label className="block text-orange-200 text-sm mb-2">
-                          Horizontal: {settings.outerLinesHorizontalLength}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="20"
-                          value={settings.outerLinesHorizontalLength}
-                          onChange={(e) => updateSetting('outerLinesHorizontalLength', parseInt(e.target.value))}
-                          className="w-full h-2 bg-orange-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-orange-200 text-sm mb-2">
-                          Vertikal: {settings.outerLinesVerticalLength}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="20"
-                          value={settings.outerLinesVerticalLength}
-                          onChange={(e) => updateSetting('outerLinesVerticalLength', parseInt(e.target.value))}
-                          className="w-full h-2 bg-orange-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-orange-200 text-sm mb-2">
-                          Dicke: {settings.outerLinesThickness}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="10"
-                          value={settings.outerLinesThickness}
-                          onChange={(e) => updateSetting('outerLinesThickness', parseInt(e.target.value))}
-                          className="w-full h-2 bg-orange-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-orange-200 text-sm mb-2">
-                          Abstand: {settings.outerLinesOffset}
-                        </label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="20"
-                          value={settings.outerLinesOffset}
-                          onChange={(e) => updateSetting('outerLinesOffset', parseInt(e.target.value))}
-                          className="w-full h-2 bg-orange-800 rounded-lg appearance-none cursor-pointer slider"
-                        />
-                      </div>
+                {settings.innerLinesShow && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Länge: {settings.innerLinesLength}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="15"
+                        value={settings.innerLinesLength}
+                        onChange={(e) => updateSetting('innerLinesLength', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
 
-                    {/* Erweiterte Einstellungen */}
-                    <div className="p-3 bg-orange-900/20 border border-orange-500/30 rounded-lg">
-                      <h4 className="text-orange-300 font-medium mb-3">🔧 Erweiterte Einstellungen</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-orange-200 text-sm mb-2">
-                            Transparenz: {(settings.outerLinesOpacity * 100).toFixed(0)}%
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.001"
-                            value={settings.outerLinesOpacity}
-                            onChange={(e) => updateSetting('outerLinesOpacity', parseFloat(e.target.value))}
-                            className="w-full h-2 bg-orange-800 rounded-lg appearance-none cursor-pointer slider"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="outerLinesIndependent"
-                              checked={settings.outerLinesIndependent}
-                              onCheckedChange={(checked) => updateSetting('outerLinesIndependent', checked)}
-                            />
-                            <label htmlFor="outerLinesIndependent" className="text-orange-200 text-sm">
-                              Unabhängige Längen
-                            </label>
-                          </div>
-                        </div>
-                      </div>
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Dicke: {settings.innerLinesThickness}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="8"
+                        value={settings.innerLinesThickness}
+                        onChange={(e) => updateSetting('innerLinesThickness', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
 
-                    {/* Movement & Firing Error */}
-                    <div className="p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
-                      <h4 className="text-red-300 font-medium mb-3">⚡ Bewegungs- & Schießfehler</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Checkbox
-                              id="outerLinesMovementError"
-                              checked={settings.outerLinesMovementError}
-                              onCheckedChange={(checked) => updateSetting('outerLinesMovementError', checked)}
-                            />
-                            <label htmlFor="outerLinesMovementError" className="text-red-200 text-sm">
-                              Bewegungsfehler
-                            </label>
-                          </div>
-                          {settings.outerLinesMovementError && (
-                            <div>
-                              <label className="block text-red-200 text-sm mb-2">
-                                Multiplikator: {settings.outerLinesMovementMultiplier.toFixed(3)}
-                              </label>
-                              <input
-                                type="range"
-                                min="0"
-                                max="3"
-                                step="0.001"
-                                value={settings.outerLinesMovementMultiplier}
-                                onChange={(e) => updateSetting('outerLinesMovementMultiplier', parseFloat(e.target.value))}
-                                className="w-full h-2 bg-red-800 rounded-lg appearance-none cursor-pointer slider"
-                              />
-                            </div>
-                          )}
-                        </div>
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Abstand: {settings.innerLinesOffset}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
+                        value={settings.innerLinesOffset}
+                        onChange={(e) => updateSetting('innerLinesOffset', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
+                    </div>
 
-                        <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <Checkbox
-                              id="outerLinesFiringError"
-                              checked={settings.outerLinesFiringError}
-                              onCheckedChange={(checked) => updateSetting('outerLinesFiringError', checked)}
-                            />
-                            <label htmlFor="outerLinesFiringError" className="text-red-200 text-sm">
-                              Schießfehler
-                            </label>
-                          </div>
-                          {settings.outerLinesFiringError && (
-                            <div>
-                              <label className="block text-red-200 text-sm mb-2">
-                                Multiplikator: {settings.outerLinesFiringMultiplier.toFixed(3)}
-                              </label>
-                              <input
-                                type="range"
-                                min="0"
-                                max="3"
-                                step="0.001"
-                                value={settings.outerLinesFiringMultiplier}
-                                onChange={(e) => updateSetting('outerLinesFiringMultiplier', parseFloat(e.target.value))}
-                                className="w-full h-2 bg-red-800 rounded-lg appearance-none cursor-pointer slider"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    <div>
+                          <label className="block text-cyan-200 text-sm mb-2">
+                        Transparenz: {settings.innerLinesOpacity}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={settings.innerLinesOpacity}
+                        onChange={(e) => updateSetting('innerLinesOpacity', parseInt(e.target.value))}
+                            className="w-full h-2 bg-cyan-800 rounded-lg appearance-none cursor-pointer slider"
+                      />
                     </div>
                   </div>
                 )}
@@ -1521,17 +1314,11 @@ const CrosshairCreator = () => {
                   centerDotShow: true,
                   centerDotThickness: 2,
                   centerDotOpacity: 255,
-                  outerLinesShow: true, // NOW ENABLED with real parameters
-                  outerLinesOpacity: 0.8, // 1a default
-                  outerLinesHorizontalLength: 6, // 1l default
-                  outerLinesVerticalLength: 6, // 1v default
-                  outerLinesIndependent: false, // 1g default
-                  outerLinesThickness: 2, // 1t default
-                  outerLinesOffset: 3, // 1o default
-                  outerLinesMovementError: false, // 1m default
-                  outerLinesMovementMultiplier: 1.0, // 1s default
-                  outerLinesFiringError: true, // 1f default
-                  outerLinesFiringMultiplier: 1.0, // 1e default
+                  outerLinesShow: false, // Disabled - Coming Soon
+                  outerLinesLength: 0,
+                  outerLinesThickness: 0,
+                  outerLinesOffset: 0,
+                  outerLinesOpacity: 255,
                   innerLinesShow: true, // Enable Inner Lines instead
                   innerLinesLength: 4,
                   innerLinesThickness: 2,
