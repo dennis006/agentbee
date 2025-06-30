@@ -6,13 +6,17 @@ const { createClient } = require('@supabase/supabase-js');
 function setupCrosshairProxyAPI(app) {
     console.log('🎯 Setting up Crosshair Proxy API with Discord Sharing...');
 
-    // Initialize Supabase Client
+    // Initialize Supabase Client - Use same keys as other systems
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY; // Changed to ANON_KEY like other systems
     const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
     if (!supabase) {
         console.warn('⚠️ Supabase not configured. Crosshair sharing features will be disabled.');
+        console.warn(`   SUPABASE_URL: ${supabaseUrl ? '✅ gesetzt' : '❌ nicht gesetzt'}`);
+        console.warn(`   SUPABASE_ANON_KEY: ${supabaseKey ? '✅ gesetzt' : '❌ nicht gesetzt'}`);
+    } else {
+        console.log('✅ Supabase client initialized for Crosshair system');
     }
 
     // CORS für Netlify
