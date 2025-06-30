@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS crosshair_settings (
     guild_name VARCHAR(255) NOT NULL,
     crosshair_channel_id VARCHAR(255), -- Channel for posting crosshairs
     crosshair_channel_name VARCHAR(255),
+    -- Interactive Panel Settings (like Verify system)
+    panel_enabled BOOLEAN DEFAULT FALSE, -- Enable Interactive Panel
+    panel_channel_id VARCHAR(255), -- Channel for the interactive panel
+    panel_channel_name VARCHAR(255), -- Human-readable panel channel name
+    panel_message_id VARCHAR(255), -- Discord message ID of panel (for updates)
+    panel_embed_color VARCHAR(7) DEFAULT '#00D4AA', -- Panel embed color
     auto_post_enabled BOOLEAN DEFAULT TRUE, -- Auto-post new crosshairs
     voting_enabled BOOLEAN DEFAULT TRUE, -- Enable voting
     require_approval BOOLEAN DEFAULT FALSE, -- Moderation required
@@ -82,6 +88,9 @@ CREATE INDEX IF NOT EXISTS idx_crosshair_shares_featured ON crosshair_shares(is_
 CREATE INDEX IF NOT EXISTS idx_crosshair_votes_crosshair_id ON crosshair_votes(crosshair_id);
 CREATE INDEX IF NOT EXISTS idx_crosshair_votes_user_id ON crosshair_votes(user_id);
 CREATE INDEX IF NOT EXISTS idx_crosshair_copies_crosshair_id ON crosshair_copies(crosshair_id);
+-- Interactive Panel indexes
+CREATE INDEX IF NOT EXISTS idx_crosshair_settings_panel_enabled ON crosshair_settings(panel_enabled);
+CREATE INDEX IF NOT EXISTS idx_crosshair_settings_panel_message_id ON crosshair_settings(panel_message_id);
 
 -- Function to update vote counts automatically
 CREATE OR REPLACE FUNCTION update_crosshair_vote_counts()
