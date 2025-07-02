@@ -714,13 +714,13 @@ const Valorant: React.FC = () => {
         enabled: newEnabled 
       });
       
-      if (response.data.success) {
+      if (response.success) {
         showMessage('success', newEnabled ? 'Valorant-System aktiviert!' : 'Valorant-System deaktiviert!');
         await loadData(); // Daten neu laden um Supabase-State zu synchronisieren
       } else {
         // Rollback bei Fehler
         setSettings(prev => ({ ...prev, enabled: !newEnabled }));
-        showMessage('error', response.data.error || 'Fehler beim Umschalten des Systems');
+        showMessage('error', response.error || 'Fehler beim Umschalten des Systems');
       }
     } catch (error) {
       console.error('❌ Fehler beim Umschalten:', error);
