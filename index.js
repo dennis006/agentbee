@@ -878,6 +878,18 @@ async function handleValorantModalSubmission(interaction) {
             }
         };
 
+        // Debug: Prüfe last_change Wert
+        console.log('🔍 Last Change Debug:', {
+            lastChangeRaw: playerData.current.last_change,
+            lastChangeType: typeof playerData.current.last_change,
+            currentRR: playerData.current.rr
+        });
+
+        // Sichere last_change Berechnung mit Fallback
+        const lastChangeValue = playerData.current.last_change !== undefined && playerData.current.last_change !== null 
+            ? playerData.current.last_change 
+            : 0;
+        
         // Template-Variablen für Ersetzung vorbereiten
         const templateVars = {
             playerName: playerData.account.name,
@@ -888,8 +900,9 @@ async function handleValorantModalSubmission(interaction) {
             currentRR: playerData.current.rr,
             peakRankName: peakTier.name,
             peakSeason: playerData.peak.season.short,
-            lastChange: Math.abs(playerData.current.last_change),
-            lastChangePrefix: playerData.current.last_change > 0 ? '+' : (playerData.current.last_change < 0 ? '-' : ''),
+            lastChange: Math.abs(lastChangeValue),
+            lastChangePrefix: lastChangeValue > 0 ? '+' : (lastChangeValue < 0 ? '-' : ''),
+            lastChangeStatus: lastChangeValue === 0 ? '\n*Keine Änderung seit letztem Match*' : '',
             remainingRequests: valorantRateLimit.getRemaining(),
             timestamp: new Date().toLocaleString('de-DE')
         };

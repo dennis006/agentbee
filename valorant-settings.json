@@ -39,8 +39,8 @@
       },
       "lastChange": {
         "enabled": true,
-        "name": "📊 Letzte Änderung",
-        "value": "{lastChangePrefix}{lastChange} RR",
+        "name": "📊 Letzte Änderung", 
+        "value": "{lastChangePrefix}{lastChange} RR{lastChangeStatus}",
         "inline": true
       },
       "leaderboard": {
