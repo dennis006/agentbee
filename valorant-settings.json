@@ -11,5 +11,86 @@
     "mode": "embed",
     "embedEnabled": true,
     "cardEnabled": false
+  },
+  "playerStatsEmbed": {
+    "title": "🎯 {playerName}#{playerTag}",
+    "description": "**Region:** {region} • **Plattform:** PC{level}",
+    "color": "dynamic",
+    "footer": "🔥 Powered by Agentbee • Verbleibende Requests: {remainingRequests}/30 • {timestamp}",
+    "thumbnail": "valorant",
+    "customThumbnail": "",
+    "author": {
+      "enabled": false,
+      "name": "",
+      "iconUrl": ""
+    },
+    "fields": {
+      "currentRank": {
+        "enabled": true,
+        "name": "🏆 Aktueller Rang",
+        "value": "**{currentRankName}**\n{currentRR} RR",
+        "inline": true
+      },
+      "peakRank": {
+        "enabled": true,
+        "name": "⭐ Peak Rang",
+        "value": "**{peakRankName}**\nSeason {peakSeason}",
+        "inline": true
+      },
+      "lastChange": {
+        "enabled": true,
+        "name": "📊 Letzte Änderung",
+        "value": "{lastChangePrefix}{lastChange} RR",
+        "inline": true
+      },
+      "leaderboard": {
+        "enabled": true,
+        "name": "🏅 Leaderboard",
+        "value": "**Position:** #{leaderboardPosition}\n*Regional Ranking*",
+        "inline": true
+      },
+      "matchStats": {
+        "enabled": true,
+        "name": "📈 Match-Statistiken",
+        "value": "**Matches:** {totalMatches}\n**Siege:** {wins} ({winRate}%)\n**Niederlagen:** {losses}",
+        "inline": true
+      },
+      "kda": {
+        "enabled": true,
+        "name": "⚔️ K/D/A Ratio",
+        "value": "**K/D:** {kd}\n**Kills:** {kills}\n**Deaths:** {deaths}\n**Assists:** {assists}",
+        "inline": true
+      },
+      "precision": {
+        "enabled": true,
+        "name": "🎯 Präzision",
+        "value": "**Headshot-Rate:** {headshotRate}%\n**Headshots:** {headshots}\n**Bodyshots:** {bodyshots}\n**Legshots:** {legshots}",
+        "inline": true
+      },
+      "damage": {
+        "enabled": true,
+        "name": "💥 Schaden",
+        "value": "**ADR:** {adr}\n**Total Damage:** {totalDamage}\n**Ø Score:** {averageScore}",
+        "inline": true
+      },
+      "seasonStats": {
+        "enabled": true,
+        "name": "🏆 Season Übersicht",
+        "value": "**Season Wins:** {seasonWins}\n**Season Games:** {seasonGames}\n**Season Win-Rate:** {seasonWinRate}%",
+        "inline": true
+      },
+      "agentStats": {
+        "enabled": true,
+        "name": "🎭 Agent-Statistiken",
+        "value": "**Lieblings-Agent:** Wird geladen...\n**Agent Win-Rate:** N/A\n**Agent K/D:** N/A",
+        "inline": true
+      },
+      "performance": {
+        "enabled": true,
+        "name": "⚡ Performance",
+        "value": "**MVP Rate:** N/A\n**Team MVP:** N/A\n**Match MVP:** N/A",
+        "inline": true
+      }
+    }
   }
 }
