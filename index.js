@@ -8857,14 +8857,23 @@ app.delete('/api/valorant/agents/:agentId', async (req, res) => {
 });
 
 // Valorant-Statistiken aktualisieren (interne Funktion)
-// Rang-Belohnungen verarbeiten
+// Rang-Belohnungen verarbeiten (FIXED: Supabase Integration)
 async function handleRankRewards(guild, user, currentTier) {
     try {
-        // Lade Valorant-Einstellungen
-        const valorantSettings = JSON.parse(fs.readFileSync('./valorant-settings.json', 'utf8'));
+        // Lade Valorant-Einstellungen aus Supabase
+        const { loadValorantSettings } = require('./valorant-tracker-supabase-api');
+        let valorantSettings;
+        
+        try {
+            valorantSettings = await loadValorantSettings();
+        } catch (supabaseError) {
+            console.log('⚠️ Supabase nicht verfügbar, lade aus JSON-Fallback');
+            valorantSettings = JSON.parse(fs.readFileSync('./valorant-settings.json', 'utf8'));
+        }
         
         // Prüfe ob Rang-Belohnungen aktiviert sind
         if (!valorantSettings.rankRewards?.enabled) {
+            console.log('ℹ️ Rang-Belohnungen sind deaktiviert');
             return;
         }
         
@@ -8904,9 +8913,17 @@ async function handleRankRewards(guild, user, currentTier) {
                     hoist: false
                 });
                 
-                // Speichere Rollen-ID in den Einstellungen
+                // Speichere Rollen-ID in den Einstellungen (Supabase + JSON Fallback)
                 rankData.roleId = targetRole.id;
-                fs.writeFileSync('./valorant-settings.json', JSON.stringify(valorantSettings, null, 2));
+                
+                try {
+                    const { saveValorantSettings } = require('./valorant-tracker-supabase-api');
+                    await saveValorantSettings(valorantSettings);
+                    console.log('✅ Rolle-ID in Supabase gespeichert');
+                } catch (saveError) {
+                    console.log('⚠️ Fallback: Speichere in JSON');
+                    fs.writeFileSync('./valorant-settings.json', JSON.stringify(valorantSettings, null, 2));
+                }
                 
                 console.log(`✅ Rolle erstellt: ${roleName} (${targetRole.id})`);
             } catch (createError) {

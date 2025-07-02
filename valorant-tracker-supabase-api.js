@@ -349,15 +349,15 @@ async function updateValorantStatsSupabase(searchData = null) {
             return await loadValorantStats();
         }
 
-        // Konvertiere Supabase-Format zu Frontend-Format
+        // Konvertiere Supabase-Format zu Frontend-Format (FIXED: neue Return-Parameter)
         const result = data[0];
         const stats = {
-            totalSearches: result.total_searches,
-            dailySearches: result.daily_searches,
-            weeklySearches: result.weekly_searches,
-            totalPlayers: result.total_players,
-            topRegions: result.top_regions,
-            systemEnabled: result.system_enabled,
+            totalSearches: result.result_total_searches,
+            dailySearches: result.result_daily_searches,
+            weeklySearches: result.result_weekly_searches,
+            totalPlayers: result.result_total_players,
+            topRegions: result.result_top_regions,
+            systemEnabled: result.result_system_enabled,
             lastUpdate: new Date().toISOString()
         };
 

@@ -1,13 +1,13 @@
 [
   {
     "userId": "790978332111536178",
-    "xp": 27,
+    "xp": 49,
     "level": 1,
-    "totalXP": 27,
+    "totalXP": 49,
     "lastMessage": 1751466314983,
     "voiceJoinTime": 0,
     "messageCount": 2,
-    "voiceTime": 0,
+    "voiceTime": 11,
     "username": "beellgrounder",
     "avatar": "b901dde1c8c56fc32c0da77f3b7ce9ad"
   },
@@ -25,25 +25,25 @@
   },
   {
     "userId": "498487439212544021",
-    "xp": 23,
+    "xp": 47,
     "level": 1,
-    "totalXP": 23,
+    "totalXP": 47,
     "lastMessage": 0,
     "voiceJoinTime": 0,
     "messageCount": 0,
-    "voiceTime": 12.165216666666666,
+    "voiceTime": 24.165216666666666,
     "username": "gamingarea22",
     "avatar": "70eb6f54b0ed7b501b302798e848d0ff"
   },
   {
     "userId": "306523854233403393",
-    "xp": 6,
+    "xp": 32,
     "level": 1,
-    "totalXP": 6,
+    "totalXP": 32,
     "lastMessage": 0,
     "voiceJoinTime": 0,
     "messageCount": 0,
-    "voiceTime": 3,
+    "voiceTime": 16,
     "username": "methface",
     "avatar": "b864e48b6ea41ebed5def0bc9c4447e1"
   }
