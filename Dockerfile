@@ -2,7 +2,7 @@
 # OPTIMIZED DISCORD BOT DOCKERFILE
 # =========================================
 # Node.js 20 - Debian Slim (Railway optimiert)
-# Minimalistischer Ansatz für bessere Performance
+# Mit Python & Build-Tools für @discordjs/opus
 # =========================================
 
 FROM node:20-slim
@@ -10,11 +10,31 @@ FROM node:20-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (minimal)
+# Install system dependencies (Discord Bot essentials)
 RUN apt-get update && apt-get install -y \
+    # Basic tools
     ca-certificates \
+    # Python & Build tools für @discordjs/opus
+    python3 \
+    python3-pip \
+    build-essential \
+    # Audio libraries für Discord
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    libasound2 \
+    # Clean up
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+
+# Set Python as python (für node-gyp)
+RUN ln -sf /usr/bin/python3 /usr/bin/python
 
 # Copy package files
 COPY package*.json ./
