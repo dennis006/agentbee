@@ -3,7 +3,7 @@
   "activeTracking": 0,
   "totalPlayers": 2,
   "apiCalls": 0,
-  "systemEnabled": false,
+  "systemEnabled": true,
   "lastUpdate": "2025-06-19T10:44:33.501Z",
   "dailySearches": 1,
   "weeklySearches": 28,
