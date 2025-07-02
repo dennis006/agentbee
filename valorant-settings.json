@@ -82,7 +82,7 @@
       "agentStats": {
         "enabled": true,
         "name": "🎭 Agent-Statistiken",
-        "value": "**Lieblings-Agent:** Wird geladen...\n**Agent Win-Rate:** N/A\n**Agent K/D:** N/A",
+        "value": "**Lieblings-Agent:** {favoriteAgent}\n**Basierend auf:** {totalMatches} Matches\n**Thumbnail:** Dynamisch",
         "inline": true
       },
       "performance": {

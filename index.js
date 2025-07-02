@@ -937,10 +937,48 @@ async function handleValorantModalSubmission(interaction) {
             };
         }
 
-        // Thumbnail hinzufügen
+        // Finde den am häufigsten gespielten Agent aus den Match-Daten (für Thumbnail)
+        let mostPlayedAgent = null;
+        let mostPlayedAgentUrl = null;
+        if (matchesData.status === 200 && matchesData.data && matchesData.data.length > 0) {
+            const agentCounts = {};
+            matchesData.data.forEach(match => {
+                const player = match.players.find(p => 
+                    p.name.toLowerCase() === playerName.toLowerCase() && 
+                    p.tag.toLowerCase() === playerTag.toLowerCase()
+                );
+                if (player && player.agent) {
+                    const agentName = player.agent.name;
+                    agentCounts[agentName] = (agentCounts[agentName] || 0) + 1;
+                }
+            });
+            
+            // Finde den am häufigsten gespielten Agent
+            let maxCount = 0;
+            Object.entries(agentCounts).forEach(([agent, count]) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostPlayedAgent = agent;
+                }
+            });
+
+            // Erstelle Agent-Icon URL wenn Agent gefunden
+            if (mostPlayedAgent) {
+                try {
+                    const agentUuid = await getAgentUUID(mostPlayedAgent);
+                    mostPlayedAgentUrl = `https://media.valorant-api.com/agents/${agentUuid}/displayicon.png`;
+                    console.log(`🎭 Lieblings-Agent gefunden: ${mostPlayedAgent} (${maxCount} Matches)`);
+                } catch (error) {
+                    console.warn(`⚠️ Konnte Agent UUID für ${mostPlayedAgent} nicht finden:`, error.message);
+                }
+            }
+        }
+
+        // Thumbnail hinzufügen - Dynamisch basierend auf am meisten gespieltem Agent
         if (playerStatsConfig.thumbnail === 'valorant') {
             embed.thumbnail = {
-                url: 'https://media.valorant-api.com/agents/dade69b4-4f5a-8528-247b-219e5a1facd6/displayicon.png'
+                // Verwende am meisten gespielten Agent oder Fade als Fallback
+                url: mostPlayedAgentUrl || 'https://media.valorant-api.com/agents/dade69b4-4f5a-8528-247b-219e5a1facd6/displayicon.png'
             };
         } else if (playerStatsConfig.thumbnail === 'custom' && playerStatsConfig.customThumbnail) {
             embed.thumbnail = {
@@ -973,11 +1011,14 @@ async function handleValorantModalSubmission(interaction) {
             seasonWins: (playerData.seasonal && playerData.seasonal.length > 0) ? (playerData.seasonal[0].wins || 0) : 0,
             seasonGames: (playerData.seasonal && playerData.seasonal.length > 0) ? (playerData.seasonal[0].games || 0) : 0,
             seasonWinRate: (playerData.seasonal && playerData.seasonal.length > 0 && playerData.seasonal[0].games > 0) ? 
-                ((playerData.seasonal[0].wins / playerData.seasonal[0].games) * 100).toFixed(1) : '0'
+                ((playerData.seasonal[0].wins / playerData.seasonal[0].games) * 100).toFixed(1) : '0',
+            // Agent-Statistiken
+            favoriteAgent: mostPlayedAgent || 'Unbekannt',
+            agentIconUrl: mostPlayedAgentUrl || ''
         };
 
         // Felder basierend auf Konfiguration hinzufügen
-        const fieldOrder = ['currentRank', 'peakRank', 'lastChange', 'leaderboard', 'matchStats', 'kda', 'precision', 'damage', 'seasonStats'];
+        const fieldOrder = ['currentRank', 'peakRank', 'lastChange', 'leaderboard', 'matchStats', 'kda', 'precision', 'damage', 'seasonStats', 'agentStats'];
         
         fieldOrder.forEach(fieldKey => {
             const fieldConfig = playerStatsConfig.fields[fieldKey];
@@ -1004,6 +1045,16 @@ async function handleValorantModalSubmission(interaction) {
                 if (fieldKey === 'seasonStats' && (!playerData.seasonal || playerData.seasonal.length === 0)) {
                     return; // Überspringe Season Stats wenn nicht verfügbar
                 }
+                
+                if (fieldKey === 'agentStats' && !mostPlayedAgent) {
+                    // Zeige alternative Nachricht wenn kein Agent gefunden
+                    embed.fields.push({
+                        name: fieldConfig.name,
+                        value: '⚠️ Kein Lieblings-Agent ermittelbar\n*Möglicherweise keine Match-Daten verfügbar*\n**Thumbnail:** Standard (Fade)',
+                        inline: fieldConfig.inline
+                    });
+                    return;
+                }
 
             embed.fields.push({
                     name: replaceTemplate(fieldConfig.name, extendedTemplateVars),
@@ -1019,30 +1070,8 @@ async function handleValorantModalSubmission(interaction) {
         try {
             console.log('🎨 Erstelle Valorant-Statistik-Karte...');
             
-            // Finde den am häufigsten gespielten Agent aus den Match-Daten
-            let mostPlayedAgent = null;
-            if (matchesData.status === 200 && matchesData.data && matchesData.data.length > 0) {
-                const agentCounts = {};
-                matchesData.data.forEach(match => {
-                    const player = match.players.find(p => 
-                        p.name.toLowerCase() === playerName.toLowerCase() && 
-                        p.tag.toLowerCase() === playerTag.toLowerCase()
-                    );
-                    if (player && player.agent) {
-                        const agentName = player.agent.name;
-                        agentCounts[agentName] = (agentCounts[agentName] || 0) + 1;
-                    }
-                });
-                
-                // Finde den am häufigsten gespielten Agent
-                let maxCount = 0;
-                Object.entries(agentCounts).forEach(([agent, count]) => {
-                    if (count > maxCount) {
-                        maxCount = count;
-                        mostPlayedAgent = agent;
-                    }
-                });
-            }
+            // Verwende bereits ermittelten am häufigsten gespielten Agent
+            // (mostPlayedAgent wurde bereits weiter oben für Thumbnail berechnet)
 
             // Bereite Daten für die Karte vor mit Fallback-Werten
             const cardStats = {
