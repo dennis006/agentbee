@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { AlertCircle, Trophy, Target, Zap, Settings, Save, RotateCcw, Search, Clock, Star, Crown, TrendingUp, Users, Play, Pause, MessageCircle, Smile, Plus, Trash2, Eye } from 'lucide-react';
 import { useToast, ToastContainer } from '../components/ui/toast';
 import EmojiPicker from '../components/ui/emoji-picker';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 // Matrix Blocks Komponente
 const MatrixBlocks = ({ density = 30 }: { density?: number }) => {
@@ -709,7 +709,7 @@ const Valorant: React.FC = () => {
       setSettings(prev => ({ ...prev, enabled: newEnabled }));
       
       // Änderung an Supabase senden
-      const response = await axios.post('/api/valorant-settings', { 
+      const response = await api.updateValorantSettings({ 
         ...settings, 
         enabled: newEnabled 
       });

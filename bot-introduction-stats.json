@@ -1,13 +1,13 @@
 {
-  "totalIntroductions": 15,
+  "totalIntroductions": 16,
   "triggerStats": {
     "manual": 15,
     "channelCreate": 0,
-    "channelMention": 0,
+    "channelMention": 1,
     "keywords": 0,
     "command": 0
   },
-  "lastIntroduction": "2025-06-17T19:45:15.495Z",
+  "lastIntroduction": "2025-07-02T14:25:18.091Z",
   "buttonInteractions": {
     "help": 2,
     "commands": 3,
