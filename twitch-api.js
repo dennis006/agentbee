@@ -34,13 +34,13 @@ function setupTwitchAPI(app, client) {
     });
 
     // Twitch-Einstellungen speichern
-    app.post('/api/twitch/settings', (req, res) => {
+    app.post('/api/twitch/settings', async (req, res) => {
         try {
             if (!twitchSystem) {
                 return res.status(503).json({ error: 'Twitch-System nicht initialisiert' });
             }
 
-            const success = twitchSystem.updateSettings(req.body);
+            const success = await twitchSystem.updateSettings(req.body);
             
             if (success) {
                 console.log('🎮 Twitch-Einstellungen aktualisiert');
@@ -77,7 +77,7 @@ function setupTwitchAPI(app, client) {
     });
 
     // Streamer hinzufügen
-    app.post('/api/twitch/streamers', (req, res) => {
+    app.post('/api/twitch/streamers', async (req, res) => {
         try {
             if (!twitchSystem) {
                 return res.status(503).json({ error: 'Twitch-System nicht initialisiert' });
@@ -98,7 +98,7 @@ function setupTwitchAPI(app, client) {
                 return res.status(400).json({ error: 'Streamer bereits vorhanden' });
             }
 
-            const streamer = twitchSystem.addStreamer({
+            const streamer = await twitchSystem.addStreamer({
                 username,
                 displayName,
                 customMessage,
@@ -118,7 +118,7 @@ function setupTwitchAPI(app, client) {
     });
 
     // Streamer aktualisieren
-    app.put('/api/twitch/streamers/:id', (req, res) => {
+    app.put('/api/twitch/streamers/:id', async (req, res) => {
         try {
             if (!twitchSystem) {
                 return res.status(503).json({ error: 'Twitch-System nicht initialisiert' });
@@ -127,7 +127,7 @@ function setupTwitchAPI(app, client) {
             const { id } = req.params;
             const updates = req.body;
 
-            const updatedStreamer = twitchSystem.updateStreamer(id, updates);
+            const updatedStreamer = await twitchSystem.updateStreamer(id, updates);
 
             if (updatedStreamer) {
                 console.log(`🎮 Streamer aktualisiert: ${updatedStreamer.username}`);
@@ -146,14 +146,14 @@ function setupTwitchAPI(app, client) {
     });
 
     // Streamer entfernen
-    app.delete('/api/twitch/streamers/:id', (req, res) => {
+    app.delete('/api/twitch/streamers/:id', async (req, res) => {
         try {
             if (!twitchSystem) {
                 return res.status(503).json({ error: 'Twitch-System nicht initialisiert' });
             }
 
             const { id } = req.params;
-            const success = twitchSystem.removeStreamer(id);
+            const success = await twitchSystem.removeStreamer(id);
 
             if (success) {
                 console.log(`🎮 Streamer entfernt: ${id}`);
@@ -171,14 +171,14 @@ function setupTwitchAPI(app, client) {
     });
 
     // Twitch-System ein/ausschalten
-    app.post('/api/twitch/toggle', (req, res) => {
+    app.post('/api/twitch/toggle', async (req, res) => {
         try {
             if (!twitchSystem) {
                 return res.status(503).json({ error: 'Twitch-System nicht initialisiert' });
             }
 
             const currentStatus = twitchSystem.settings.enabled;
-            const success = twitchSystem.updateSettings({ enabled: !currentStatus });
+            const success = await twitchSystem.updateSettings({ enabled: !currentStatus });
             
             const newStatus = !currentStatus;
             console.log(`🎮 Twitch-System ${newStatus ? 'aktiviert' : 'deaktiviert'}`);
@@ -241,7 +241,7 @@ function setupTwitchAPI(app, client) {
     });
 
     // Statistiken abrufen
-    app.get('/api/twitch/stats', (req, res) => {
+    app.get('/api/twitch/stats', async (req, res) => {
         try {
             if (!twitchSystem) {
                 return res.json({
@@ -257,7 +257,7 @@ function setupTwitchAPI(app, client) {
                 });
             }
 
-            const stats = twitchSystem.getStats();
+            const stats = await twitchSystem.getStats();
             res.json({
                 stats,
                 isSystemReady: true,
@@ -352,9 +352,10 @@ function setupTwitchAPI(app, client) {
 
     // Twitch-System initialisieren wenn Client verfügbar wird
     return {
-        initializeTwitchSystem: () => {
+        initializeTwitchSystem: async () => {
             if (client && client.isReady() && !twitchSystem) {
                 twitchSystem = new TwitchSystem(client);
+                await twitchSystem.initializeSystem();
                 console.log('🎮 Twitch-System über API initialisiert');
             }
         },

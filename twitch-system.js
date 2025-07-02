@@ -1,17 +1,14 @@
-const fs = require('fs');
-const path = require('path');
 const { EmbedBuilder } = require('discord.js');
+const TwitchSupabaseAPI = require('./twitch-supabase-api');
 
 class TwitchSystem {
     constructor(client) {
         this.client = client;
-        this.settingsFile = path.join(__dirname, 'twitch-settings.json');
-        this.streamersFile = path.join(__dirname, 'twitch-streamers.json');
-        this.liveDataFile = path.join(__dirname, 'twitch-live-data.json');
+        this.supabaseAPI = new TwitchSupabaseAPI();
         
-        this.settings = this.loadSettings();
-        this.streamers = this.loadStreamers();
-        this.liveData = this.loadLiveData();
+        this.settings = {};
+        this.streamers = [];
+        this.liveData = {};
         
         this.checkInterval = null;
         this.twitchAPI = null;
@@ -27,11 +24,46 @@ class TwitchSystem {
     }
 
     // System initialisieren
-    initializeSystem() {
-        if (this.settings.enabled && this.clientId && this.clientSecret) {
-            this.startTwitchMonitoring();
+    async initializeSystem() {
+        try {
+            await this.loadData();
+            if (this.settings.enabled && this.clientId && this.clientSecret) {
+                this.startTwitchMonitoring();
+            }
+            console.log('🎮 Twitch Live Notification System mit Supabase initialisiert');
+        } catch (error) {
+            console.error('❌ Fehler beim Initialisieren des Twitch Systems:', error);
         }
-        console.log('🎮 Twitch Live Notification System initialisiert');
+    }
+
+    // Daten aus Supabase laden
+    async loadData() {
+        try {
+            if (!this.supabaseAPI.isAvailable()) {
+                console.log('⚠️ Supabase nicht verfügbar - verwende Fallback-Einstellungen');
+                this.settings = this.getDefaultSettings();
+                this.streamers = [];
+                this.liveData = {};
+                return;
+            }
+
+            // Einstellungen laden
+            this.settings = await this.loadSettingsFromSupabase();
+            
+            // Streamer laden
+            this.streamers = await this.loadStreamersFromSupabase();
+            
+            // Live-Daten laden
+            this.liveData = await this.loadLiveDataFromSupabase();
+            
+            console.log('✅ Twitch-Daten aus Supabase geladen');
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Twitch-Daten aus Supabase:', error);
+            // Fallback zu Default-Einstellungen
+            this.settings = this.getDefaultSettings();
+            this.streamers = [];
+            this.liveData = {};
+        }
     }
 
     // Credentials setzen
@@ -51,43 +83,96 @@ class TwitchSystem {
         }
     }
 
-    // Einstellungen laden
-    loadSettings() {
+    // Einstellungen aus Supabase laden
+    async loadSettingsFromSupabase() {
         try {
-            if (fs.existsSync(this.settingsFile)) {
-                return JSON.parse(fs.readFileSync(this.settingsFile, 'utf8'));
-            }
+            const data = await this.supabaseAPI.getSettings();
+            
+            // Daten in altes Format konvertieren für Kompatibilität
+            return {
+                enabled: data.enabled,
+                checkInterval: data.check_interval,
+                channels: {
+                    notificationChannel: data.notification_channel,
+                    roleToMention: data.role_to_mention,
+                    mentionEveryone: data.mention_everyone
+                },
+                embed: {
+                    color: data.embed_color,
+                    showThumbnail: data.show_thumbnail,
+                    showViewerCount: data.show_viewer_count,
+                    showCategory: data.show_category,
+                    showUptime: data.show_uptime,
+                    customMessage: data.custom_message,
+                    includeEmojis: data.include_emojis,
+                    customEmojis: data.custom_emojis || []
+                },
+                notifications: {
+                    onlyFirstTime: data.only_first_time,
+                    cooldown: data.cooldown,
+                    offlineNotification: data.offline_notification,
+                    streamEndedMessage: data.stream_ended_message
+                },
+                filters: {
+                    minViewers: data.min_viewers,
+                    allowedCategories: data.allowed_categories || [],
+                    blockedCategories: data.blocked_categories || [],
+                    onlyFollowers: data.only_followers
+                }
+            };
         } catch (error) {
-            console.error('❌ Fehler beim Laden der Twitch-Einstellungen:', error);
+            console.error('❌ Fehler beim Laden der Einstellungen aus Supabase:', error);
+            return this.getDefaultSettings();
         }
-        
-        return this.getDefaultSettings();
     }
 
-    // Streamer laden
-    loadStreamers() {
+    // Streamer aus Supabase laden
+    async loadStreamersFromSupabase() {
         try {
-            if (fs.existsSync(this.streamersFile)) {
-                return JSON.parse(fs.readFileSync(this.streamersFile, 'utf8'));
-            }
+            const data = await this.supabaseAPI.getStreamers();
+            
+            // Daten in altes Format konvertieren für Kompatibilität
+            return data.map(streamer => ({
+                id: streamer.id.toString(),
+                username: streamer.username,
+                displayName: streamer.display_name,
+                customMessage: streamer.custom_message,
+                enabled: streamer.enabled,
+                addedAt: streamer.created_at,
+                notifications: {
+                    live: streamer.live_notifications,
+                    offline: streamer.offline_notifications
+                },
+                lastLive: streamer.last_live,
+                totalNotifications: streamer.total_notifications
+            }));
         } catch (error) {
-            console.error('❌ Fehler beim Laden der Streamer:', error);
+            console.error('❌ Fehler beim Laden der Streamer aus Supabase:', error);
+            return [];
         }
-        
-        return [];
     }
 
-    // Live-Daten laden
-    loadLiveData() {
+    // Live-Daten aus Supabase laden
+    async loadLiveDataFromSupabase() {
         try {
-            if (fs.existsSync(this.liveDataFile)) {
-                return JSON.parse(fs.readFileSync(this.liveDataFile, 'utf8'));
+            const data = await this.supabaseAPI.getLiveData();
+            
+            // Daten in altes Format konvertieren für Kompatibilität
+            const liveData = {};
+            for (const item of data) {
+                const key = `${item.streamer_id}_${item.stream_id}`;
+                liveData[key] = {
+                    streamId: item.stream_id,
+                    startedAt: item.started_at,
+                    notifiedAt: item.notified_at
+                };
             }
+            
+            return liveData;
         } catch (error) {
-            console.error('❌ Fehler beim Laden der Live-Daten:', error);
+            console.error('❌ Fehler beim Laden der Live-Daten aus Supabase:', error);
+            return {};
         }
-        
-        return {};
     }
 
     // Standard-Einstellungen
@@ -125,10 +210,15 @@ class TwitchSystem {
         };
     }
 
-    // Einstellungen speichern
-    saveSettings() {
+    // Einstellungen in Supabase speichern
+    async saveSettings() {
         try {
-            fs.writeFileSync(this.settingsFile, JSON.stringify(this.settings, null, 2));
+            if (!this.supabaseAPI.isAvailable()) {
+                console.log('⚠️ Supabase nicht verfügbar - Einstellungen nicht gespeichert');
+                return false;
+            }
+
+            await this.supabaseAPI.updateSettings(this.settings);
             return true;
         } catch (error) {
             console.error('❌ Fehler beim Speichern der Twitch-Einstellungen:', error);
@@ -136,32 +226,24 @@ class TwitchSystem {
         }
     }
 
-    // Streamer speichern
-    saveStreamers() {
-        try {
-            fs.writeFileSync(this.streamersFile, JSON.stringify(this.streamers, null, 2));
-            return true;
-        } catch (error) {
-            console.error('❌ Fehler beim Speichern der Streamer:', error);
-            return false;
-        }
+    // Streamer in Supabase speichern (wird automatisch durch API-Aufrufe erledigt)
+    async saveStreamers() {
+        // Diese Methode wird für Kompatibilität beibehalten, aber die Daten
+        // werden automatisch durch die Supabase API gespeichert
+        return true;
     }
 
-    // Live-Daten speichern
-    saveLiveData() {
-        try {
-            fs.writeFileSync(this.liveDataFile, JSON.stringify(this.liveData, null, 2));
-            return true;
-        } catch (error) {
-            console.error('❌ Fehler beim Speichern der Live-Daten:', error);
-            return false;
-        }
+    // Live-Daten in Supabase speichern (wird automatisch durch API-Aufrufe erledigt)
+    async saveLiveData() {
+        // Diese Methode wird für Kompatibilität beibehalten, aber die Daten
+        // werden automatisch durch die Supabase API gespeichert
+        return true;
     }
 
     // Einstellungen aktualisieren
-    updateSettings(newSettings) {
+    async updateSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
-        this.saveSettings();
+        await this.saveSettings();
         
         if (this.settings.enabled && !this.checkInterval) {
             this.startTwitchMonitoring();
@@ -173,45 +255,119 @@ class TwitchSystem {
     }
 
     // Streamer hinzufügen
-    addStreamer(streamerData) {
-        const streamer = {
-            id: Date.now().toString(),
-            username: streamerData.username.toLowerCase(),
-            displayName: streamerData.displayName || streamerData.username,
-            customMessage: streamerData.customMessage || '',
-            enabled: true,
-            addedAt: new Date().toISOString(),
-            notifications: {
-                live: true,
-                offline: streamerData.offlineNotifications || false
-            },
-            lastLive: null,
-            totalNotifications: 0
-        };
+    async addStreamer(streamerData) {
+        try {
+            if (!this.supabaseAPI.isAvailable()) {
+                // Fallback: Lokales hinzufügen
+                const streamer = {
+                    id: Date.now().toString(),
+                    username: streamerData.username.toLowerCase(),
+                    displayName: streamerData.displayName || streamerData.username,
+                    customMessage: streamerData.customMessage || '',
+                    enabled: true,
+                    addedAt: new Date().toISOString(),
+                    notifications: {
+                        live: true,
+                        offline: streamerData.offlineNotifications || false
+                    },
+                    lastLive: null,
+                    totalNotifications: 0
+                };
 
-        this.streamers.push(streamer);
-        this.saveStreamers();
-        return streamer;
+                this.streamers.push(streamer);
+                return streamer;
+            }
+
+            // Zu Supabase hinzufügen
+            const supabaseStreamer = await this.supabaseAPI.addStreamer(streamerData);
+            
+            // Lokale Liste aktualisieren
+            const streamer = {
+                id: supabaseStreamer.id.toString(),
+                username: supabaseStreamer.username,
+                displayName: supabaseStreamer.display_name,
+                customMessage: supabaseStreamer.custom_message,
+                enabled: supabaseStreamer.enabled,
+                addedAt: supabaseStreamer.created_at,
+                notifications: {
+                    live: supabaseStreamer.live_notifications,
+                    offline: supabaseStreamer.offline_notifications
+                },
+                lastLive: supabaseStreamer.last_live,
+                totalNotifications: supabaseStreamer.total_notifications
+            };
+
+            this.streamers.push(streamer);
+            return streamer;
+        } catch (error) {
+            console.error('❌ Fehler beim Hinzufügen des Streamers:', error);
+            throw error;
+        }
     }
 
     // Streamer entfernen
-    removeStreamer(streamerId) {
-        this.streamers = this.streamers.filter(s => s.id !== streamerId);
-        delete this.liveData[streamerId];
-        this.saveStreamers();
-        this.saveLiveData();
-        return true;
+    async removeStreamer(streamerId) {
+        try {
+            if (this.supabaseAPI.isAvailable()) {
+                await this.supabaseAPI.removeStreamer(streamerId);
+            }
+
+            // Lokale Liste aktualisieren
+            this.streamers = this.streamers.filter(s => s.id !== streamerId);
+            
+            // Live-Daten für diesen Streamer entfernen
+            Object.keys(this.liveData).forEach(key => {
+                if (key.startsWith(`${streamerId}_`)) {
+                    delete this.liveData[key];
+                }
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Fehler beim Entfernen des Streamers:', error);
+            return false;
+        }
     }
 
     // Streamer aktualisieren
-    updateStreamer(streamerId, updates) {
-        const streamerIndex = this.streamers.findIndex(s => s.id === streamerId);
-        if (streamerIndex !== -1) {
-            this.streamers[streamerIndex] = { ...this.streamers[streamerIndex], ...updates };
-            this.saveStreamers();
-            return this.streamers[streamerIndex];
+    async updateStreamer(streamerId, updates) {
+        try {
+            if (this.supabaseAPI.isAvailable()) {
+                const updatedStreamer = await this.supabaseAPI.updateStreamer(streamerId, updates);
+                
+                // Lokale Liste aktualisieren
+                const streamerIndex = this.streamers.findIndex(s => s.id === streamerId);
+                if (streamerIndex !== -1) {
+                    this.streamers[streamerIndex] = {
+                        id: updatedStreamer.id.toString(),
+                        username: updatedStreamer.username,
+                        displayName: updatedStreamer.display_name,
+                        customMessage: updatedStreamer.custom_message,
+                        enabled: updatedStreamer.enabled,
+                        addedAt: updatedStreamer.created_at,
+                        notifications: {
+                            live: updatedStreamer.live_notifications,
+                            offline: updatedStreamer.offline_notifications
+                        },
+                        lastLive: updatedStreamer.last_live,
+                        totalNotifications: updatedStreamer.total_notifications
+                    };
+                    return this.streamers[streamerIndex];
+                }
+            } else {
+                // Fallback: Lokale Aktualisierung
+                const streamerIndex = this.streamers.findIndex(s => s.id === streamerId);
+                if (streamerIndex !== -1) {
+                    this.streamers[streamerIndex] = { ...this.streamers[streamerIndex], ...updates };
+                    return this.streamers[streamerIndex];
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('❌ Fehler beim Aktualisieren des Streamers:', error);
+            return null;
         }
-        return null;
     }
 
     // Monitoring starten
@@ -358,7 +514,15 @@ class TwitchSystem {
         const streamKey = `${streamer.id}_${stream.id}`;
         
         // Prüfen ob bereits eine Benachrichtigung für diesen Stream gesendet wurde
-        if (this.liveData[streamKey]) {
+        let alreadyNotified = false;
+        
+        if (this.supabaseAPI.isAvailable()) {
+            alreadyNotified = await this.supabaseAPI.isNotificationSent(streamer.id, stream.id);
+        } else {
+            alreadyNotified = !!this.liveData[streamKey];
+        }
+        
+        if (alreadyNotified) {
             return; // Bereits benachrichtigt
         }
 
@@ -379,22 +543,27 @@ class TwitchSystem {
         try {
             await this.sendLiveNotification(streamer, stream, user);
             
-            // Status speichern
-            this.liveData[streamKey] = {
-                streamId: stream.id,
-                startedAt: stream.started_at,
-                notifiedAt: new Date().toISOString()
-            };
+            // Status in Supabase speichern
+            if (this.supabaseAPI.isAvailable()) {
+                await this.supabaseAPI.setLiveStatus(streamer.id, {
+                    streamId: stream.id,
+                    startedAt: stream.started_at
+                });
+            } else {
+                // Fallback: Lokales Speichern
+                this.liveData[streamKey] = {
+                    streamId: stream.id,
+                    startedAt: stream.started_at,
+                    notifiedAt: new Date().toISOString()
+                };
+            }
             
-            // Streamer-Daten aktualisieren
+            // Lokale Streamer-Daten aktualisieren
             const streamerIndex = this.streamers.findIndex(s => s.id === streamer.id);
             if (streamerIndex !== -1) {
                 this.streamers[streamerIndex].lastLive = new Date().toISOString();
                 this.streamers[streamerIndex].totalNotifications++;
             }
-
-            this.saveLiveData();
-            this.saveStreamers();
             
         } catch (error) {
             console.error(`❌ Fehler beim Senden der Live-Benachrichtigung für ${streamer.username}:`, error);
@@ -407,23 +576,34 @@ class TwitchSystem {
         if (!streamer.notifications.offline) return;
 
         // Prüfen ob Streamer vorher live war
-        const wasLive = Object.keys(this.liveData).some(key => 
-            key.startsWith(`${streamer.id}_`)
-        );
+        let wasLive = false;
+        
+        if (this.supabaseAPI.isAvailable()) {
+            const liveData = await this.supabaseAPI.getLiveData();
+            wasLive = liveData.some(item => item.streamer_id === parseInt(streamer.id));
+        } else {
+            wasLive = Object.keys(this.liveData).some(key => 
+                key.startsWith(`${streamer.id}_`)
+            );
+        }
 
         if (wasLive) {
             // Offline-Benachrichtigung senden
             try {
                 await this.sendOfflineNotification(streamer);
                 
-                // Live-Daten für diesen Streamer löschen
-                Object.keys(this.liveData).forEach(key => {
-                    if (key.startsWith(`${streamer.id}_`)) {
-                        delete this.liveData[key];
-                    }
-                });
+                // Live-Status in Supabase beenden
+                if (this.supabaseAPI.isAvailable()) {
+                    await this.supabaseAPI.endLiveStatus(streamer.id);
+                } else {
+                    // Fallback: Lokale Live-Daten für diesen Streamer löschen
+                    Object.keys(this.liveData).forEach(key => {
+                        if (key.startsWith(`${streamer.id}_`)) {
+                            delete this.liveData[key];
+                        }
+                    });
+                }
                 
-                this.saveLiveData();
             } catch (error) {
                 console.error(`❌ Fehler beim Senden der Offline-Benachrichtigung für ${streamer.username}:`, error);
             }
@@ -614,20 +794,45 @@ class TwitchSystem {
     }
 
     // Statistiken holen
-    getStats() {
-        const totalStreamers = this.streamers.length;
-        const activeStreamers = this.streamers.filter(s => s.enabled).length;
-        const totalNotifications = this.streamers.reduce((sum, s) => sum + s.totalNotifications, 0);
-        const currentlyLive = Object.keys(this.liveData).length;
+    async getStats() {
+        try {
+            if (this.supabaseAPI.isAvailable()) {
+                const stats = await this.supabaseAPI.getStats();
+                return {
+                    totalStreamers: stats.total_streamers || 0,
+                    activeStreamers: stats.active_streamers || 0,
+                    totalNotifications: stats.total_notifications || 0,
+                    currentlyLive: stats.currently_live || 0,
+                    systemEnabled: this.settings.enabled,
+                    lastCheck: this.lastCheck || null
+                };
+            } else {
+                // Fallback: Lokale Berechnung
+                const totalStreamers = this.streamers.length;
+                const activeStreamers = this.streamers.filter(s => s.enabled).length;
+                const totalNotifications = this.streamers.reduce((sum, s) => sum + s.totalNotifications, 0);
+                const currentlyLive = Object.keys(this.liveData).length;
 
-        return {
-            totalStreamers,
-            activeStreamers,
-            totalNotifications,
-            currentlyLive,
-            systemEnabled: this.settings.enabled,
-            lastCheck: this.lastCheck || null
-        };
+                return {
+                    totalStreamers,
+                    activeStreamers,
+                    totalNotifications,
+                    currentlyLive,
+                    systemEnabled: this.settings.enabled,
+                    lastCheck: this.lastCheck || null
+                };
+            }
+        } catch (error) {
+            console.error('❌ Fehler beim Laden der Statistiken:', error);
+            return {
+                totalStreamers: 0,
+                activeStreamers: 0,
+                totalNotifications: 0,
+                currentlyLive: 0,
+                systemEnabled: this.settings.enabled,
+                lastCheck: this.lastCheck || null
+            };
+        }
     }
 }
 

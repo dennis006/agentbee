@@ -38,7 +38,62 @@
       },
       "optimizationPotential": 21,
       "overallScore": 79
+    },
+    "1325050102477488169": {
+      "guildId": "1325050102477488169",
+      "guildName": "The Beellgrounds 🎯",
+      "timestamp": 1751472253626,
+      "scores": {
+        "structure": 100,
+        "activity": 70,
+        "security": 100,
+        "engagement": 60,
+        "performance": 65
+      },
+      "recommendations": [
+        {
+          "type": "performance",
+          "priority": "medium",
+          "title": "Rollen-Anzahl reduzieren",
+          "description": "Server hat 91 Rollen. 3 ungenutzte Rollen (ohne Bot-Features): 🛡️ Wächter, ❎ Xbox, Twitch Subscriber. 80 Bot-Feature-Rollen (werden ignoriert): Sage, Valorant Ascendant 3, Bots, +77 weitere",
+          "action": "cleanup_roles",
+          "details": {
+            "totalRoles": 91,
+            "botFeatureRoles": 80,
+            "unusedRoles": [
+              {
+                "id": "1387440706527826091",
+                "name": "🛡️ Wächter",
+                "members": 0
+              },
+              {
+                "id": "1326307527121703035",
+                "name": "❎ Xbox",
+                "members": 0
+              },
+              {
+                "id": "1325051978388340736",
+                "name": "Twitch Subscriber",
+                "members": 0
+              }
+            ],
+            "duplicateRoles": [],
+            "recommendation": "Lösche ungenutzte Rollen (Bot-Features werden automatisch ignoriert)"
+          }
+        }
+      ],
+      "metrics": {
+        "memberCount": 88,
+        "channelCount": 42,
+        "roleCount": 91,
+        "boostLevel": 1,
+        "boostCount": 5,
+        "verificationLevel": 1,
+        "createdAt": 1735986962671
+      },
+      "optimizationPotential": 21,
+      "overallScore": 79
     }
   },
-  "lastUpdated": 1751468658763
+  "lastUpdated": 1751472253644
 }
