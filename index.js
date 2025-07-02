@@ -51,6 +51,16 @@ const {
     autoCreateGameFolders,
     updateWelcomeStats
 } = require('./welcome-supabase-api');
+
+// Valorant Tracker Supabase Integration
+const {
+    loadValorantSettings,
+    saveValorantSettings,
+    loadValorantStats,
+    updateValorantStatsSupabase,
+    addValorantSearch
+} = require('./valorant-tracker-supabase-api');
+
 require('dotenv').config();
 
 // ================== SUPABASE INITIALIZATION ==================
@@ -8483,22 +8493,30 @@ app.post('/api/valorant-settings', (req, res) => {
 app.get('/api/valorant/stats', (req, res) => {
     try {
         // Lade Valorant-Statistiken aus Datei oder erstelle Standard-Werte
-        let stats = {
-            totalSearches: 0,
-            activeTracking: 0,
-            totalPlayers: 0,
-            apiCalls: 0,
-            systemEnabled: false,
-            lastUpdate: null,
-            dailySearches: 0,
-            weeklySearches: 0,
-            topRegions: { eu: 0, na: 0, ap: 0, kr: 0 },
-            searchHistory: []
-        };
+        console.log('📊 [Valorant-API] Loading stats...');
+        
+        // Versuche zuerst Supabase Stats zu laden
+        let stats = await loadValorantStats();
+        
+        // Fallback auf JSON wenn Supabase fehlschlägt
+        if (!stats || stats.totalSearches === undefined) {
+            console.log('⚠️ [Valorant-API] Supabase stats failed, using JSON fallback');
+            stats = {
+                totalSearches: 0,
+                activeTracking: 0,
+                totalPlayers: 0,
+                apiCalls: 0,
+                systemEnabled: false,
+                lastUpdate: null,
+                dailySearches: 0,
+                weeklySearches: 0,
+                topRegions: { eu: 0, na: 0, ap: 0, kr: 0 }
+            };
 
-        if (fs.existsSync('./valorant-stats.json')) {
-            const savedStats = JSON.parse(fs.readFileSync('./valorant-stats.json', 'utf8'));
-            stats = { ...stats, ...savedStats };
+            if (fs.existsSync('./valorant-stats.json')) {
+                const savedStats = JSON.parse(fs.readFileSync('./valorant-stats.json', 'utf8'));
+                stats = { ...stats, ...savedStats };
+            }
         }
 
         // Aktuelle Rate-Limit-Daten hinzufügen
@@ -8506,21 +8524,32 @@ app.get('/api/valorant/stats', (req, res) => {
         stats.rateLimitMax = 30;
         stats.rateLimitReset = Math.ceil(valorantRateLimit.getResetTime() / 1000);
 
-        // System-Status aus Einstellungen
-        if (fs.existsSync('./valorant-settings.json')) {
-            const settings = JSON.parse(fs.readFileSync('./valorant-settings.json', 'utf8'));
+        // System-Status aus Einstellungen laden
+        try {
+            const settings = await loadValorantSettings();
             stats.systemEnabled = settings.enabled || false;
+        } catch (error) {
+            console.log('⚠️ [Valorant-API] Settings fallback to JSON');
+            if (fs.existsSync('./valorant-settings.json')) {
+                const settingsData = JSON.parse(fs.readFileSync('./valorant-settings.json', 'utf8'));
+                stats.systemEnabled = settingsData.enabled || false;
+            }
         }
 
-        // Aktive Tracker (simuliert basierend auf letzten Suchen)
-        const now = Date.now();
-        const oneHourAgo = now - (60 * 60 * 1000);
-        stats.activeTracking = stats.searchHistory.filter(search => 
-            new Date(search.timestamp).getTime() > oneHourAgo
-        ).length;
+        // Aktive Tracker (simuliert als dailySearches / 10)
+        stats.activeTracking = Math.max(0, Math.floor((stats.dailySearches || 0) / 10));
 
         // Letzte Aktualisierung
-        stats.lastUpdate = new Date().toISOString();
+        if (!stats.lastUpdate) {
+            stats.lastUpdate = new Date().toISOString();
+        }
+
+        console.log('✅ [Valorant-API] Stats loaded successfully:', {
+            totalSearches: stats.totalSearches,
+            dailySearches: stats.dailySearches,
+            systemEnabled: stats.systemEnabled,
+            source: stats.totalSearches > 0 ? 'Supabase' : 'JSON'
+        });
 
         res.json({
             success: true,
@@ -8900,8 +8929,48 @@ async function handleRankRewards(guild, user, currentTier) {
     }
 }
 
-function updateValorantStats(searchData) {
+async function updateValorantStats(searchData) {
     try {
+        console.log('📊 [Valorant-Stats] Updating stats...', searchData ? {
+            player: `${searchData.playerName}#${searchData.playerTag}`,
+            region: searchData.region,
+            success: searchData.success
+        } : 'No search data');
+
+        // Versuche zuerst Supabase Update
+        try {
+            if (searchData) {
+                // Füge Suche zur Supabase Historie hinzu
+                await addValorantSearch(
+                    searchData.playerName,
+                    searchData.playerTag,
+                    searchData.region,
+                    searchData.success || false,
+                    searchData.discordUserId || null,
+                    searchData.discordUsername || null,
+                    searchData.rankData || null,
+                    searchData.matchData || null
+                );
+            }
+
+            // Aktualisiere Statistiken via Supabase Function
+            const updatedStats = await updateValorantStatsSupabase(searchData ? {
+                region: searchData.region
+            } : null);
+
+            if (updatedStats && updatedStats.totalSearches !== undefined) {
+                console.log('✅ [Valorant-Stats] Supabase update successful:', {
+                    totalSearches: updatedStats.totalSearches,
+                    dailySearches: updatedStats.dailySearches,
+                    topRegions: updatedStats.topRegions
+                });
+                return updatedStats;
+            }
+        } catch (supabaseError) {
+            console.log('⚠️ [Valorant-Stats] Supabase update failed, using JSON fallback:', supabaseError.message);
+        }
+
+        // Fallback zu JSON System
         let stats = {
             totalSearches: 0,
             activeTracking: 0,
@@ -8959,6 +9028,11 @@ function updateValorantStats(searchData) {
 
         // Speichern
         fs.writeFileSync('./valorant-stats.json', JSON.stringify(stats, null, 2));
+        
+        console.log('✅ [Valorant-Stats] JSON update successful:', {
+            totalSearches: stats.totalSearches,
+            dailySearches: stats.dailySearches
+        });
         
         return stats;
     } catch (error) {

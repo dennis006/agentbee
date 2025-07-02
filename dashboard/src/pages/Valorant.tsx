@@ -140,7 +140,7 @@ interface ValorantSettings {
     autoPost: boolean;
   };
   outputFormat: {
-    mode: 'embed' | 'card' | 'both';
+    mode: 'embed';
     embedEnabled: boolean;
     cardEnabled: boolean;
   };
@@ -1569,120 +1569,25 @@ const Valorant: React.FC = () => {
               <label className="text-sm font-medium text-dark-text">Output Modus</label>
               <Tooltip 
                 title="📤 Output Modus erklärt:"
-                content={
-                  <div>
-                    <div>• Discord Embed: Nur klassische Discord-Nachricht</div>
-                    <div>• Valorant Card: Nur generiertes Bild</div>
-                    <div>• Beide: Discord Embed + Valorant Card</div>
-                  </div>
-                }
+                content="Das System nutzt nur Discord Embeds für optimale Performance und Kompatibilität"
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Discord Embed Option */}
-              <div 
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  settings.outputFormat?.mode === 'embed' 
-                    ? 'border-purple-primary bg-purple-primary/10 shadow-purple-glow' 
-                    : 'border-purple-primary/30 bg-dark-bg/50 hover:border-purple-accent'
-                }`}
-                onClick={() => setSettings(prev => ({
-                  ...prev,
-                  outputFormat: { mode: 'embed', embedEnabled: true, cardEnabled: false }
-                }))}
-              >
-                <div className="text-center">
-                  {/* Preview Image */}
-                  <div className="mb-3 mx-auto w-full max-w-[200px] h-[130px] rounded-lg overflow-hidden border border-purple-primary/20">
-                    <img 
-                      src="/images/valorant-previews/discord-embed-preview.svg" 
-                      alt="Discord Embed Preview"
-                      className="w-full h-full object-cover"
-                    />
+            {/* Discord Embed Only */}
+            <div className="p-6 rounded-lg border-2 border-purple-primary bg-purple-primary/10 shadow-purple-glow">
+              <div className="text-center">
+                <MessageCircle className="w-8 h-8 text-purple-accent mx-auto mb-3" />
+                <h4 className="font-semibold text-dark-text mb-2 text-lg">Discord Embed</h4>
+                <p className="text-sm text-dark-muted mb-4">
+                  Optimierte Discord-Nachrichten mit strukturierten Feldern und schneller Anzeige
+                </p>
+                <div className="bg-dark-bg/50 rounded-lg p-3 border border-purple-primary/20">
+                  <div className="flex items-center justify-center gap-2 text-sm text-green-400">
+                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                    <span>✅ Aktiv - Nur Discord Embeds werden verwendet</span>
                   </div>
-                  <MessageCircle className="w-6 h-6 text-purple-accent mx-auto mb-2" />
-                  <h4 className="font-semibold text-dark-text mb-1">Discord Embed</h4>
-                  <p className="text-xs text-dark-muted">Klassische Discord-Nachricht mit Feldern</p>
                 </div>
               </div>
-
-              {/* Valorant Card Option */}
-              <div 
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  settings.outputFormat?.mode === 'card' 
-                    ? 'border-purple-primary bg-purple-primary/10 shadow-purple-glow' 
-                    : 'border-purple-primary/30 bg-dark-bg/50 hover:border-purple-accent'
-                }`}
-                onClick={() => setSettings(prev => ({
-                  ...prev,
-                  outputFormat: { mode: 'card', embedEnabled: false, cardEnabled: true }
-                }))}
-              >
-                <div className="text-center">
-                  {/* Preview Image */}
-                  <div className="mb-3 mx-auto w-full max-w-[200px] h-[130px] rounded-lg overflow-hidden border border-purple-primary/20">
-                    <img 
-                      src="/images/valorant-previews/valorant-card-preview.svg" 
-                      alt="Valorant Card Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <Target className="w-6 h-6 text-purple-accent mx-auto mb-2" />
-                  <h4 className="font-semibold text-dark-text mb-1">Valorant Card</h4>
-                  <p className="text-xs text-dark-muted">Generiertes Bild im Valorant-Design</p>
-                </div>
-              </div>
-
-              {/* Both Option */}
-              <div 
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-300 hover:scale-105 ${
-                  settings.outputFormat?.mode === 'both' 
-                    ? 'border-purple-primary bg-purple-primary/10 shadow-purple-glow' 
-                    : 'border-purple-primary/30 bg-dark-bg/50 hover:border-purple-accent'
-                }`}
-                onClick={() => setSettings(prev => ({
-                  ...prev,
-                  outputFormat: { mode: 'both', embedEnabled: true, cardEnabled: true }
-                }))}
-              >
-                <div className="text-center">
-                  {/* Preview Image */}
-                  <div className="mb-3 mx-auto w-full max-w-[200px] h-[130px] rounded-lg overflow-hidden border border-purple-primary/20">
-                    <img 
-                      src="/images/valorant-previews/both-preview.svg" 
-                      alt="Both Formats Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex justify-center items-center gap-1 mb-2">
-                    <MessageCircle className="w-5 h-5 text-purple-accent" />
-                    <Plus className="w-4 h-4 text-dark-muted" />
-                    <Target className="w-5 h-5 text-purple-accent" />
-                  </div>
-                  <h4 className="font-semibold text-dark-text mb-1">Beide</h4>
-                  <p className="text-xs text-dark-muted">Discord Embed + Valorant Card</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Preview Information */}
-          <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Eye className="w-4 h-4 text-purple-accent" />
-              <span className="text-sm font-medium text-dark-text">Aktueller Modus:</span>
-            </div>
-            <div className="text-sm text-dark-muted">
-              {settings.outputFormat?.mode === 'embed' && (
-                <span>📝 Nur Discord Embed wird gesendet</span>
-              )}
-              {settings.outputFormat?.mode === 'card' && (
-                <span>🖼️ Nur Valorant Card wird gesendet</span>
-              )}
-              {settings.outputFormat?.mode === 'both' && (
-                <span>📝🖼️ Sowohl Discord Embed als auch Valorant Card werden gesendet</span>
-              )}
             </div>
           </div>
         </CardContent>
