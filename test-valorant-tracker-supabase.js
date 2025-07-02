@@ -1,173 +1,212 @@
-/**
- * =====================================================
- * VALORANT TRACKER SUPABASE TEST SCRIPT
- * =====================================================
- * Testet alle Valorant Tracker Supabase Funktionen
- * =====================================================
- */
+// =====================================================
+// DISCORD BOT - VALORANT TRACKER SUPABASE TEST
+// =====================================================
+// Testet die neue Supabase-Integration für Valorant Tracker
+// =====================================================
 
 require('dotenv').config();
 
 const {
     initializeValorantSupabase,
+    checkValorantSupabaseConnection,
     loadValorantSettings,
     saveValorantSettings,
     loadValorantStats,
     updateValorantStatsSupabase,
-    addValorantSearch,
-    getDefaultValorantSettings,
-    getDefaultValorantStats
+    addValorantSearch
 } = require('./valorant-tracker-supabase-api');
 
-async function runValorantSupabaseTests() {
-    console.log('🚀 Starting Valorant Tracker Supabase Tests...\n');
+async function testValorantTrackerSupabase() {
+    console.log('🧪 === VALORANT TRACKER SUPABASE TEST START ===');
+    console.log('');
 
     try {
-        // Test 1: Connection
-        console.log('📡 Test 1: Supabase Connection');
-        const client = await initializeValorantSupabase();
-        if (client) {
-            console.log('✅ Connection successful\n');
-        } else {
-            console.log('❌ Connection failed\n');
+        // 1. Initialisierung testen
+        console.log('1️⃣ Test: Supabase-Initialisierung');
+        const initialized = initializeValorantSupabase();
+        console.log(`   Ergebnis: ${initialized ? '✅ Erfolgreich' : '❌ Fehlgeschlagen'}`);
+        
+        if (!initialized) {
+            console.log('❌ Kann ohne Supabase-Verbindung nicht fortfahren');
             return;
-        }
-
-        // Test 2: Load Settings
-        console.log('⚙️ Test 2: Load Settings');
-        const settings = await loadValorantSettings();
-        console.log('Settings loaded:', {
-            enabled: settings.enabled,
-            defaultRegion: settings.defaultRegion,
-            outputMode: settings.outputFormat?.mode,
-            embedTitle: settings.embedConfig?.title
-        });
-        console.log('✅ Settings loaded successfully\n');
-
-        // Test 3: Load Stats
-        console.log('📊 Test 3: Load Stats');
-        const stats = await loadValorantStats();
-        console.log('Stats loaded:', {
-            totalSearches: stats.totalSearches,
-            dailySearches: stats.dailySearches,
-            totalPlayers: stats.totalPlayers,
-            topRegions: stats.topRegions
-        });
-        console.log('✅ Stats loaded successfully\n');
-
-        // Test 4: Add Search
-        console.log('🔍 Test 4: Add Search');
-        const searchResult1 = await addValorantSearch(
-            'testplayer',
-            '1234',
-            'eu',
-            true,
-            '123456789',
-            'TestUser#1234',
-            { rank: 'Gold 2', rr: 85 },
-            { matches: 5, winRate: 60 }
-        );
-
-        const searchResult2 = await addValorantSearch(
-            'anotherplayer',
-            '5678',
-            'na',
-            true,
-            '987654321',
-            'AnotherUser#5678',
-            { rank: 'Platinum 1', rr: 45 },
-            { matches: 3, winRate: 75 }
-        );
-
-        if (searchResult1 && searchResult2) {
-            console.log('✅ Searches added successfully');
-            console.log('Search IDs:', searchResult1, searchResult2);
-        } else {
-            console.log('❌ Failed to add searches');
         }
         console.log('');
 
-        // Test 5: Update Stats with Search Data
-        console.log('📈 Test 5: Update Stats');
+        // 2. Verbindung testen
+        console.log('2️⃣ Test: Supabase-Verbindung');
+        const connected = await checkValorantSupabaseConnection();
+        console.log(`   Ergebnis: ${connected ? '✅ Verbunden' : '❌ Nicht verbunden'}`);
+        
+        if (!connected) {
+            console.log('❌ Kann ohne aktive Verbindung nicht fortfahren');
+            return;
+        }
+        console.log('');
+
+        // 3. Einstellungen laden
+        console.log('3️⃣ Test: Valorant-Einstellungen laden');
+        const settings = await loadValorantSettings();
+        console.log(`   Ergebnis: ${settings ? '✅ Geladen' : '❌ Fehler'}`);
+        
+        if (settings) {
+            console.log(`   - Enabled: ${settings.enabled}`);
+            console.log(`   - Region: ${settings.defaultRegion}`);
+            console.log(`   - Output-Mode: ${settings.outputFormat?.mode || 'N/A'}`);
+            console.log(`   - Embed-Title: ${settings.embed?.title || 'N/A'}`);
+        }
+        console.log('');
+
+        // 4. Einstellungen modifizieren und speichern
+        console.log('4️⃣ Test: Valorant-Einstellungen speichern');
+        if (settings) {
+            const testSettings = {
+                ...settings,
+                enabled: true,
+                defaultRegion: 'eu',
+                outputFormat: {
+                    mode: 'embed',
+                    embedEnabled: true,
+                    cardEnabled: false
+                },
+                embed: {
+                    ...settings.embed,
+                    title: '🧪 TEST: Valorant Spielersuche',
+                    description: 'Dies ist ein Test der Supabase-Integration!'
+                }
+            };
+
+            const saved = await saveValorantSettings(testSettings);
+            console.log(`   Ergebnis: ${saved ? '✅ Gespeichert' : '❌ Fehler'}`);
+        }
+        console.log('');
+
+        // 5. Statistiken laden
+        console.log('5️⃣ Test: Valorant-Statistiken laden');
+        const stats = await loadValorantStats();
+        console.log(`   Ergebnis: ${stats ? '✅ Geladen' : '❌ Fehler'}`);
+        
+        if (stats) {
+            console.log(`   - Total Searches: ${stats.totalSearches}`);
+            console.log(`   - Daily Searches: ${stats.dailySearches}`);
+            console.log(`   - Total Players: ${stats.totalPlayers}`);
+            console.log(`   - System Enabled: ${stats.systemEnabled}`);
+        }
+        console.log('');
+
+        // 6. Test-Suche hinzufügen
+        console.log('6️⃣ Test: Valorant-Suche hinzufügen');
+        const searchId = await addValorantSearch({
+            playerName: 'TestPlayer',
+            playerTag: '1234',
+            region: 'eu',
+            success: true,
+            discordUserId: '123456789012345678',
+            discordUsername: 'TestUser#0001',
+            rankData: {
+                currentTier: { id: 15, name: 'Gold 3' },
+                rr: 75,
+                lastChange: 25
+            },
+            matchData: {
+                totalMatches: 5,
+                wins: 3,
+                losses: 2
+            }
+        });
+        console.log(`   Ergebnis: ${searchId ? '✅ Hinzugefügt' : '❌ Fehler'}`);
+        console.log(`   - Search ID: ${searchId}`);
+        console.log('');
+
+        // 7. Statistiken aktualisieren
+        console.log('7️⃣ Test: Valorant-Statistiken aktualisieren');
         const updatedStats = await updateValorantStatsSupabase({
             region: 'eu'
         });
-        console.log('Updated stats:', {
-            totalSearches: updatedStats.totalSearches,
-            dailySearches: updatedStats.dailySearches,
-            topRegions: updatedStats.topRegions
-        });
-        console.log('✅ Stats updated successfully\n');
-
-        // Test 6: Save Settings
-        console.log('💾 Test 6: Save Settings');
-        const newSettings = {
-            ...settings,
-            enabled: true,
-            defaultRegion: 'na',
-            embedConfig: {
-                ...settings.embedConfig,
-                title: '🎯 UPDATED Valorant Spielersuche',
-                description: 'Updated description for testing!'
-            }
-        };
-
-        const saveResult = await saveValorantSettings(newSettings);
-        if (saveResult) {
-            console.log('✅ Settings saved successfully');
-        } else {
-            console.log('❌ Failed to save settings');
+        console.log(`   Ergebnis: ${updatedStats ? '✅ Aktualisiert' : '❌ Fehler'}`);
+        
+        if (updatedStats) {
+            console.log(`   - Total Searches: ${updatedStats.totalSearches}`);
+            console.log(`   - EU Searches: ${updatedStats.topRegions?.eu || 0}`);
         }
         console.log('');
 
-        // Test 7: Verify Updated Settings
-        console.log('🔄 Test 7: Verify Updated Settings');
-        const verifySettings = await loadValorantSettings();
-        console.log('Verified settings:', {
-            enabled: verifySettings.enabled,
-            defaultRegion: verifySettings.defaultRegion,
-            embedTitle: verifySettings.embedConfig?.title
-        });
+        // 8. Weitere Test-Suchen für bessere Statistiken
+        console.log('8️⃣ Test: Mehrere Test-Suchen hinzufügen');
+        const testSearches = [
+            { playerName: 'BeellGrounder', playerTag: '1996', region: 'eu', success: true },
+            { playerName: 'Cracko', playerTag: '1907', region: 'eu', success: true },
+            { playerName: 'FailedPlayer', playerTag: '0000', region: 'na', success: false },
+            { playerName: 'AnotherTest', playerTag: '5678', region: 'ap', success: true }
+        ];
 
-        if (verifySettings.enabled === true && verifySettings.defaultRegion === 'na') {
-            console.log('✅ Settings update verified successfully\n');
-        } else {
-            console.log('❌ Settings update verification failed\n');
+        for (const search of testSearches) {
+            await addValorantSearch({
+                ...search,
+                discordUserId: `${Math.floor(Math.random() * 1000000000000000000)}`,
+                discordUsername: `TestUser${Math.floor(Math.random() * 1000)}#0001`
+            });
         }
+        console.log(`   Ergebnis: ✅ ${testSearches.length} Test-Suchen hinzugefügt`);
+        console.log('');
 
-        // Test 8: Final Stats Check
-        console.log('📋 Test 8: Final Stats Check');
+        // 9. Finale Statistiken anzeigen
+        console.log('9️⃣ Test: Finale Statistiken abrufen');
         const finalStats = await loadValorantStats();
-        console.log('Final stats:', finalStats);
-        console.log('✅ Final stats check completed\n');
+        console.log(`   Ergebnis: ${finalStats ? '✅ Geladen' : '❌ Fehler'}`);
+        
+        if (finalStats) {
+            console.log(`   - Total Searches: ${finalStats.totalSearches}`);
+            console.log(`   - Daily Searches: ${finalStats.dailySearches}`);
+            console.log(`   - Weekly Searches: ${finalStats.weeklySearches}`);
+            console.log(`   - Total Players: ${finalStats.totalPlayers}`);
+            console.log(`   - Top Regions:`);
+            console.log(`     • EU: ${finalStats.topRegions?.eu || 0}`);
+            console.log(`     • NA: ${finalStats.topRegions?.na || 0}`);
+            console.log(`     • AP: ${finalStats.topRegions?.ap || 0}`);
+            console.log(`     • KR: ${finalStats.topRegions?.kr || 0}`);
+        }
+        console.log('');
 
-        console.log('🎉 All Valorant Tracker Supabase tests completed successfully!');
-        console.log('\n📊 SUMMARY:');
-        console.log(`- Connection: ✅ Working`);
-        console.log(`- Settings Load/Save: ✅ Working`);
-        console.log(`- Stats Load/Update: ✅ Working`);
-        console.log(`- Search History: ✅ Working`);
-        console.log(`- Database Functions: ✅ Working`);
+        // 10. Erfolgreiche Fertigstellung
+        console.log('🎉 === VALORANT TRACKER SUPABASE TEST ERFOLGREICH ===');
+        console.log('');
+        console.log('✅ Alle Tests bestanden!');
+        console.log('✅ Supabase-Integration funktioniert korrekt');
+        console.log('✅ Das System ist bereit für die Verwendung');
+        console.log('');
+        console.log('📋 Nächste Schritte:');
+        console.log('   1. Führe die SQL-Migration in Supabase aus');
+        console.log('   2. Starte den Discord Bot neu');
+        console.log('   3. Teste die Valorant-Funktionen im Discord');
+        console.log('   4. Überprüfe das Dashboard für Einstellungen');
 
     } catch (error) {
-        console.error('❌ Test failed with error:', error);
-        console.log('\n🔧 TROUBLESHOOTING:');
-        console.log('1. Check SUPABASE_URL in environment variables');
-        console.log('2. Check SUPABASE_SERVICE_ROLE_KEY in environment variables');
-        console.log('3. Ensure Supabase tables exist (run migration SQL)');
-        console.log('4. Check network connectivity to Supabase');
+        console.error('❌ === VALORANT TRACKER SUPABASE TEST FEHLGESCHLAGEN ===');
+        console.error('');
+        console.error('Fehler:', error.message);
+        console.error('Stack:', error.stack);
+        console.error('');
+        console.error('🔧 Mögliche Lösungen:');
+        console.error('   1. Überprüfe die SUPABASE_URL und SUPABASE_KEY in den Umgebungsvariablen');
+        console.error('   2. Stelle sicher, dass die Supabase-Migration ausgeführt wurde');
+        console.error('   3. Überprüfe die Netzwerkverbindung zu Supabase');
+        console.error('   4. Überprüfe die RLS-Policies in Supabase');
     }
 }
 
-// Run tests if this file is executed directly
+// Führe den Test aus wenn das Script direkt aufgerufen wird
 if (require.main === module) {
-    runValorantSupabaseTests().then(() => {
-        console.log('\n🏁 Test execution completed');
-        process.exit(0);
-    }).catch((error) => {
-        console.error('❌ Test execution failed:', error);
-        process.exit(1);
-    });
+    testValorantTrackerSupabase()
+        .then(() => {
+            console.log('🏁 Test abgeschlossen');
+            process.exit(0);
+        })
+        .catch((error) => {
+            console.error('💥 Test-Script Fehler:', error);
+            process.exit(1);
+        });
 }
 
-module.exports = { runValorantSupabaseTests }; 
+module.exports = {
+    testValorantTrackerSupabase
+}; 

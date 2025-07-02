@@ -51,16 +51,6 @@ const {
     autoCreateGameFolders,
     updateWelcomeStats
 } = require('./welcome-supabase-api');
-
-// Valorant Tracker Supabase Integration
-const {
-    loadValorantSettings,
-    saveValorantSettings,
-    loadValorantStats,
-    updateValorantStatsSupabase,
-    addValorantSearch
-} = require('./valorant-tracker-supabase-api');
-
 require('dotenv').config();
 
 // ================== SUPABASE INITIALIZATION ==================
@@ -1156,12 +1146,16 @@ async function handleValorantModalSubmission(interaction) {
             // Fehler bei Rang-Belohnungen soll nicht die Hauptfunktion beeinträchtigen
         }
 
-        // Statistiken aktualisieren
+        // Statistiken aktualisieren (async, ohne blocking)
         updateValorantStats({
             playerName: playerName,
             playerTag: playerTag,
             region: region,
-            success: true
+            success: true,
+            discordUserId: interaction.user.id,
+            discordUsername: interaction.user.username
+        }).catch(error => {
+            console.error('❌ Fehler beim Aktualisieren der Valorant Statistiken:', error);
         });
 
     } catch (error) {
@@ -8313,12 +8307,14 @@ app.get('/api/valorant/mmr/:region/:platform/:name/:tag', async (req, res) => {
         const data = await response.json();
         
         if (response.ok && data.status === 200) {
-            // Statistiken aktualisieren bei erfolgreicher Suche
+            // Statistiken aktualisieren bei erfolgreicher Suche (async, ohne blocking)
             updateValorantStats({
                 playerName: name,
                 playerTag: tag,
                 region: region,
                 success: true
+            }).catch(error => {
+                console.error('❌ Fehler beim Aktualisieren der Valorant Statistiken:', error);
             });
 
             res.json({
@@ -8326,12 +8322,14 @@ app.get('/api/valorant/mmr/:region/:platform/:name/:tag', async (req, res) => {
                 data: data.data
             });
         } else {
-            // Auch fehlgeschlagene Suchen tracken
+            // Auch fehlgeschlagene Suchen tracken (async, ohne blocking)
             updateValorantStats({
                 playerName: name,
                 playerTag: tag,
                 region: region,
                 success: false
+            }).catch(error => {
+                console.error('❌ Fehler beim Aktualisieren der Valorant Statistiken:', error);
             });
 
             res.json({
@@ -8391,14 +8389,32 @@ app.get('/api/valorant/history/:region/:platform/:name/:tag', async (req, res) =
     }
 });
 
-// Valorant-Einstellungen laden
-app.get('/api/valorant-settings', (req, res) => {
+// Valorant-Einstellungen laden (Supabase + JSON Fallback)
+app.get('/api/valorant-settings', async (req, res) => {
     try {
+        // Versuche zuerst Supabase
+        try {
+            const { loadValorantSettings } = require('./valorant-tracker-supabase-api');
+            const settings = await loadValorantSettings();
+            
+            console.log('✅ Valorant-Einstellungen aus Supabase geladen');
+            res.json({
+                success: true,
+                settings: settings,
+                source: 'supabase'
+            });
+            return;
+        } catch (supabaseError) {
+            console.warn('⚠️ Supabase nicht verfügbar, verwende JSON-Fallback:', supabaseError.message);
+        }
+
+        // Fallback zu JSON
         if (fs.existsSync('./valorant-settings.json')) {
             const settings = JSON.parse(fs.readFileSync('./valorant-settings.json', 'utf8'));
             res.json({
                 success: true,
-                settings: settings
+                settings: settings,
+                source: 'json'
             });
         } else {
             // Standard-Einstellungen
@@ -8422,6 +8438,11 @@ app.get('/api/valorant-settings', (req, res) => {
                     newMatches: false,
                     channelName: '',
                     autoPost: false
+                },
+                outputFormat: {
+                    mode: 'embed',
+                    embedEnabled: true,
+                    cardEnabled: false
                 },
                 embed: {
                     title: '🎯 Valorant Spielersuche',
@@ -8456,7 +8477,8 @@ app.get('/api/valorant-settings', (req, res) => {
             };
             res.json({
                 success: true,
-                settings: defaultSettings
+                settings: defaultSettings,
+                source: 'default'
             });
         }
     } catch (error) {
@@ -8465,17 +8487,27 @@ app.get('/api/valorant-settings', (req, res) => {
     }
 });
 
-// Valorant-Einstellungen speichern
-app.post('/api/valorant-settings', (req, res) => {
+// Valorant-Einstellungen speichern (Supabase + JSON Backup)
+app.post('/api/valorant-settings', async (req, res) => {
     try {
         const settings = req.body;
         
-        // Speichere in Datei
-        fs.writeFileSync('./valorant-settings.json', JSON.stringify(settings, null, 2));
+        // Versuche zuerst Supabase
+        try {
+            const { saveValorantSettings } = require('./valorant-tracker-supabase-api');
+            await saveValorantSettings(settings);
+            console.log('✅ Valorant-Einstellungen in Supabase gespeichert');
+        } catch (supabaseError) {
+            console.warn('⚠️ Supabase nicht verfügbar, verwende JSON-Backup:', supabaseError.message);
+            
+            // Backup in JSON-Datei
+            fs.writeFileSync('./valorant-settings.json', JSON.stringify(settings, null, 2));
+            console.log('✅ Valorant-Einstellungen in JSON-Backup gespeichert');
+        }
         
         // Wenn Auto-Post aktiviert wurde, poste die interaktive Nachricht
-        if (settings.notifications.autoPost && settings.notifications.channelName) {
-            // Kurz warten damit die Datei gespeichert ist, dann posten
+        if (settings.notifications && settings.notifications.autoPost && settings.notifications.channelName) {
+            // Kurz warten damit die Einstellungen gespeichert sind, dann posten
             setTimeout(() => {
                 postValorantInteractiveMessage(settings.notifications.channelName);
             }, 500);
@@ -8489,34 +8521,42 @@ app.post('/api/valorant-settings', (req, res) => {
     }
 });
 
-// Valorant-Statistiken abrufen
-app.get('/api/valorant/stats', (req, res) => {
+// Valorant-Statistiken abrufen (Supabase + JSON Fallback)
+app.get('/api/valorant/stats', async (req, res) => {
     try {
-        // Lade Valorant-Statistiken aus Datei oder erstelle Standard-Werte
-        console.log('📊 [Valorant-API] Loading stats...');
-        
-        // Versuche zuerst Supabase Stats zu laden
-        let stats = await loadValorantStats();
-        
-        // Fallback auf JSON wenn Supabase fehlschlägt
-        if (!stats || stats.totalSearches === undefined) {
-            console.log('⚠️ [Valorant-API] Supabase stats failed, using JSON fallback');
-            stats = {
-                totalSearches: 0,
-                activeTracking: 0,
-                totalPlayers: 0,
-                apiCalls: 0,
-                systemEnabled: false,
-                lastUpdate: null,
-                dailySearches: 0,
-                weeklySearches: 0,
-                topRegions: { eu: 0, na: 0, ap: 0, kr: 0 }
-            };
+        // Versuche zuerst Supabase
+        try {
+            const { loadValorantStats } = require('./valorant-tracker-supabase-api');
+            const stats = await loadValorantStats();
+            
+            console.log('✅ Valorant-Statistiken aus Supabase geladen');
+            res.json({
+                success: true,
+                stats: stats,
+                source: 'supabase'
+            });
+            return;
+        } catch (supabaseError) {
+            console.warn('⚠️ Supabase nicht verfügbar, verwende JSON-Fallback:', supabaseError.message);
+        }
 
-            if (fs.existsSync('./valorant-stats.json')) {
-                const savedStats = JSON.parse(fs.readFileSync('./valorant-stats.json', 'utf8'));
-                stats = { ...stats, ...savedStats };
-            }
+        // Fallback zu JSON
+        let stats = {
+            totalSearches: 0,
+            activeTracking: 0,
+            totalPlayers: 0,
+            apiCalls: 0,
+            systemEnabled: false,
+            lastUpdate: null,
+            dailySearches: 0,
+            weeklySearches: 0,
+            topRegions: { eu: 0, na: 0, ap: 0, kr: 0 },
+            searchHistory: []
+        };
+
+        if (fs.existsSync('./valorant-stats.json')) {
+            const savedStats = JSON.parse(fs.readFileSync('./valorant-stats.json', 'utf8'));
+            stats = { ...stats, ...savedStats };
         }
 
         // Aktuelle Rate-Limit-Daten hinzufügen
@@ -8524,36 +8564,26 @@ app.get('/api/valorant/stats', (req, res) => {
         stats.rateLimitMax = 30;
         stats.rateLimitReset = Math.ceil(valorantRateLimit.getResetTime() / 1000);
 
-        // System-Status aus Einstellungen laden
-        try {
-            const settings = await loadValorantSettings();
+        // System-Status aus Einstellungen
+        if (fs.existsSync('./valorant-settings.json')) {
+            const settings = JSON.parse(fs.readFileSync('./valorant-settings.json', 'utf8'));
             stats.systemEnabled = settings.enabled || false;
-        } catch (error) {
-            console.log('⚠️ [Valorant-API] Settings fallback to JSON');
-            if (fs.existsSync('./valorant-settings.json')) {
-                const settingsData = JSON.parse(fs.readFileSync('./valorant-settings.json', 'utf8'));
-                stats.systemEnabled = settingsData.enabled || false;
-            }
         }
 
-        // Aktive Tracker (simuliert als dailySearches / 10)
-        stats.activeTracking = Math.max(0, Math.floor((stats.dailySearches || 0) / 10));
+        // Aktive Tracker (simuliert basierend auf letzten Suchen)
+        const now = Date.now();
+        const oneHourAgo = now - (60 * 60 * 1000);
+        stats.activeTracking = stats.searchHistory.filter(search => 
+            new Date(search.timestamp).getTime() > oneHourAgo
+        ).length;
 
         // Letzte Aktualisierung
-        if (!stats.lastUpdate) {
-            stats.lastUpdate = new Date().toISOString();
-        }
-
-        console.log('✅ [Valorant-API] Stats loaded successfully:', {
-            totalSearches: stats.totalSearches,
-            dailySearches: stats.dailySearches,
-            systemEnabled: stats.systemEnabled,
-            source: stats.totalSearches > 0 ? 'Supabase' : 'JSON'
-        });
+        stats.lastUpdate = new Date().toISOString();
 
         res.json({
             success: true,
-            stats: stats
+            stats: stats,
+            source: 'json'
         });
 
     } catch (error) {
@@ -8929,48 +8959,53 @@ async function handleRankRewards(guild, user, currentTier) {
     }
 }
 
+// Import Valorant Tracker Supabase API
+const {
+    initializeValorantSupabase,
+    updateValorantStatsSupabase,
+    addValorantSearch
+} = require('./valorant-tracker-supabase-api');
+
+// Initialisiere Valorant Supabase beim Start
+initializeValorantSupabase();
+
 async function updateValorantStats(searchData) {
     try {
-        console.log('📊 [Valorant-Stats] Updating stats...', searchData ? {
-            player: `${searchData.playerName}#${searchData.playerTag}`,
-            region: searchData.region,
-            success: searchData.success
-        } : 'No search data');
-
-        // Versuche zuerst Supabase Update
-        try {
-            if (searchData) {
-                // Füge Suche zur Supabase Historie hinzu
-                await addValorantSearch(
-                    searchData.playerName,
-                    searchData.playerTag,
-                    searchData.region,
-                    searchData.success || false,
-                    searchData.discordUserId || null,
-                    searchData.discordUsername || null,
-                    searchData.rankData || null,
-                    searchData.matchData || null
-                );
-            }
-
-            // Aktualisiere Statistiken via Supabase Function
-            const updatedStats = await updateValorantStatsSupabase(searchData ? {
-                region: searchData.region
-            } : null);
-
-            if (updatedStats && updatedStats.totalSearches !== undefined) {
-                console.log('✅ [Valorant-Stats] Supabase update successful:', {
-                    totalSearches: updatedStats.totalSearches,
-                    dailySearches: updatedStats.dailySearches,
-                    topRegions: updatedStats.topRegions
-                });
-                return updatedStats;
-            }
-        } catch (supabaseError) {
-            console.log('⚠️ [Valorant-Stats] Supabase update failed, using JSON fallback:', supabaseError.message);
+        // Verwende Supabase statt JSON
+        if (searchData) {
+            // Füge Suche zur Historie hinzu
+            await addValorantSearch({
+                playerName: searchData.playerName,
+                playerTag: searchData.playerTag,
+                region: searchData.region,
+                success: searchData.success || false,
+                discordUserId: searchData.discordUserId || null,
+                discordUsername: searchData.discordUsername || null,
+                rankData: searchData.rankData || null,
+                matchData: searchData.matchData || null
+            });
         }
 
-        // Fallback zu JSON System
+        // Aktualisiere und lade Statistiken
+        const stats = await updateValorantStatsSupabase(searchData ? {
+            region: searchData.region
+        } : null);
+
+        console.log('✅ Valorant Tracker: Statistiken erfolgreich über Supabase aktualisiert');
+        return stats;
+
+    } catch (error) {
+        console.error('❌ Fehler beim Aktualisieren der Valorant-Statistiken (Supabase):', error);
+        
+        // Fallback zu altem JSON-System falls Supabase nicht verfügbar
+        console.log('🔄 Fallback zu JSON-System...');
+        return updateValorantStatsLegacy(searchData);
+    }
+}
+
+// Legacy JSON-Funktion als Fallback
+function updateValorantStatsLegacy(searchData) {
+    try {
         let stats = {
             totalSearches: 0,
             activeTracking: 0,
@@ -9029,14 +9064,10 @@ async function updateValorantStats(searchData) {
         // Speichern
         fs.writeFileSync('./valorant-stats.json', JSON.stringify(stats, null, 2));
         
-        console.log('✅ [Valorant-Stats] JSON update successful:', {
-            totalSearches: stats.totalSearches,
-            dailySearches: stats.dailySearches
-        });
-        
+        console.log('⚠️ Valorant Tracker: Verwendung von Legacy JSON-System');
         return stats;
     } catch (error) {
-        console.error('❌ Fehler beim Aktualisieren der Valorant-Statistiken:', error);
+        console.error('❌ Fehler beim Aktualisieren der Valorant-Statistiken (Legacy):', error);
         return null;
     }
 }

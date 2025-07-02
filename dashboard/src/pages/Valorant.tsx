@@ -361,9 +361,9 @@ const Valorant: React.FC = () => {
       autoPost: false
     },
     outputFormat: {
-      mode: 'both',
+      mode: 'embed',
       embedEnabled: true,
-      cardEnabled: true
+      cardEnabled: false
     },
     visibility: {
       public: true,
@@ -1569,25 +1569,65 @@ const Valorant: React.FC = () => {
               <label className="text-sm font-medium text-dark-text">Output Modus</label>
               <Tooltip 
                 title="📤 Output Modus erklärt:"
-                content="Das System nutzt nur Discord Embeds für optimale Performance und Kompatibilität"
+                content={
+                  <div>
+                    <div>• Discord Embed: Nur klassische Discord-Nachricht</div>
+                    <div>• Valorant Card: Nur generiertes Bild</div>
+                    <div>• Beide: Discord Embed + Valorant Card</div>
+                  </div>
+                }
               />
             </div>
             
-            {/* Discord Embed Only */}
-            <div className="p-6 rounded-lg border-2 border-purple-primary bg-purple-primary/10 shadow-purple-glow">
-              <div className="text-center">
-                <MessageCircle className="w-8 h-8 text-purple-accent mx-auto mb-3" />
-                <h4 className="font-semibold text-dark-text mb-2 text-lg">Discord Embed</h4>
-                <p className="text-sm text-dark-muted mb-4">
-                  Optimierte Discord-Nachrichten mit strukturierten Feldern und schneller Anzeige
-                </p>
-                <div className="bg-dark-bg/50 rounded-lg p-3 border border-purple-primary/20">
-                  <div className="flex items-center justify-center gap-2 text-sm text-green-400">
-                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                    <span>✅ Aktiv - Nur Discord Embeds werden verwendet</span>
+            <div className="grid grid-cols-1 gap-4">
+              {/* Discord Embed Option (EINZIGE OPTION) */}
+              <div 
+                className="p-6 rounded-lg border-2 border-purple-primary bg-purple-primary/10 shadow-purple-glow"
+              >
+                <div className="text-center">
+                  {/* Preview Image */}
+                  <div className="mb-4 mx-auto w-full max-w-[300px] h-[180px] rounded-lg overflow-hidden border border-purple-primary/20">
+                    <img 
+                      src="/images/valorant-previews/discord-embed-preview.svg" 
+                      alt="Discord Embed Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <MessageCircle className="w-8 h-8 text-purple-accent mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-dark-text mb-2">Discord Embed</h3>
+                  <p className="text-sm text-dark-muted mb-4">Klassische Discord-Nachricht mit strukturierten Feldern und ansprechendem Design</p>
+                  
+                  {/* Eigenschaften */}
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Badge variant="outline" className="text-xs">✅ Schnell</Badge>
+                    <Badge variant="outline" className="text-xs">✅ Anpassbar</Badge>
+                    <Badge variant="outline" className="text-xs">✅ Kompakt</Badge>
+                    <Badge variant="outline" className="text-xs">✅ Discord-nativ</Badge>
                   </div>
                 </div>
               </div>
+            </div>
+            
+            {/* Info zur Vereinfachung */}
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-blue-400 text-lg">ℹ️</span>
+                <div className="text-sm text-blue-200">
+                  <div className="font-medium mb-2">Output-Format vereinfacht!</div>
+                  <div className="text-xs">Das System verwendet jetzt nur noch Discord Embeds für eine konsistente und schnelle Benutzererfahrung. Valorant Cards und kombinierte Ausgaben wurden entfernt, um die Performance zu verbessern.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview Information */}
+          <div className="bg-dark-bg/50 rounded-lg p-4 border border-purple-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="w-4 h-4 text-purple-accent" />
+              <span className="text-sm font-medium text-dark-text">Aktueller Modus:</span>
+            </div>
+            <div className="text-sm text-dark-muted">
+              <span>📝 Discord Embed (Einzige verfügbare Option)</span>
             </div>
           </div>
         </CardContent>
