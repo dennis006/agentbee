@@ -12,7 +12,6 @@ DROP TABLE IF EXISTS valorant_tracker_settings CASCADE;
 -- ============================
 -- TABELLE: VALORANT TRACKER SETTINGS
 -- ============================
-
 CREATE TABLE valorant_tracker_settings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     
@@ -159,7 +158,6 @@ CREATE TABLE valorant_tracker_settings (
 -- ============================
 -- TABELLE: VALORANT TRACKER STATS
 -- ============================
-
 CREATE TABLE valorant_tracker_stats (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     
@@ -191,7 +189,6 @@ CREATE TABLE valorant_tracker_stats (
 -- ============================
 -- TABELLE: VALORANT SEARCH HISTORY
 -- ============================
-
 CREATE TABLE valorant_search_history (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     
@@ -239,8 +236,10 @@ CREATE INDEX idx_valorant_search_history_region ON valorant_search_history(regio
 CREATE INDEX idx_valorant_search_history_success ON valorant_search_history(success);
 CREATE INDEX idx_valorant_search_history_discord_user ON valorant_search_history(discord_user_id);
 CREATE INDEX idx_valorant_search_history_timestamp ON valorant_search_history(search_timestamp DESC);
-CREATE INDEX idx_valorant_search_history_daily ON valorant_search_history(search_timestamp) WHERE search_timestamp >= CURRENT_DATE;
-CREATE INDEX idx_valorant_search_history_weekly ON valorant_search_history(search_timestamp) WHERE search_timestamp >= CURRENT_DATE - INTERVAL '7 days';
+
+-- Composite indexes for better performance on date-based queries
+CREATE INDEX idx_valorant_search_history_date_region ON valorant_search_history(search_timestamp DESC, region);
+CREATE INDEX idx_valorant_search_history_date_success ON valorant_search_history(search_timestamp DESC, success);
 
 -- ============================
 -- TRIGGER FÜR AUTO-TIMESTAMPS
@@ -326,20 +325,20 @@ BEGIN
     -- Wenn neue Suchdaten vorhanden sind
     IF search_data IS NOT NULL THEN
         -- Aktualisiere Gesamt-Suchen
-        UPDATE valorant_tracker_stats 
-        SET total_searches = total_searches + 1,
+        UPDATE valorant_tracker_stats SET 
+            total_searches = total_searches + 1,
             last_update = NOW()
         WHERE id = stats_row.id;
         
         -- Aktualisiere Region-Statistiken
         region_name := search_data->>'region';
         IF region_name IS NOT NULL THEN
-            UPDATE valorant_tracker_stats 
-            SET top_regions = jsonb_set(
-                top_regions, 
-                ARRAY[region_name], 
-                to_jsonb(COALESCE((top_regions->>region_name)::INTEGER, 0) + 1)
-            )
+            UPDATE valorant_tracker_stats SET 
+                top_regions = jsonb_set(
+                    top_regions,
+                    ARRAY[region_name],
+                    to_jsonb(COALESCE((top_regions->>region_name)::INTEGER, 0) + 1)
+                )
             WHERE id = stats_row.id;
         END IF;
     END IF;
@@ -384,8 +383,7 @@ CREATE OR REPLACE FUNCTION add_valorant_search(
     p_discord_username TEXT DEFAULT NULL,
     p_rank_data JSONB DEFAULT NULL,
     p_match_data JSONB DEFAULT NULL
-)
-RETURNS UUID AS $$
+) RETURNS UUID AS $$
 DECLARE
     search_id UUID;
 BEGIN
@@ -438,7 +436,6 @@ $$ LANGUAGE plpgsql;
 -- ============================
 -- SEED DATA: DEFAULT SETTINGS
 -- ============================
-
 INSERT INTO valorant_tracker_settings (
     enabled,
     default_region,
@@ -503,7 +500,6 @@ CREATE POLICY "Allow insert for all users" ON valorant_search_history FOR INSERT
 -- ============================
 -- ERFOLGSMELDUNG
 -- ============================
-
 DO $$
 BEGIN
     RAISE NOTICE '✅ Valorant Tracker Supabase Migration erfolgreich abgeschlossen!';
