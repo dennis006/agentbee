@@ -68,7 +68,6 @@ CREATE TABLE IF NOT EXISTS twitch_live_data (
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    INDEX(guild_id, streamer_id, is_active),
     UNIQUE(guild_id, streamer_id, stream_id)
 );
 
