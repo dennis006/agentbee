@@ -1,45 +1,33 @@
-# Production-ready Dockerfile für Railway
-FROM node:18-alpine
+# Minimalistic Dockerfile - Node 20 Debian
+FROM node:20-slim
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies needed for Discord.js and Canvas
-RUN apk add --no-cache \
-    cairo-dev \
-    jpeg-dev \
-    pango-dev \
-    giflib-dev \
-    librsvg-dev \
-    pixman-dev \
-    pangomm-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
+# Install only essential system dependencies
+RUN apt-get update && apt-get install -y \
     python3 \
     make \
-    g++
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
+# Copy package files first for better caching
 COPY package*.json ./
 
-# Install dependencies with production optimizations
+# Install dependencies
 RUN npm ci --only=production --no-audit --no-fund
 
-# Copy source code
+# Copy application source
 COPY . .
 
-# Create necessary directories
+# Create directories
 RUN mkdir -p public/images/welcome
 
-# Set environment to production
+# Set environment
 ENV NODE_ENV=production
 
-# Expose port (Railway will provide PORT environment variable)
+# Expose port
 EXPOSE 3001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:$PORT/api/health || exit 1
-
-# Start the application
-CMD ["npm", "start"] 
+# Start application
+CMD ["node", "index.js"] 
