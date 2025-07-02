@@ -16,7 +16,7 @@ CREATE TABLE valorant_tracker_settings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     
     -- Basis-Einstellungen
-    enabled BOOLEAN DEFAULT false,
+    enabled BOOLEAN DEFAULT true,
     default_region TEXT DEFAULT 'eu' CHECK (default_region IN ('eu', 'na', 'ap', 'kr')),
     refresh_interval INTEGER DEFAULT 300, -- Sekunden
     
@@ -443,7 +443,7 @@ INSERT INTO valorant_tracker_settings (
     embed_config,
     player_stats_embed
 ) VALUES (
-    false, -- System startet deaktiviert
+    true, -- System startet aktiviert
     'eu',
     '{"mode": "embed", "embedEnabled": true, "cardEnabled": false}'::jsonb,
     '{

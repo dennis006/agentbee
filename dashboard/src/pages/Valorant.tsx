@@ -708,10 +708,24 @@ const Valorant: React.FC = () => {
       const newEnabled = !settings.enabled;
       setSettings(prev => ({ ...prev, enabled: newEnabled }));
       
-      showMessage('success', newEnabled ? 'Valorant-System aktiviert!' : 'Valorant-System deaktiviert!');
-      await loadData();
+      // Änderung an Supabase senden
+      const response = await axios.post('/api/valorant-settings', { 
+        ...settings, 
+        enabled: newEnabled 
+      });
+      
+      if (response.data.success) {
+        showMessage('success', newEnabled ? 'Valorant-System aktiviert!' : 'Valorant-System deaktiviert!');
+        await loadData(); // Daten neu laden um Supabase-State zu synchronisieren
+      } else {
+        // Rollback bei Fehler
+        setSettings(prev => ({ ...prev, enabled: !newEnabled }));
+        showMessage('error', response.data.error || 'Fehler beim Umschalten des Systems');
+      }
     } catch (error) {
       console.error('❌ Fehler beim Umschalten:', error);
+      // Rollback bei Fehler
+      setSettings(prev => ({ ...prev, enabled: !settings.enabled }));
       showMessage('error', 'Fehler beim Umschalten des Systems');
     }
   };
