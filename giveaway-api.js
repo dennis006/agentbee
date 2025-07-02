@@ -24,7 +24,7 @@ function registerGiveawayAPI(app, client) {
                 return res.status(503).json({ error: 'Giveaway-System noch nicht initialisiert' });
             }
             const newSettings = req.body;
-            giveawaySystem.updateSettings(newSettings);
+            await giveawaySystem.updateSettings(newSettings);
             
             // Sofortige Aktualisierung aller Auto-Leaderboard-Channels
             setTimeout(async () => {

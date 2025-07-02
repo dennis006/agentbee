@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const supabaseAPI = require('./giveaway-supabase-api');
 
 class GiveawaySystem {
     constructor(client) {
@@ -10,6 +11,7 @@ class GiveawaySystem {
         this.inviteCodeTracking = new Map(); // code -> { userId: string, giveawayId: string, uses: number }
         this.userInvites = new Map(); // giveawayId -> { userId -> inviteCount }
         this.invitedUsers = new Map(); // giveawayId -> { inviterId -> Set<invitedUserId> } - Tracking wer wen eingeladen hat
+        this.isSupabaseEnabled = false;
         this.settings = {
             enabled: true,
             defaultChannel: 'giveaways',
@@ -49,8 +51,9 @@ class GiveawaySystem {
         
         this.dataFile = path.join(__dirname, 'giveaway-data.json');
         this.settingsFile = path.join(__dirname, 'giveaway-settings.json');
-        this.loadData();
-        this.loadSettings();
+        
+        // Initialize Supabase
+        this.initializeSystem();
         
         // Event-Listener für Member-Join (für Invite-Tracking)
         this.client.on('guildMemberAdd', (member) => this.handleMemberJoin(member));
@@ -67,6 +70,69 @@ class GiveawaySystem {
 
         // Timer für automatisches Leaderboard-Posting (jede Minute prüfen)
         setInterval(() => this.checkAutoLeaderboardPost(), 60000);
+    }
+
+    async initializeSystem() {
+        try {
+            console.log('🔄 Initializing Giveaway System...');
+            
+            // Try to initialize Supabase
+            this.isSupabaseEnabled = await supabaseAPI.initializeSupabase();
+            
+            if (this.isSupabaseEnabled) {
+                console.log('✅ Supabase initialized for Giveaway System');
+                // Load settings from Supabase
+                await this.loadSettingsFromSupabase();
+                // Load giveaways from Supabase
+                await this.loadGiveawaysFromSupabase();
+            } else {
+                console.log('⚠️ Supabase not available, using local fallback for Giveaway System');
+                // Fallback to local files
+                this.loadData();
+                this.loadSettings();
+            }
+        } catch (error) {
+            console.error('❌ Error initializing Giveaway System:', error);
+            // Fallback to local files
+            this.loadData();
+            this.loadSettings();
+        }
+    }
+
+    async loadSettingsFromSupabase() {
+        try {
+            if (this.isSupabaseEnabled && supabaseAPI.isSupabaseAvailable()) {
+                const settings = await supabaseAPI.getSettings();
+                this.settings = { ...this.settings, ...settings };
+                console.log('✅ Giveaway settings loaded from Supabase');
+            }
+        } catch (error) {
+            console.error('❌ Error loading settings from Supabase:', error);
+            // Fallback to local files
+            this.loadSettings();
+        }
+    }
+
+    async loadGiveawaysFromSupabase() {
+        try {
+            if (this.isSupabaseEnabled && supabaseAPI.isSupabaseAvailable()) {
+                const giveaways = await supabaseAPI.getAllGiveaways();
+                this.giveaways.clear();
+                
+                for (const giveaway of giveaways) {
+                    // Get participants for each giveaway
+                    const participants = await supabaseAPI.getParticipants(giveaway.id);
+                    giveaway.participants = new Set(participants.map(p => p.user_id));
+                    this.giveaways.set(giveaway.id, giveaway);
+                }
+                
+                console.log(`✅ Loaded ${giveaways.length} giveaway(s) from Supabase`);
+            }
+        } catch (error) {
+            console.error('❌ Error loading giveaways from Supabase:', error);
+            // Fallback to local files
+            this.loadData();
+        }
     }
 
     loadData() {
@@ -156,42 +222,47 @@ class GiveawaySystem {
         }
     }
 
-    saveData() {
+    async saveData() {
         try {
-            const data = {
-                giveaways: Array.from(this.giveaways.values()).map(g => ({
-                    ...g,
-                    participants: Array.from(g.participants)
-                })),
-                settings: this.settings,
-                inviteTracking: Object.fromEntries(this.inviteTracking),
-                inviteCodeTracking: Object.fromEntries(this.inviteCodeTracking),
-                userInvites: Object.fromEntries(
-                    Array.from(this.userInvites.entries()).map(([giveawayId, userMap]) => [
-                        giveawayId, 
-                        Object.fromEntries(userMap)
-                    ])
-                ),
-                invitedUsers: Object.fromEntries(
-                    Array.from(this.invitedUsers.entries()).map(([giveawayId, inviterMap]) => [
-                        giveawayId,
-                        Object.fromEntries(
-                            Array.from(inviterMap.entries()).map(([inviterId, invitedSet]) => [
-                                inviterId,
-                                Array.from(invitedSet)
-                            ])
-                        )
-                    ])
-                )
-            };
-            
-            fs.writeFileSync(this.dataFile, JSON.stringify(data, null, 2));
+            // If Supabase is available, data is saved automatically through API calls
+            // This method is kept for fallback compatibility
+            if (!this.isSupabaseEnabled || !supabaseAPI.isSupabaseAvailable()) {
+                const data = {
+                    giveaways: Array.from(this.giveaways.values()).map(g => ({
+                        ...g,
+                        participants: Array.from(g.participants)
+                    })),
+                    settings: this.settings,
+                    inviteTracking: Object.fromEntries(this.inviteTracking),
+                    inviteCodeTracking: Object.fromEntries(this.inviteCodeTracking),
+                    userInvites: Object.fromEntries(
+                        Array.from(this.userInvites.entries()).map(([giveawayId, userMap]) => [
+                            giveawayId, 
+                            Object.fromEntries(userMap)
+                        ])
+                    ),
+                    invitedUsers: Object.fromEntries(
+                        Array.from(this.invitedUsers.entries()).map(([giveawayId, inviterMap]) => [
+                            giveawayId,
+                            Object.fromEntries(
+                                Array.from(inviterMap.entries()).map(([inviterId, invitedSet]) => [
+                                    inviterId,
+                                    Array.from(invitedSet)
+                                ])
+                            )
+                        ])
+                    )
+                };
+                
+                fs.writeFileSync(this.dataFile, JSON.stringify(data, null, 2));
+                console.log('✅ Giveaway data saved to local file (fallback)');
+            }
         } catch (error) {
             console.error('❌ Fehler beim Speichern der Giveaway-Daten:', error);
         }
     }
 
-    updateSettings(newSettings) {
+    async updateSettings(newSettings) {
         const oldUpdateInterval = this.settings.leaderboard?.updateInterval;
         this.settings = { ...this.settings, ...newSettings };
         
@@ -212,8 +283,8 @@ class GiveawaySystem {
             }, 500);
         }
         
-        this.saveSettings();
-        this.saveData();
+        await this.saveSettings();
+        await this.saveData();
     }
 
     restartLeaderboardTimer() {
@@ -232,12 +303,25 @@ class GiveawaySystem {
         console.log(`⏰ Leaderboard-Timer gestartet: Updates alle ${this.settings.leaderboard?.updateInterval || 30}s`);
     }
 
-    saveSettings() {
+    async saveSettings() {
         try {
-            fs.writeFileSync(this.settingsFile, JSON.stringify(this.settings, null, 2));
-            console.log('✅ Giveaway-Einstellungen gespeichert');
+            if (this.isSupabaseEnabled && supabaseAPI.isSupabaseAvailable()) {
+                await supabaseAPI.updateSettings(this.settings);
+                console.log('✅ Giveaway settings saved to Supabase');
+            } else {
+                // Fallback to local file
+                fs.writeFileSync(this.settingsFile, JSON.stringify(this.settings, null, 2));
+                console.log('✅ Giveaway-Einstellungen lokal gespeichert (fallback)');
+            }
         } catch (error) {
             console.error('❌ Fehler beim Speichern der Giveaway-Einstellungen:', error);
+            // Try fallback if Supabase fails
+            try {
+                fs.writeFileSync(this.settingsFile, JSON.stringify(this.settings, null, 2));
+                console.log('✅ Giveaway-Einstellungen lokal gespeichert (fallback nach Supabase-Fehler)');
+            } catch (fallbackError) {
+                console.error('❌ Auch Fallback-Speicherung fehlgeschlagen:', fallbackError);
+            }
         }
     }
 
@@ -292,6 +376,17 @@ class GiveawaySystem {
             requirements: options.requirements || {},
             antiCheat: { ...this.settings.antiCheat, ...options.antiCheat }
         };
+
+        // Save to Supabase first, then add to local map
+        if (this.isSupabaseEnabled && supabaseAPI.isSupabaseAvailable()) {
+            try {
+                await supabaseAPI.createGiveaway(giveaway);
+                console.log('✅ Giveaway created in Supabase');
+            } catch (error) {
+                console.error('❌ Error creating giveaway in Supabase:', error);
+                // Continue with local storage as fallback
+            }
+        }
 
         this.giveaways.set(giveaway.id, giveaway);
 
@@ -379,7 +474,7 @@ class GiveawaySystem {
             console.log(`ℹ️ Auto-Leaderboard nur für Invite-Giveaways verfügbar (Type: ${giveaway.type})`);
         }
 
-        this.saveData();
+        await this.saveData();
 
         // Benachrichtigung senden
         if (this.settings.notifications.newGiveaway) {
@@ -628,7 +723,31 @@ class GiveawaySystem {
                         await this.createOrUpdateLeaderboardChannel(inviteData.giveawayId);
                     }
                     
-                    this.saveData();
+                    // Save invite tracking to Supabase
+                    if (this.isSupabaseEnabled && supabaseAPI.isSupabaseAvailable()) {
+                        try {
+                            // Update invite tracking
+                            await supabaseAPI.updateInviteTracking(inviteData.userId, userTracking);
+                            
+                            // Add invited user
+                            await supabaseAPI.addInvitedUser(
+                                inviteData.giveawayId, 
+                                inviteData.userId, 
+                                member.user.id, 
+                                member.user.username
+                            );
+                            
+                            // Update user invites count
+                            const currentCount = (this.userInvites.get(inviteData.giveawayId) || new Map()).get(inviteData.userId) || 0;
+                            await supabaseAPI.updateUserInvites(inviteData.giveawayId, inviteData.userId, currentCount + 1);
+                            
+                            console.log('✅ Invite tracking saved to Supabase');
+                        } catch (error) {
+                            console.error('❌ Error saving invite tracking to Supabase:', error);
+                        }
+                    }
+                    
+                    await this.saveData();
                     
                     console.log(`✅ Invite-Tracking: ${member.user.tag} wurde von ${inviteData.userId} eingeladen`);
                 } else {
@@ -847,7 +966,26 @@ class GiveawaySystem {
             userTracking.codes.push(invite.code);
             this.inviteTracking.set(userId, userTracking);
 
-        this.saveData();
+            // Save to Supabase
+            if (this.isSupabaseEnabled && supabaseAPI.isSupabaseAvailable()) {
+                try {
+                    await supabaseAPI.createInviteCode({
+                        code: invite.code,
+                        userId: userId,
+                        giveawayId: giveawayId,
+                        uses: 0,
+                        maxUses: 100,
+                        expiresAt: giveaway.endTime
+                    });
+                    
+                    await supabaseAPI.updateInviteTracking(userId, userTracking);
+                    console.log('✅ Invite code saved to Supabase');
+                } catch (error) {
+                    console.error('❌ Error saving invite code to Supabase:', error);
+                }
+            }
+
+            await this.saveData();
 
             return invite;
 
@@ -977,7 +1115,21 @@ class GiveawaySystem {
                 await this.deleteAutoLeaderboardChannel(giveaway.id);
             }
 
-            this.saveData();
+            // Update in Supabase
+            if (this.isSupabaseEnabled && supabaseAPI.isSupabaseAvailable()) {
+                try {
+                    await supabaseAPI.updateGiveaway(giveaway.id, {
+                        status: giveaway.status,
+                        winnerList: winners,
+                        endedAt: giveaway.endedAt
+                    });
+                    console.log('✅ Giveaway status updated in Supabase');
+                } catch (error) {
+                    console.error('❌ Error updating giveaway in Supabase:', error);
+                }
+            }
+
+            await this.saveData();
             console.log(`✅ Giveaway beendet: ${giveaway.title} (${winners.length} Gewinner)`);
             
             return { winners, giveaway };
