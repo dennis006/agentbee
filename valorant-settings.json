@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "defaultRegion": "eu",
+  "features": {
+    "mmrTracking": true,
+    "matchHistory": true,
+    "leaderboard": false,
+    "playerStats": true
+  },
+  "outputFormat": {
+    "mode": "embed",
+    "embedEnabled": true,
+    "cardEnabled": false
+  }
+}
