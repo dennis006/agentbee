@@ -1,0 +1,36 @@
+# Nixpacks-Optimized Dockerfile for Railway
+FROM node:20-bullseye-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies using Railway-friendly approach
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+
+# Set npm configuration for Railway
+RUN npm config set fund false
+RUN npm config set audit false
+
+# Install dependencies with verbose logging
+RUN npm install --only=production --verbose
+
+# Copy application files
+COPY . .
+
+# Create required directories
+RUN mkdir -p public/images/welcome
+
+# Set Railway-specific environment
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Start command
+CMD ["node", "index.js"] 
