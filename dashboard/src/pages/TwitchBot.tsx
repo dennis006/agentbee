@@ -48,8 +48,8 @@ const TwitchBot = () => {
     return particles;
   };
 
-  // API Base URL
-  const apiUrl = import.meta.env.VITE_TWITCH_API_URL || 'https://agentbee-twitch.up.railway.app';
+  // API Base URL - Verwendet gleiche Domain wie Discord Bot
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee-discord.up.railway.app';
 
   // Daten laden
   const loadData = async () => {
@@ -60,7 +60,7 @@ const TwitchBot = () => {
       const statusResponse = await fetch(`${apiUrl}/api/twitch/status`);
       if (statusResponse.ok) {
         const statusData = await statusResponse.json();
-        setBotStatus(statusData.bot);
+        setBotStatus(statusData.status);
       }
 
       // Channels laden
@@ -74,7 +74,7 @@ const TwitchBot = () => {
       const statsResponse = await fetch(`${apiUrl}/api/twitch/stats`);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
-        setStats(statsData);
+        setStats(statsData.stats || statsData);
       }
 
     } catch (error) {
@@ -99,7 +99,7 @@ const TwitchBot = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          channel_name: newChannel.trim().toLowerCase()
+          channelName: newChannel.trim().toLowerCase()
         })
       });
 
