@@ -532,8 +532,8 @@ class TwitchSystem {
             return;
         }
 
-        // Cooldown prüfen
-        if (this.settings.notifications.onlyFirstTime && streamer.lastLive) {
+        // Cooldown prüfen (nur wenn > 0)
+        if (this.settings.notifications.onlyFirstTime && streamer.lastLive && this.settings.notifications.cooldown > 0) {
             const lastLive = new Date(streamer.lastLive).getTime();
             const cooldownMs = this.settings.notifications.cooldown * 60 * 1000;
             if (Date.now() - lastLive < cooldownMs) {

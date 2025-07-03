@@ -153,7 +153,7 @@ const TwitchBotCommandsSection: React.FC = () => {
     responseText: '',
     description: '',
     enabled: true,
-    cooldownSeconds: 30,
+    cooldownSeconds: 0,
     modOnly: false,
     vipOnly: false,
     subscriberOnly: false,
@@ -277,7 +277,7 @@ const TwitchBotCommandsSection: React.FC = () => {
       responseText: '',
       description: '',
       enabled: true,
-      cooldownSeconds: 30,
+      cooldownSeconds: 0,
       modOnly: false,
       vipOnly: false,
       subscriberOnly: false,
@@ -531,10 +531,11 @@ const TwitchBotCommandsSection: React.FC = () => {
                   <Label className="text-dark-text">Cooldown (Sekunden)</Label>
                   <Input
                     type="number"
-                    min="1"
+                    min="0"
                     value={formData.cooldownSeconds}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 30 }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 0 }))}
                     className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                    placeholder="0 = kein Cooldown"
                   />
                 </div>
 
@@ -615,7 +616,7 @@ const TwitchBot: React.FC = () => {
     blockedUsers: [],
     globalCooldown: 3,
     liveNotificationsEnabled: true,
-    liveMessageCooldown: 30
+    liveMessageCooldown: 0
   });
 
   const [channels, setChannels] = useState<TwitchBotChannel[]>([]);
@@ -1342,13 +1343,14 @@ const TwitchBot: React.FC = () => {
                   <Label className="text-sm font-medium text-dark-text">Message Cooldown (Minuten)</Label>
                   <Input
                     type="number"
-                    min="5"
+                    min="0"
                     max="120"
                     value={settings.liveMessageCooldown}
-                    onChange={(e) => setSettings({...settings, liveMessageCooldown: parseInt(e.target.value) || 30})}
+                    onChange={(e) => setSettings({...settings, liveMessageCooldown: parseInt(e.target.value) || 0})}
                     className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                    placeholder="0 = kein Cooldown"
                   />
-                  <p className="text-xs text-dark-muted mt-1">Mindestabstand zwischen automatischen Nachrichten</p>
+                  <p className="text-xs text-dark-muted mt-1">Mindestabstand zwischen automatischen Nachrichten (0 = kein Cooldown)</p>
                 </div>
               </div>
 

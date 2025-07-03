@@ -49,9 +49,9 @@ class TwitchChatBot {
         this.settings = settings;
         this.botUsername = settings.botUsername || 'AgentBeeBot';
         this.oauthToken = settings.oauthToken || '';
-        this.liveNotificationEnabled = settings.liveNotificationEnabled !== false;
+        this.liveNotificationEnabled = settings.liveNotificationsEnabled !== false;
         
-        console.log(`🤖 Twitch Bot konfiguriert: ${this.botUsername}`);
+        console.log(`🤖 Twitch Bot konfiguriert: ${this.botUsername} | Live Messages: ${this.liveNotificationEnabled}`);
     }
 
     // Standard Commands initialisieren
@@ -633,15 +633,17 @@ class TwitchChatBot {
             return;
         }
 
-        // Cooldown Check
-        const userId = tags['user-id'];
-        const lastUsed = command.lastUsed.get(userId) || 0;
-        const timeSinceLastUse = Date.now() - lastUsed;
-        
-        if (timeSinceLastUse < command.cooldown) {
-            const remainingCooldown = Math.ceil((command.cooldown - timeSinceLastUse) / 1000);
-            this.sendMessage(channel, `⏰ Command Cooldown: ${remainingCooldown}s verbleibend`);
-            return;
+        // Cooldown Check (nur wenn Cooldown > 0)
+        if (command.cooldown > 0) {
+            const userId = tags['user-id'];
+            const lastUsed = command.lastUsed.get(userId) || 0;
+            const timeSinceLastUse = Date.now() - lastUsed;
+            
+            if (timeSinceLastUse < command.cooldown) {
+                const remainingCooldown = Math.ceil((command.cooldown - timeSinceLastUse) / 1000);
+                this.sendMessage(channel, `⏰ Command Cooldown: ${remainingCooldown}s verbleibend`);
+                return;
+            }
         }
 
         try {
@@ -689,16 +691,18 @@ class TwitchChatBot {
                 return;
             }
 
-            // Cooldown Check
-            const userId = tags['user-id'];
-            const lastUsed = command.lastUsed.get(userId) || 0;
-            const timeSinceLastUse = Date.now() - lastUsed;
-            const cooldownMs = command.cooldownSeconds * 1000;
-            
-            if (timeSinceLastUse < cooldownMs) {
-                const remainingCooldown = Math.ceil((cooldownMs - timeSinceLastUse) / 1000);
-                this.sendMessage(channel, `⏰ Command Cooldown: ${remainingCooldown}s verbleibend`);
-                return;
+            // Cooldown Check (nur wenn Cooldown > 0)
+            if (command.cooldownSeconds > 0) {
+                const userId = tags['user-id'];
+                const lastUsed = command.lastUsed.get(userId) || 0;
+                const timeSinceLastUse = Date.now() - lastUsed;
+                const cooldownMs = command.cooldownSeconds * 1000;
+                
+                if (timeSinceLastUse < cooldownMs) {
+                    const remainingCooldown = Math.ceil((cooldownMs - timeSinceLastUse) / 1000);
+                    this.sendMessage(channel, `⏰ Command Cooldown: ${remainingCooldown}s verbleibend`);
+                    return;
+                }
             }
 
             // Response Text vorbereiten
@@ -986,15 +990,18 @@ class TwitchChatBot {
         
         const notificationKey = `${channelName}_${Date.now()}`;
         
-        // Prüfen ob bereits eine Nachricht in den letzten 30 Minuten gesendet wurde
-        const recentNotifications = Array.from(this.sentLiveNotifications).filter(key => 
-            key.startsWith(channelName) && 
-            (Date.now() - parseInt(key.split('_')[1])) < 30 * 60 * 1000 // 30 Minuten
-        );
-        
-        if (recentNotifications.length > 0) {
-            console.log(`🤖 Live-Nachricht für ${channelName} bereits kürzlich gesendet`);
-            return false;
+        // Cooldown prüfen (nur wenn > 0)
+        const cooldownMinutes = this.settings?.liveMessageCooldown ?? 30;
+        if (cooldownMinutes > 0) {
+            const recentNotifications = Array.from(this.sentLiveNotifications).filter(key => 
+                key.startsWith(channelName) && 
+                (Date.now() - parseInt(key.split('_')[1])) < cooldownMinutes * 60 * 1000
+            );
+            
+            if (recentNotifications.length > 0) {
+                console.log(`🤖 Live-Nachricht für ${channelName} bereits kürzlich gesendet (Cooldown: ${cooldownMinutes} Min)`);
+                return false;
+            }
         }
         
         try {

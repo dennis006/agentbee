@@ -311,7 +311,9 @@ function createTwitchBotAPI(app) {
                         oauthToken: settings.oauth_token || process.env.TWITCH_BOT_OAUTH || '',
                         commandPrefix: settings.command_prefix || '!',
                         modCommandsOnly: settings.mod_commands_only || false,
-                        globalCooldown: settings.global_cooldown || 3
+                        globalCooldown: settings.global_cooldown || 3,
+                        liveNotificationsEnabled: settings.live_notifications_enabled !== false,
+                        liveMessageCooldown: settings.live_message_cooldown ?? 30
                     });
 
                     // Channels aus Supabase laden und hinzufügen
