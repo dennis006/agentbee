@@ -161,7 +161,11 @@ function createTwitchBotAPI(app) {
                 blockedUsers: [],
                 globalCooldown: 3,
                 liveNotificationsEnabled: true,
-                liveMessageCooldown: 30
+                liveMessageCooldown: 30,
+                // ⚡ NEU: Self-Monitoring System
+                selfMonitoringEnabled: false,
+                twitchClientId: '',
+                twitchClientSecret: ''
             };
 
             const settings = data ? {
@@ -176,7 +180,11 @@ function createTwitchBotAPI(app) {
                 blockedUsers: data.blocked_users || [],
                 globalCooldown: data.global_cooldown,
                 liveNotificationsEnabled: data.live_notifications_enabled ?? true,
-                liveMessageCooldown: data.live_message_cooldown ?? 30
+                liveMessageCooldown: data.live_message_cooldown ?? 30,
+                // ⚡ NEU: Self-Monitoring System
+                selfMonitoringEnabled: data.self_monitoring_enabled ?? false,
+                twitchClientId: data.twitch_client_id || '',
+                twitchClientSecret: data.twitch_client_secret || ''
             } : defaultSettings;
 
             console.log('✅ Bot settings retrieved successfully');
@@ -222,6 +230,10 @@ function createTwitchBotAPI(app) {
                 global_cooldown: settings.globalCooldown,
                 live_notifications_enabled: settings.liveNotificationsEnabled ?? true,
                 live_message_cooldown: settings.liveMessageCooldown ?? 30,
+                // ⚡ NEU: Self-Monitoring System
+                self_monitoring_enabled: settings.selfMonitoringEnabled ?? false,
+                twitch_client_id: settings.twitchClientId || '',
+                twitch_client_secret: settings.twitchClientSecret || '',
                 updated_at: new Date().toISOString()
             };
 
@@ -317,7 +329,11 @@ function createTwitchBotAPI(app) {
                         modCommandsOnly: settings.mod_commands_only || false,
                         globalCooldown: settings.global_cooldown || 3,
                         liveNotificationsEnabled: settings.live_notifications_enabled !== false,
-                        liveMessageCooldown: settings.live_message_cooldown ?? 30
+                        liveMessageCooldown: settings.live_message_cooldown ?? 30,
+                        // ⚡ NEU: Self-Monitoring System
+                        selfMonitoringEnabled: settings.self_monitoring_enabled ?? false,
+                        twitchClientId: settings.twitch_client_id || process.env.TWITCH_CLIENT_ID,
+                        twitchClientSecret: settings.twitch_client_secret || process.env.TWITCH_CLIENT_SECRET
                     });
 
                     // Channels aus Supabase laden und hinzufügen
@@ -849,7 +865,21 @@ function createTwitchBotAPI(app) {
                 messagesLast24h: events.filter(e => e.event_type === 'message').length || realTimeStats.messagesProcessed,
                 commandsUsedLast24h: events.filter(e => e.event_type === 'command').length || realTimeStats.commandsExecuted,
                 isConnected: realTimeStats.isConnected,
-                uptime: realTimeStats.isConnected ? realTimeStats.uptime : uptime
+                uptime: realTimeStats.isConnected ? realTimeStats.uptime : uptime,
+                // ⚡ NEU: Self-Monitoring Stats
+                selfMonitoring: twitchBot ? {
+                    enabled: twitchBot.selfMonitoringEnabled || false,
+                    hasToken: Boolean(twitchBot.twitchAccessToken),
+                    hasCredentials: Boolean(twitchBot.twitchClientId && twitchBot.twitchClientSecret),
+                    isRunning: Boolean(twitchBot.selfMonitoringInterval),
+                    monitoredChannels: twitchBot.channels ? twitchBot.channels.size : 0,
+                    lastStatus: twitchBot.sentLiveNotifications ? 
+                        Object.fromEntries(
+                            Array.from(twitchBot.channels.keys()).map(channelName => 
+                                [channelName, twitchBot.sentLiveNotifications.has(channelName)]
+                            )
+                        ) : {}
+                } : undefined
             };
 
             console.log('✅ Bot stats retrieved successfully');

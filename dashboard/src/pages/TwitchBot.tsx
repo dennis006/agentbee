@@ -64,6 +64,10 @@ interface TwitchBotSettings {
   globalCooldown: number;
   liveNotificationsEnabled: boolean;
   liveMessageCooldown: number;
+  // ⚡ NEU: Self-Monitoring System
+  selfMonitoringEnabled: boolean;
+  twitchClientId: string;
+  twitchClientSecret: string;
 }
 
 interface TwitchBotChannel {
@@ -95,6 +99,15 @@ interface TwitchBotStats {
   commandsUsedLast24h: number;
   isConnected: boolean;
   uptime: string;
+  // ⚡ NEU: Self-Monitoring Stats
+  selfMonitoring?: {
+    enabled: boolean;
+    hasToken: boolean;
+    hasCredentials: boolean;
+    isRunning: boolean;
+    monitoredChannels: number;
+    lastStatus: { [channelName: string]: boolean };
+  };
 }
 
 interface LiveMessageTemplate {
@@ -616,7 +629,11 @@ const TwitchBot: React.FC = () => {
     blockedUsers: [],
     globalCooldown: 3,
     liveNotificationsEnabled: true,
-    liveMessageCooldown: 0
+    liveMessageCooldown: 0,
+    // ⚡ NEU: Self-Monitoring System
+    selfMonitoringEnabled: false,
+    twitchClientId: '',
+    twitchClientSecret: ''
   });
 
   const [channels, setChannels] = useState<TwitchBotChannel[]>([]);
@@ -999,7 +1016,7 @@ const TwitchBot: React.FC = () => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-dark-text">Aktive Channels</CardTitle>
@@ -1022,6 +1039,21 @@ const TwitchBot: React.FC = () => {
             <div className="text-2xl font-bold text-neon-purple">{stats.totalCommands}</div>
             <p className="text-xs text-dark-muted">
               verfügbare Commands
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-dark-text">Live Detection</CardTitle>
+            <Monitor className="h-4 w-4 text-purple-accent" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-neon-purple">
+              {settings.selfMonitoringEnabled ? '✅' : '❌'}
+            </div>
+            <p className="text-xs text-dark-muted">
+              {stats.selfMonitoring?.monitoredChannels || 0} überwacht
             </p>
           </CardContent>
         </Card>
@@ -1055,7 +1087,7 @@ const TwitchBot: React.FC = () => {
 
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-dark-surface/50 p-1 rounded-lg mb-6">
-        {['overview', 'settings', 'channels', 'commands', 'live-messages'].map((tab) => (
+        {['overview', 'settings', 'self-monitoring', 'channels', 'commands', 'live-messages'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1067,6 +1099,7 @@ const TwitchBot: React.FC = () => {
           >
             {tab === 'overview' && 'Übersicht'}
             {tab === 'settings' && 'Einstellungen'}
+            {tab === 'self-monitoring' && 'Live Detection'}
             {tab === 'channels' && 'Channels'}
             {tab === 'commands' && 'Commands'}
             {tab === 'live-messages' && 'Live Messages'}
@@ -1186,6 +1219,227 @@ const TwitchBot: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      )}
+
+      {/* Self-Monitoring System */}
+      {activeTab === 'self-monitoring' && (
+        <div className="space-y-6">
+          {/* Self-Monitoring Status Card */}
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <Monitor className="w-5 h-5 text-purple-accent" />
+                Live Detection System
+                <Badge variant={settings.selfMonitoringEnabled ? "default" : "outline"} className="ml-2">
+                  {settings.selfMonitoringEnabled ? '✅ Aktiviert' : '❌ Deaktiviert'}
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Automatische Erkennung wenn du live gehst - unabhängig von Discord Sync! ⚡
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Erklärung */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <h4 className="text-blue-400 font-semibold mb-2 flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  🎯 Wie funktioniert das Live Detection System?
+                </h4>
+                <div className="text-sm text-blue-300 space-y-2">
+                  <p>• Der Bot überwacht <strong>seine eigenen Channels</strong> alle 3 Minuten über die Twitch API</p>
+                  <p>• Sobald du live gehst, wird <strong>automatisch eine Live Message</strong> in deinen Twitch Chat gepostet</p>
+                  <p>• <strong>Keine Discord Sync nötig</strong> - funktioniert komplett eigenständig!</p>
+                  <p>• Verwendet die Live Message Templates (8 verschiedene Nachrichten)</p>
+                </div>
+              </div>
+
+              {/* Self-Monitoring Konfiguration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <Switch
+                      checked={settings.selfMonitoringEnabled}
+                      onCheckedChange={(checked) => setSettings({...settings, selfMonitoringEnabled: checked})}
+                    />
+                    <div>
+                      <Label className="text-white font-medium">Self-Monitoring aktiviert</Label>
+                      <p className="text-xs text-dark-muted">Bot überwacht eigene Channels automatisch</p>
+                    </div>
+                  </div>
+                  
+                  {stats.selfMonitoring && (
+                    <div className="bg-dark-bg/30 p-3 rounded-lg border border-purple-primary/20">
+                      <h5 className="text-sm font-medium text-white mb-2">📊 System Status:</h5>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-dark-muted">System:</span>
+                          <span className={stats.selfMonitoring.enabled ? 'text-green-400' : 'text-red-400'}>
+                            {stats.selfMonitoring.enabled ? '✅ Aktiviert' : '❌ Deaktiviert'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-dark-muted">API Credentials:</span>
+                          <span className={stats.selfMonitoring.hasCredentials ? 'text-green-400' : 'text-red-400'}>
+                            {stats.selfMonitoring.hasCredentials ? '✅ Verfügbar' : '❌ Fehlen'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-dark-muted">API Token:</span>
+                          <span className={stats.selfMonitoring.hasToken ? 'text-green-400' : 'text-red-400'}>
+                            {stats.selfMonitoring.hasToken ? '✅ Gültig' : '❌ Ungültig'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-dark-muted">Monitoring läuft:</span>
+                          <span className={stats.selfMonitoring.isRunning ? 'text-green-400' : 'text-yellow-400'}>
+                            {stats.selfMonitoring.isRunning ? '✅ Läuft' : '⏸️ Gestoppt'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-dark-muted">Überwachte Channels:</span>
+                          <span className="text-purple-400">{stats.selfMonitoring.monitoredChannels}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-dark-text">Twitch Client ID</Label>
+                    <Input
+                      type="password"
+                      value={settings.twitchClientId}
+                      onChange={(e) => setSettings({...settings, twitchClientId: e.target.value})}
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                      placeholder="Twitch App Client ID"
+                    />
+                    <p className="text-xs text-dark-muted">Für Twitch API Zugriff (falls nicht als Environment Variable gesetzt)</p>
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-dark-text">Twitch Client Secret</Label>
+                    <Input
+                      type="password"
+                      value={settings.twitchClientSecret}
+                      onChange={(e) => setSettings({...settings, twitchClientSecret: e.target.value})}
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                      placeholder="Twitch App Client Secret"
+                    />
+                    <p className="text-xs text-dark-muted">Secret für Twitch API Authentication</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Channel Status (wenn Self-Monitoring aktiv) */}
+              {stats.selfMonitoring && Object.keys(stats.selfMonitoring.lastStatus).length > 0 && (
+                <div className="bg-dark-bg/30 p-4 rounded-lg border border-purple-primary/20">
+                  <h5 className="text-md font-medium text-white mb-3 flex items-center gap-2">
+                    📺 Channel Live Status
+                  </h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries(stats.selfMonitoring.lastStatus).map(([channelName, isLive]) => (
+                      <div key={channelName} className="flex items-center justify-between bg-dark-bg/50 p-3 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`}></div>
+                          <span className="text-white font-medium">{channelName}</span>
+                        </div>
+                        <Badge variant={isLive ? "default" : "outline"}>
+                          {isLive ? '🔴 LIVE' : '⚫ Offline'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Twitch API Setup Hilfe */}
+              {!settings.twitchClientId || !settings.twitchClientSecret ? (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                  <h4 className="text-yellow-400 font-semibold mb-2">⚙️ Twitch API Setup erforderlich</h4>
+                  <div className="text-sm text-yellow-300 space-y-2">
+                    <p>Für das Self-Monitoring benötigst du Twitch API Credentials:</p>
+                    <ol className="list-decimal list-inside space-y-1 ml-4">
+                      <li>Gehe zu <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 underline">dev.twitch.tv/console/apps</a></li>
+                      <li>Erstelle eine neue App (Name: "AgentBee Bot")</li>
+                      <li>OAuth Redirect URL: <code className="bg-dark-bg px-1 rounded">http://localhost</code></li>
+                      <li>Kategorie: Chat Bot</li>
+                      <li>Kopiere Client ID und Client Secret hierher</li>
+                    </ol>
+                    <p className="text-xs mt-2">💡 <strong>Alternativ:</strong> Setze <code className="bg-dark-bg px-1 rounded">TWITCH_CLIENT_ID</code> und <code className="bg-dark-bg px-1 rounded">TWITCH_CLIENT_SECRET</code> als Environment Variables in Railway</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                  <h4 className="text-green-400 font-semibold mb-2">✅ API Credentials konfiguriert</h4>
+                  <p className="text-sm text-green-300">
+                    Twitch API Credentials sind gesetzt. Das Self-Monitoring System kann aktiviert werden!
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  onClick={saveSettings} 
+                  className="bg-gradient-to-r from-purple-primary to-purple-secondary hover:from-purple-secondary hover:to-purple-accent text-white font-bold py-3 px-6 rounded-xl shadow-neon transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                >
+                  <Save className="h-5 w-5" />
+                  <span>Self-Monitoring Speichern</span>
+                </Button>
+                
+                <Button
+                  onClick={() => window.open('https://dev.twitch.tv/console/apps', '_blank')}
+                  variant="outline"
+                  className="border-purple-primary text-purple-primary hover:bg-purple-primary hover:text-white"
+                >
+                  <Link className="w-4 h-4 mr-2" />
+                  Twitch Dev Console
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Live Message Templates Info */}
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-purple-accent" />
+                Live Message Templates
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Diese Nachrichten werden automatisch in deinen Twitch Chat gepostet
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+                  '🎮 Der Stream startet jetzt - lasst uns zocken!',
+                  '💜 Hey Chat! Wir sind live und bereit!',
+                  '🚀 Stream ist online - Zeit für Action!',
+                  '⭐ Live und bereit für ein geiles Game!',
+                  '🔥 Der Stream läuft - lasst uns Spaß haben!',
+                  '🎪 Show time! Der Stream ist live!',
+                  '💎 Frisch live - willkommen im Chat!'
+                ].map((template, index) => (
+                  <div key={index} className="bg-dark-bg/30 p-3 rounded-lg border border-purple-primary/20">
+                    <div className="text-sm text-dark-text flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">#{index + 1}</Badge>
+                      {template}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <p className="text-sm text-blue-300">
+                  💡 <strong>Info:</strong> Eine dieser Nachrichten wird zufällig ausgewählt und automatisch in deinen Twitch Chat gepostet, sobald du live gehst!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Channel Management */}
