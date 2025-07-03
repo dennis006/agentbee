@@ -7563,6 +7563,7 @@ client.login(apiKeys.discord.bot_token);
 // Twitch Bot Status und Configuration
 let twitchBotStatus = {
     isRunning: false,
+    status: 'offline',
     connectedChannels: [],
     totalMessages: 0,
     uptime: '0h 0m',
@@ -7623,6 +7624,8 @@ async function initializeTwitchBot() {
 
         if (twitchChannels.length === 0) {
             console.log('ℹ️ Keine Twitch Channels konfiguriert - Twitch Bot wartend');
+            twitchBotStatus.status = 'offline';
+            twitchBotStatus.isRunning = false;
             return;
         }
 
@@ -7645,6 +7648,7 @@ async function initializeTwitchBot() {
         twitchBot.on('connected', (addr, port) => {
             console.log(`🎮 Twitch Bot verbunden mit ${addr}:${port}`);
             twitchBotStatus.isRunning = true;
+            twitchBotStatus.status = 'online';
             twitchBotStatus.startTime = new Date();
             twitchBotStatus.connectedChannels = channelNames;
             updateTwitchUptime();
@@ -7683,16 +7687,22 @@ async function initializeTwitchBot() {
         twitchBot.on('disconnected', (reason) => {
             console.log(`🎮 Twitch Bot getrennt: ${reason}`);
             twitchBotStatus.isRunning = false;
+            twitchBotStatus.status = 'offline';
             twitchBotStatus.connectedChannels = [];
         });
 
         // Bot starten
+        twitchBotStatus.status = 'connecting';
+        twitchBotStatus.isRunning = false;
+        console.log('🎮 Twitch Bot versucht zu verbinden...');
+        
         await twitchBot.connect();
         console.log('🎮 Twitch Bot erfolgreich gestartet!');
 
     } catch (error) {
         console.error('❌ Fehler beim Starten des Twitch Bots:', error);
         twitchBotStatus.isRunning = false;
+        twitchBotStatus.status = 'error';
     }
 }
 
@@ -7861,12 +7871,21 @@ async function saveTwitchBotStatusToSupabase() {
 // Twitch Bot API Routen
 app.get('/api/twitch/status', (req, res) => {
     updateTwitchUptime();
-    res.json({
-        success: true,
-        status: twitchBotStatus,
-        channels: twitchChannels,
-        settings: twitchSettings
-    });
+    
+    // Update Status basierend auf Verbindungszustand
+    if (twitchBot && twitchBot.readyState() === 'OPEN') {
+        twitchBotStatus.status = 'online';
+        twitchBotStatus.isRunning = true;
+    } else if (twitchBot && twitchBot.readyState() === 'CONNECTING') {
+        twitchBotStatus.status = 'connecting';
+        twitchBotStatus.isRunning = false;
+    } else {
+        twitchBotStatus.status = 'offline';
+        twitchBotStatus.isRunning = false;
+    }
+    
+    // Gleiches Format wie Discord Bot (direkt das Status-Object)
+    res.json(twitchBotStatus);
 });
 
 app.get('/api/twitch/channels', (req, res) => {

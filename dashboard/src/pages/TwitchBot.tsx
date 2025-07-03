@@ -116,12 +116,14 @@ const TwitchBot = () => {
       const statusResponse = await fetch(`${apiUrl}/api/twitch/status`);
       if (statusResponse.ok) {
         const statusData = await statusResponse.json();
-        setBotStatus(statusData.status || {
+        // API gibt jetzt direkt das Status-Object zurück
+        setBotStatus(statusData || {
           isRunning: false,
           connectedChannels: [],
           totalMessages: 0,
           uptime: '0h 0m',
-          lastActivity: null
+          lastActivity: null,
+          status: 'offline'
         });
       }
 
@@ -214,11 +216,130 @@ const TwitchBot = () => {
     }
   };
 
-  // Daten laden beim Mount und alle 30 Sekunden
+  // Verbessertes Status-Update System (wie im Discord Dashboard)
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 30000);
-    return () => clearInterval(interval);
+    let retryDelay = 1000; // Start mit 1 Sekunde
+    const maxRetryDelay = 30000; // Max 30 Sekunden
+    let consecutiveFailures = 0;
+    
+    const fetchTwitchStatus = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+        
+        const response = await fetch(`${apiUrl}/api/twitch/status`, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            // API gibt jetzt direkt das Status-Object zurück (nicht verschachtelt)
+            setBotStatus(data || {
+              isRunning: false,
+              connectedChannels: [],
+              totalMessages: 0,
+              uptime: '0h 0m',
+              lastActivity: null,
+              status: 'offline'
+            });
+            
+            // Reset retry delay bei erfolgreichem Request
+            retryDelay = 1000;
+            consecutiveFailures = 0;
+          } else {
+            setBotStatus(prev => ({ 
+              ...prev, 
+              status: 'error', 
+              isRunning: false 
+            }));
+            consecutiveFailures++;
+          }
+        } else if (response.status === 502) {
+          // 502 Bad Gateway - Railway startet noch
+          setBotStatus(prev => ({ 
+            ...prev, 
+            status: 'starting', 
+            isRunning: false 
+          }));
+          consecutiveFailures++;
+        } else if (response.status === 503) {
+          // 503 Service Unavailable
+          setBotStatus(prev => ({ 
+            ...prev, 
+            status: 'connecting', 
+            isRunning: false 
+          }));
+          consecutiveFailures++;
+        } else {
+          consecutiveFailures++;
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          // Silent timeout handling
+        } else {
+          console.error('Twitch Bot Status Error:', error);
+        }
+        
+        consecutiveFailures++;
+        
+        // Nach vielen Fehlern auf offline setzen
+        if (consecutiveFailures >= 5) {
+          setBotStatus(prev => ({ 
+            ...prev, 
+            status: 'offline', 
+            isRunning: false 
+          }));
+        } else {
+          setBotStatus(prev => ({ 
+            ...prev, 
+            status: 'connecting', 
+            isRunning: false 
+          }));
+        }
+      }
+      
+      // Exponential backoff bei Fehlern
+      if (consecutiveFailures > 0) {
+        retryDelay = Math.min(retryDelay * 1.5, maxRetryDelay);
+      }
+    };
+
+    // Race Condition Schutz
+    let isFetching = false;
+    
+    const safeFetchStatus = async () => {
+      if (isFetching) return;
+      
+      isFetching = true;
+      try {
+        await fetchTwitchStatus();
+        // Lade auch andere Daten
+        await loadData();
+      } finally {
+        isFetching = false;
+      }
+    };
+    
+    // Initial fetch mit Verzögerung
+    const initialTimeout = setTimeout(() => safeFetchStatus(), 2000);
+    
+    // Polling interval mit dynamischem Delay
+    const interval = setInterval(() => {
+      safeFetchStatus();
+    }, consecutiveFailures > 0 ? retryDelay : 5000); // 5s normal, exponential bei Fehlern
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, []);
 
   // Auto-clear Messages
