@@ -1246,7 +1246,7 @@ const TwitchBot: React.FC = () => {
                   🎯 Wie funktioniert das Live Detection System?
                 </h4>
                 <div className="text-sm text-blue-300 space-y-2">
-                  <p>• Der Bot überwacht <strong>seine eigenen Channels</strong> alle 3 Minuten über die Twitch API</p>
+                  <p>• Der Bot überwacht <strong>seine eigenen Channels</strong> jede Minute über die Twitch API</p>
                   <p>• Sobald du live gehst, wird <strong>automatisch eine Live Message</strong> in deinen Twitch Chat gepostet</p>
                   <p>• <strong>Keine Discord Sync nötig</strong> - funktioniert komplett eigenständig!</p>
                   <p>• Verwendet die Live Message Templates (8 verschiedene Nachrichten)</p>

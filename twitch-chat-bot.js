@@ -1392,21 +1392,21 @@ class TwitchChatBot {
             return;
         }
         
-        // Self-Monitoring Interval starten (alle 3 Minuten)
+        // Self-Monitoring Interval starten (alle 1 Minute)
         if (this.selfMonitoringInterval) {
             clearInterval(this.selfMonitoringInterval);
         }
         
         this.selfMonitoringInterval = setInterval(() => {
             this.checkOwnChannelsLiveStatus();
-        }, 3 * 60 * 1000); // Alle 3 Minuten
+        }, 1 * 60 * 1000); // Alle 1 Minute
         
         // Sofortiger erster Check nach 30 Sekunden
         setTimeout(() => {
             this.checkOwnChannelsLiveStatus();
         }, 30000);
         
-        console.log('✅ Self-Monitoring System gestartet (alle 3 Minuten)');
+        console.log('✅ Self-Monitoring System gestartet (alle 1 Minute)');
     }
     
     // Self-Monitoring stoppen
