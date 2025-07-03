@@ -12,6 +12,7 @@ class TwitchSystem {
         
         this.checkInterval = null;
         this.twitchAPI = null;
+        this.twitchChatBot = null; // Chat Bot Referenz
         
         // Twitch API Credentials aus zentralem API-Key-System laden
         this.clientId = null;
@@ -541,7 +542,11 @@ class TwitchSystem {
         }
 
         try {
+            // Discord Live Notification senden
             await this.sendLiveNotification(streamer, stream, user);
+            
+            // ⚡ NEU: Automatische Twitch Chat Nachricht senden
+            await this.sendAutomaticChatMessage(streamer, stream, user);
             
             // Status in Supabase speichern
             if (this.supabaseAPI.isAvailable()) {
@@ -567,6 +572,39 @@ class TwitchSystem {
             
         } catch (error) {
             console.error(`❌ Fehler beim Senden der Live-Benachrichtigung für ${streamer.username}:`, error);
+        }
+    }
+
+    // ⚡ NEU: Automatische Chat-Nachricht senden
+    async sendAutomaticChatMessage(streamer, stream, user) {
+        if (!this.twitchChatBot || !this.twitchChatBot.isConnected) {
+            console.log('🤖 Chat Bot nicht verfügbar für automatische Nachricht');
+            return;
+        }
+
+        try {
+            // Streamer Info für die Chat-Nachricht aufbereiten
+            const streamerInfo = {
+                displayName: user?.display_name || streamer.displayName || streamer.username,
+                gameName: stream.game_name || 'Gaming',
+                title: stream.title || 'Live Stream',
+                viewerCount: stream.viewer_count || 0,
+                startedAt: stream.started_at
+            };
+
+            console.log(`🤖 Sende automatische Live-Nachricht für ${streamer.username}...`);
+            
+            // Automatische Chat-Nachricht senden
+            const success = await this.twitchChatBot.sendLiveMessage(streamer.username, streamerInfo);
+            
+            if (success) {
+                console.log(`✅ Automatische Live-Nachricht gesendet: ${streamer.username}`);
+            } else {
+                console.log(`⚠️ Live-Nachricht nicht gesendet (Cooldown oder anderer Grund): ${streamer.username}`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ Fehler beim Senden der automatischen Chat-Nachricht für ${streamer.username}:`, error);
         }
     }
 
@@ -833,6 +871,12 @@ class TwitchSystem {
                 lastCheck: this.lastCheck || null
             };
         }
+    }
+
+    // Twitch Chat Bot setzen
+    setTwitchChatBot(twitchChatBot) {
+        this.twitchChatBot = twitchChatBot;
+        console.log('🤖 Twitch Chat Bot mit Live System verbunden');
     }
 }
 

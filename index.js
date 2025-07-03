@@ -11,7 +11,7 @@ const { registerGiveawayAPI } = require('./giveaway-api');
 const { registerTicketAPI } = require('./ticket-api');
 const TicketSystemV2 = require('./ticket-system-v2');
 const setupTwitchAPI = require('./twitch-api');
-const { initializeSupabase: initializeTwitchSupabase, createTwitchBotAPI, setDiscordClient: setTwitchBotDiscordClient } = require('./twitch-bot-supabase-api');
+const { initializeSupabase: initializeTwitchSupabase, createTwitchBotAPI, setDiscordClient: setTwitchBotDiscordClient, getTwitchBot } = require('./twitch-bot-supabase-api');
 
 // 🎵 YOUTUBE RADIO-SYSTEM
 const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
@@ -2820,6 +2820,13 @@ try {
         const twitchSystem = twitchAPI.getTwitchSystem();
         if (twitchSystem && apiKeys.twitch.clientId && apiKeys.twitch.clientSecret) {
             twitchSystem.setCredentials(apiKeys.twitch.clientId, apiKeys.twitch.clientSecret);
+            
+            // ⚡ NEU: Twitch Chat Bot mit Live System verbinden
+            const twitchBot = getTwitchBot();
+            if (twitchBot) {
+                twitchSystem.setTwitchChatBot(twitchBot);
+                console.log('🤖 Twitch Chat Bot mit Live System verbunden');
+            }
         }
     }
     

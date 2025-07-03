@@ -29,6 +29,11 @@ function setDiscordClient(discordClient) {
     }
 }
 
+// ⚡ NEU: Twitch Bot Instanz abrufen (für Live System Integration)
+function getTwitchBot() {
+    return twitchBot;
+}
+
 // Twitch Bot API Routes
 function createTwitchBotAPI(app) {
     
@@ -585,6 +590,82 @@ function createTwitchBotAPI(app) {
         }
     });
 
+    // ⚡ NEU: Live-Nachricht manuell auslösen
+    app.post('/api/twitch-bot/trigger-live/:channelId', async (req, res) => {
+        try {
+            console.log('🔴 [API] Triggering live message for Twitch channel...');
+            
+            if (!supabaseClient || !twitchBot) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'System not initialized'
+                });
+            }
+
+            const { channelId } = req.params;
+            const { customMessage, streamerInfo } = req.body;
+
+            // Channel-Info abrufen
+            const { data: channelData, error: fetchError } = await supabaseClient
+                .from('twitch_bot_channels')
+                .select('channel_name')
+                .eq('id', channelId)
+                .eq('guild_id', 'default')
+                .single();
+
+            if (fetchError || !channelData) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Channel nicht gefunden'
+                });
+            }
+
+            if (!twitchBot.isConnected) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Bot ist nicht mit Twitch verbunden'
+                });
+            }
+
+            // Live-Nachricht auslösen
+            let success;
+            if (customMessage) {
+                // Manuelle Nachricht
+                success = await twitchBot.triggerLiveMessage(channelData.channel_name, customMessage);
+            } else {
+                // Automatische Live-Nachricht mit Streamer-Info
+                const testStreamerInfo = streamerInfo || {
+                    displayName: channelData.channel_name,
+                    gameName: 'Test Game',
+                    title: 'Test Stream Title',
+                    viewerCount: 42
+                };
+                success = await twitchBot.sendLiveMessage(channelData.channel_name, testStreamerInfo);
+            }
+            
+            if (success) {
+                console.log(`✅ Live message triggered for ${channelData.channel_name}`);
+                res.json({
+                    success: true,
+                    message: `Live-Nachricht für ${channelData.channel_name} ausgelöst!`,
+                    channelName: channelData.channel_name
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    error: 'Live-Nachricht konnte nicht gesendet werden (Cooldown oder anderer Grund)'
+                });
+            }
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/trigger-live:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     // =============================================
     // BOT STATISTICS
     // =============================================
@@ -691,5 +772,6 @@ function createTwitchBotAPI(app) {
 module.exports = {
     initializeSupabase,
     createTwitchBotAPI,
-    setDiscordClient
+    setDiscordClient,
+    getTwitchBot
 }; 

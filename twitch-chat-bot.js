@@ -23,6 +23,10 @@ class TwitchChatBot {
         this.oauthToken = '';
         this.settings = null;
         
+        // Live Notification System
+        this.liveNotificationEnabled = true;
+        this.sentLiveNotifications = new Set(); // Track sent notifications
+        
         // Reconnection handling
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
@@ -41,6 +45,7 @@ class TwitchChatBot {
         this.settings = settings;
         this.botUsername = settings.botUsername || 'AgentBeeBot';
         this.oauthToken = settings.oauthToken || '';
+        this.liveNotificationEnabled = settings.liveNotificationEnabled !== false;
         
         console.log(`🤖 Twitch Bot konfiguriert: ${this.botUsername}`);
     }
@@ -424,6 +429,150 @@ class TwitchChatBot {
         this.sendMessage(formattedChannel, testMessage);
         
         return { success: true, message: testMessage };
+    }
+
+    // =============================================
+    // LIVE STREAM NOTIFICATION SYSTEM
+    // =============================================
+    
+    // Automatische Live-Nachricht senden
+    async sendLiveMessage(channelName, streamerInfo = {}) {
+        if (!this.isConnected || !this.liveNotificationEnabled) {
+            return false;
+        }
+        
+        const notificationKey = `${channelName}_${Date.now()}`;
+        
+        // Prüfen ob bereits eine Nachricht in den letzten 30 Minuten gesendet wurde
+        const recentNotifications = Array.from(this.sentLiveNotifications).filter(key => 
+            key.startsWith(channelName) && 
+            (Date.now() - parseInt(key.split('_')[1])) < 30 * 60 * 1000 // 30 Minuten
+        );
+        
+        if (recentNotifications.length > 0) {
+            console.log(`🤖 Live-Nachricht für ${channelName} bereits kürzlich gesendet`);
+            return false;
+        }
+        
+        try {
+            // Channel-spezifische Einstellungen abrufen
+            const channelSettings = this.channels.get(`#${channelName}`);
+            
+            // Standard Live-Nachrichten
+            const liveMessages = [
+                `🔴 Stream ist LIVE! Willkommen alle! 🎉`,
+                `🎮 Der Stream startet JETZT! Let's go! 🔥`,
+                `⚡ LIVE! Bereit für Action? 💪`,
+                `🚀 Stream ist online! Viel Spaß beim Zuschauen! ❤️`,
+                `🎊 GO LIVE! Lasst uns eine geile Zeit haben! 🎯`
+            ];
+            
+            // Custom Message falls konfiguriert
+            let message = liveMessages[Math.floor(Math.random() * liveMessages.length)];
+            
+            if (channelSettings?.welcomeMessage) {
+                message = channelSettings.welcomeMessage
+                    .replace('{{username}}', streamerInfo.displayName || channelName)
+                    .replace('{{streamer}}', streamerInfo.displayName || channelName)
+                    .replace('{{game}}', streamerInfo.gameName || 'Gaming')
+                    .replace('{{title}}', streamerInfo.title || 'Awesome Stream');
+            }
+            
+            // Nachricht senden
+            const success = this.sendMessage(`#${channelName}`, message);
+            
+            if (success) {
+                // Notification tracking
+                this.sentLiveNotifications.add(notificationKey);
+                
+                // Cleanup alte Notifications (> 2 Stunden)
+                setTimeout(() => {
+                    this.sentLiveNotifications.delete(notificationKey);
+                }, 2 * 60 * 60 * 1000);
+                
+                console.log(`🤖 Live-Nachricht gesendet an ${channelName}: ${message}`);
+                
+                // Discord Sync falls aktiviert
+                if (channelSettings?.syncMessages && channelSettings?.discordChannelId) {
+                    await this.syncLiveMessageToDiscord(channelName, message, channelSettings.discordChannelId, streamerInfo);
+                }
+                
+                return true;
+            }
+            
+        } catch (error) {
+            console.error(`❌ Fehler beim Senden der Live-Nachricht für ${channelName}:`, error);
+        }
+        
+        return false;
+    }
+    
+    // Live-Nachricht zu Discord syncen
+    async syncLiveMessageToDiscord(channelName, message, discordChannelId, streamerInfo = {}) {
+        if (!this.discordClient) return;
+        
+        try {
+            const discordChannel = this.discordClient.channels.cache.get(discordChannelId);
+            if (!discordChannel) return;
+            
+            const embed = new EmbedBuilder()
+                .setColor('#FF0000') // Rot für LIVE
+                .setTitle('🔴 Stream Live Nachricht')
+                .setDescription(`**Bot Message in ${channelName}:**\n${message}`)
+                .addFields([
+                    {
+                        name: '📺 Channel',
+                        value: `https://twitch.tv/${channelName}`,
+                        inline: true
+                    }
+                ])
+                .setTimestamp()
+                .setFooter({ text: 'Twitch Chat Bot - Live Notification' });
+            
+            // Streamer Info hinzufügen falls vorhanden
+            if (streamerInfo.gameName) {
+                embed.addFields([
+                    {
+                        name: '🎮 Spiel',
+                        value: streamerInfo.gameName,
+                        inline: true
+                    }
+                ]);
+            }
+            
+            if (streamerInfo.viewerCount) {
+                embed.addFields([
+                    {
+                        name: '👥 Zuschauer',
+                        value: streamerInfo.viewerCount.toString(),
+                        inline: true
+                    }
+                ]);
+            }
+            
+            await discordChannel.send({ embeds: [embed] });
+            console.log(`📤 Live-Nachricht zu Discord synced: #${discordChannel.name}`);
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Sync zu Discord:', error);
+        }
+    }
+    
+    // Live Notification System aktivieren/deaktivieren
+    toggleLiveNotifications(enabled) {
+        this.liveNotificationEnabled = enabled;
+        console.log(`🤖 Live Notifications ${enabled ? 'aktiviert' : 'deaktiviert'}`);
+        return this.liveNotificationEnabled;
+    }
+    
+    // Manuelle Live-Nachricht (für Tests)
+    async triggerLiveMessage(channelName, customMessage = null) {
+        if (!this.isConnected) {
+            throw new Error('Bot ist nicht verbunden');
+        }
+        
+        const message = customMessage || `🔴 LIVE! Der Stream läuft! 🎉`;
+        return this.sendMessage(`#${channelName}`, message);
     }
 }
 
