@@ -11,7 +11,7 @@ const { registerGiveawayAPI } = require('./giveaway-api');
 const { registerTicketAPI } = require('./ticket-api');
 const TicketSystemV2 = require('./ticket-system-v2');
 const setupTwitchAPI = require('./twitch-api');
-const { initializeSupabase: initializeTwitchSupabase, createTwitchBotAPI } = require('./twitch-bot-supabase-api');
+const { initializeSupabase: initializeTwitchSupabase, createTwitchBotAPI, setDiscordClient: setTwitchBotDiscordClient } = require('./twitch-bot-supabase-api');
 
 // 🎵 YOUTUBE RADIO-SYSTEM
 const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
@@ -2786,6 +2786,7 @@ console.log('🎉 Giveaway-API registriert');
 
 // Twitch Bot API registrieren
 createTwitchBotAPI(app);
+setTwitchBotDiscordClient(client);
 console.log('🤖 Twitch Bot API registriert');
 
 // 🎵 YOUTUBE RADIO-SYSTEM INITIALISIEREN

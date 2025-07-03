@@ -3,14 +3,30 @@
 
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
+const TwitchChatBot = require('./twitch-chat-bot');
 
 // Supabase Client (wird in index.js initialisiert)
 let supabaseClient = null;
 
+// Globale Bot-Instanz
+let twitchBot = null;
+
 // Supabase Client setzen
 function initializeSupabase(client) {
     supabaseClient = client;
+    
+    // Twitch Chat Bot initialisieren
+    twitchBot = new TwitchChatBot();
+    
     console.log('✅ Twitch Bot Supabase API initialisiert');
+}
+
+// Discord Client für Bot setzen
+function setDiscordClient(discordClient) {
+    if (twitchBot) {
+        twitchBot.setDiscordClient(discordClient);
+        console.log('🤖 Discord Client für Twitch Bot gesetzt');
+    }
 }
 
 // Twitch Bot API Routes
@@ -152,17 +168,17 @@ function createTwitchBotAPI(app) {
         try {
             console.log('🤖 [API] Toggling Twitch Bot...');
             
-            if (!supabaseClient) {
+            if (!supabaseClient || !twitchBot) {
                 return res.status(500).json({
                     success: false,
-                    error: 'Supabase client not initialized'
+                    error: 'System not initialized'
                 });
             }
 
             // Aktuelle Einstellungen abrufen
             const { data: currentSettings, error: fetchError } = await supabaseClient
                 .from('twitch_bot_settings')
-                .select('bot_enabled')
+                .select('*')
                 .eq('guild_id', 'default')
                 .single();
 
@@ -177,6 +193,7 @@ function createTwitchBotAPI(app) {
             // Toggle Status
             const newStatus = currentSettings ? !currentSettings.bot_enabled : true;
             
+            // Einstellungen in Supabase aktualisieren
             const { data, error } = await supabaseClient
                 .from('twitch_bot_settings')
                 .upsert({
@@ -192,6 +209,60 @@ function createTwitchBotAPI(app) {
                 return res.status(500).json({
                     success: false,
                     error: error.message
+                });
+            }
+
+            // Echten Bot starten/stoppen
+            try {
+                if (newStatus) {
+                    // Bot konfigurieren mit aktuellen Einstellungen
+                    const settings = currentSettings || {};
+                    twitchBot.configure({
+                        botEnabled: true,
+                        botUsername: settings.bot_username || 'AgentBeeBot',
+                        oauthToken: settings.oauth_token || process.env.TWITCH_BOT_OAUTH || '',
+                        commandPrefix: settings.command_prefix || '!',
+                        modCommandsOnly: settings.mod_commands_only || false,
+                        globalCooldown: settings.global_cooldown || 3
+                    });
+
+                    // Channels aus Supabase laden und hinzufügen
+                    const { data: channels } = await supabaseClient
+                        .from('twitch_bot_channels')
+                        .select('*')
+                        .eq('guild_id', 'default')
+                        .eq('enabled', true);
+
+                    if (channels) {
+                        for (const channel of channels) {
+                            await twitchBot.addChannel(channel.channel_name, {
+                                discordChannelId: channel.discord_channel_id,
+                                syncMessages: channel.sync_messages,
+                                enabled: channel.enabled
+                            });
+                        }
+                    }
+
+                    // Bot starten
+                    await twitchBot.start();
+                } else {
+                    // Bot stoppen
+                    await twitchBot.stop();
+                }
+            } catch (botError) {
+                console.error('❌ Error starting/stopping bot:', botError);
+                // Rollback in Supabase
+                await supabaseClient
+                    .from('twitch_bot_settings')
+                    .upsert({
+                        guild_id: 'default',
+                        bot_enabled: !newStatus,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'guild_id' });
+
+                return res.status(500).json({
+                    success: false,
+                    error: `Bot ${newStatus ? 'Start' : 'Stop'} Error: ${botError.message}`
                 });
             }
 
@@ -356,6 +427,20 @@ function createTwitchBotAPI(app) {
                 totalCommands: 0
             };
 
+            // Echten Bot Channel hinzufügen wenn Bot läuft
+            if (twitchBot && twitchBot.isConnected) {
+                try {
+                    await twitchBot.addChannel(channelName, {
+                        discordChannelId: discordChannelId || '',
+                        syncMessages: syncMessages || false,
+                        enabled: true
+                    });
+                    console.log(`🤖 Channel "${channelName}" zum Bot hinzugefügt`);
+                } catch (botError) {
+                    console.error(`❌ Fehler beim Hinzufügen zu Bot:`, botError);
+                }
+            }
+
             console.log(`✅ Channel "${channelName}" added successfully`);
             res.json({
                 success: true,
@@ -386,6 +471,32 @@ function createTwitchBotAPI(app) {
 
             const { channelId } = req.params;
 
+            // Channel-Info vor dem Löschen abrufen
+            const { data: channelData, error: fetchError } = await supabaseClient
+                .from('twitch_bot_channels')
+                .select('channel_name')
+                .eq('id', channelId)
+                .eq('guild_id', 'default')
+                .single();
+
+            if (fetchError) {
+                console.error('❌ Error fetching channel data:', fetchError);
+                return res.status(500).json({
+                    success: false,
+                    error: fetchError.message
+                });
+            }
+
+            // Aus Bot entfernen wenn läuft
+            if (twitchBot && twitchBot.isConnected && channelData) {
+                try {
+                    await twitchBot.removeChannel(channelData.channel_name);
+                    console.log(`🤖 Channel "${channelData.channel_name}" vom Bot entfernt`);
+                } catch (botError) {
+                    console.error(`❌ Fehler beim Entfernen vom Bot:`, botError);
+                }
+            }
+
             const { error } = await supabaseClient
                 .from('twitch_bot_channels')
                 .delete()
@@ -408,6 +519,65 @@ function createTwitchBotAPI(app) {
 
         } catch (error) {
             console.error('❌ Error in /api/twitch-bot/channels DELETE:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // =============================================
+    // BOT TESTING & UTILITIES
+    // =============================================
+
+    // Test-Nachricht in Channel senden
+    app.post('/api/twitch-bot/test/:channelId', async (req, res) => {
+        try {
+            console.log('🧪 [API] Sending test message to Twitch channel...');
+            
+            if (!supabaseClient || !twitchBot) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'System not initialized'
+                });
+            }
+
+            const { channelId } = req.params;
+
+            // Channel-Info abrufen
+            const { data: channelData, error: fetchError } = await supabaseClient
+                .from('twitch_bot_channels')
+                .select('channel_name')
+                .eq('id', channelId)
+                .eq('guild_id', 'default')
+                .single();
+
+            if (fetchError || !channelData) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Channel nicht gefunden'
+                });
+            }
+
+            if (!twitchBot.isConnected) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Bot ist nicht mit Twitch verbunden'
+                });
+            }
+
+            // Test-Nachricht senden
+            const result = await twitchBot.sendTestMessage(channelData.channel_name);
+            
+            console.log(`✅ Test message sent to ${channelData.channel_name}`);
+            res.json({
+                success: true,
+                message: `Test-Nachricht an ${channelData.channel_name} gesendet!`,
+                testMessage: result.message
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/test:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
@@ -472,14 +642,32 @@ function createTwitchBotAPI(app) {
                 uptime = diffHours > 0 ? `${diffHours}h ${diffMinutes}m` : `${diffMinutes}m`;
             }
 
+            // Echte Bot-Statistiken abrufen wenn Bot läuft
+            let realTimeStats = {
+                isConnected: false,
+                uptime: '0s',
+                messagesProcessed: 0,
+                commandsExecuted: 0
+            };
+
+            if (twitchBot) {
+                const botStatus = twitchBot.getStatus();
+                realTimeStats = {
+                    isConnected: botStatus.isConnected,
+                    uptime: botStatus.stats.uptime,
+                    messagesProcessed: botStatus.stats.messagesProcessed,
+                    commandsExecuted: botStatus.stats.commandsExecuted
+                };
+            }
+
             const stats = {
                 totalChannels: channels.length,
                 activeChannels: channels.filter(c => c.enabled).length,
                 totalCommands: commands.length,
-                messagesLast24h: events.filter(e => e.event_type === 'message').length,
-                commandsUsedLast24h: events.filter(e => e.event_type === 'command').length,
-                isConnected: settings?.bot_enabled || false,
-                uptime
+                messagesLast24h: events.filter(e => e.event_type === 'message').length || realTimeStats.messagesProcessed,
+                commandsUsedLast24h: events.filter(e => e.event_type === 'command').length || realTimeStats.commandsExecuted,
+                isConnected: realTimeStats.isConnected,
+                uptime: realTimeStats.isConnected ? realTimeStats.uptime : uptime
             };
 
             console.log('✅ Bot stats retrieved successfully');
@@ -502,5 +690,6 @@ function createTwitchBotAPI(app) {
 
 module.exports = {
     initializeSupabase,
-    createTwitchBotAPI
+    createTwitchBotAPI,
+    setDiscordClient
 }; 
