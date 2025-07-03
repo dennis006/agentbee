@@ -462,7 +462,8 @@ const TwitchBot: React.FC = () => {
               >
                 twitchapps.com/tmi
               </a>
-              {' '}generieren
+              {' '}generieren<br/>
+              💡 <strong>Optional:</strong> Kann auch als <code className="bg-dark-bg px-1 rounded text-purple-accent">TWITCH_BOT_OAUTH</code> Environment Variable in Railway gesetzt werden
             </p>
           </div>
 
