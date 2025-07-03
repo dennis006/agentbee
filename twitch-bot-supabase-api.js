@@ -801,7 +801,7 @@ function createTwitchBotAPI(app) {
             }
 
             const { data, error } = await supabaseClient
-                .from('twitch_live_message_templates')
+                .from('twitch_bot_live_message_templates')
                 .select('*')
                 .eq('guild_id', 'default')
                 .order('category')
@@ -876,7 +876,7 @@ function createTwitchBotAPI(app) {
             };
 
             const { data, error } = await supabaseClient
-                .from('twitch_live_message_templates')
+                .from('twitch_bot_live_message_templates')
                 .insert(templateData)
                 .select()
                 .single();
@@ -949,7 +949,7 @@ function createTwitchBotAPI(app) {
             if (enabled !== undefined) updateData.enabled = enabled;
 
             const { data, error } = await supabaseClient
-                .from('twitch_live_message_templates')
+                .from('twitch_bot_live_message_templates')
                 .update(updateData)
                 .eq('id', templateId)
                 .eq('guild_id', 'default')
@@ -1034,7 +1034,7 @@ function createTwitchBotAPI(app) {
             }
 
             const { error } = await supabaseClient
-                .from('twitch_live_message_templates')
+                .from('twitch_bot_live_message_templates')
                 .delete()
                 .eq('id', templateId)
                 .eq('guild_id', 'default');

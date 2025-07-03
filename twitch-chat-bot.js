@@ -525,7 +525,7 @@ class TwitchChatBot {
             if (global.supabaseClient) {
                 try {
                     const { data, error } = await global.supabaseClient
-                        .from('twitch_live_message_templates')
+                        .from('twitch_bot_live_message_templates')
                         .select('id, template, name')
                         .eq('guild_id', 'default')
                         .eq('enabled', true)
@@ -575,7 +575,7 @@ class TwitchChatBot {
         
         try {
             await global.supabaseClient
-                .from('twitch_live_message_templates')
+                .from('twitch_bot_live_message_templates')
                 .update({ 
                     usage_count: global.supabaseClient.raw('usage_count + 1'),
                     updated_at: new Date().toISOString()
@@ -601,7 +601,7 @@ class TwitchChatBot {
             
             if (channelData) {
                 await global.supabaseClient
-                    .from('twitch_live_message_stats')
+                    .from('twitch_bot_live_message_stats')
                     .insert({
                         guild_id: 'default',
                         channel_id: channelData.id,
