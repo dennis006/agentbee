@@ -57,15 +57,25 @@ class TwitchChatBot {
     configure(settings) {
         this.settings = settings;
         this.botUsername = settings.botUsername || 'AgentBeeBot';
-        this.oauthToken = settings.oauthToken || '';
+        this.oauthToken = settings.oauthToken || process.env.TWITCH_BOT_OAUTH || '';
+        
+        // Debug OAuth Token
+        console.log(`🔑 OAuth Token Status: ${this.oauthToken ? 'Gesetzt (' + this.oauthToken.substring(0, 10) + '...)' : 'FEHLT!'}`);
         this.liveNotificationEnabled = settings.liveNotificationsEnabled !== false;
         
-        // ⚡ NEU: Self-Monitoring Konfiguration
-        this.selfMonitoringEnabled = settings.selfMonitoringEnabled || false;
-        this.twitchClientId = settings.twitchClientId || null;
-        this.twitchClientSecret = settings.twitchClientSecret || null;
+        // ⚡ NEU: Self-Monitoring Konfiguration - immer aus Environment Variables
+        this.selfMonitoringEnabled = true; // Immer aktiviert wenn Credentials vorhanden
+        this.twitchClientId = process.env.TWITCH_CLIENT_ID || settings.twitchClientId || null;
+        this.twitchClientSecret = process.env.TWITCH_CLIENT_SECRET || settings.twitchClientSecret || null;
+        
+        // Self-Monitoring nur aktivieren wenn Credentials vorhanden sind
+        if (!this.twitchClientId || !this.twitchClientSecret) {
+            this.selfMonitoringEnabled = false;
+            console.log('⚠️ Twitch API Credentials fehlen - Self-Monitoring deaktiviert');
+        }
         
         console.log(`🤖 Twitch Bot konfiguriert: ${this.botUsername} | Live Messages: ${this.liveNotificationEnabled} | Self-Monitoring: ${this.selfMonitoringEnabled}`);
+        console.log(`🔑 Credentials Status: ClientID=${!!this.twitchClientId}, Secret=${!!this.twitchClientSecret}, OAuth=${!!this.oauthToken}`);
     }
 
     // Standard Commands initialisieren

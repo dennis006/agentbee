@@ -29,51 +29,72 @@ function initializeSupabase(client) {
 
 // Auto-Start Funktionalität
 async function checkAutoStart() {
-    if (!supabaseClient || !twitchBot) return;
+    if (!twitchBot) return;
     
     try {
         console.log('🔍 Prüfe Auto-Start für Twitch Bot...');
         
-        // Bot-Einstellungen laden
-        const { data: settings, error } = await supabaseClient
-            .from('twitch_bot_settings')
-            .select('*')
-            .eq('guild_id', 'default')
-            .single();
+        // Fallback-Konfiguration wenn Supabase nicht verfügbar ist
+        let settings = null;
+        let channels = [];
         
-        if (error && error.code !== 'PGRST116') {
-            console.error('❌ Fehler beim Laden der Auto-Start Einstellungen:', error);
-            return;
-        }
-        
-        // Auto-Connect prüfen
-        if (settings && settings.bot_enabled && settings.auto_connect) {
-            console.log('🚀 Auto-Start aktiviert, starte Bot...');
+        if (supabaseClient) {
+            // Bot-Einstellungen aus Supabase laden
+            const { data: settingsData, error } = await supabaseClient
+                .from('twitch_bot_settings')
+                .select('*')
+                .eq('guild_id', 'default')
+                .single();
             
-            // Bot konfigurieren
-            twitchBot.configure({
-                botEnabled: true,
-                botUsername: settings.bot_username || 'AgentBeeBot',
-                oauthToken: settings.oauth_token || process.env.TWITCH_BOT_OAUTH || '',
-                commandPrefix: settings.command_prefix || '!',
-                modCommandsOnly: settings.mod_commands_only || false,
-                globalCooldown: settings.global_cooldown || 3,
-                liveNotificationsEnabled: settings.live_notifications_enabled ?? true,
-                liveMessageCooldown: settings.live_message_cooldown ?? 30,
-                // ⚡ NEU: Self-Monitoring Konfiguration
-                selfMonitoringEnabled: settings.self_monitoring_enabled ?? false,
-                twitchClientId: settings.twitch_client_id || process.env.TWITCH_CLIENT_ID,
-                twitchClientSecret: settings.twitch_client_secret || process.env.TWITCH_CLIENT_SECRET
-            });
+            if (error && error.code !== 'PGRST116') {
+                console.error('❌ Fehler beim Laden der Auto-Start Einstellungen:', error);
+            } else {
+                settings = settingsData;
+            }
             
-            // Channels laden und hinzufügen
-            const { data: channels } = await supabaseClient
+            // Channels laden
+            const { data: channelsData } = await supabaseClient
                 .from('twitch_bot_channels')
                 .select('*')
                 .eq('guild_id', 'default')
                 .eq('enabled', true);
             
-            if (channels && channels.length > 0) {
+            channels = channelsData || [];
+        }
+        
+        // Fallback wenn keine Supabase-Settings oder immer Auto-Start mit Environment Variables
+        const shouldAutoStart = (settings && settings.bot_enabled && settings.auto_connect) || 
+                                (!supabaseClient && process.env.TWITCH_BOT_OAUTH);
+        
+        if (shouldAutoStart) {
+            console.log('🚀 Auto-Start aktiviert, starte Bot...');
+            
+            // Bot konfigurieren mit Fallback zu Environment Variables
+            twitchBot.configure({
+                botEnabled: true,
+                botUsername: settings?.bot_username || 'AgentBeeBot',
+                oauthToken: settings?.oauth_token || process.env.TWITCH_BOT_OAUTH || '',
+                commandPrefix: settings?.command_prefix || '!',
+                modCommandsOnly: settings?.mod_commands_only || false,
+                globalCooldown: settings?.global_cooldown || 3,
+                liveNotificationsEnabled: settings?.live_notifications_enabled ?? true,
+                liveMessageCooldown: settings?.live_message_cooldown ?? 30,
+                // ⚡ Self-Monitoring immer aktiviert wenn Credentials da sind
+                selfMonitoringEnabled: true,
+                twitchClientId: process.env.TWITCH_CLIENT_ID,
+                twitchClientSecret: process.env.TWITCH_CLIENT_SECRET
+            });
+            
+            // Default Channel hinzufügen wenn keine Supabase-Channels vorhanden
+            if (channels.length === 0 && process.env.TWITCH_DEFAULT_CHANNEL) {
+                console.log('📺 Füge Default-Channel hinzu:', process.env.TWITCH_DEFAULT_CHANNEL);
+                await twitchBot.addChannel(process.env.TWITCH_DEFAULT_CHANNEL, {
+                    liveMessageEnabled: true,
+                    customLiveMessage: '',
+                    useCustomLiveMessage: false
+                });
+            } else if (channels && channels.length > 0) {
+                // Channels aus Supabase hinzufügen
                 console.log(`📺 Lade ${channels.length} Channels...`);
                 
                 for (const channel of channels) {
