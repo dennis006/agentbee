@@ -147,49 +147,135 @@ class TwitchChatBot {
         }
 
         try {
-            // TMI Client konfigurieren
+            console.log(`🤖 Starte Twitch Bot "${this.botUsername}"...`);
+            
+            // TMI Client konfigurieren mit aggressiveren Einstellungen
             const clientOptions = {
-                options: { debug: false },
+                options: { 
+                    debug: false,
+                    messagesLogLevel: 'info'
+                },
                 connection: {
                     reconnect: true,
-                    secure: true
+                    secure: true,
+                    timeout: 30000,      // 30 Sekunden Timeout
+                    reconnectDelay: 2000, // 2 Sekunden Reconnect-Delay
+                    reconnectDecay: 1.5,  // Exponentieller Backoff
+                    maxReconnectAttempts: 10
                 },
                 identity: {
                     username: this.botUsername,
                     password: this.oauthToken
                 },
-                channels: Array.from(this.channels.keys())
+                channels: [] // Channels separat joinen für bessere Kontrolle
             };
 
             this.client = new tmi.Client(clientOptions);
             this.setupEventHandlers();
             
-            await this.client.connect();
-            console.log(`🤖 Twitch Bot "${this.botUsername}" erfolgreich gestartet`);
+            // Bot verbinden mit Timeout
+            console.log('🔗 Verbinde mit Twitch...');
+            const connectPromise = this.client.connect();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)
+            );
+            
+            await Promise.race([connectPromise, timeoutPromise]);
+            
+            console.log(`✅ Twitch Bot "${this.botUsername}" erfolgreich verbunden`);
             
             this.isConnected = true;
             this.stats.uptime = Date.now();
             this.reconnectAttempts = 0;
             
+            // Channels nach erfolgreicher Verbindung joinen
+            await this.joinConfiguredChannels();
+            
         } catch (error) {
             console.error('❌ Fehler beim Starten des Twitch Bots:', error);
             this.isConnected = false;
+            
+            // Cleanup bei Fehler
+            if (this.client) {
+                try {
+                    await this.client.disconnect();
+                } catch (disconnectError) {
+                    console.error('❌ Fehler beim Disconnect nach Start-Fehler:', disconnectError);
+                }
+                this.client = null;
+            }
+            
             throw error;
         }
     }
 
-    // Bot stoppen
-    async stop() {
-        if (this.client) {
+    // Neue Methode: Channels nach Verbindung joinen
+    async joinConfiguredChannels() {
+        if (!this.client || !this.isConnected) return;
+        
+        const channelNames = Array.from(this.channels.keys());
+        if (channelNames.length === 0) {
+            console.log('🤖 Keine Channels zum Joinen konfiguriert');
+            return;
+        }
+        
+        console.log(`🏠 Joiner ${channelNames.length} Channels...`);
+        
+        for (const channelName of channelNames) {
             try {
-                await this.client.disconnect();
-                console.log('🤖 Twitch Bot gestoppt');
-            } catch (error) {
-                console.error('❌ Fehler beim Stoppen des Bots:', error);
+                // Mit kleiner Verzögerung zwischen Joins
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                await this.client.join(channelName);
+                console.log(`✅ Bot ist Channel ${channelName} beigetreten`);
+                
+            } catch (joinError) {
+                console.error(`❌ Fehler beim Joinen von ${channelName}:`, joinError);
+                // Weitermachen mit nächstem Channel
             }
         }
+        
+        console.log(`🎉 Bot Setup abgeschlossen! Aktiv in ${this.channels.size} Channels`);
+    }
+
+    // Bot stoppen
+    async stop() {
+        console.log('🛑 Stoppe Twitch Bot...');
+        
+        // Status sofort auf disconnected setzen um Reconnects zu verhindern
         this.isConnected = false;
-        this.client = null;
+        
+        if (this.client) {
+            try {
+                // Channels verlassen
+                const joinedChannels = this.client.getChannels ? this.client.getChannels() : [];
+                console.log(`🔴 Verlasse ${joinedChannels.length} Channels...`);
+                
+                for (const channel of joinedChannels) {
+                    try {
+                        await this.client.part(channel);
+                    } catch (e) {
+                        // Ignorieren - Channel war bereits verlassen
+                    }
+                }
+                
+                // Client disconnecten
+                await this.client.disconnect();
+                console.log('🤖 Twitch Bot erfolgreich gestoppt');
+                
+            } catch (error) {
+                console.error('❌ Fehler beim Stoppen des Bots:', error);
+            } finally {
+                // Client-Referenz cleanen
+                this.client = null;
+            }
+        }
+        
+        // Stats zurücksetzen
+        this.stats.connectedChannels = 0;
+        this.reconnectAttempts = 0;
+        
+        console.log('✅ Bot vollständig gestoppt');
     }
 
     // Event Handlers setup
@@ -198,16 +284,30 @@ class TwitchChatBot {
 
         // Verbindung erfolgreich
         this.client.on('connected', (addr, port) => {
-            console.log(`🤖 Twitch Bot verbunden mit ${addr}:${port}`);
+            console.log(`🟢 Twitch Bot verbunden mit ${addr}:${port}`);
             this.isConnected = true;
             this.stats.connectedChannels = this.channels.size;
         });
 
         // Verbindung verloren
         this.client.on('disconnected', (reason) => {
-            console.log(`🤖 Twitch Bot getrennt: ${reason}`);
+            console.log(`🔴 Twitch Bot getrennt: ${reason}`);
             this.isConnected = false;
-            this.handleDisconnection();
+            
+            // Schnellere Reconnection versuchen
+            setTimeout(() => {
+                this.handleDisconnection();
+            }, 1000); // 1 Sekunde Verzögerung
+        });
+
+        // Verbindung wird aufgebaut
+        this.client.on('connecting', (address, port) => {
+            console.log(`🔄 Verbinde mit Twitch Chat auf ${address}:${port}...`);
+        });
+
+        // Reconnect-Versuch
+        this.client.on('reconnect', () => {
+            console.log('🔄 Twitch Bot versucht Reconnect...');
         });
 
         // Chat Messages
@@ -217,24 +317,53 @@ class TwitchChatBot {
             this.handleMessage(channel, tags, message);
         });
 
-        // Channel joined
+        // Channel joined - Mit verbessertem Logging
         this.client.on('join', (channel, username, self) => {
             if (self) {
-                console.log(`🤖 Bot "${this.botUsername}" ist Channel ${channel} beigetreten`);
+                console.log(`🟢 Bot "${this.botUsername}" ist Channel ${channel} beigetreten`);
+                this.stats.connectedChannels = this.getJoinedChannelsCount();
             }
         });
 
         // Channel left
         this.client.on('part', (channel, username, self) => {
             if (self) {
-                console.log(`🤖 Bot "${this.botUsername}" hat Channel ${channel} verlassen`);
+                console.log(`🔴 Bot "${this.botUsername}" hat Channel ${channel} verlassen`);
+                this.stats.connectedChannels = this.getJoinedChannelsCount();
             }
         });
 
-        // Error handling
+        // Error handling mit detailliertem Logging
         this.client.on('error', (error) => {
             console.error('❌ Twitch Bot Fehler:', error);
+            
+            // Bei kritischen Fehlern Reconnect versuchen
+            if (error.message && error.message.includes('Login authentication failed')) {
+                console.error('❌ KRITISCH: OAuth Token ungültig! Bot kann nicht verbinden.');
+                this.isConnected = false;
+            } else if (error.message && error.message.includes('Connection closed')) {
+                console.log('🔄 Verbindung geschlossen, versuche Reconnect...');
+                this.handleDisconnection();
+            }
         });
+
+        // Rate Limit Warnings
+        this.client.on('slowmode', (channel, enabled, length) => {
+            if (enabled) {
+                console.log(`⚠️ Slowmode aktiviert in ${channel}: ${length}s`);
+            }
+        });
+
+        // Hosting Events
+        this.client.on('hosted', (channel, username, viewers, autohost) => {
+            console.log(`🎯 ${channel} wird von ${username} gehostet (${viewers} Zuschauer)`);
+        });
+    }
+
+    // Neue Hilfsmethode: Anzahl der tatsächlich beigetretenen Channels
+    getJoinedChannelsCount() {
+        if (!this.client || !this.client.getChannels) return 0;
+        return this.client.getChannels().length;
     }
 
     // Message handling
@@ -337,23 +466,40 @@ class TwitchChatBot {
     async addChannel(channelName, channelSettings = {}) {
         const formattedChannel = channelName.startsWith('#') ? channelName : `#${channelName}`;
         
+        console.log(`🏠 Füge Channel ${formattedChannel} hinzu...`);
+        
         this.channels.set(formattedChannel, {
             enabled: true,
             autoJoin: true,
             discordChannelId: '',
             syncMessages: false,
+            welcomeMessage: '',
+            liveMessageEnabled: true,
+            liveMessageTemplate: '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+            useCustomLiveMessage: false,
+            liveMessageVariables: { username: true, game: true, title: true, viewers: true },
             ...channelSettings
         });
 
-        // Bot läuft bereits? Channel joinen
+        // Falls Bot bereits läuft, Channel sofort joinen
         if (this.client && this.isConnected) {
             try {
+                console.log(`🔄 Joiner Channel ${formattedChannel} sofort...`);
                 await this.client.join(formattedChannel);
-                console.log(`🤖 Channel ${formattedChannel} hinzugefügt`);
+                console.log(`✅ Channel ${formattedChannel} erfolgreich gejoint`);
+                
+                // Stats aktualisieren
+                this.stats.connectedChannels = this.getJoinedChannelsCount();
+                
             } catch (error) {
                 console.error(`❌ Fehler beim Joinen von ${formattedChannel}:`, error);
+                throw error;
             }
+        } else {
+            console.log(`📝 Channel ${formattedChannel} zur Liste hinzugefügt (Bot offline)`);
         }
+        
+        return true;
     }
 
     // Channel entfernen
@@ -375,17 +521,48 @@ class TwitchChatBot {
 
     // Verbindungsfehler behandeln
     handleDisconnection() {
+        // Nicht reconnecten wenn manuell gestoppt
+        if (!this.isConnected && this.client === null) {
+            console.log('🤖 Bot wurde manuell gestoppt, kein Reconnect');
+            return;
+        }
+        
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
-            console.log(`🔄 Reconnect Versuch ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${this.reconnectDelay/1000}s`);
+            const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1), 30000); // Max 30 Sekunden
             
-            setTimeout(() => {
-                this.start().catch(error => {
+            console.log(`🔄 Reconnect Versuch ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay/1000}s`);
+            
+            setTimeout(async () => {
+                try {
+                    // Cleanup alte Verbindung
+                    if (this.client) {
+                        try {
+                            await this.client.disconnect();
+                        } catch (e) {
+                            // Ignorieren - client war bereits disconnected
+                        }
+                    }
+                    
+                    // Frische Verbindung aufbauen
+                    console.log('🔄 Starte frische Bot-Verbindung...');
+                    await this.start();
+                    
+                    console.log('✅ Bot erfolgreich reconnected!');
+                    
+                } catch (error) {
                     console.error('❌ Reconnect fehlgeschlagen:', error);
-                });
-            }, this.reconnectDelay);
+                    
+                    // Weiterer Reconnect-Versuch
+                    setTimeout(() => {
+                        this.handleDisconnection();
+                    }, 2000);
+                }
+            }, delay);
         } else {
-            console.error('❌ Maximale Reconnect-Versuche erreicht');
+            console.error('❌ Maximale Reconnect-Versuche erreicht. Bot gestoppt.');
+            this.isConnected = false;
+            this.client = null;
         }
     }
 
@@ -404,15 +581,27 @@ class TwitchChatBot {
 
     // Bot Status abrufen
     getStatus() {
+        const joinedChannels = this.client && this.client.getChannels ? this.client.getChannels() : [];
+        
         return {
             isConnected: this.isConnected,
             botUsername: this.botUsername,
             channelsCount: this.channels.size,
+            joinedChannelsCount: joinedChannels.length,
             commandsCount: this.commands.size,
+            reconnectAttempts: this.reconnectAttempts,
+            maxReconnectAttempts: this.maxReconnectAttempts,
             stats: {
                 ...this.stats,
                 uptime: this.getUptimeString(),
-                connectedChannels: this.isConnected ? this.channels.size : 0
+                connectedChannels: joinedChannels.length,
+                configuredChannels: this.channels.size,
+                joinedChannelNames: joinedChannels
+            },
+            connectionDetails: {
+                hasClient: !!this.client,
+                clientState: this.client ? 'initialized' : 'null',
+                isReconnecting: this.reconnectAttempts > 0
             }
         };
     }

@@ -14,11 +14,88 @@ let twitchBot = null;
 // Supabase Client setzen
 function initializeSupabase(client) {
     supabaseClient = client;
+    global.supabaseClient = client;
     
     // Twitch Chat Bot initialisieren
     twitchBot = new TwitchChatBot();
     
+    // Auto-Start prüfen
+    setTimeout(async () => {
+        await checkAutoStart();
+    }, 2000); // 2 Sekunden Verzögerung für vollständige Initialisierung
+    
     console.log('✅ Twitch Bot Supabase API initialisiert');
+}
+
+// Auto-Start Funktionalität
+async function checkAutoStart() {
+    if (!supabaseClient || !twitchBot) return;
+    
+    try {
+        console.log('🔍 Prüfe Auto-Start für Twitch Bot...');
+        
+        // Bot-Einstellungen laden
+        const { data: settings, error } = await supabaseClient
+            .from('twitch_bot_settings')
+            .select('*')
+            .eq('guild_id', 'default')
+            .single();
+        
+        if (error && error.code !== 'PGRST116') {
+            console.error('❌ Fehler beim Laden der Auto-Start Einstellungen:', error);
+            return;
+        }
+        
+        // Auto-Connect prüfen
+        if (settings && settings.bot_enabled && settings.auto_connect) {
+            console.log('🚀 Auto-Start aktiviert, starte Bot...');
+            
+            // Bot konfigurieren
+            twitchBot.configure({
+                botEnabled: true,
+                botUsername: settings.bot_username || 'AgentBeeBot',
+                oauthToken: settings.oauth_token || process.env.TWITCH_BOT_OAUTH || '',
+                commandPrefix: settings.command_prefix || '!',
+                modCommandsOnly: settings.mod_commands_only || false,
+                globalCooldown: settings.global_cooldown || 3,
+                liveNotificationsEnabled: settings.live_notifications_enabled ?? true,
+                liveMessageCooldown: settings.live_message_cooldown ?? 30
+            });
+            
+            // Channels laden und hinzufügen
+            const { data: channels } = await supabaseClient
+                .from('twitch_bot_channels')
+                .select('*')
+                .eq('guild_id', 'default')
+                .eq('enabled', true);
+            
+            if (channels && channels.length > 0) {
+                console.log(`📺 Lade ${channels.length} Channels...`);
+                
+                for (const channel of channels) {
+                    await twitchBot.addChannel(channel.channel_name, {
+                        discordChannelId: channel.discord_channel_id,
+                        syncMessages: channel.sync_messages,
+                        enabled: channel.enabled,
+                        liveMessageEnabled: channel.live_message_enabled ?? true,
+                        liveMessageTemplate: channel.live_message_template || '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+                        useCustomLiveMessage: channel.use_custom_live_message ?? false,
+                        liveMessageVariables: channel.live_message_variables || { username: true, game: true, title: true, viewers: true }
+                    });
+                }
+            }
+            
+            // Bot starten
+            await twitchBot.start();
+            console.log('✅ Auto-Start erfolgreich abgeschlossen!');
+            
+        } else {
+            console.log('⏸️ Auto-Start deaktiviert oder Bot nicht aktiviert');
+        }
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Auto-Start:', error);
+    }
 }
 
 // Discord Client für Bot setzen
