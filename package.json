@@ -1,7 +1,7 @@
 {
-  "name": "discord-bot",
-  "version": "1.0.32",
-  "description": "Ein Discord-Bot mit Web-Dashboard",
+  "name": "agentbee-bot",
+  "version": "2.1.0",
+  "description": "AgentBee Discord Bot with XP, Giveaway, Ticket, Music, Twitch, Valorant systems",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
