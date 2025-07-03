@@ -17,7 +17,6 @@ import VerificationSettings from './pages/VerificationSettings'
 import XP from './pages/XP'
 import TwitchNotifications from './pages/TwitchNotifications'
 import TwitchBot from './pages/TwitchBot'
-import TwitchBotTabs from './pages/TwitchBotTabs'
 import Valorant from './pages/Valorant'
 import ValorantNews from './pages/ValorantNews'
 import CrosshairCreator from './pages/CrosshairCreator'
@@ -419,7 +418,7 @@ const DashboardLayout = () => {
       case 'twitch':
         return <TwitchNotifications />
       case 'twitch-bot':
-        return <TwitchBotTabs />
+        return <TwitchBot />
       case 'valorant':
         return <Valorant />
       case 'valorant-news':

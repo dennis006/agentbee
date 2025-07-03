@@ -4,7 +4,6 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
 const TwitchChatBot = require('./twitch-chat-bot');
-const { createTwitchBotStreamEventsAPI, initializeSupabase: initializeStreamEventsSupabase, setTwitchBot: setStreamEventsTwitchBot } = require('./twitch-bot-stream-events-api');
 
 // Supabase Client (wird in index.js initialisiert)
 let supabaseClient = null;
@@ -18,10 +17,6 @@ function initializeSupabase(client) {
     
     // Twitch Chat Bot initialisieren
     twitchBot = new TwitchChatBot();
-    
-    // Stream Events API initialisieren
-    initializeStreamEventsSupabase(client);
-    setStreamEventsTwitchBot(twitchBot);
     
     console.log('✅ Twitch Bot Supabase API initialisiert');
 }
@@ -689,13 +684,6 @@ function createTwitchBotAPI(app) {
             });
         }
     });
-
-    // =============================================
-    // STREAM EVENTS API INTEGRATION
-    // =============================================
-    
-    // Stream Events API Routes hinzufügen
-    createTwitchBotStreamEventsAPI(app);
 
     console.log('🤖 Twitch Bot API routes initialized');
 }
