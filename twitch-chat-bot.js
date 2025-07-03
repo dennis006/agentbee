@@ -633,9 +633,11 @@ class TwitchChatBot {
             return;
         }
 
+        // User ID für Cooldown-Tracking
+        const userId = tags['user-id'];
+
         // Cooldown Check (nur wenn Cooldown > 0)
         if (command.cooldown > 0) {
-            const userId = tags['user-id'];
             const lastUsed = command.lastUsed.get(userId) || 0;
             const timeSinceLastUse = Date.now() - lastUsed;
             
@@ -726,8 +728,11 @@ class TwitchChatBot {
                 await this.syncCustomCommandToDiscord(commandName, responseText, command.discordChannelId, tags, channel);
             }
 
-            // Cooldown setzen
-            command.lastUsed.set(userId, Date.now());
+            // Cooldown setzen (nur wenn Cooldown aktiv war)
+            if (command.cooldownSeconds > 0) {
+                const userId = tags['user-id'];
+                command.lastUsed.set(userId, Date.now());
+            }
             this.stats.commandsExecuted++;
 
             console.log(`🎮 Custom Command !${commandName} von ${tags['display-name']} in ${channel}`);
