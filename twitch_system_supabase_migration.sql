@@ -2,9 +2,30 @@
 -- Datum: 2025
 
 -- =============================================
+-- CLEANUP: Drop existing tables if they exist
+-- =============================================
+DROP TABLE IF EXISTS twitch_bot_stats CASCADE;
+DROP TABLE IF EXISTS twitch_bot_events CASCADE;
+DROP TABLE IF EXISTS twitch_bot_commands CASCADE;
+DROP TABLE IF EXISTS twitch_bot_moderation CASCADE;
+DROP TABLE IF EXISTS twitch_bot_channels CASCADE;
+DROP TABLE IF EXISTS twitch_monitored_streamers CASCADE;
+DROP TABLE IF EXISTS twitch_live_notifications CASCADE;
+DROP TABLE IF EXISTS twitch_bot_settings CASCADE;
+
+-- Drop functions and views
+DROP VIEW IF EXISTS twitch_bot_active_channels CASCADE;
+DROP VIEW IF EXISTS twitch_bot_stats_summary CASCADE;
+DROP VIEW IF EXISTS twitch_monitored_streamers_status CASCADE;
+DROP FUNCTION IF EXISTS update_twitch_bot_updated_at_column() CASCADE;
+DROP FUNCTION IF EXISTS cleanup_old_twitch_bot_events(INTEGER) CASCADE;
+DROP FUNCTION IF EXISTS increment_command_usage(INTEGER) CASCADE;
+DROP FUNCTION IF EXISTS update_twitch_bot_daily_stats(TEXT, INTEGER, INTEGER, INTEGER, INTEGER, INTEGER, INTEGER, INTEGER, INTEGER) CASCADE;
+
+-- =============================================
 -- TWITCH BOT SETTINGS TABLE
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_bot_settings (
+CREATE TABLE twitch_bot_settings (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     bot_enabled BOOLEAN DEFAULT false,
@@ -26,7 +47,7 @@ CREATE TABLE IF NOT EXISTS twitch_bot_settings (
 -- =============================================
 -- TWITCH BOT CHANNELS TABLE
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_bot_channels (
+CREATE TABLE twitch_bot_channels (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     channel_name TEXT NOT NULL,
@@ -49,7 +70,7 @@ CREATE TABLE IF NOT EXISTS twitch_bot_channels (
 -- =============================================
 -- TWITCH BOT COMMANDS TABLE
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_bot_commands (
+CREATE TABLE twitch_bot_commands (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     channel_id INTEGER REFERENCES twitch_bot_channels(id) ON DELETE CASCADE,
@@ -70,7 +91,7 @@ CREATE TABLE IF NOT EXISTS twitch_bot_commands (
 -- =============================================
 -- TWITCH BOT MODERATION TABLE
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_bot_moderation (
+CREATE TABLE twitch_bot_moderation (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     channel_id INTEGER REFERENCES twitch_bot_channels(id) ON DELETE CASCADE,
@@ -92,7 +113,7 @@ CREATE TABLE IF NOT EXISTS twitch_bot_moderation (
 -- =============================================
 -- TWITCH BOT LIVE NOTIFICATIONS (erweitert)
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_live_notifications (
+CREATE TABLE twitch_live_notifications (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     enabled BOOLEAN DEFAULT true,
@@ -123,7 +144,7 @@ CREATE TABLE IF NOT EXISTS twitch_live_notifications (
 -- =============================================
 -- TWITCH MONITORED STREAMERS TABLE
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_monitored_streamers (
+CREATE TABLE twitch_monitored_streamers (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     username TEXT NOT NULL,
@@ -142,7 +163,7 @@ CREATE TABLE IF NOT EXISTS twitch_monitored_streamers (
 -- =============================================
 -- TWITCH BOT EVENTS TABLE
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_bot_events (
+CREATE TABLE twitch_bot_events (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     channel_id INTEGER REFERENCES twitch_bot_channels(id) ON DELETE CASCADE,
@@ -157,7 +178,7 @@ CREATE TABLE IF NOT EXISTS twitch_bot_events (
 -- =============================================
 -- TWITCH BOT STATS TABLE
 -- =============================================
-CREATE TABLE IF NOT EXISTS twitch_bot_stats (
+CREATE TABLE twitch_bot_stats (
     id SERIAL PRIMARY KEY,
     guild_id TEXT NOT NULL DEFAULT 'default',
     channel_id INTEGER REFERENCES twitch_bot_channels(id) ON DELETE CASCADE,
@@ -263,17 +284,28 @@ ON CONFLICT (guild_id) DO NOTHING;
 -- View für aktive Bot Channels mit Stats
 CREATE OR REPLACE VIEW twitch_bot_active_channels AS
 SELECT 
-    c.*,
-    m.spam_protection,
-    m.caps_protection,
-    m.link_protection,
+    c.id,
+    c.guild_id,
+    c.channel_name,
+    c.channel_id,
+    c.enabled,
+    c.auto_join,
+    c.discord_channel_id,
+    c.sync_messages,
+    c.created_at,
+    c.updated_at,
+    COALESCE(m.spam_protection, false) as spam_protection,
+    COALESCE(m.caps_protection, false) as caps_protection,
+    COALESCE(m.link_protection, false) as link_protection,
     COUNT(cmd.id) as total_commands,
     COUNT(CASE WHEN cmd.enabled = true THEN 1 END) as active_commands
 FROM twitch_bot_channels c
 LEFT JOIN twitch_bot_moderation m ON c.id = m.channel_id
 LEFT JOIN twitch_bot_commands cmd ON c.id = cmd.channel_id
 WHERE c.enabled = true
-GROUP BY c.id, m.spam_protection, m.caps_protection, m.link_protection;
+GROUP BY c.id, c.guild_id, c.channel_name, c.channel_id, c.enabled, c.auto_join, 
+         c.discord_channel_id, c.sync_messages, c.created_at, c.updated_at,
+         m.spam_protection, m.caps_protection, m.link_protection;
 
 -- View für Bot Statistiken
 CREATE OR REPLACE VIEW twitch_bot_stats_summary AS
@@ -294,7 +326,18 @@ GROUP BY guild_id;
 -- View für überwachte Streamer mit Live-Status
 CREATE OR REPLACE VIEW twitch_monitored_streamers_status AS
 SELECT 
-    s.*,
+    s.id,
+    s.guild_id,
+    s.username,
+    s.display_name,
+    s.custom_message,
+    s.enabled,
+    s.live_notifications,
+    s.offline_notifications,
+    s.last_live,
+    s.total_notifications,
+    s.created_at,
+    s.updated_at,
     CASE WHEN s.last_live > NOW() - INTERVAL '10 minutes' THEN true ELSE false END as is_currently_live
 FROM twitch_monitored_streamers s
 WHERE s.enabled = true;
