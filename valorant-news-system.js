@@ -66,8 +66,6 @@ class ValorantNewsSystem {
             }
 
             const data = await response.json();
-            console.log(`✅ ${data.data?.length || 0} Valorant News Artikel von Henrik API geladen`);
-            
             return data.data || [];
         } catch (error) {
             console.error('❌ Fehler beim Laden der Valorant News:', error);
@@ -85,7 +83,7 @@ class ValorantNewsSystem {
         }
 
         try {
-            console.log(`💾 Speichere ${articles.length} News Artikel in Supabase...`);
+            // Reduzierte Logging für bessere Performance
 
             const newsData = articles.map(article => {
                 const newsId = article.id || this.generateNewsId(article);
@@ -103,7 +101,6 @@ class ValorantNewsSystem {
                 posted_to_discord: false
                 };
                 
-                console.log(`📝 Bereite News vor: ${newsEntry.title} (ID: ${newsId})`);
                 return newsEntry;
             });
 
@@ -118,14 +115,7 @@ class ValorantNewsSystem {
                 return false;
             }
 
-            console.log(`✅ ${data?.length || 0} News Artikel erfolgreich in Supabase gespeichert`);
-            
-            // Debug: Zeige die gespeicherten News IDs
-            if (data && data.length > 0) {
-                data.forEach(savedNews => {
-                    console.log(`📋 Gespeichert: ${savedNews.title} (ID: ${savedNews.news_id})`);
-                });
-            }
+            // Nur bei Fehlern loggen
             
             return true;
         } catch (error) {
@@ -170,7 +160,6 @@ class ValorantNewsSystem {
             }
 
             const newsIds = new Set(data?.map(row => row.news_id) || []);
-            console.log(`📋 ${newsIds.size} bestehende News IDs geladen`);
             return newsIds;
         } catch (error) {
             console.error('❌ Fehler beim Laden bestehender News IDs:', error);
@@ -396,7 +385,7 @@ class ValorantNewsSystem {
                 };
             }
 
-            console.log(`📰 ${newsArticles.length} News Artikel von API geladen`);
+            // Nur loggen wenn neue News gefunden wurden
 
             let savedCount = 0;
             let postedCount = 0;
@@ -407,25 +396,21 @@ class ValorantNewsSystem {
             if (this.supabaseClient) {
                 // Erste Prüfung: Welche News sind bereits in Supabase?
                 const existingNewsIds = await this.getExistingNewsIds();
-                console.log(`📋 ${existingNewsIds.size} bestehende News IDs in Supabase gefunden`);
-                
                 // Filter: Nur wirklich neue News
                 const newNewsArticles = newsArticles.filter(article => {
                     const newsId = this.generateNewsId(article);
                     const isNew = !existingNewsIds.has(newsId);
-                    if (!isNew) {
-                        console.log(`⏭️ News bereits vorhanden: ${article.title}`);
-                    }
                     return isNew;
                 });
                 
-                console.log(`🆕 ${newNewsArticles.length}/${newsArticles.length} wirklich neue News gefunden`);
+                if (newNewsArticles.length > 0) {
+                    console.log(`🆕 ${newNewsArticles.length} neue News gefunden`);
+                }
                 
                 // 3. Nur neue News in Supabase speichern
                 if (newNewsArticles.length > 0) {
                     const saveResult = await this.saveNewsToSupabase(newNewsArticles);
                     if (saveResult) {
-                        console.log(`✅ ${newNewsArticles.length} neue News in Supabase gespeichert`);
                         savedCount = newNewsArticles.length;
                         
                         // Diese neuen News sind zum Posten bereit
@@ -436,19 +421,13 @@ class ValorantNewsSystem {
                                 news_id: this.generateNewsId(article)
                             }));
                     }
-                } else {
-                    console.log('ℹ️ Keine neuen News zum Speichern gefunden');
                 }
             } else {
-                console.log('⚠️ Supabase nicht verfügbar, überspringe Speicherung');
-                
                 // Fallback: News nach Cutoff-Datum filtern und limitieren
                 const recentArticles = newsArticles.filter(article => {
                     const articleDate = new Date(article.date);
                     return articleDate >= this.newsCutoffDate;
                 });
-                
-                console.log(`📋 ${recentArticles.length}/${newsArticles.length} News nach ${this.newsCutoffDate.toLocaleDateString('de-DE')} gefiltert`);
                 
                 unpostedNews = recentArticles.slice(0, 5).map((article, index) => ({
                     ...article,
@@ -456,14 +435,12 @@ class ValorantNewsSystem {
                 }));
             }
             
-            console.log(`📋 ${unpostedNews.length} ungepostete News gefunden`);
-            
             // 4. News in Discord posten
             if (unpostedNews.length > 0) {
                 postedCount = await this.postNewsToDiscord(unpostedNews);
-                console.log(`✅ ${postedCount} News erfolgreich gepostet`);
-            } else {
-                console.log('ℹ️ Keine neuen News zum Posten');
+                if (postedCount > 0) {
+                    console.log(`✅ ${postedCount} News gepostet`);
+                }
             }
 
             this.lastCheckTime = Date.now();
@@ -492,13 +469,11 @@ class ValorantNewsSystem {
         console.log(`📰 Automatische Valorant News Updates gestartet (alle ${this.checkInterval / 60000} Minuten)`);
         
         setInterval(async () => {
-            console.log('🔄 Automatischer Valorant News Check...');
             await this.updateNews(false);
         }, this.checkInterval);
 
         // Erste Prüfung nach 30 Sekunden
         setTimeout(async () => {
-            console.log('🔄 Initiale Valorant News Prüfung...');
             await this.updateNews(false);
         }, 30000);
     }
