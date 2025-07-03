@@ -443,6 +443,29 @@ const TwitchBot: React.FC = () => {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-dark-text">OAuth Token</Label>
+            <Input
+              type="password"
+              value={settings.oauthToken}
+              onChange={(e) => setSettings({...settings, oauthToken: e.target.value})}
+              className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+              placeholder="oauth:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            />
+            <p className="text-xs text-dark-muted">
+              🔑 Twitch OAuth Token von{' '}
+              <a 
+                href="https://twitchapps.com/tmi/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-purple-accent hover:text-purple-primary underline"
+              >
+                twitchapps.com/tmi
+              </a>
+              {' '}generieren
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center space-x-3">
               <Switch
