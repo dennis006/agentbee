@@ -121,18 +121,56 @@ CREATE INDEX IF NOT EXISTS idx_twitch_bot_moderators_enabled ON twitch_bot_moder
 -- RLS POLICIES (Row Level Security)
 -- =============================================
 
--- Enable RLS
-ALTER TABLE twitch_bot_stream_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE twitch_bot_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE twitch_bot_auto_voice ENABLE ROW LEVEL SECURITY;
-ALTER TABLE twitch_bot_custom_commands ENABLE ROW LEVEL SECURITY;
-ALTER TABLE twitch_bot_moderators ENABLE ROW LEVEL SECURITY;
+-- Enable RLS (safe execution, ignore if already enabled)
+DO $$
+BEGIN
+    -- Enable RLS on all tables
+    BEGIN
+        ALTER TABLE twitch_bot_stream_events ENABLE ROW LEVEL SECURITY;
+    EXCEPTION
+        WHEN OTHERS THEN NULL; -- Ignore if already enabled
+    END;
+    
+    BEGIN
+        ALTER TABLE twitch_bot_events ENABLE ROW LEVEL SECURITY;
+    EXCEPTION
+        WHEN OTHERS THEN NULL; -- Ignore if already enabled
+    END;
+    
+    BEGIN
+        ALTER TABLE twitch_bot_auto_voice ENABLE ROW LEVEL SECURITY;
+    EXCEPTION
+        WHEN OTHERS THEN NULL; -- Ignore if already enabled
+    END;
+    
+    BEGIN
+        ALTER TABLE twitch_bot_custom_commands ENABLE ROW LEVEL SECURITY;
+    EXCEPTION
+        WHEN OTHERS THEN NULL; -- Ignore if already enabled
+    END;
+    
+    BEGIN
+        ALTER TABLE twitch_bot_moderators ENABLE ROW LEVEL SECURITY;
+    EXCEPTION
+        WHEN OTHERS THEN NULL; -- Ignore if already enabled
+    END;
+END $$;
 
 -- Policies für öffentlichen Zugriff (da es ein Bot-System ist)
+-- Drop existing policies if they exist, then create new ones
+DROP POLICY IF EXISTS "Allow all operations on twitch_bot_stream_events" ON twitch_bot_stream_events;
 CREATE POLICY "Allow all operations on twitch_bot_stream_events" ON twitch_bot_stream_events FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all operations on twitch_bot_events" ON twitch_bot_events;
 CREATE POLICY "Allow all operations on twitch_bot_events" ON twitch_bot_events FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all operations on twitch_bot_auto_voice" ON twitch_bot_auto_voice;
 CREATE POLICY "Allow all operations on twitch_bot_auto_voice" ON twitch_bot_auto_voice FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all operations on twitch_bot_custom_commands" ON twitch_bot_custom_commands;
 CREATE POLICY "Allow all operations on twitch_bot_custom_commands" ON twitch_bot_custom_commands FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow all operations on twitch_bot_moderators" ON twitch_bot_moderators;
 CREATE POLICY "Allow all operations on twitch_bot_moderators" ON twitch_bot_moderators FOR ALL USING (true);
 
 -- =============================================
