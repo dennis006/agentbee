@@ -22,10 +22,14 @@ In Supabase sind sehr viele Twitch-Tabellen die sich überschneiden und teilweis
 
 ## 🗑️ **BENÖTIGTE TABELLEN (BEHALTEN):**
 
-### **Für Live Notifications System:**
-✅ `twitch_live_notifications` - Live-Benachrichtigungs-Einstellungen
-✅ `twitch_monitored_streamers` - Liste der überwachten Streamer
-✅ `twitch_settings` - Grundeinstellungen (falls vorhanden)
+### **⚠️ WICHTIGE ERKENNTNIS:**
+Die `twitch-supabase-api.js` verwendet **ANDERE Tabellennamen** als die Migration!
+- **API verwendet**: `twitch_settings` + `twitch_streamers` 
+- **Migration erstellt**: `twitch_live_notifications` + `twitch_monitored_streamers`
+
+### **Für Live Notifications System (API-basiert):**
+✅ `twitch_settings` - Live-Benachrichtigungs-Einstellungen (wird von API verwendet!)
+✅ `twitch_streamers` - Liste der überwachten Streamer (wird von API verwendet!)
 
 ### **Für Chat Bot System:**
 ✅ `twitch_bot_settings` - Bot-Grundeinstellungen
@@ -54,7 +58,8 @@ In Supabase sind sehr viele Twitch-Tabellen die sich überschneiden und teilweis
 ❌ `twitch_moderation_logs` - Nicht implementiert
 ❌ `twitch_statistics` - Doppelt
 ❌ `twitch_stats` - Doppelt
-❌ `twitch_streamers` - Doppelt zu monitored_streamers
+❌ `twitch_monitored_streamers` - Migration-Duplikat (API nutzt twitch_streamers)
+❌ `twitch_live_notifications` - Migration-Duplikat (API nutzt twitch_settings)
 ❌ `twitch_users` - Nicht verwendet
 
 ---
@@ -96,9 +101,9 @@ DROP VIEW IF EXISTS twitch_monitored_streamers_status CASCADE;
 
 ### **Schritt 3: Nur benötigte Tabellen behalten**
 
-**Live Notifications:**
-- `twitch_live_notifications`
-- `twitch_monitored_streamers`
+**Live Notifications (API-basiert):**
+- `twitch_settings`
+- `twitch_streamers`
 
 **Chat Bot:**
 - `twitch_bot_settings`
