@@ -20,7 +20,6 @@ import Valorant from './pages/Valorant'
 import ValorantNews from './pages/ValorantNews'
 import CrosshairCreator from './pages/CrosshairCreator'
 import CrosshairSharing from './pages/CrosshairSharing'
-import TwitchBot from './pages/TwitchBot'
 
 import Gaming from './pages/Gaming'
 import APIKeys from './pages/APIKeys'
@@ -506,7 +505,6 @@ const App = () => {
         <Routes>
           {/* Public Routes */}
           <Route path="/verify" element={<VerifyPage />} />
-          <Route path="/twitch" element={<TwitchBot />} />
           <Route path="/crosshair" element={<CrosshairCreator />} />
           <Route path="/crosshair-sharing" element={<CrosshairSharing />} />
           <Route path="/login" element={<LoginPage />} />
