@@ -51,6 +51,7 @@
     "play-dl": "^1.9.7",
     "sharp": "^0.34.2",
     "spotify-web-api-node": "^5.0.2",
+    "tmi.js": "^1.8.5",
     "util": "^0.12.5",
     "youtubei.js": "^14.0.0",
     "yt-search": "^2.13.1",
