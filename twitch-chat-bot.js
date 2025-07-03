@@ -1445,10 +1445,16 @@ class TwitchChatBot {
             
             console.log(`✅ Twitch Access Token erhalten (gültig für ${data.expires_in}s)`);
             
-            // Token automatisch erneuern (1 Stunde vor Ablauf)
+            // Token automatisch erneuern (1 Stunde vor Ablauf, max 24 Stunden)
+            const refreshInMs = Math.min(
+                Math.max((data.expires_in - 3600) * 1000, 3600000), // Min. 1 Stunde
+                24 * 60 * 60 * 1000 // Max. 24 Stunden
+            );
+            
             setTimeout(() => {
+                console.log('🔄 Erneuere Twitch Access Token...');
                 this.getTwitchAccessToken();
-            }, (data.expires_in - 3600) * 1000);
+            }, refreshInMs);
             
             return this.twitchAccessToken;
             
