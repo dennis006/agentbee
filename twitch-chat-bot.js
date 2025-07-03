@@ -461,6 +461,9 @@ class TwitchChatBot {
     // Custom Commands aus Datenbank laden
     async loadCustomCommandsFromDatabase() {
         try {
+            console.log('🔍 [DEBUG] Prüfe Supabase Client...');
+            console.log(`🔍 [DEBUG] global.supabaseClient verfügbar: ${!!global.supabaseClient}`);
+            
             if (!global.supabaseClient) {
                 console.log('⚠️ Supabase Client nicht verfügbar, überspringe Command-Loading');
                 return;
@@ -477,6 +480,8 @@ class TwitchChatBot {
                 .eq('enabled', true)
                 .order('command_name');
 
+            console.log(`🔍 [DEBUG] Supabase Query Result: data=${commands?.length || 0} commands, error=${error?.message || 'none'}`);
+
             if (error) {
                 console.error('❌ Fehler beim Laden der Custom Commands:', error);
                 return;
@@ -485,6 +490,8 @@ class TwitchChatBot {
             this.customCommands.clear();
 
             for (const cmd of commands || []) {
+                console.log(`🔍 [DEBUG] Loading command: !${cmd.command_name} -> "${cmd.response_text?.substring(0, 50)}..."`);
+                
                 this.customCommands.set(cmd.command_name, {
                     id: cmd.id,
                     responseText: cmd.response_text,
@@ -508,6 +515,7 @@ class TwitchChatBot {
             }
 
             console.log(`✅ ${this.customCommands.size} Custom Commands geladen`);
+            console.log(`🔍 [DEBUG] Geladene Commands: ${Array.from(this.customCommands.keys()).join(', ')}`);
 
         } catch (error) {
             console.error('❌ Unerwarteter Fehler beim Laden der Custom Commands:', error);
@@ -610,9 +618,14 @@ class TwitchChatBot {
         const args = message.slice(prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
         
+        console.log(`🔍 [DEBUG] Command detected: !${commandName} from ${tags['display-name']} in ${channel}`);
+        console.log(`🔍 [DEBUG] Available built-in commands: ${Array.from(this.commands.keys()).join(', ')}`);
+        console.log(`🔍 [DEBUG] Available custom commands: ${Array.from(this.customCommands.keys()).join(', ')}`);
+        
         // Zuerst Built-in Commands prüfen
         const builtinCommand = this.commands.get(commandName);
         if (builtinCommand) {
+            console.log(`🔍 [DEBUG] Executing built-in command: !${commandName}`);
             await this.executeBuiltinCommand(builtinCommand, commandName, channel, tags, message, args);
             return;
         }
@@ -620,9 +633,12 @@ class TwitchChatBot {
         // Dann Custom Commands prüfen
         const customCommand = this.customCommands.get(commandName);
         if (customCommand) {
+            console.log(`🔍 [DEBUG] Executing custom command: !${commandName} -> "${customCommand.responseText?.substring(0, 50)}..."`);
             await this.executeCustomCommand(customCommand, commandName, channel, tags, message, args);
             return;
         }
+        
+        console.log(`🔍 [DEBUG] Command !${commandName} not found in built-in or custom commands`);
 
     }
 
@@ -989,7 +1005,13 @@ class TwitchChatBot {
     
     // Automatische Live-Nachricht senden
     async sendLiveMessage(channelName, streamerInfo = {}) {
+        console.log(`🔍 [DEBUG] sendLiveMessage called for ${channelName}`);
+        console.log(`🔍 [DEBUG] isConnected: ${this.isConnected}`);
+        console.log(`🔍 [DEBUG] liveNotificationEnabled: ${this.liveNotificationEnabled}`);
+        console.log(`🔍 [DEBUG] settings.liveMessageCooldown: ${this.settings?.liveMessageCooldown}`);
+        
         if (!this.isConnected || !this.liveNotificationEnabled) {
+            console.log(`🤖 Live-Nachricht abgebrochen: Connected=${this.isConnected}, Enabled=${this.liveNotificationEnabled}`);
             return false;
         }
         
@@ -997,16 +1019,22 @@ class TwitchChatBot {
         
         // Cooldown prüfen (nur wenn > 0)
         const cooldownMinutes = this.settings?.liveMessageCooldown ?? 30;
+        console.log(`🔍 [DEBUG] Cooldown check: ${cooldownMinutes} minutes`);
+        
         if (cooldownMinutes > 0) {
             const recentNotifications = Array.from(this.sentLiveNotifications).filter(key => 
                 key.startsWith(channelName) && 
                 (Date.now() - parseInt(key.split('_')[1])) < cooldownMinutes * 60 * 1000
             );
             
+            console.log(`🔍 [DEBUG] Recent notifications found: ${recentNotifications.length}`);
+            
             if (recentNotifications.length > 0) {
                 console.log(`🤖 Live-Nachricht für ${channelName} bereits kürzlich gesendet (Cooldown: ${cooldownMinutes} Min)`);
                 return false;
             }
+        } else {
+            console.log(`🔍 [DEBUG] Cooldown = 0, skipping cooldown check`);
         }
         
         try {
