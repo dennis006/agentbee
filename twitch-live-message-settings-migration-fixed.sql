@@ -91,20 +91,30 @@ CREATE POLICY twitch_bot_live_message_stats_policy ON twitch_bot_live_message_st
 
 -- View für Live Message Analytics (mit korrektem Tabellennamen)
 CREATE OR REPLACE VIEW twitch_bot_live_message_analytics AS
+WITH message_intervals AS (
+    SELECT 
+        s.channel_id,
+        s.sent_at,
+        s.success,
+        s.template_id,
+        EXTRACT(EPOCH FROM (s.sent_at - LAG(s.sent_at) OVER (PARTITION BY s.channel_id ORDER BY s.sent_at))) / 60 as minutes_since_last
+    FROM twitch_bot_live_message_stats s
+)
 SELECT 
     c.channel_name,
     c.guild_id,
     COUNT(s.id) as total_messages_sent,
     COUNT(CASE WHEN s.success THEN 1 END) as successful_messages,
     COUNT(CASE WHEN NOT s.success THEN 1 END) as failed_messages,
-    AVG(EXTRACT(EPOCH FROM (s.sent_at - LAG(s.sent_at) OVER (PARTITION BY c.id ORDER BY s.sent_at)))) / 60 as avg_minutes_between_messages,
+    COALESCE(AVG(mi.minutes_since_last), 0) as avg_minutes_between_messages,
     MAX(s.sent_at) as last_message_sent,
-    t.name as most_used_template
+    (SELECT t2.name FROM twitch_bot_live_message_templates t2 
+     WHERE t2.id = s.template_id LIMIT 1) as most_used_template
 FROM twitch_bot_channels c
 LEFT JOIN twitch_bot_live_message_stats s ON c.id = s.channel_id
-LEFT JOIN twitch_bot_live_message_templates t ON s.template_id = t.id
+LEFT JOIN message_intervals mi ON mi.channel_id = c.id
 WHERE c.live_message_enabled = true
-GROUP BY c.id, c.channel_name, c.guild_id, t.name
+GROUP BY c.id, c.channel_name, c.guild_id, s.template_id
 ORDER BY total_messages_sent DESC;
 
 -- Function für automatische Template-Auswahl (mit korrektem Tabellennamen)
