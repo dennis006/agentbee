@@ -1,5 +1,5 @@
--- 🎮 AgentBee Twitch Bot - Supabase Database Migration
--- Erstellt alle Tabellen für den Multi-Channel Twitch Bot
+-- 🎮 AgentBee Twitch Bot - Supabase Database Migration (Safe Version)
+-- Diese Version verwendet keine ON CONFLICT Statements für maximale Kompatibilität
 
 -- 1. Twitch Bot Settings Tabelle
 CREATE TABLE IF NOT EXISTS public.twitch_bot_settings (
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS public.twitch_commands (
     sub_only BOOLEAN DEFAULT false,
     vip_only BOOLEAN DEFAULT false,
     usage_count INTEGER DEFAULT 0,
-    channels TEXT[] DEFAULT '{}', -- Specific channels or empty for all
+    channels TEXT[] DEFAULT '{}',
     created_by VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -120,12 +120,12 @@ CREATE TABLE IF NOT EXISTS public.twitch_auto_responses (
 CREATE TABLE IF NOT EXISTS public.twitch_moderation_actions (
     id SERIAL PRIMARY KEY,
     channel VARCHAR(255) NOT NULL,
-    action_type VARCHAR(50) NOT NULL, -- 'timeout', 'ban', 'delete', 'warning'
+    action_type VARCHAR(50) NOT NULL,
     target_user VARCHAR(255) NOT NULL,
     target_user_id VARCHAR(255),
     moderator VARCHAR(255) NOT NULL,
     reason TEXT,
-    duration INTEGER, -- in seconds for timeouts
+    duration INTEGER,
     original_message TEXT,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     auto_action BOOLEAN DEFAULT false
@@ -245,27 +245,6 @@ CREATE TRIGGER update_twitch_auto_responses_updated_at
     BEFORE UPDATE ON public.twitch_auto_responses 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 📝 Insert Default Settings
-INSERT INTO public.twitch_bot_settings (enabled) VALUES (true) 
-ON CONFLICT (id) DO NOTHING;
-
--- 📝 Default Commands
-INSERT INTO public.twitch_commands (command_name, description, response, enabled) VALUES
-('ping', 'Bot Ping Test', 'Pong! 🏓 Bot ist online!', true),
-('bot', 'Bot Information', '🤖 AgentBee Twitch Bot - Multi-Channel Support!', true),
-('commands', 'Liste aller Befehle', '📋 Verfügbare Befehle: !ping, !bot, !uptime, !stats', true),
-('uptime', 'Bot Uptime', '⏰ Bot läuft seit: {uptime}', true),
-('stats', 'Bot Statistiken', '📊 Channels: {channels} | Nachrichten: {messages}', true)
-ON CONFLICT (command_name) DO NOTHING;
-
--- 📝 Default Auto Responses
-INSERT INTO public.twitch_auto_responses (trigger_word, response, enabled) VALUES
-('hallo', 'Hallo {user}! 👋 Willkommen im Chat!', true),
-('hi', 'Hi {user}! 👋 Schön dich zu sehen!', true),
-('discord', '📢 Unser Discord Server: https://discord.gg/yourserver', true),
-('youtube', '📺 Unser YouTube Channel: https://youtube.com/yourchannel', true)
-ON CONFLICT (trigger_word) DO NOTHING;
-
 -- 🔐 Row Level Security (RLS) Policies
 ALTER TABLE public.twitch_bot_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.twitch_channels ENABLE ROW LEVEL SECURITY;
@@ -290,5 +269,34 @@ CREATE POLICY "Public access for twitch_moderation_actions" ON public.twitch_mod
 CREATE POLICY "Public access for twitch_statistics" ON public.twitch_statistics FOR ALL USING (true);
 CREATE POLICY "Public access for twitch_bot_events" ON public.twitch_bot_events FOR ALL USING (true);
 
+-- 📝 Insert Default Data (nur wenn Tabellen leer sind)
+DO $$
+BEGIN
+    -- Default Settings einfügen
+    IF NOT EXISTS (SELECT 1 FROM public.twitch_bot_settings LIMIT 1) THEN
+        INSERT INTO public.twitch_bot_settings (enabled) VALUES (true);
+    END IF;
+    
+    -- Default Commands einfügen
+    IF NOT EXISTS (SELECT 1 FROM public.twitch_commands LIMIT 1) THEN
+        INSERT INTO public.twitch_commands (command_name, description, response, enabled) VALUES
+        ('ping', 'Bot Ping Test', 'Pong! 🏓 Bot ist online!', true),
+        ('bot', 'Bot Information', '🤖 AgentBee Twitch Bot - Multi-Channel Support!', true),
+        ('commands', 'Liste aller Befehle', '📋 Verfügbare Befehle: !ping, !bot, !uptime, !stats', true),
+        ('uptime', 'Bot Uptime', '⏰ Bot läuft seit: {uptime}', true),
+        ('stats', 'Bot Statistiken', '📊 Channels: {channels} | Nachrichten: {messages}', true);
+    END IF;
+    
+    -- Default Auto Responses einfügen
+    IF NOT EXISTS (SELECT 1 FROM public.twitch_auto_responses LIMIT 1) THEN
+        INSERT INTO public.twitch_auto_responses (trigger_word, response, enabled) VALUES
+        ('hallo', 'Hallo {user}! 👋 Willkommen im Chat!', true),
+        ('hi', 'Hi {user}! 👋 Schön dich zu sehen!', true),
+        ('discord', '📢 Unser Discord Server: https://discord.gg/yourserver', true),
+        ('youtube', '📺 Unser YouTube Channel: https://youtube.com/yourchannel', true);
+    END IF;
+END
+$$;
+
 -- ✅ Migration Complete
-SELECT 'Twitch Bot Migration erfolgreich abgeschlossen!' as status; 
+SELECT 'Twitch Bot Migration (Safe Version) erfolgreich abgeschlossen!' as status; 
