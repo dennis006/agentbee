@@ -36,7 +36,8 @@ class TwitchChatBot {
         // Channel Health Check Interval
         this.channelHealthInterval = null;
         
-        this.initializeCommands();
+        // Built-in Commands deaktiviert - nur Custom Commands aus Supabase verwenden
+        // this.initializeCommands();
     }
 
     // Discord Client setzen
@@ -619,18 +620,9 @@ class TwitchChatBot {
         const commandName = args.shift().toLowerCase();
         
         console.log(`🔍 [DEBUG] Command detected: !${commandName} from ${tags['display-name']} in ${channel}`);
-        console.log(`🔍 [DEBUG] Available built-in commands: ${Array.from(this.commands.keys()).join(', ')}`);
         console.log(`🔍 [DEBUG] Available custom commands: ${Array.from(this.customCommands.keys()).join(', ')}`);
         
-        // Zuerst Built-in Commands prüfen
-        const builtinCommand = this.commands.get(commandName);
-        if (builtinCommand) {
-            console.log(`🔍 [DEBUG] Executing built-in command: !${commandName}`);
-            await this.executeBuiltinCommand(builtinCommand, commandName, channel, tags, message, args);
-            return;
-        }
-        
-        // Dann Custom Commands prüfen
+        // NUR Custom Commands aus Supabase verwenden
         const customCommand = this.customCommands.get(commandName);
         if (customCommand) {
             console.log(`🔍 [DEBUG] Executing custom command: !${commandName} -> "${customCommand.responseText?.substring(0, 50)}..."`);
@@ -638,7 +630,7 @@ class TwitchChatBot {
             return;
         }
         
-        console.log(`🔍 [DEBUG] Command !${commandName} not found in built-in or custom commands`);
+        console.log(`🔍 [DEBUG] Command !${commandName} not found in custom commands from Supabase`);
 
     }
 
