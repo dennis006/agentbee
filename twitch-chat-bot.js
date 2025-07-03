@@ -10,7 +10,8 @@ class TwitchChatBot {
         this.discordClient = null;
         this.isConnected = false;
         this.channels = new Map();
-        this.commands = new Map();
+        this.commands = new Map(); // Built-in commands
+        this.customCommands = new Map(); // Custom commands from database
         this.stats = {
             messagesProcessed: 0,
             commandsExecuted: 0,
@@ -193,6 +194,9 @@ class TwitchChatBot {
             
             // Channels nach erfolgreicher Verbindung joinen
             await this.joinConfiguredChannels();
+            
+            // Custom Commands aus Datenbank laden
+            await this.loadCustomCommandsFromDatabase();
             
             // Periodische Channel-Überprüfung starten (alle 5 Minuten)
             this.startChannelHealthCheck();
@@ -450,6 +454,141 @@ class TwitchChatBot {
         }
     }
 
+    // =============================================================================
+    // CUSTOM COMMANDS SYSTEM
+    // =============================================================================
+
+    // Custom Commands aus Datenbank laden
+    async loadCustomCommandsFromDatabase() {
+        try {
+            if (!global.supabaseClient) {
+                console.log('⚠️ Supabase Client nicht verfügbar, überspringe Command-Loading');
+                return;
+            }
+
+            console.log('📋 Lade Custom Commands aus Datenbank...');
+
+            const { data: commands, error } = await global.supabaseClient
+                .from('twitch_bot_commands')
+                .select(`
+                    *,
+                    category:twitch_bot_command_categories(name, icon, color)
+                `)
+                .eq('enabled', true)
+                .order('command_name');
+
+            if (error) {
+                console.error('❌ Fehler beim Laden der Custom Commands:', error);
+                return;
+            }
+
+            this.customCommands.clear();
+
+            for (const cmd of commands || []) {
+                this.customCommands.set(cmd.command_name, {
+                    id: cmd.id,
+                    responseText: cmd.response_text,
+                    description: cmd.description || '',
+                    cooldownSeconds: cmd.cooldown_seconds || 30,
+                    modOnly: cmd.mod_only || false,
+                    vipOnly: cmd.vip_only || false,
+                    subscriberOnly: cmd.subscriber_only || false,
+                    responseType: cmd.response_type || 'text',
+                    embedColor: cmd.embed_color || '#9146FF',
+                    embedTitle: cmd.embed_title || '',
+                    useVariables: cmd.use_variables !== false,
+                    customVariables: cmd.custom_variables || {},
+                    channelName: cmd.channel_name,
+                    discordSync: cmd.discord_sync || false,
+                    discordChannelId: cmd.discord_channel_id,
+                    category: cmd.category || { name: 'custom', icon: '⚙️' },
+                    lastUsed: new Map(), // Per-user cooldown tracking
+                    usesCount: cmd.uses_count || 0
+                });
+            }
+
+            console.log(`✅ ${this.customCommands.size} Custom Commands geladen`);
+
+        } catch (error) {
+            console.error('❌ Unerwarteter Fehler beim Laden der Custom Commands:', error);
+        }
+    }
+
+    // Custom Command hinzufügen/aktualisieren
+    addCustomCommand(commandName, commandData) {
+        this.customCommands.set(commandName.toLowerCase(), {
+            ...commandData,
+            lastUsed: new Map()
+        });
+        console.log(`✅ Custom Command !${commandName} hinzugefügt/aktualisiert`);
+    }
+
+    // Custom Command aktualisieren  
+    updateCustomCommand(commandName, updateData) {
+        const existingCommand = this.customCommands.get(commandName.toLowerCase());
+        if (existingCommand) {
+            this.customCommands.set(commandName.toLowerCase(), {
+                ...existingCommand,
+                ...updateData
+            });
+            console.log(`✅ Custom Command !${commandName} aktualisiert`);
+            return true;
+        }
+        return false;
+    }
+
+    // Custom Command entfernen
+    removeCustomCommand(commandName) {
+        const removed = this.customCommands.delete(commandName.toLowerCase());
+        if (removed) {
+            console.log(`🗑️ Custom Command !${commandName} entfernt`);
+        }
+        return removed;
+    }
+
+    // Variablen in Text ersetzen
+    replaceCommandVariables(text, customVariables = {}, userName = '', channelName = '') {
+        let result = text;
+        
+        // Standard Variablen
+        const now = new Date();
+        const variables = {
+            user: userName,
+            channel: channelName.replace('#', ''),
+            time: now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+            date: now.toLocaleDateString('de-DE'),
+            ...customVariables
+        };
+
+        // Alle Variablen ersetzen
+        for (const [key, value] of Object.entries(variables)) {
+            const regex = new RegExp(`{{${key}}}`, 'gi');
+            result = result.replace(regex, value || '');
+        }
+
+        return result;
+    }
+
+    // Command Usage in Datenbank loggen
+    async logCommandUsage(commandId, channelName, userName, responseTimeMs = null, success = true, errorMessage = null) {
+        try {
+            if (!global.supabaseClient) return;
+
+            await global.supabaseClient
+                .rpc('log_twitch_command_usage', {
+                    p_command_id: commandId,
+                    p_channel_name: channelName.replace('#', ''),
+                    p_user_name: userName,
+                    p_response_time_ms: responseTimeMs,
+                    p_success: success,
+                    p_error_message: errorMessage
+                });
+
+        } catch (error) {
+            console.error('❌ Fehler beim Loggen der Command Usage:', error);
+        }
+    }
+
     // Message handling
     async handleMessage(channel, tags, message) {
         this.stats.messagesProcessed++;
@@ -471,9 +610,24 @@ class TwitchChatBot {
         const args = message.slice(prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
         
-        const command = this.commands.get(commandName);
-        if (!command) return;
+        // Zuerst Built-in Commands prüfen
+        const builtinCommand = this.commands.get(commandName);
+        if (builtinCommand) {
+            await this.executeBuiltinCommand(builtinCommand, commandName, channel, tags, message, args);
+            return;
+        }
+        
+        // Dann Custom Commands prüfen
+        const customCommand = this.customCommands.get(commandName);
+        if (customCommand) {
+            await this.executeCustomCommand(customCommand, commandName, channel, tags, message, args);
+            return;
+        }
 
+    }
+
+    // Built-in Command ausführen
+    async executeBuiltinCommand(command, commandName, channel, tags, message, args) {
         // Moderation Check
         if (this.settings?.modCommandsOnly && !this.isModerator(tags)) {
             return;
@@ -496,10 +650,126 @@ class TwitchChatBot {
             command.lastUsed.set(userId, Date.now());
             this.stats.commandsExecuted++;
             
-            console.log(`🎮 Command "${commandName}" von ${tags['display-name']} in ${channel}`);
+            console.log(`🎮 Built-in Command !${commandName} von ${tags['display-name']} in ${channel}`);
         } catch (error) {
-            console.error(`❌ Fehler beim Ausführen von Command "${commandName}":`, error);
+            console.error(`❌ Fehler beim Ausführen von Built-in Command !${commandName}:`, error);
             this.sendMessage(channel, `❌ Fehler beim Ausführen des Commands`);
+        }
+    }
+
+    // Custom Command ausführen
+    async executeCustomCommand(command, commandName, channel, tags, message, args) {
+        const startTime = Date.now();
+        let success = true;
+        let errorMessage = null;
+
+        try {
+            // Channel-spezifische Commands prüfen
+            if (command.channelName && command.channelName !== channel.replace('#', '')) {
+                return; // Command nur für bestimmten Channel
+            }
+
+            // Permission Checks
+            const isMod = this.isModerator(tags);
+            const isVip = tags.badges?.vip === '1';
+            const isSub = tags.badges?.subscriber === '1' || tags.badges?.founder === '1';
+
+            if (command.modOnly && !isMod) {
+                this.sendMessage(channel, `🛡️ Command !${commandName} ist nur für Moderatoren verfügbar`);
+                return;
+            }
+
+            if (command.vipOnly && !isVip && !isMod) {
+                this.sendMessage(channel, `⭐ Command !${commandName} ist nur für VIPs verfügbar`);
+                return;
+            }
+
+            if (command.subscriberOnly && !isSub && !isMod) {
+                this.sendMessage(channel, `💎 Command !${commandName} ist nur für Subscriber verfügbar`);
+                return;
+            }
+
+            // Cooldown Check
+            const userId = tags['user-id'];
+            const lastUsed = command.lastUsed.get(userId) || 0;
+            const timeSinceLastUse = Date.now() - lastUsed;
+            const cooldownMs = command.cooldownSeconds * 1000;
+            
+            if (timeSinceLastUse < cooldownMs) {
+                const remainingCooldown = Math.ceil((cooldownMs - timeSinceLastUse) / 1000);
+                this.sendMessage(channel, `⏰ Command Cooldown: ${remainingCooldown}s verbleibend`);
+                return;
+            }
+
+            // Response Text vorbereiten
+            let responseText = command.responseText;
+
+            // Variablen ersetzen
+            if (command.useVariables) {
+                responseText = this.replaceCommandVariables(
+                    responseText,
+                    command.customVariables,
+                    tags['display-name'] || tags.username,
+                    channel
+                );
+            }
+
+            // Response senden
+            this.sendMessage(channel, responseText);
+
+            // Discord Sync
+            if (command.discordSync && command.discordChannelId && this.discordClient) {
+                await this.syncCustomCommandToDiscord(commandName, responseText, command.discordChannelId, tags, channel);
+            }
+
+            // Cooldown setzen
+            command.lastUsed.set(userId, Date.now());
+            this.stats.commandsExecuted++;
+
+            console.log(`🎮 Custom Command !${commandName} von ${tags['display-name']} in ${channel}`);
+
+        } catch (error) {
+            success = false;
+            errorMessage = error.message;
+            console.error(`❌ Fehler beim Ausführen von Custom Command !${commandName}:`, error);
+            this.sendMessage(channel, `❌ Fehler beim Ausführen des Commands`);
+        } finally {
+            // Usage loggen
+            const responseTime = Date.now() - startTime;
+            await this.logCommandUsage(
+                command.id,
+                channel,
+                tags['display-name'] || tags.username,
+                responseTime,
+                success,
+                errorMessage
+            );
+        }
+    }
+
+    // Custom Command zu Discord weiterleiten
+    async syncCustomCommandToDiscord(commandName, responseText, discordChannelId, tags, channel) {
+        try {
+            const discordChannel = this.discordClient.channels.cache.get(discordChannelId);
+            if (!discordChannel) return;
+
+            const embed = new EmbedBuilder()
+                .setColor('#9146FF')
+                .setTitle(`🤖 Command !${commandName}`)
+                .setDescription(responseText)
+                .setAuthor({
+                    name: tags['display-name'] || tags.username,
+                    iconURL: `https://static-cdn.jtvnw.net/user-default-pictures-uv/13e5fa74-defa-11e5-8972-02301e8ac30e.png`
+                })
+                .setFooter({ 
+                    text: `Twitch: ${channel.replace('#', '')}`,
+                    iconURL: 'https://static.twitchcdn.net/assets/favicon-32-e29e246c157142c94346.png'
+                })
+                .setTimestamp();
+
+            await discordChannel.send({ embeds: [embed] });
+        } catch (error) {
+            console.error('❌ Fehler beim Discord Sync für Custom Command:', error);
         }
     }
 

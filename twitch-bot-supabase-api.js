@@ -1139,6 +1139,532 @@ function createTwitchBotAPI(app) {
         }
     });
 
+    // =============================================
+    // COMMAND MANAGEMENT
+    // =============================================
+    
+    // Alle Commands abrufen
+    app.get('/api/twitch-bot/commands', async (req, res) => {
+        try {
+            console.log('🤖 [API] Getting Twitch Bot commands...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { channelName } = req.query;
+
+            let query = supabaseClient
+                .from('twitch_bot_commands')
+                .select(`
+                    *,
+                    category:twitch_bot_command_categories(name, icon, color)
+                `)
+                .order('command_name');
+
+            if (channelName) {
+                query = query.or(`channel_name.eq.${channelName},channel_name.is.null`);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('❌ Error fetching commands:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            const commands = data.map(cmd => ({
+                id: cmd.id.toString(),
+                commandName: cmd.command_name,
+                responseText: cmd.response_text,
+                description: cmd.description || '',
+                enabled: cmd.enabled,
+                cooldownSeconds: cmd.cooldown_seconds,
+                usesCount: cmd.uses_count,
+                modOnly: cmd.mod_only,
+                vipOnly: cmd.vip_only,
+                subscriberOnly: cmd.subscriber_only,
+                responseType: cmd.response_type,
+                embedColor: cmd.embed_color,
+                embedTitle: cmd.embed_title,
+                useVariables: cmd.use_variables,
+                customVariables: cmd.custom_variables || {},
+                channelName: cmd.channel_name,
+                discordSync: cmd.discord_sync,
+                discordChannelId: cmd.discord_channel_id,
+                category: cmd.category || { name: 'custom', icon: '⚙️', color: '#95A5A6' },
+                createdBy: cmd.created_by,
+                createdAt: cmd.created_at,
+                lastUsedAt: cmd.last_used_at
+            }));
+
+            console.log(`✅ Retrieved ${commands.length} commands`);
+            res.json({
+                success: true,
+                commands
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/commands GET:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Neuen Command erstellen
+    app.post('/api/twitch-bot/commands', async (req, res) => {
+        try {
+            console.log('🤖 [API] Creating new Twitch command...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const {
+                commandName,
+                responseText,
+                description,
+                enabled = true,
+                cooldownSeconds = 30,
+                modOnly = false,
+                vipOnly = false,
+                subscriberOnly = false,
+                responseType = 'text',
+                embedColor = '#9146FF',
+                embedTitle = '',
+                useVariables = true,
+                customVariables = {},
+                channelName = null,
+                discordSync = false,
+                discordChannelId = null,
+                categoryId = 6
+            } = req.body;
+
+            if (!commandName || !responseText) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Command-Name und Response-Text sind erforderlich'
+                });
+            }
+
+            // Command name validieren
+            const cleanCommandName = commandName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+            if (cleanCommandName !== commandName.toLowerCase()) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Command-Name darf nur Buchstaben, Zahlen und Unterstriche enthalten'
+                });
+            }
+
+            // Prüfen ob Command bereits existiert
+            const { data: existingCommand } = await supabaseClient
+                .from('twitch_bot_commands')
+                .select('id')
+                .eq('command_name', cleanCommandName)
+                .eq('channel_name', channelName || null)
+                .single();
+
+            if (existingCommand) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Ein Command mit diesem Namen existiert bereits'
+                });
+            }
+
+            const commandData = {
+                command_name: cleanCommandName,
+                response_text: responseText.trim(),
+                description: description?.trim() || '',
+                enabled,
+                cooldown_seconds: Math.max(1, cooldownSeconds),
+                mod_only: modOnly,
+                vip_only: vipOnly,
+                subscriber_only: subscriberOnly,
+                response_type: responseType,
+                embed_color: embedColor,
+                embed_title: embedTitle?.trim() || '',
+                use_variables: useVariables,
+                custom_variables: customVariables,
+                channel_name: channelName,
+                discord_sync: discordSync,
+                discord_channel_id: discordChannelId,
+                category_id: categoryId,
+                created_by: 'dashboard'
+            };
+
+            const { data, error } = await supabaseClient
+                .from('twitch_bot_commands')
+                .insert(commandData)
+                .select(`
+                    *,
+                    category:twitch_bot_command_categories(name, icon, color)
+                `)
+                .single();
+
+            if (error) {
+                console.error('❌ Error creating command:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            // Command dem Bot hinzufügen wenn er läuft
+            if (twitchBot) {
+                try {
+                    twitchBot.addCustomCommand(data.command_name, {
+                        responseText: data.response_text,
+                        description: data.description,
+                        cooldownSeconds: data.cooldown_seconds,
+                        modOnly: data.mod_only,
+                        vipOnly: data.vip_only,
+                        subscriberOnly: data.subscriber_only,
+                        useVariables: data.use_variables,
+                        customVariables: data.custom_variables,
+                        channelName: data.channel_name,
+                        discordSync: data.discord_sync,
+                        discordChannelId: data.discord_channel_id
+                    });
+                    console.log(`🤖 Command !${data.command_name} zum Bot hinzugefügt`);
+                } catch (botError) {
+                    console.error(`❌ Fehler beim Hinzufügen zu Bot:`, botError);
+                }
+            }
+
+            const responseCommand = {
+                id: data.id.toString(),
+                commandName: data.command_name,
+                responseText: data.response_text,
+                description: data.description,
+                enabled: data.enabled,
+                cooldownSeconds: data.cooldown_seconds,
+                usesCount: data.uses_count,
+                modOnly: data.mod_only,
+                vipOnly: data.vip_only,
+                subscriberOnly: data.subscriber_only,
+                responseType: data.response_type,
+                embedColor: data.embed_color,
+                embedTitle: data.embed_title,
+                useVariables: data.use_variables,
+                customVariables: data.custom_variables,
+                channelName: data.channel_name,
+                discordSync: data.discord_sync,
+                discordChannelId: data.discord_channel_id,
+                category: data.category,
+                createdBy: data.created_by,
+                createdAt: data.created_at
+            };
+
+            console.log(`✅ Command !${data.command_name} created successfully`);
+            res.json({
+                success: true,
+                message: `Command !${data.command_name} erfolgreich erstellt!`,
+                command: responseCommand
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/commands POST:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Command bearbeiten
+    app.put('/api/twitch-bot/commands/:commandId', async (req, res) => {
+        try {
+            console.log('🤖 [API] Updating Twitch command...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { commandId } = req.params;
+            const updateData = {
+                updated_at: new Date().toISOString()
+            };
+
+            // Nur geänderte Felder aktualisieren
+            const allowedFields = [
+                'responseText', 'description', 'enabled', 'cooldownSeconds',
+                'modOnly', 'vipOnly', 'subscriberOnly', 'responseType',
+                'embedColor', 'embedTitle', 'useVariables', 'customVariables',
+                'discordSync', 'discordChannelId', 'categoryId'
+            ];
+
+            allowedFields.forEach(field => {
+                const dbField = field.replace(/([A-Z])/g, '_$1').toLowerCase();
+                if (req.body[field] !== undefined) {
+                    updateData[dbField] = req.body[field];
+                }
+            });
+
+            const { data, error } = await supabaseClient
+                .from('twitch_bot_commands')
+                .update(updateData)
+                .eq('id', commandId)
+                .select(`
+                    *,
+                    category:twitch_bot_command_categories(name, icon, color)
+                `)
+                .single();
+
+            if (error) {
+                console.error('❌ Error updating command:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            if (!data) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Command nicht gefunden'
+                });
+            }
+
+            // Command im Bot aktualisieren wenn er läuft
+            if (twitchBot) {
+                try {
+                    twitchBot.updateCustomCommand(data.command_name, {
+                        responseText: data.response_text,
+                        description: data.description,
+                        cooldownSeconds: data.cooldown_seconds,
+                        modOnly: data.mod_only,
+                        vipOnly: data.vip_only,
+                        subscriberOnly: data.subscriber_only,
+                        useVariables: data.use_variables,
+                        customVariables: data.custom_variables,
+                        enabled: data.enabled
+                    });
+                    console.log(`🤖 Command !${data.command_name} im Bot aktualisiert`);
+                } catch (botError) {
+                    console.error(`❌ Fehler beim Aktualisieren im Bot:`, botError);
+                }
+            }
+
+            console.log(`✅ Command ${commandId} updated successfully`);
+            res.json({
+                success: true,
+                message: `Command !${data.command_name} erfolgreich aktualisiert!`,
+                command: {
+                    id: data.id.toString(),
+                    commandName: data.command_name,
+                    responseText: data.response_text,
+                    description: data.description,
+                    enabled: data.enabled,
+                    cooldownSeconds: data.cooldown_seconds,
+                    usesCount: data.uses_count,
+                    modOnly: data.mod_only,
+                    vipOnly: data.vip_only,
+                    subscriberOnly: data.subscriber_only,
+                    responseType: data.response_type,
+                    embedColor: data.embed_color,
+                    embedTitle: data.embed_title,
+                    useVariables: data.use_variables,
+                    customVariables: data.custom_variables,
+                    channelName: data.channel_name,
+                    discordSync: data.discord_sync,
+                    discordChannelId: data.discord_channel_id,
+                    category: data.category
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/commands PUT:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Command löschen
+    app.delete('/api/twitch-bot/commands/:commandId', async (req, res) => {
+        try {
+            console.log('🤖 [API] Deleting Twitch command...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { commandId } = req.params;
+
+            // Command-Daten abrufen vor dem Löschen
+            const { data: commandData, error: fetchError } = await supabaseClient
+                .from('twitch_bot_commands')
+                .select('command_name, created_by')
+                .eq('id', commandId)
+                .single();
+
+            if (fetchError) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Command nicht gefunden'
+                });
+            }
+
+            // System-Commands können nicht gelöscht werden
+            if (commandData.created_by === 'system') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'System-Commands können nicht gelöscht werden'
+                });
+            }
+
+            const { error } = await supabaseClient
+                .from('twitch_bot_commands')
+                .delete()
+                .eq('id', commandId);
+
+            if (error) {
+                console.error('❌ Error deleting command:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            // Command aus Bot entfernen wenn er läuft
+            if (twitchBot) {
+                try {
+                    twitchBot.removeCustomCommand(commandData.command_name);
+                    console.log(`🤖 Command !${commandData.command_name} aus Bot entfernt`);
+                } catch (botError) {
+                    console.error(`❌ Fehler beim Entfernen aus Bot:`, botError);
+                }
+            }
+
+            console.log(`✅ Command ${commandId} deleted successfully`);
+            res.json({
+                success: true,
+                message: `Command !${commandData.command_name} erfolgreich gelöscht!`
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/commands DELETE:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Command Categories abrufen
+    app.get('/api/twitch-bot/command-categories', async (req, res) => {
+        try {
+            console.log('🤖 [API] Getting command categories...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { data, error } = await supabaseClient
+                .from('twitch_bot_command_categories')
+                .select('*')
+                .order('name');
+
+            if (error) {
+                console.error('❌ Error fetching categories:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            const categories = data.map(cat => ({
+                id: cat.id,
+                name: cat.name,
+                description: cat.description,
+                color: cat.color,
+                icon: cat.icon
+            }));
+
+            console.log(`✅ Retrieved ${categories.length} categories`);
+            res.json({
+                success: true,
+                categories
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/command-categories GET:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Command Analytics abrufen
+    app.get('/api/twitch-bot/command-analytics', async (req, res) => {
+        try {
+            console.log('🤖 [API] Getting command analytics...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { channelName } = req.query;
+
+            let query = supabaseClient
+                .from('twitch_bot_command_analytics')
+                .select('*')
+                .order('recent_uses', { ascending: false });
+
+            if (channelName) {
+                query = query.or(`channel_name.eq.${channelName},channel_name.is.null`);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('❌ Error fetching analytics:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            console.log(`✅ Retrieved analytics for ${data.length} commands`);
+            res.json({
+                success: true,
+                analytics: data || []
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/command-analytics GET:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
     console.log('🤖 Twitch Bot API routes initialized');
 }
 

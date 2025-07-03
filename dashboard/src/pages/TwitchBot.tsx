@@ -110,6 +110,498 @@ interface LiveMessageTemplate {
   createdAt: string;
 }
 
+// Commands Interface
+interface Command {
+  id: string;
+  commandName: string;
+  responseText: string;
+  description: string;
+  enabled: boolean;
+  cooldownSeconds: number;
+  usesCount: number;
+  modOnly: boolean;
+  vipOnly: boolean;
+  subscriberOnly: boolean;
+  category: {
+    name: string;
+    icon: string;
+    color: string;
+  };
+  createdBy: string;
+  createdAt: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+}
+
+// Commands Section Component
+const TwitchBotCommandsSection: React.FC = () => {
+  const [commands, setCommands] = useState<Command[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingCommand, setEditingCommand] = useState<Command | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const [formData, setFormData] = useState({
+    commandName: '',
+    responseText: '',
+    description: '',
+    enabled: true,
+    cooldownSeconds: 30,
+    modOnly: false,
+    vipOnly: false,
+    subscriberOnly: false,
+    categoryId: 6
+  });
+
+  useEffect(() => {
+    loadCommands();
+    loadCategories();
+  }, []);
+
+  const loadCommands = async () => {
+    try {
+      const response = await fetch('/api/twitch-bot/commands');
+      const data = await response.json();
+      
+      if (data.success) {
+        setCommands(data.commands || []);
+      }
+    } catch (error) {
+      console.error('Error loading commands:', error);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const response = await fetch('/api/twitch-bot/command-categories');
+      const data = await response.json();
+      
+      if (data.success) {
+        setCategories(data.categories || []);
+      }
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.commandName.trim() || !formData.responseText.trim()) {
+      alert('Command-Name und Response-Text sind erforderlich');
+      return;
+    }
+
+    try {
+      const url = editingCommand 
+        ? `/api/twitch-bot/commands/${editingCommand.id}` 
+        : '/api/twitch-bot/commands';
+      
+      const method = editingCommand ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(data.message);
+        setShowModal(false);
+        resetForm();
+        loadCommands();
+      } else {
+        alert(`Fehler: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error saving command:', error);
+      alert('Fehler beim Speichern des Commands');
+    }
+  };
+
+  const handleDelete = async (commandId: string, commandName: string) => {
+    if (!confirm(`Command !${commandName} wirklich löschen?`)) return;
+
+    try {
+      const response = await fetch(`/api/twitch-bot/commands/${commandId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(data.message);
+        loadCommands();
+      } else {
+        alert(`Fehler: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting command:', error);
+      alert('Fehler beim Löschen des Commands');
+    }
+  };
+
+  const handleEdit = (command: Command) => {
+    setEditingCommand(command);
+    setFormData({
+      commandName: command.commandName,
+      responseText: command.responseText,
+      description: command.description,
+      enabled: command.enabled,
+      cooldownSeconds: command.cooldownSeconds,
+      modOnly: command.modOnly,
+      vipOnly: command.vipOnly,
+      subscriberOnly: command.subscriberOnly,
+      categoryId: categories.find(cat => cat.name === command.category.name)?.id || 6
+    });
+    setShowModal(true);
+  };
+
+  const resetForm = () => {
+    setEditingCommand(null);
+    setFormData({
+      commandName: '',
+      responseText: '',
+      description: '',
+      enabled: true,
+      cooldownSeconds: 30,
+      modOnly: false,
+      vipOnly: false,
+      subscriberOnly: false,
+      categoryId: 6
+    });
+  };
+
+  const filteredCommands = commands.filter(cmd => 
+    cmd.commandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cmd.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+        <CardContent className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-primary mx-auto mb-4"></div>
+            <p className="text-dark-text">Lade Commands...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+        <CardHeader>
+          <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+            <Bot className="w-5 h-5 text-purple-accent" />
+            Custom Commands
+          </CardTitle>
+          <CardDescription className="text-dark-muted">
+            Verwalte benutzerdefinierte Commands für den Twitch Bot
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Search & Add */}
+          <div className="flex gap-4 items-center justify-between">
+            <Input
+              placeholder="Commands durchsuchen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+            />
+            
+            <Button 
+              onClick={() => {
+                resetForm();
+                setShowModal(true);
+              }}
+              className="bg-purple-primary hover:bg-purple-primary/80"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Neuer Command
+            </Button>
+          </div>
+
+          {/* Commands Grid */}
+          {filteredCommands.length === 0 ? (
+            <div className="text-center py-12">
+              <Bot className="w-16 h-16 mx-auto mb-4 text-purple-accent/50" />
+              <h3 className="text-lg font-semibold text-dark-text mb-2">
+                {searchTerm ? 'Keine Commands gefunden' : 'Keine Commands erstellt'}
+              </h3>
+              <p className="text-dark-muted mb-4">
+                {searchTerm 
+                  ? 'Versuche andere Suchbegriffe oder erstelle einen neuen Command'
+                  : 'Erstelle deinen ersten Custom Command für den Bot'
+                }
+              </p>
+              <Button 
+                onClick={() => {
+                  resetForm();
+                  setShowModal(true);
+                }}
+                className="bg-purple-primary hover:bg-purple-primary/80"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Ersten Command erstellen
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredCommands.map((command) => (
+                <div key={command.id} className="bg-dark-bg/50 p-4 rounded-lg border border-purple-primary/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{command.category.icon}</span>
+                      <h3 className="font-bold text-white">!{command.commandName}</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!command.enabled && (
+                        <Badge variant="outline" className="text-xs text-red-400 border-red-400">
+                          Deaktiviert
+                        </Badge>
+                      )}
+                      {command.createdBy === 'system' && (
+                        <Badge className="text-xs bg-blue-500/20 text-blue-400 border-blue-500">
+                          System
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-dark-muted mb-3">{command.description}</p>
+
+                  <div className="bg-dark-bg/30 p-3 rounded mb-3">
+                    <p className="text-sm text-dark-text line-clamp-2">
+                      {command.responseText.length > 80 
+                        ? `${command.responseText.substring(0, 80)}...` 
+                        : command.responseText
+                      }
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-dark-muted">Cooldown:</span>
+                      <span className="text-dark-text">{command.cooldownSeconds}s</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-dark-muted">Nutzung:</span>
+                      <span className="text-dark-text">{command.usesCount}x</span>
+                    </div>
+
+                    {/* Permissions */}
+                    <div className="flex gap-1 flex-wrap">
+                      {command.modOnly && (
+                        <Badge variant="outline" className="text-xs text-red-400 border-red-400">
+                          🛡️ Mod
+                        </Badge>
+                      )}
+                      {command.vipOnly && (
+                        <Badge variant="outline" className="text-xs text-yellow-400 border-yellow-400">
+                          ⭐ VIP
+                        </Badge>
+                      )}
+                      {command.subscriberOnly && (
+                        <Badge variant="outline" className="text-xs text-purple-400 border-purple-400">
+                          💎 Sub
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 mt-4 pt-3 border-t border-purple-primary/20">
+                    <Button
+                      onClick={() => handleEdit(command)}
+                      size="sm"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Edit3 className="w-3 h-3 mr-1" />
+                      Bearbeiten
+                    </Button>
+                    
+                    {command.createdBy !== 'system' && (
+                      <Button
+                        onClick={() => handleDelete(command.id, command.commandName)}
+                        size="sm"
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Command Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50">
+          <div className="bg-dark-surface rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-purple-primary/30">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">
+                {editingCommand ? '✏️ Command bearbeiten' : '➕ Neuer Command'}
+              </h2>
+              <Button 
+                onClick={() => setShowModal(false)}
+                className="text-dark-muted hover:text-white"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-dark-text">Command Name *</Label>
+                  <Input
+                    value={formData.commandName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, commandName: e.target.value }))}
+                    placeholder="discord"
+                    disabled={!!editingCommand}
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                    required
+                  />
+                  <p className="text-xs text-dark-muted mt-1">Ohne ! - nur Buchstaben, Zahlen, _</p>
+                </div>
+
+                <div>
+                  <Label className="text-dark-text">Kategorie</Label>
+                  <select
+                    value={formData.categoryId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, categoryId: parseInt(e.target.value) }))}
+                    className="w-full px-3 py-2 bg-dark-bg/70 border border-purple-primary/30 rounded-md text-dark-text focus:border-purple-primary"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.icon} {cat.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-dark-text">Response Text *</Label>
+                <Textarea
+                  value={formData.responseText}
+                  onChange={(e) => setFormData(prev => ({ ...prev, responseText: e.target.value }))}
+                  placeholder="Join unseren Discord: https://discord.gg/example"
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                  rows={3}
+                  required
+                />
+                <p className="text-xs text-dark-muted mt-1">
+                  Verfügbare Variablen: {"`{{user}}, {{channel}}, {{time}}, {{date}}`"}
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-dark-text">Beschreibung</Label>
+                <Input
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Discord Server Link"
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-dark-text">Cooldown (Sekunden)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.cooldownSeconds}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cooldownSeconds: parseInt(e.target.value) || 30 }))}
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={formData.enabled}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, enabled: checked }))}
+                  />
+                  <Label className="text-dark-text">Aktiviert</Label>
+                </div>
+              </div>
+
+              {/* Permissions */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-white">Berechtigungen</h3>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={formData.modOnly}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, modOnly: checked }))}
+                    />
+                    <Label className="text-dark-text">🛡️ Nur Mods</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={formData.vipOnly}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, vipOnly: checked }))}
+                    />
+                    <Label className="text-dark-text">⭐ Nur VIPs</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      checked={formData.subscriberOnly}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, subscriberOnly: checked }))}
+                    />
+                    <Label className="text-dark-text">💎 Nur Subs</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 pt-6 border-t border-purple-primary/20">
+                <Button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white"
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-purple-primary hover:bg-purple-primary/80 text-white"
+                >
+                  {editingCommand ? 'Aktualisieren' : 'Erstellen'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TwitchBot: React.FC = () => {
   const [settings, setSettings] = useState<TwitchBotSettings>({
     botEnabled: false,
@@ -562,7 +1054,7 @@ const TwitchBot: React.FC = () => {
 
       {/* Tab Navigation */}
       <div className="flex space-x-1 bg-dark-surface/50 p-1 rounded-lg mb-6">
-        {['overview', 'settings', 'channels', 'live-messages'].map((tab) => (
+        {['overview', 'settings', 'channels', 'commands', 'live-messages'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -575,6 +1067,7 @@ const TwitchBot: React.FC = () => {
             {tab === 'overview' && 'Übersicht'}
             {tab === 'settings' && 'Einstellungen'}
             {tab === 'channels' && 'Channels'}
+            {tab === 'commands' && 'Commands'}
             {tab === 'live-messages' && 'Live Messages'}
           </button>
         ))}
@@ -814,6 +1307,9 @@ const TwitchBot: React.FC = () => {
         </CardContent>
       </Card>
       )}
+
+      {/* Commands Tab */}
+      {activeTab === 'commands' && <TwitchBotCommandsSection />}
 
       {/* Live Messages Tab */}
       {activeTab === 'live-messages' && (
