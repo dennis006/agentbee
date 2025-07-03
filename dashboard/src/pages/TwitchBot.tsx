@@ -28,6 +28,62 @@ const TwitchBot = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Status Helper Functions (wie im Discord Dashboard)
+  const getStatusColor = (botStatus: any) => {
+    if (!botStatus) return 'text-gray-400';
+    
+    // Prüfe spezifische Status-Zustände
+    if (botStatus.status) {
+      switch (botStatus.status) {
+        case 'online': return 'text-green-400';
+        case 'offline': return 'text-red-400';
+        case 'starting': return 'text-yellow-400';
+        case 'stopping': return 'text-orange-400';
+        case 'connecting': return 'text-blue-400';
+        case 'error': return 'text-red-600';
+        default: return 'text-gray-400';
+      }
+    }
+    
+    // Fallback auf isRunning
+    if (botStatus.isRunning) return 'text-green-400';
+    return 'text-red-400';
+  };
+
+  const getStatusIcon = (botStatus: any) => {
+    if (!botStatus) return '⚪';
+    
+    // Prüfe spezifische Status-Zustände
+    if (botStatus.status) {
+      switch (botStatus.status) {
+        case 'online': return '🟢';
+        case 'offline': return '🔴';
+        case 'starting': return '🟡';
+        case 'stopping': return '🟠';
+        case 'connecting': return '🔵';
+        case 'error': return '❌';
+        default: return '⚪';
+      }
+    }
+    
+    // Fallback auf isRunning
+    if (botStatus.isRunning) return '🟢';
+    return '🔴';
+  };
+
+  const getStatusText = (botStatus: any) => {
+    if (!botStatus) return 'UNKNOWN';
+    
+    // Prüfe spezifische Status-Zustände
+    if (botStatus.status) {
+      return botStatus.status.toUpperCase();
+    }
+    
+    // Fallback auf isRunning
+    if (botStatus.isRunning) return 'ONLINE';
+    return 'OFFLINE';
+  };
+
   // Floating Particles Effect
   const createFloatingParticles = () => {
     const particles = [];
@@ -216,62 +272,70 @@ const TwitchBot = () => {
         {/* Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {/* Bot Status */}
-          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.1s]">
-            <div className="flex items-center gap-3 mb-4">
-              <div className={cn(
-                "w-3 h-3 rounded-full animate-pulse",
-                botStatus?.isRunning ? "bg-green-400" : "bg-red-400"
-              )} />
-              <Bot className="w-6 h-6 text-neon-purple" />
-              <span className="font-medium text-neon-purple">Bot Status</span>
+          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.1s] hover:scale-105 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Bot className="w-6 h-6 text-neon-purple animate-pulse" />
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-purple-primary rounded-full animate-ping"></div>
+                </div>
+                <span className="font-medium text-neon-purple">Bot Status</span>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-dark-text mb-2">
-              {botStatus?.isRunning ? 'Online' : 'Offline'}
+            <div className={`text-2xl font-bold ${getStatusColor(botStatus)} flex items-center gap-2 mb-2`}>
+              <span className="text-2xl animate-bounce-slow">{getStatusIcon(botStatus)}</span>
+              {getStatusText(botStatus)}
             </div>
             <div className="text-sm text-dark-muted">
-              Uptime: {botStatus?.uptime || '0h 0m'}
+              ⏱️ Uptime: {botStatus?.uptime || '0h 0m'}
             </div>
           </div>
 
           {/* Channels */}
-          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.2s]">
-            <div className="flex items-center gap-3 mb-4">
-              <Hash className="w-6 h-6 text-purple-400" />
-              <span className="font-medium text-purple-400">Channels</span>
+          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.2s] hover:scale-105 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Hash className="w-6 h-6 text-purple-400" />
+                <span className="font-medium text-purple-400">Channels</span>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-dark-text mb-2">
+            <div className="text-3xl font-bold text-neon-purple animate-pulse-slow mb-2">
               {stats.totalChannels || 0}
             </div>
             <div className="text-sm text-dark-muted">
-              Verbundene Channels
+              📺 Verbundene Channels
             </div>
           </div>
 
           {/* Messages */}
-          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.3s]">
-            <div className="flex items-center gap-3 mb-4">
-              <MessageCircle className="w-6 h-6 text-blue-400" />
-              <span className="font-medium text-blue-400">Nachrichten</span>
+          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.3s] hover:scale-105 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <MessageCircle className="w-6 h-6 text-blue-400" />
+                <span className="font-medium text-blue-400">Nachrichten</span>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-dark-text mb-2">
+            <div className="text-3xl font-bold text-blue-400 animate-pulse-slow mb-2">
               {(stats.totalMessages || 0).toLocaleString()}
             </div>
             <div className="text-sm text-dark-muted">
-              Heute: {stats.dailyMessages || 0}
+              📈 Heute: {stats.dailyMessages || 0}
             </div>
           </div>
 
           {/* Commands */}
-          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.4s]">
-            <div className="flex items-center gap-3 mb-4">
-              <Zap className="w-6 h-6 text-yellow-400" />
-              <span className="font-medium text-yellow-400">Commands</span>
+          <div className="cyber-card p-6 animate-fade-in-up [animation-delay:0.4s] hover:scale-105 transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Zap className="w-6 h-6 text-yellow-400" />
+                <span className="font-medium text-yellow-400">Commands</span>
+              </div>
             </div>
-            <div className="text-2xl font-bold text-dark-text mb-2">
+            <div className="text-3xl font-bold text-yellow-400 animate-pulse-slow mb-2">
               {stats.dailyCommands || 0}
             </div>
             <div className="text-sm text-dark-muted">
-              Heute ausgeführt
+              ⚡ Heute ausgeführt
             </div>
           </div>
         </div>
