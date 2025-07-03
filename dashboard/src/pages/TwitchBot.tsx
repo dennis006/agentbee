@@ -922,7 +922,7 @@ const TwitchBot: React.FC = () => {
                     rows={3}
                   />
                   <p className="text-xs text-dark-muted mt-1">
-                    Verfügbare Variablen: {{username}}, {{streamer}}, {{game}}, {{title}}, {{viewers}}
+                    Verfügbare Variablen: {"{{username}}, {{streamer}}, {{game}}, {{title}}, {{viewers}}"}
                   </p>
                 </div>
 
@@ -1087,6 +1087,94 @@ const TwitchBot: React.FC = () => {
             {settings.botEnabled ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
             {settings.botEnabled ? 'Bot stoppen' : 'Bot starten'}
           </Button>
+        </div>
+      )}
+
+      {/* Template Edit Modal */}
+      {editingTemplate && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-dark-surface/95 backdrop-blur-xl p-6 rounded-xl border border-purple-primary/30 shadow-purple-glow w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Template bearbeiten</h3>
+              <Button
+                onClick={() => setEditingTemplate(null)}
+                size="sm"
+                variant="outline"
+                className="border-purple-primary/30"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label>Name *</Label>
+                <Input
+                  value={editingTemplate.name}
+                  onChange={(e) => setEditingTemplate(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                />
+              </div>
+
+              <div>
+                <Label>Kategorie</Label>
+                <select
+                  value={editingTemplate.category}
+                  onChange={(e) => setEditingTemplate(prev => prev ? { ...prev, category: e.target.value } : null)}
+                  className="w-full px-3 py-2 bg-dark-bg/70 border border-purple-primary/30 rounded-md text-dark-text focus:border-purple-primary"
+                >
+                  <option value="general">Allgemein</option>
+                  <option value="gaming">Gaming</option>
+                  <option value="special">Besonders</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+
+              <div>
+                <Label>Template Text *</Label>
+                <Textarea
+                  value={editingTemplate.template}
+                  onChange={(e) => setEditingTemplate(prev => prev ? { ...prev, template: e.target.value } : null)}
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                  rows={3}
+                />
+                                                  <p className="text-xs text-dark-muted mt-1">
+                   Verfügbare Variablen: {"{{username}}, {{streamer}}, {{game}}, {{title}}, {{viewers}}"}
+                 </p>
+              </div>
+
+              <div>
+                <Label>Beschreibung</Label>
+                <Input
+                  value={editingTemplate.description}
+                  onChange={(e) => setEditingTemplate(prev => prev ? { ...prev, description: e.target.value } : null)}
+                  className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={() => updateTemplate(editingTemplate.id, {
+                    name: editingTemplate.name,
+                    template: editingTemplate.template,
+                    description: editingTemplate.description,
+                    category: editingTemplate.category
+                  })}
+                  className="bg-purple-primary hover:bg-purple-primary/80 flex-1"
+                  disabled={!editingTemplate.name.trim() || !editingTemplate.template.trim()}
+                >
+                  Speichern
+                </Button>
+                <Button
+                  onClick={() => setEditingTemplate(null)}
+                  variant="outline"
+                  className="border-purple-primary/30"
+                >
+                  Abbrechen
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
