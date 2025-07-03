@@ -60,7 +60,13 @@ const TwitchBot = () => {
       const statusResponse = await fetch(`${apiUrl}/api/twitch/status`);
       if (statusResponse.ok) {
         const statusData = await statusResponse.json();
-        setBotStatus(statusData.status);
+        setBotStatus(statusData.status || {
+          isRunning: false,
+          connectedChannels: [],
+          totalMessages: 0,
+          uptime: '0h 0m',
+          lastActivity: null
+        });
       }
 
       // Channels laden
@@ -74,7 +80,13 @@ const TwitchBot = () => {
       const statsResponse = await fetch(`${apiUrl}/api/twitch/stats`);
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
-        setStats(statsData.stats || statsData);
+        setStats({
+          totalChannels: (statsData.stats?.totalChannels || statsData.totalChannels) || 0,
+          totalMessages: (statsData.stats?.totalMessages || statsData.totalMessages) || 0,
+          dailyMessages: (statsData.stats?.dailyMessages || statsData.dailyMessages) || 0,
+          dailyCommands: (statsData.stats?.dailyCommands || statsData.dailyCommands) || 0,
+          isRunning: (statsData.stats?.isRunning || statsData.isRunning) || false
+        });
       }
 
     } catch (error) {
@@ -208,16 +220,16 @@ const TwitchBot = () => {
             <div className="flex items-center gap-3 mb-4">
               <div className={cn(
                 "w-3 h-3 rounded-full animate-pulse",
-                botStatus.isRunning ? "bg-green-400" : "bg-red-400"
+                botStatus?.isRunning ? "bg-green-400" : "bg-red-400"
               )} />
               <Bot className="w-6 h-6 text-neon-purple" />
               <span className="font-medium text-neon-purple">Bot Status</span>
             </div>
             <div className="text-2xl font-bold text-dark-text mb-2">
-              {botStatus.isRunning ? 'Online' : 'Offline'}
+              {botStatus?.isRunning ? 'Online' : 'Offline'}
             </div>
             <div className="text-sm text-dark-muted">
-              Uptime: {botStatus.uptime}
+              Uptime: {botStatus?.uptime || '0h 0m'}
             </div>
           </div>
 
@@ -228,7 +240,7 @@ const TwitchBot = () => {
               <span className="font-medium text-purple-400">Channels</span>
             </div>
             <div className="text-2xl font-bold text-dark-text mb-2">
-              {stats.totalChannels}
+              {stats.totalChannels || 0}
             </div>
             <div className="text-sm text-dark-muted">
               Verbundene Channels
@@ -242,10 +254,10 @@ const TwitchBot = () => {
               <span className="font-medium text-blue-400">Nachrichten</span>
             </div>
             <div className="text-2xl font-bold text-dark-text mb-2">
-              {stats.totalMessages.toLocaleString()}
+              {(stats.totalMessages || 0).toLocaleString()}
             </div>
             <div className="text-sm text-dark-muted">
-              Heute: {stats.dailyMessages}
+              Heute: {stats.dailyMessages || 0}
             </div>
           </div>
 
@@ -256,7 +268,7 @@ const TwitchBot = () => {
               <span className="font-medium text-yellow-400">Commands</span>
             </div>
             <div className="text-2xl font-bold text-dark-text mb-2">
-              {stats.dailyCommands}
+              {stats.dailyCommands || 0}
             </div>
             <div className="text-sm text-dark-muted">
               Heute ausgeführt
@@ -320,18 +332,18 @@ const TwitchBot = () => {
           <div className="cyber-card p-8 animate-fade-in-up [animation-delay:0.6s]">
             <h2 className="text-2xl font-bold text-neon-purple mb-6 flex items-center gap-3">
               <Users className="w-6 h-6" />
-              Verbundene Channels ({channels.length})
+              Verbundene Channels ({channels?.length || 0})
             </h2>
             
             <div className="space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
-              {channels.length === 0 ? (
+              {!channels || channels.length === 0 ? (
                 <div className="text-center py-8 text-dark-muted">
                   <Hash className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Noch keine Channels hinzugefügt</p>
                   <p className="text-sm mt-2">Füge deinen ersten Channel hinzu!</p>
                 </div>
               ) : (
-                channels.map((channel: any, index) => (
+                (channels || []).map((channel: any, index) => (
                   <div
                     key={channel.id}
                     className="flex items-center justify-between p-4 bg-dark-bg/30 rounded-lg border border-purple-primary/20 hover:border-purple-primary/40 transition-all duration-300 animate-fade-in-up"
@@ -348,7 +360,7 @@ const TwitchBot = () => {
                           {channel.channel_name}
                         </div>
                         <div className="text-xs text-dark-muted">
-                          Hinzugefügt: {new Date(channel.added_at).toLocaleDateString('de-DE')}
+                          Hinzugefügt: {channel.added_at ? new Date(channel.added_at).toLocaleDateString('de-DE') : 'Unbekannt'}
                         </div>
                       </div>
                     </div>
