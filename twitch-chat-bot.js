@@ -824,13 +824,32 @@ class TwitchChatBot {
 
     // Message senden
     sendMessage(channel, message) {
-        if (!this.client || !this.isConnected) return;
+        if (!this.client || !this.isConnected) {
+            console.log(`❌ [DEBUG] sendMessage failed: client=${!!this.client}, connected=${this.isConnected}`);
+            return false;
+        }
         
-        // Global Cooldown berücksichtigen
-        const globalCooldown = this.settings?.globalCooldown || 3;
-        setTimeout(() => {
-            this.client.say(channel, message);
-        }, globalCooldown * 1000);
+        console.log(`📤 [DEBUG] Sending message to ${channel}: ${message}`);
+        
+        try {
+            // Global Cooldown berücksichtigen
+            const globalCooldown = this.settings?.globalCooldown || 0;
+            
+            if (globalCooldown > 0) {
+                setTimeout(() => {
+                    this.client.say(channel, message);
+                    console.log(`✅ [DEBUG] Message sent with ${globalCooldown}s delay to ${channel}`);
+                }, globalCooldown * 1000);
+            } else {
+                this.client.say(channel, message);
+                console.log(`✅ [DEBUG] Message sent immediately to ${channel}`);
+            }
+            
+            return true;
+        } catch (error) {
+            console.error(`❌ [DEBUG] Error sending message to ${channel}:`, error);
+            return false;
+        }
     }
 
     // Channel hinzufügen
@@ -1050,8 +1069,12 @@ class TwitchChatBot {
                 message = await this.getRandomLiveMessage(streamerInfo, channelName);
             }
             
+            console.log(`🔍 [DEBUG] Attempting to send live message: ${message}`);
+            console.log(`🔍 [DEBUG] Target channel: #${channelName}`);
+            
             // Nachricht senden
             const success = this.sendMessage(`#${channelName}`, message);
+            console.log(`🔍 [DEBUG] sendMessage result: ${success}`);
             
             if (success) {
                 // Notification tracking
@@ -1062,7 +1085,7 @@ class TwitchChatBot {
                     this.sentLiveNotifications.delete(notificationKey);
                 }, 2 * 60 * 60 * 1000);
                 
-                console.log(`🤖 Live-Nachricht gesendet an ${channelName}: ${message}`);
+                console.log(`🤖✅ Live-Nachricht erfolgreich gesendet an ${channelName}: ${message}`);
                 
                 // Statistik in Datenbank speichern (falls verfügbar)
                 if (global.supabaseClient) {
@@ -1075,6 +1098,8 @@ class TwitchChatBot {
                 }
                 
                 return true;
+            } else {
+                console.log(`❌ [DEBUG] Failed to send live message for ${channelName}`);
             }
             
         } catch (error) {
@@ -1087,6 +1112,10 @@ class TwitchChatBot {
     // Zufällige Live-Nachricht generieren
     async getRandomLiveMessage(streamerInfo = {}, channelName = '') {
         try {
+            console.log(`🔍 [DEBUG] getRandomLiveMessage called for ${channelName}`);
+            console.log(`🔍 [DEBUG] streamerInfo:`, streamerInfo);
+            console.log(`🔍 [DEBUG] global.supabaseClient available: ${!!global.supabaseClient}`);
+            
             // Fallback Standard-Nachrichten (falls keine Datenbank verfügbar)
             const fallbackMessages = [
                 '🔴 Stream ist LIVE! Willkommen alle! 🎉',
@@ -1099,6 +1128,7 @@ class TwitchChatBot {
             // Versuche Template aus Datenbank zu holen
             if (global.supabaseClient) {
                 try {
+                    console.log(`🔍 [DEBUG] Querying twitch_bot_live_message_templates table...`);
                     const { data, error } = await global.supabaseClient
                         .from('twitch_bot_live_message_templates')
                         .select('id, template, name')
@@ -1108,21 +1138,31 @@ class TwitchChatBot {
                         .limit(1)
                         .single();
                     
+                    console.log(`🔍 [DEBUG] Template query result - data:`, data);
+                    console.log(`🔍 [DEBUG] Template query result - error:`, error);
+                    
                     if (!error && data) {
+                        console.log(`🔍 [DEBUG] Using template from DB: ${data.template}`);
                         // Template-Nutzung in DB vermerken
                         await this.incrementTemplateUsage(data.id);
                         
                         // Variablen ersetzen
-                        return this.replaceVariables(data.template, streamerInfo, channelName);
+                        const finalMessage = this.replaceVariables(data.template, streamerInfo, channelName);
+                        console.log(`🔍 [DEBUG] Final message after variable replacement: ${finalMessage}`);
+                        return finalMessage;
                     }
                 } catch (dbError) {
-                    console.log('⚠️ Template aus DB nicht verfügbar, verwende Fallback');
+                    console.log('⚠️ Template aus DB nicht verfügbar, verwende Fallback:', dbError);
                 }
             }
             
             // Fallback zu Standard-Templates
+            console.log(`🔍 [DEBUG] Using fallback message templates`);
             const randomMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
-            return this.replaceVariables(randomMessage, streamerInfo, channelName);
+            console.log(`🔍 [DEBUG] Selected fallback message: ${randomMessage}`);
+            const finalMessage = this.replaceVariables(randomMessage, streamerInfo, channelName);
+            console.log(`🔍 [DEBUG] Final fallback message: ${finalMessage}`);
+            return finalMessage;
             
         } catch (error) {
             console.error('❌ Fehler beim Generieren der Live-Nachricht:', error);
@@ -1255,12 +1295,41 @@ class TwitchChatBot {
     
     // Manuelle Live-Nachricht (für Tests)
     async triggerLiveMessage(channelName, customMessage = null) {
-        if (!this.isConnected) {
-            throw new Error('Bot ist nicht verbunden');
+        try {
+            console.log(`🔍 [DEBUG] triggerLiveMessage called for ${channelName}`);
+            console.log(`🔍 [DEBUG] customMessage: ${customMessage}`);
+            console.log(`🔍 [DEBUG] Bot connected: ${this.isConnected}`);
+            console.log(`🔍 [DEBUG] Bot channels: ${Array.from(this.channels.keys())}`);
+            
+            if (!this.isConnected) {
+                throw new Error('Bot ist nicht verbunden');
+            }
+            
+            const streamerInfo = {
+                displayName: channelName,
+                gameName: 'Test Game',
+                title: 'Test Stream',
+                viewerCount: 123,
+                startedAt: new Date().toISOString()
+            };
+            
+            if (customMessage) {
+                console.log(`🔍 [DEBUG] Using custom message: ${customMessage}`);
+                // Custom Message verwenden
+                const result = this.sendMessage(`#${channelName}`, customMessage);
+                console.log(`🔍 [DEBUG] Custom message send result: ${result}`);
+                return { success: result, message: customMessage };
+            } else {
+                console.log(`🔍 [DEBUG] Using standard live message system`);
+                // Standard Live Message senden
+                const success = await this.sendLiveMessage(channelName, streamerInfo);
+                console.log(`🔍 [DEBUG] Standard live message result: ${success}`);
+                return { success, message: success ? 'Live-Nachricht gesendet' : 'Fehler beim Senden' };
+            }
+        } catch (error) {
+            console.error('❌ Fehler beim Triggern der Live-Nachricht:', error);
+            return { success: false, error: error.message };
         }
-        
-        const message = customMessage || `🔴 LIVE! Der Stream läuft! 🎉`;
-        return this.sendMessage(`#${channelName}`, message);
     }
 }
 
