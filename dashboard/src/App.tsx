@@ -16,6 +16,7 @@ import VerifyPage from './pages/VerifyPage'
 import VerificationSettings from './pages/VerificationSettings'
 import XP from './pages/XP'
 import TwitchNotifications from './pages/TwitchNotifications'
+import TwitchBot from './pages/TwitchBot'
 import Valorant from './pages/Valorant'
 import ValorantNews from './pages/ValorantNews'
 import CrosshairCreator from './pages/CrosshairCreator'
@@ -113,6 +114,7 @@ const Navigation = ({
         { id: 'tickets', icon: Ticket, label: 'Ticket System', description: 'Support & Help Desk System' },
         // AFK System entfernt - verwende Discord Native AFK
         { id: 'twitch', icon: Play, label: 'Twitch Live', description: 'Live Stream Notifications' },
+        { id: 'twitch-bot', icon: Bot, label: 'Twitch Bot', description: 'Multi-Channel Twitch Chat Bot' },
         { id: 'valorant', icon: Target, label: 'Valorant', description: 'Player Stats & MMR Tracking' },
         { id: 'valorant-news', icon: Newspaper, label: 'Valorant News', description: 'Automatische News Updates' },
         { id: 'crosshair-creator', icon: Target, label: 'Crosshair Creator', description: 'Valorant Crosshair Generator' },
@@ -415,6 +417,8 @@ const DashboardLayout = () => {
       // AFK Auto-Move entfernt - verwende Discord Native AFK
       case 'twitch':
         return <TwitchNotifications />
+      case 'twitch-bot':
+        return <TwitchBot />
       case 'valorant':
         return <Valorant />
       case 'valorant-news':
