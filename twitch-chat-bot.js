@@ -32,6 +32,9 @@ class TwitchChatBot {
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 5000;
         
+        // Channel Health Check Interval
+        this.channelHealthInterval = null;
+        
         this.initializeCommands();
     }
 
@@ -191,6 +194,9 @@ class TwitchChatBot {
             // Channels nach erfolgreicher Verbindung joinen
             await this.joinConfiguredChannels();
             
+            // Periodische Channel-Überprüfung starten (alle 5 Minuten)
+            this.startChannelHealthCheck();
+            
         } catch (error) {
             console.error('❌ Fehler beim Starten des Twitch Bots:', error);
             this.isConnected = false;
@@ -219,7 +225,7 @@ class TwitchChatBot {
             return;
         }
         
-        console.log(`🏠 Joiner ${channelNames.length} Channels...`);
+        console.log(`🏠 Joiner ${channelNames.length} Channels (dauerhaft)...`);
         
         for (const channelName of channelNames) {
             try {
@@ -227,15 +233,23 @@ class TwitchChatBot {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 await this.client.join(channelName);
-                console.log(`✅ Bot ist Channel ${channelName} beigetreten`);
+                console.log(`✅ Bot ist Channel ${channelName} dauerhaft beigetreten (24/7 aktiv)`);
                 
             } catch (joinError) {
                 console.error(`❌ Fehler beim Joinen von ${channelName}:`, joinError);
-                // Weitermachen mit nächstem Channel
+                // Retry nach 2 Sekunden
+                setTimeout(async () => {
+                    try {
+                        await this.client.join(channelName);
+                        console.log(`🔄 Bot ist Channel ${channelName} beim Retry beigetreten`);
+                    } catch (retryError) {
+                        console.error(`❌ Retry fehlgeschlagen für ${channelName}:`, retryError);
+                    }
+                }, 2000);
             }
         }
         
-        console.log(`🎉 Bot Setup abgeschlossen! Aktiv in ${this.channels.size} Channels`);
+        console.log(`🎉 Bot Setup abgeschlossen! Dauerhaft aktiv in ${this.channels.size} Channels (auch offline)`);
     }
 
     // Bot stoppen
@@ -244,6 +258,9 @@ class TwitchChatBot {
         
         // Status sofort auf disconnected setzen um Reconnects zu verhindern
         this.isConnected = false;
+        
+        // Health Check stoppen
+        this.stopChannelHealthCheck();
         
         if (this.client) {
             try {
@@ -320,16 +337,31 @@ class TwitchChatBot {
         // Channel joined - Mit verbessertem Logging
         this.client.on('join', (channel, username, self) => {
             if (self) {
-                console.log(`🟢 Bot "${this.botUsername}" ist Channel ${channel} beigetreten`);
+                console.log(`🟢 Bot "${this.botUsername}" ist Channel ${channel} beigetreten (dauerhaft aktiv)`);
                 this.stats.connectedChannels = this.getJoinedChannelsCount();
             }
         });
 
-        // Channel left
+        // Channel left - Mit Rejoin-Logik
         this.client.on('part', (channel, username, self) => {
             if (self) {
                 console.log(`🔴 Bot "${this.botUsername}" hat Channel ${channel} verlassen`);
                 this.stats.connectedChannels = this.getJoinedChannelsCount();
+                
+                // Prüfen ob Channel wieder gejoint werden soll (falls nicht manuell verlassen)
+                if (this.channels.has(channel) && this.isConnected) {
+                    console.log(`🔄 Automatischer Rejoin für ${channel} in 3 Sekunden...`);
+                    setTimeout(async () => {
+                        try {
+                            if (this.client && this.isConnected) {
+                                await this.client.join(channel);
+                                console.log(`✅ Auto-Rejoin erfolgreich für ${channel}`);
+                            }
+                        } catch (rejoinError) {
+                            console.error(`❌ Auto-Rejoin fehlgeschlagen für ${channel}:`, rejoinError);
+                        }
+                    }, 3000);
+                }
             }
         });
 
@@ -364,6 +396,58 @@ class TwitchChatBot {
     getJoinedChannelsCount() {
         if (!this.client || !this.client.getChannels) return 0;
         return this.client.getChannels().length;
+    }
+
+    // Periodische Channel-Gesundheitsüberprüfung
+    startChannelHealthCheck() {
+        // Alte Interval clearen falls vorhanden
+        if (this.channelHealthInterval) {
+            clearInterval(this.channelHealthInterval);
+        }
+        
+        this.channelHealthInterval = setInterval(async () => {
+            if (!this.client || !this.isConnected) return;
+            
+            try {
+                const joinedChannels = this.client.getChannels ? this.client.getChannels() : [];
+                const configuredChannels = Array.from(this.channels.keys());
+                
+                // Prüfen welche Channels fehlen
+                const missingChannels = configuredChannels.filter(channel => 
+                    !joinedChannels.includes(channel.toLowerCase())
+                );
+                
+                if (missingChannels.length > 0) {
+                    console.log(`🔍 Health Check: ${missingChannels.length} Channels fehlen, joiner automatisch...`);
+                    
+                    for (const missingChannel of missingChannels) {
+                        try {
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // 1s Verzögerung
+                            await this.client.join(missingChannel);
+                            console.log(`🔄 Health Check: ${missingChannel} wieder beigetreten`);
+                        } catch (error) {
+                            console.error(`❌ Health Check: Fehler beim Joinen von ${missingChannel}:`, error);
+                        }
+                    }
+                } else {
+                    console.log(`✅ Health Check: Bot ist in allen ${configuredChannels.length} Channels aktiv`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Fehler bei Channel Health Check:', error);
+            }
+        }, 5 * 60 * 1000); // Alle 5 Minuten
+        
+        console.log('🏥 Channel Health Check gestartet (alle 5 Minuten)');
+    }
+
+    // Health Check stoppen
+    stopChannelHealthCheck() {
+        if (this.channelHealthInterval) {
+            clearInterval(this.channelHealthInterval);
+            this.channelHealthInterval = null;
+            console.log('🏥 Channel Health Check gestoppt');
+        }
     }
 
     // Message handling
@@ -548,7 +632,7 @@ class TwitchChatBot {
                     console.log('🔄 Starte frische Bot-Verbindung...');
                     await this.start();
                     
-                    console.log('✅ Bot erfolgreich reconnected!');
+                    console.log('✅ Bot erfolgreich reconnected und in allen Channels aktiv!');
                     
                 } catch (error) {
                     console.error('❌ Reconnect fehlgeschlagen:', error);
