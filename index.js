@@ -11,6 +11,7 @@ const { registerGiveawayAPI } = require('./giveaway-api');
 const { registerTicketAPI } = require('./ticket-api');
 const TicketSystemV2 = require('./ticket-system-v2');
 const setupTwitchAPI = require('./twitch-api');
+const { initializeSupabase: initializeTwitchSupabase, createTwitchBotAPI } = require('./twitch-bot-supabase-api');
 
 // 🎵 YOUTUBE RADIO-SYSTEM
 const { loadMusicSettings, musicSettings, registerMusicAPI } = require('./music-api');
@@ -95,6 +96,7 @@ const supabaseInitialized = initializeSupabase();
 // Welcome System mit Supabase initialisieren
 if (supabaseInitialized && supabase) {
     initializeSupabaseForWelcome(supabase);
+    initializeTwitchSupabase(supabase);
 }
 
 // ================== API KEYS MANAGEMENT ==================
@@ -2781,6 +2783,10 @@ console.log('🎉 Giveaway-System und Interaktionen initialisiert');
 registerGiveawayAPI(app, client);
 registerTicketAPI(app, client);
 console.log('🎉 Giveaway-API registriert');
+
+// Twitch Bot API registrieren
+createTwitchBotAPI(app);
+console.log('🤖 Twitch Bot API registriert');
 
 // 🎵 YOUTUBE RADIO-SYSTEM INITIALISIEREN
 try {

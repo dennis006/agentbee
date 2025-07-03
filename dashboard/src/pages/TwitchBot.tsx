@@ -133,31 +133,33 @@ const TwitchBot: React.FC = () => {
     try {
       setLoading(true);
       
-      // Für jetzt Mock-Daten verwenden
-      setSettings({
-        botEnabled: false,
-        botUsername: 'AgentBeeBot',
-        oauthToken: '',
-        autoConnect: true,
-        reconnectAttempts: 3,
-        commandPrefix: '!',
-        modCommandsOnly: false,
-        allowedRoles: [],
-        blockedUsers: [],
-        globalCooldown: 3
-      });
+      // Parallel alle Daten laden
+      const [settingsRes, channelsRes, statsRes] = await Promise.all([
+        fetch('/api/twitch-bot/settings'),
+        fetch('/api/twitch-bot/channels'),
+        fetch('/api/twitch-bot/stats')
+      ]);
 
-      setChannels([]);
-      
-      setStats({
-        totalChannels: 0,
-        activeChannels: 0,
-        totalCommands: 0,
-        messagesLast24h: 0,
-        commandsUsedLast24h: 0,
-        isConnected: false,
-        uptime: '0s'
-      });
+      if (settingsRes.ok) {
+        const data = await settingsRes.json();
+        if (data.success) {
+          setSettings(data.settings);
+        }
+      }
+
+      if (channelsRes.ok) {
+        const data = await channelsRes.json();
+        if (data.success) {
+          setChannels(data.channels);
+        }
+      }
+
+      if (statsRes.ok) {
+        const data = await statsRes.json();
+        if (data.success) {
+          setStats(data.stats);
+        }
+      }
 
     } catch (error) {
       console.error('❌ Fehler beim Laden der Twitch Bot Daten:', error);
@@ -168,12 +170,46 @@ const TwitchBot: React.FC = () => {
   };
 
   const saveSettings = async () => {
-    showSuccess('Bot-Einstellungen gespeichert! (Demo)');
+    try {
+      const res = await fetch('/api/twitch-bot/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        showSuccess('Bot-Einstellungen erfolgreich gespeichert!');
+      } else {
+        showError(data.error || 'Fehler beim Speichern');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Speichern:', error);
+      showError('Fehler beim Speichern der Einstellungen');
+    }
   };
 
   const toggleBot = async () => {
-    setSettings(prev => ({ ...prev, botEnabled: !prev.botEnabled }));
-    showSuccess(settings.botEnabled ? 'Bot gestoppt!' : 'Bot gestartet!');
+    try {
+      const res = await fetch('/api/twitch-bot/toggle', {
+        method: 'POST'
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setSettings(prev => ({ ...prev, botEnabled: data.enabled }));
+        showSuccess(data.message);
+        // Stats nach Toggle aktualisieren
+        loadData();
+      } else {
+        showError(data.error || 'Fehler beim Bot-Toggle');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Bot-Toggle:', error);
+      showError('Fehler beim Ein-/Ausschalten des Bots');
+    }
   };
 
   const addChannel = async () => {
@@ -182,35 +218,58 @@ const TwitchBot: React.FC = () => {
       return;
     }
 
-    const newChannelData: TwitchBotChannel = {
-      id: Date.now().toString(),
-      channelName: newChannel.channelName,
-      channelId: '',
-      enabled: true,
-      autoJoin: true,
-      discordChannelId: newChannel.discordChannelId,
-      syncMessages: newChannel.syncMessages,
-      welcomeMessage: '',
-      followMessage: '',
-      subMessage: '',
-      donationMessage: '',
-      raidMessage: '',
-      hostMessage: '',
-      totalCommands: 0
-    };
+    try {
+      const res = await fetch('/api/twitch-bot/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelName: newChannel.channelName.toLowerCase(),
+          discordChannelId: newChannel.discordChannelId,
+          syncMessages: newChannel.syncMessages
+        })
+      });
 
-    setChannels(prev => [...prev, newChannelData]);
-    setNewChannel({
-      channelName: '',
-      discordChannelId: '',
-      syncMessages: false
-    });
-    showSuccess(`Channel ${newChannel.channelName} hinzugefügt!`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setChannels(prev => [...prev, data.channel]);
+        setNewChannel({
+          channelName: '',
+          discordChannelId: '',
+          syncMessages: false
+        });
+        showSuccess(data.message);
+        // Stats aktualisieren
+        loadData();
+      } else {
+        showError(data.error || 'Fehler beim Hinzufügen des Channels');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Channel hinzufügen:', error);
+      showError('Fehler beim Hinzufügen des Channels');
+    }
   };
 
   const removeChannel = async (channelId: string) => {
-    setChannels(prev => prev.filter(c => c.id !== channelId));
-    showError('Channel entfernt!');
+    try {
+      const res = await fetch(`/api/twitch-bot/channels/${channelId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setChannels(prev => prev.filter(c => c.id !== channelId));
+        showSuccess(data.message);
+        // Stats aktualisieren
+        loadData();
+      } else {
+        showError(data.error || 'Fehler beim Entfernen des Channels');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Channel entfernen:', error);
+      showError('Fehler beim Entfernen des Channels');
+    }
   };
 
   if (loading) {
