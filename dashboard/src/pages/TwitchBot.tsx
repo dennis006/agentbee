@@ -62,6 +62,8 @@ interface TwitchBotSettings {
   allowedRoles: string[];
   blockedUsers: string[];
   globalCooldown: number;
+  liveNotificationsEnabled: boolean;
+  liveMessageCooldown: number;
 }
 
 interface TwitchBotChannel {
@@ -78,6 +80,10 @@ interface TwitchBotChannel {
   donationMessage: string;
   raidMessage: string;
   hostMessage: string;
+  liveMessageEnabled: boolean;
+  liveMessageTemplate: string;
+  useCustomLiveMessage: boolean;
+  liveMessageVariables: { [key: string]: boolean };
   totalCommands: number;
 }
 
@@ -91,6 +97,19 @@ interface TwitchBotStats {
   uptime: string;
 }
 
+interface LiveMessageTemplate {
+  id: string;
+  name: string;
+  template: string;
+  description: string;
+  category: string;
+  variables: string[];
+  usageCount: number;
+  isDefault: boolean;
+  enabled: boolean;
+  createdAt: string;
+}
+
 const TwitchBot: React.FC = () => {
   const [settings, setSettings] = useState<TwitchBotSettings>({
     botEnabled: false,
@@ -102,10 +121,13 @@ const TwitchBot: React.FC = () => {
     modCommandsOnly: false,
     allowedRoles: [],
     blockedUsers: [],
-    globalCooldown: 3
+    globalCooldown: 3,
+    liveNotificationsEnabled: true,
+    liveMessageCooldown: 30
   });
 
   const [channels, setChannels] = useState<TwitchBotChannel[]>([]);
+  const [liveTemplates, setLiveTemplates] = useState<LiveMessageTemplate[]>([]);
   const [stats, setStats] = useState<TwitchBotStats>({
     totalChannels: 0,
     activeChannels: 0,
@@ -117,11 +139,24 @@ const TwitchBot: React.FC = () => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
   const [newChannel, setNewChannel] = useState({
     channelName: '',
     discordChannelId: '',
-    syncMessages: false
+    syncMessages: false,
+    liveMessageEnabled: true,
+    liveMessageTemplate: '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+    useCustomLiveMessage: false
   });
+
+  const [newTemplate, setNewTemplate] = useState({
+    name: '',
+    template: '',
+    description: '',
+    category: 'custom'
+  });
+
+  const [editingTemplate, setEditingTemplate] = useState<LiveMessageTemplate | null>(null);
 
   const { toasts, removeToast, success: showSuccess, error: showError } = useToast();
 
@@ -134,10 +169,11 @@ const TwitchBot: React.FC = () => {
       setLoading(true);
       
       // Parallel alle Daten laden
-      const [settingsRes, channelsRes, statsRes] = await Promise.all([
+      const [settingsRes, channelsRes, statsRes, templatesRes] = await Promise.all([
         fetch('/api/twitch-bot/settings'),
         fetch('/api/twitch-bot/channels'),
-        fetch('/api/twitch-bot/stats')
+        fetch('/api/twitch-bot/stats'),
+        fetch('/api/twitch-bot/live-templates')
       ]);
 
       if (settingsRes.ok) {
@@ -158,6 +194,13 @@ const TwitchBot: React.FC = () => {
         const data = await statsRes.json();
         if (data.success) {
           setStats(data.stats);
+        }
+      }
+
+      if (templatesRes.ok) {
+        const data = await templatesRes.json();
+        if (data.success) {
+          setLiveTemplates(data.templates);
         }
       }
 
@@ -214,7 +257,7 @@ const TwitchBot: React.FC = () => {
 
   const addChannel = async () => {
     if (!newChannel.channelName.trim()) {
-      showError('Bitte Channel-Namen eingeben');
+      showError('Channel-Name ist erforderlich');
       return;
     }
 
@@ -222,11 +265,7 @@ const TwitchBot: React.FC = () => {
       const res = await fetch('/api/twitch-bot/channels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          channelName: newChannel.channelName.toLowerCase(),
-          discordChannelId: newChannel.discordChannelId,
-          syncMessages: newChannel.syncMessages
-        })
+        body: JSON.stringify(newChannel)
       });
 
       const data = await res.json();
@@ -236,16 +275,18 @@ const TwitchBot: React.FC = () => {
         setNewChannel({
           channelName: '',
           discordChannelId: '',
-          syncMessages: false
+          syncMessages: false,
+          liveMessageEnabled: true,
+          liveMessageTemplate: '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+          useCustomLiveMessage: false
         });
         showSuccess(data.message);
-        // Stats aktualisieren
-        loadData();
+        await loadData(); // Reload für aktuelle Stats
       } else {
         showError(data.error || 'Fehler beim Hinzufügen des Channels');
       }
     } catch (error) {
-      console.error('❌ Fehler beim Channel hinzufügen:', error);
+      console.error('❌ Fehler beim Hinzufügen des Channels:', error);
       showError('Fehler beim Hinzufügen des Channels');
     }
   };
@@ -261,14 +302,124 @@ const TwitchBot: React.FC = () => {
       if (data.success) {
         setChannels(prev => prev.filter(c => c.id !== channelId));
         showSuccess(data.message);
-        // Stats aktualisieren
-        loadData();
       } else {
         showError(data.error || 'Fehler beim Entfernen des Channels');
       }
     } catch (error) {
-      console.error('❌ Fehler beim Channel entfernen:', error);
+      console.error('❌ Fehler beim Entfernen des Channels:', error);
       showError('Fehler beim Entfernen des Channels');
+    }
+  };
+
+  // =============================================
+  // LIVE MESSAGE TEMPLATE FUNKTIONEN
+  // =============================================
+  
+  const createTemplate = async () => {
+    if (!newTemplate.name.trim() || !newTemplate.template.trim()) {
+      showError('Name und Template sind erforderlich');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/twitch-bot/live-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTemplate)
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setLiveTemplates(prev => [...prev, data.template]);
+        setNewTemplate({
+          name: '',
+          template: '',
+          description: '',
+          category: 'custom'
+        });
+        showSuccess(data.message);
+      } else {
+        showError(data.error || 'Fehler beim Erstellen des Templates');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Erstellen des Templates:', error);
+      showError('Fehler beim Erstellen des Templates');
+    }
+  };
+
+  const updateTemplate = async (templateId: string, updates: Partial<LiveMessageTemplate>) => {
+    try {
+      const res = await fetch(`/api/twitch-bot/live-templates/${templateId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setLiveTemplates(prev => prev.map(t => 
+          t.id === templateId ? data.template : t
+        ));
+        showSuccess(data.message);
+        setEditingTemplate(null);
+      } else {
+        showError(data.error || 'Fehler beim Aktualisieren des Templates');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Aktualisieren des Templates:', error);
+      showError('Fehler beim Aktualisieren des Templates');
+    }
+  };
+
+  const deleteTemplate = async (templateId: string) => {
+    if (!confirm('Template wirklich löschen?')) return;
+
+    try {
+      const res = await fetch(`/api/twitch-bot/live-templates/${templateId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setLiveTemplates(prev => prev.filter(t => t.id !== templateId));
+        showSuccess(data.message);
+      } else {
+        showError(data.error || 'Fehler beim Löschen des Templates');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Löschen des Templates:', error);
+      showError('Fehler beim Löschen des Templates');
+    }
+  };
+
+  const triggerLiveMessage = async (channelId: string) => {
+    try {
+      const res = await fetch(`/api/twitch-bot/trigger-live/${channelId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          streamerInfo: {
+            displayName: 'TestStreamer',
+            gameName: 'Just Chatting',
+            title: 'Test Stream für Live Message',
+            viewerCount: 42
+          }
+        })
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        showSuccess(data.message);
+      } else {
+        showError(data.error || 'Fehler beim Senden der Live-Nachricht');
+      }
+    } catch (error) {
+      console.error('❌ Fehler beim Senden der Live-Nachricht:', error);
+      showError('Fehler beim Senden der Live-Nachricht');
     }
   };
 
@@ -409,8 +560,29 @@ const TwitchBot: React.FC = () => {
         </Card>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 bg-dark-surface/50 p-1 rounded-lg mb-6">
+        {['overview', 'settings', 'channels', 'live-messages'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === tab
+                ? 'bg-purple-primary text-white shadow-lg'
+                : 'text-dark-text hover:text-white hover:bg-dark-bg/50'
+            }`}
+          >
+            {tab === 'overview' && 'Übersicht'}
+            {tab === 'settings' && 'Einstellungen'}
+            {tab === 'channels' && 'Channels'}
+            {tab === 'live-messages' && 'Live Messages'}
+          </button>
+        ))}
+      </div>
+
       {/* Bot Settings */}
-      <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+      {activeTab === 'settings' && (
+        <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
         <CardHeader>
           <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
             <Settings className="w-5 h-5 text-purple-accent" />
@@ -520,9 +692,11 @@ const TwitchBot: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Channel Management */}
-      <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+      {activeTab === 'channels' && (
+        <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
         <CardHeader>
           <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
             <Hash className="w-5 h-5 text-purple-accent" />
@@ -639,6 +813,282 @@ const TwitchBot: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      )}
+
+      {/* Live Messages Tab */}
+      {activeTab === 'live-messages' && (
+        <div className="space-y-6">
+          {/* Live Message Settings */}
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <Zap className="w-5 h-5 text-purple-accent" />
+                Live Message Einstellungen
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Konfiguriere automatische Nachrichten wenn Streams live gehen
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center space-x-3">
+                  <Switch
+                    checked={settings.liveNotificationsEnabled}
+                    onCheckedChange={(checked) => setSettings({...settings, liveNotificationsEnabled: checked})}
+                  />
+                  <div>
+                    <Label className="text-sm font-medium">Live Messages aktiviert</Label>
+                    <p className="text-xs text-dark-muted">Automatische Chat-Nachrichten wenn Stream live geht</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-dark-text">Message Cooldown (Minuten)</Label>
+                  <Input
+                    type="number"
+                    min="5"
+                    max="120"
+                    value={settings.liveMessageCooldown}
+                    onChange={(e) => setSettings({...settings, liveMessageCooldown: parseInt(e.target.value) || 30})}
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                  />
+                  <p className="text-xs text-dark-muted mt-1">Mindestabstand zwischen automatischen Nachrichten</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button onClick={saveSettings} className="bg-purple-primary hover:bg-purple-primary/80">
+                  <Save className="w-4 h-4 mr-2" />
+                  Einstellungen speichern
+                </Button>
+                
+                <Button onClick={toggleBot} variant="outline" className={`${settings.botEnabled ? 'bg-red-500/20 border-red-500 text-red-400' : 'bg-green-500/20 border-green-500 text-green-400'}`}>
+                  {settings.botEnabled ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                  {settings.botEnabled ? 'Bot stoppen' : 'Bot starten'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Live Message Templates */}
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-purple-accent" />
+                Live Message Templates
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Verwalte Vorlagen für automatische Live-Nachrichten
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Neues Template erstellen */}
+              <div className="p-4 bg-dark-bg/30 rounded-lg border border-purple-primary/20">
+                <h4 className="text-md font-semibold text-white mb-4">Neues Template erstellen</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Label>Template Name *</Label>
+                    <Input
+                      value={newTemplate.name}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Mein Live Template"
+                      className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Kategorie</Label>
+                    <select
+                      value={newTemplate.category}
+                      onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-3 py-2 bg-dark-bg/70 border border-purple-primary/30 rounded-md text-dark-text focus:border-purple-primary"
+                    >
+                      <option value="general">Allgemein</option>
+                      <option value="gaming">Gaming</option>
+                      <option value="special">Besonders</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <Label>Template Text *</Label>
+                  <Textarea
+                    value={newTemplate.template}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, template: e.target.value }))}
+                    placeholder="🔴 {{username}} ist LIVE mit {{game}}! 🎮 {{title}}"
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                    rows={3}
+                  />
+                  <p className="text-xs text-dark-muted mt-1">
+                    Verfügbare Variablen: {{username}}, {{streamer}}, {{game}}, {{title}}, {{viewers}}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <Label>Beschreibung</Label>
+                  <Input
+                    value={newTemplate.description}
+                    onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Beschreibung des Templates..."
+                    className="bg-dark-bg/70 border-purple-primary/30 text-dark-text focus:border-purple-primary"
+                  />
+                </div>
+
+                <Button
+                  onClick={createTemplate}
+                  className="bg-purple-primary hover:bg-purple-primary/80"
+                  disabled={!newTemplate.name.trim() || !newTemplate.template.trim()}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Template erstellen
+                </Button>
+              </div>
+
+              {/* Template Liste */}
+              <div className="space-y-3">
+                <h4 className="text-md font-semibold text-white">
+                  Templates ({liveTemplates.length})
+                </h4>
+
+                {liveTemplates.length === 0 ? (
+                  <div className="text-center py-8 text-dark-text/70">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Noch keine Templates erstellt</p>
+                    <p className="text-sm">Erstelle dein erstes Live Message Template!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {liveTemplates.map((template) => (
+                      <div key={template.id} className="bg-dark-bg/50 p-4 rounded-lg border border-purple-primary/20">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h5 className="font-semibold text-white">{template.name}</h5>
+                              <Badge variant="outline" className="text-xs">
+                                {template.category}
+                              </Badge>
+                              {template.isDefault && (
+                                <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500">
+                                  Standard
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="bg-dark-bg/50 p-3 rounded mb-2">
+                              <code className="text-purple-accent text-sm">{template.template}</code>
+                            </div>
+                            
+                            {template.description && (
+                              <p className="text-sm text-dark-text/70 mb-2">{template.description}</p>
+                            )}
+                            
+                            <p className="text-xs text-dark-muted">
+                              Verwendet: {template.usageCount}x
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 ml-4">
+                            <Switch
+                              checked={template.enabled}
+                              onCheckedChange={(checked) => updateTemplate(template.id, { enabled: checked })}
+                            />
+
+                            {!template.isDefault && (
+                              <>
+                                <Button
+                                  onClick={() => setEditingTemplate(template)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-purple-primary/30"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </Button>
+                                
+                                <Button
+                                  onClick={() => deleteTemplate(template.id)}
+                                  size="sm"
+                                  variant="destructive"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Test Live Messages */}
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <TestTube className="w-5 h-5 text-purple-accent" />
+                Live Message Tests
+              </CardTitle>
+              <CardDescription className="text-dark-muted">
+                Teste Live-Nachrichten für deine Channels
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-3">
+                {channels.filter(c => c.enabled).map((channel) => (
+                  <div key={channel.id} className="flex items-center justify-between p-3 bg-dark-bg/30 rounded-lg border border-purple-primary/20">
+                    <div className="flex items-center gap-3">
+                      <Hash className="w-4 h-4 text-purple-accent" />
+                      <span className="text-white font-medium">{channel.channelName}</span>
+                      {channel.liveMessageEnabled ? (
+                        <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500">Live Messages ✅</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-red-400 border-red-500">Live Messages ❌</Badge>
+                      )}
+                    </div>
+                    
+                    <Button
+                      onClick={() => triggerLiveMessage(channel.id)}
+                      size="sm"
+                      className="bg-purple-primary hover:bg-purple-primary/80"
+                      disabled={!channel.liveMessageEnabled || !stats.isConnected}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Test Message
+                    </Button>
+                  </div>
+                ))}
+                
+                {channels.filter(c => c.enabled).length === 0 && (
+                  <div className="text-center py-8 text-dark-text/70">
+                    <Hash className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Keine aktiven Channels für Tests</p>
+                    <p className="text-sm">Aktiviere zuerst einen Channel im Channels-Tab</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Save Settings Button für Settings Tab */}
+      {activeTab === 'settings' && (
+        <div className="flex gap-3 mt-6">
+          <Button onClick={saveSettings} className="bg-purple-primary hover:bg-purple-primary/80">
+            <Save className="w-4 h-4 mr-2" />
+            Einstellungen speichern
+          </Button>
+          
+          <Button onClick={toggleBot} variant="outline" className={`${settings.botEnabled ? 'bg-red-500/20 border-red-500 text-red-400' : 'bg-green-500/20 border-green-500 text-green-400'}`}>
+            {settings.botEnabled ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+            {settings.botEnabled ? 'Bot stoppen' : 'Bot starten'}
+          </Button>
+        </div>
+      )}
 
       {/* Toast Container */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />

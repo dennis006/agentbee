@@ -458,24 +458,21 @@ class TwitchChatBot {
             // Channel-spezifische Einstellungen abrufen
             const channelSettings = this.channels.get(`#${channelName}`);
             
-            // Standard Live-Nachrichten
-            const liveMessages = [
-                `🔴 Stream ist LIVE! Willkommen alle! 🎉`,
-                `🎮 Der Stream startet JETZT! Let's go! 🔥`,
-                `⚡ LIVE! Bereit für Action? 💪`,
-                `🚀 Stream ist online! Viel Spaß beim Zuschauen! ❤️`,
-                `🎊 GO LIVE! Lasst uns eine geile Zeit haben! 🎯`
-            ];
+            // Prüfen ob Live-Messages für diesen Channel aktiviert sind
+            if (channelSettings && channelSettings.liveMessageEnabled === false) {
+                console.log(`🤖 Live-Nachrichten für ${channelName} deaktiviert`);
+                return false;
+            }
             
-            // Custom Message falls konfiguriert
-            let message = liveMessages[Math.floor(Math.random() * liveMessages.length)];
+            let message;
             
-            if (channelSettings?.welcomeMessage) {
-                message = channelSettings.welcomeMessage
-                    .replace('{{username}}', streamerInfo.displayName || channelName)
-                    .replace('{{streamer}}', streamerInfo.displayName || channelName)
-                    .replace('{{game}}', streamerInfo.gameName || 'Gaming')
-                    .replace('{{title}}', streamerInfo.title || 'Awesome Stream');
+            // Template-basierte Nachricht generieren
+            if (channelSettings && channelSettings.useCustomLiveMessage && channelSettings.liveMessageTemplate) {
+                // Custom Template vom Channel verwenden
+                message = this.replaceVariables(channelSettings.liveMessageTemplate, streamerInfo, channelName);
+            } else {
+                // Zufälliges Template aus der Datenbank oder Standard-Templates
+                message = await this.getRandomLiveMessage(streamerInfo, channelName);
             }
             
             // Nachricht senden
@@ -492,6 +489,11 @@ class TwitchChatBot {
                 
                 console.log(`🤖 Live-Nachricht gesendet an ${channelName}: ${message}`);
                 
+                // Statistik in Datenbank speichern (falls verfügbar)
+                if (global.supabaseClient) {
+                    this.saveLiveMessageStats(channelName, message, streamerInfo);
+                }
+                
                 // Discord Sync falls aktiviert
                 if (channelSettings?.syncMessages && channelSettings?.discordChannelId) {
                     await this.syncLiveMessageToDiscord(channelName, message, channelSettings.discordChannelId, streamerInfo);
@@ -507,6 +509,117 @@ class TwitchChatBot {
         return false;
     }
     
+    // Zufällige Live-Nachricht generieren
+    async getRandomLiveMessage(streamerInfo = {}, channelName = '') {
+        try {
+            // Fallback Standard-Nachrichten (falls keine Datenbank verfügbar)
+            const fallbackMessages = [
+                '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+                '🎮 Der Stream startet JETZT! Let\'s go! 🔥',
+                '⚡ LIVE! Bereit für Action? 💪',
+                '🚀 Stream ist online! Viel Spaß beim Zuschauen! ❤️',
+                '🎊 GO LIVE! Lasst uns eine geile Zeit haben! 🎯'
+            ];
+            
+            // Versuche Template aus Datenbank zu holen
+            if (global.supabaseClient) {
+                try {
+                    const { data, error } = await global.supabaseClient
+                        .from('twitch_live_message_templates')
+                        .select('id, template, name')
+                        .eq('guild_id', 'default')
+                        .eq('enabled', true)
+                        .order('RANDOM()')
+                        .limit(1)
+                        .single();
+                    
+                    if (!error && data) {
+                        // Template-Nutzung in DB vermerken
+                        await this.incrementTemplateUsage(data.id);
+                        
+                        // Variablen ersetzen
+                        return this.replaceVariables(data.template, streamerInfo, channelName);
+                    }
+                } catch (dbError) {
+                    console.log('⚠️ Template aus DB nicht verfügbar, verwende Fallback');
+                }
+            }
+            
+            // Fallback zu Standard-Templates
+            const randomMessage = fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)];
+            return this.replaceVariables(randomMessage, streamerInfo, channelName);
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Generieren der Live-Nachricht:', error);
+            return '🔴 Stream ist LIVE! 🎉';
+        }
+    }
+    
+    // Template-Variablen ersetzen
+    replaceVariables(template, streamerInfo = {}, channelName = '') {
+        let message = template;
+        
+        // Variablen ersetzen
+        message = message.replace(/\{\{username\}\}/g, streamerInfo.displayName || channelName || 'Streamer');
+        message = message.replace(/\{\{streamer\}\}/g, streamerInfo.displayName || channelName || 'Streamer');
+        message = message.replace(/\{\{game\}\}/g, streamerInfo.gameName || 'Gaming');
+        message = message.replace(/\{\{title\}\}/g, streamerInfo.title || 'Awesome Stream');
+        message = message.replace(/\{\{viewers\}\}/g, (streamerInfo.viewerCount || 0).toString());
+        
+        return message;
+    }
+    
+    // Template-Nutzung in DB erhöhen
+    async incrementTemplateUsage(templateId) {
+        if (!global.supabaseClient) return;
+        
+        try {
+            await global.supabaseClient
+                .from('twitch_live_message_templates')
+                .update({ 
+                    usage_count: global.supabaseClient.raw('usage_count + 1'),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', templateId);
+        } catch (error) {
+            console.log('⚠️ Template-Nutzung konnte nicht gespeichert werden:', error);
+        }
+    }
+    
+    // Live-Message Statistik speichern
+    async saveLiveMessageStats(channelName, message, streamerInfo = {}) {
+        if (!global.supabaseClient) return;
+        
+        try {
+            // Channel ID ermitteln
+            const { data: channelData } = await global.supabaseClient
+                .from('twitch_bot_channels')
+                .select('id')
+                .eq('guild_id', 'default')
+                .eq('channel_name', channelName.toLowerCase())
+                .single();
+            
+            if (channelData) {
+                await global.supabaseClient
+                    .from('twitch_live_message_stats')
+                    .insert({
+                        guild_id: 'default',
+                        channel_id: channelData.id,
+                        message_sent: message,
+                        stream_info: {
+                            game: streamerInfo.gameName,
+                            title: streamerInfo.title,
+                            viewers: streamerInfo.viewerCount,
+                            displayName: streamerInfo.displayName
+                        },
+                        success: true
+                    });
+            }
+        } catch (error) {
+            console.log('⚠️ Live-Message Statistik konnte nicht gespeichert werden:', error);
+        }
+    }
+
     // Live-Nachricht zu Discord syncen
     async syncLiveMessageToDiscord(channelName, message, discordChannelId, streamerInfo = {}) {
         if (!this.discordClient) return;

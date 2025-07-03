@@ -78,7 +78,9 @@ function createTwitchBotAPI(app) {
                 modCommandsOnly: false,
                 allowedRoles: [],
                 blockedUsers: [],
-                globalCooldown: 3
+                globalCooldown: 3,
+                liveNotificationsEnabled: true,
+                liveMessageCooldown: 30
             };
 
             const settings = data ? {
@@ -91,7 +93,9 @@ function createTwitchBotAPI(app) {
                 modCommandsOnly: data.mod_commands_only,
                 allowedRoles: data.allowed_roles || [],
                 blockedUsers: data.blocked_users || [],
-                globalCooldown: data.global_cooldown
+                globalCooldown: data.global_cooldown,
+                liveNotificationsEnabled: data.live_notifications_enabled ?? true,
+                liveMessageCooldown: data.live_message_cooldown ?? 30
             } : defaultSettings;
 
             console.log('✅ Bot settings retrieved successfully');
@@ -135,6 +139,8 @@ function createTwitchBotAPI(app) {
                 allowed_roles: settings.allowedRoles,
                 blocked_users: settings.blockedUsers,
                 global_cooldown: settings.globalCooldown,
+                live_notifications_enabled: settings.liveNotificationsEnabled ?? true,
+                live_message_cooldown: settings.liveMessageCooldown ?? 30,
                 updated_at: new Date().toISOString()
             };
 
@@ -336,6 +342,10 @@ function createTwitchBotAPI(app) {
                 donationMessage: channel.donation_message,
                 raidMessage: channel.raid_message,
                 hostMessage: channel.host_message,
+                liveMessageEnabled: channel.live_message_enabled ?? true,
+                liveMessageTemplate: channel.live_message_template || '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+                useCustomLiveMessage: channel.use_custom_live_message ?? false,
+                liveMessageVariables: channel.live_message_variables || { username: true, game: true, title: true, viewers: true },
                 totalCommands: channel.commands?.length || 0
             }));
 
@@ -366,7 +376,7 @@ function createTwitchBotAPI(app) {
                 });
             }
 
-            const { channelName, discordChannelId, syncMessages } = req.body;
+            const { channelName, discordChannelId, syncMessages, liveMessageEnabled, liveMessageTemplate, useCustomLiveMessage, liveMessageVariables } = req.body;
 
             if (!channelName || !channelName.trim()) {
                 return res.status(400).json({
@@ -398,6 +408,10 @@ function createTwitchBotAPI(app) {
                 auto_join: true,
                 discord_channel_id: discordChannelId || '',
                 sync_messages: syncMessages || false,
+                live_message_enabled: liveMessageEnabled ?? true,
+                live_message_template: liveMessageTemplate || '🔴 Stream ist LIVE! Willkommen alle! 🎉',
+                use_custom_live_message: useCustomLiveMessage ?? false,
+                live_message_variables: liveMessageVariables || { username: true, game: true, title: true, viewers: true },
                 created_at: new Date().toISOString()
             };
 
@@ -429,6 +443,10 @@ function createTwitchBotAPI(app) {
                 donationMessage: data.donation_message,
                 raidMessage: data.raid_message,
                 hostMessage: data.host_message,
+                liveMessageEnabled: data.live_message_enabled,
+                liveMessageTemplate: data.live_message_template,
+                useCustomLiveMessage: data.use_custom_live_message,
+                liveMessageVariables: data.live_message_variables,
                 totalCommands: 0
             };
 
@@ -759,6 +777,284 @@ function createTwitchBotAPI(app) {
 
         } catch (error) {
             console.error('❌ Error in /api/twitch-bot/stats GET:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // =============================================
+    // LIVE MESSAGE TEMPLATES MANAGEMENT
+    // =============================================
+    
+    // Alle Live Message Templates abrufen
+    app.get('/api/twitch-bot/live-templates', async (req, res) => {
+        try {
+            console.log('🔴 [API] Getting live message templates...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { data, error } = await supabaseClient
+                .from('twitch_live_message_templates')
+                .select('*')
+                .eq('guild_id', 'default')
+                .order('category')
+                .order('name');
+
+            if (error) {
+                console.error('❌ Error fetching live templates:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            const templates = data?.map(template => ({
+                id: template.id.toString(),
+                name: template.name,
+                template: template.template,
+                description: template.description,
+                category: template.category,
+                variables: template.variables,
+                usageCount: template.usage_count,
+                isDefault: template.is_default,
+                enabled: template.enabled,
+                createdAt: template.created_at
+            })) || [];
+
+            console.log(`✅ Retrieved ${templates.length} live message templates`);
+            res.json({
+                success: true,
+                templates
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/live-templates GET:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Neues Live Message Template erstellen
+    app.post('/api/twitch-bot/live-templates', async (req, res) => {
+        try {
+            console.log('🔴 [API] Creating new live message template...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { name, template, description, category, variables } = req.body;
+
+            if (!name || !template) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Name und Template sind erforderlich'
+                });
+            }
+
+            const templateData = {
+                guild_id: 'default',
+                name: name.trim(),
+                template: template.trim(),
+                description: description?.trim() || '',
+                category: category || 'custom',
+                variables: variables || ['username', 'game', 'title', 'viewers'],
+                is_default: false,
+                enabled: true
+            };
+
+            const { data, error } = await supabaseClient
+                .from('twitch_live_message_templates')
+                .insert(templateData)
+                .select()
+                .single();
+
+            if (error) {
+                if (error.code === '23505') { // Unique constraint violation
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Ein Template mit diesem Namen existiert bereits'
+                    });
+                }
+                console.error('❌ Error creating template:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            console.log(`✅ Live message template "${name}" created successfully`);
+            res.json({
+                success: true,
+                message: `Template "${name}" erfolgreich erstellt!`,
+                template: {
+                    id: data.id.toString(),
+                    name: data.name,
+                    template: data.template,
+                    description: data.description,
+                    category: data.category,
+                    variables: data.variables,
+                    usageCount: data.usage_count,
+                    isDefault: data.is_default,
+                    enabled: data.enabled,
+                    createdAt: data.created_at
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/live-templates POST:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Live Message Template bearbeiten
+    app.put('/api/twitch-bot/live-templates/:templateId', async (req, res) => {
+        try {
+            console.log('🔴 [API] Updating live message template...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { templateId } = req.params;
+            const { name, template, description, category, variables, enabled } = req.body;
+
+            const updateData = {
+                updated_at: new Date().toISOString()
+            };
+
+            if (name !== undefined) updateData.name = name.trim();
+            if (template !== undefined) updateData.template = template.trim();
+            if (description !== undefined) updateData.description = description.trim();
+            if (category !== undefined) updateData.category = category;
+            if (variables !== undefined) updateData.variables = variables;
+            if (enabled !== undefined) updateData.enabled = enabled;
+
+            const { data, error } = await supabaseClient
+                .from('twitch_live_message_templates')
+                .update(updateData)
+                .eq('id', templateId)
+                .eq('guild_id', 'default')
+                .select()
+                .single();
+
+            if (error) {
+                console.error('❌ Error updating template:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            if (!data) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Template nicht gefunden'
+                });
+            }
+
+            console.log(`✅ Live message template ${templateId} updated successfully`);
+            res.json({
+                success: true,
+                message: 'Template erfolgreich aktualisiert!',
+                template: {
+                    id: data.id.toString(),
+                    name: data.name,
+                    template: data.template,
+                    description: data.description,
+                    category: data.category,
+                    variables: data.variables,
+                    usageCount: data.usage_count,
+                    isDefault: data.is_default,
+                    enabled: data.enabled
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/live-templates PUT:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    });
+
+    // Live Message Template löschen
+    app.delete('/api/twitch-bot/live-templates/:templateId', async (req, res) => {
+        try {
+            console.log('🔴 [API] Deleting live message template...');
+            
+            if (!supabaseClient) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'Supabase client not initialized'
+                });
+            }
+
+            const { templateId } = req.params;
+
+            // Prüfen ob es ein Standard-Template ist
+            const { data: templateData, error: fetchError } = await supabaseClient
+                .from('twitch_live_message_templates')
+                .select('name, is_default')
+                .eq('id', templateId)
+                .eq('guild_id', 'default')
+                .single();
+
+            if (fetchError) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Template nicht gefunden'
+                });
+            }
+
+            if (templateData.is_default) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Standard-Templates können nicht gelöscht werden'
+                });
+            }
+
+            const { error } = await supabaseClient
+                .from('twitch_live_message_templates')
+                .delete()
+                .eq('id', templateId)
+                .eq('guild_id', 'default');
+
+            if (error) {
+                console.error('❌ Error deleting template:', error);
+                return res.status(500).json({
+                    success: false,
+                    error: error.message
+                });
+            }
+
+            console.log(`✅ Live message template ${templateId} deleted successfully`);
+            res.json({
+                success: true,
+                message: `Template "${templateData.name}" erfolgreich gelöscht!`
+            });
+
+        } catch (error) {
+            console.error('❌ Error in /api/twitch-bot/live-templates DELETE:', error);
             res.status(500).json({
                 success: false,
                 error: error.message
