@@ -49,7 +49,7 @@ const TwitchBot = () => {
   };
 
   // API Base URL - Verwendet gleiche Domain wie Discord Bot
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee-discord.up.railway.app';
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://agentbee.up.railway.app';
 
   // Daten laden
   const loadData = async () => {
