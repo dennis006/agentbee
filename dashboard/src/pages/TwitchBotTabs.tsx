@@ -511,7 +511,23 @@ const TwitchBotTabs: React.FC = () => {
         );
 
       default:
-        return renderTabContent();
+        return (
+          <Card className="bg-dark-surface/90 backdrop-blur-xl border-purple-primary/30 shadow-purple-glow">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold text-dark-text flex items-center gap-2">
+                <Bot className="w-5 h-5 text-purple-accent" />
+                Unbekannter Tab
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <Bot className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-300 mb-2">Tab nicht gefunden</h3>
+                <p className="text-gray-400">Bitte wähle einen gültigen Tab aus.</p>
+              </div>
+            </CardContent>
+          </Card>
+        );
     }
   };
 
@@ -645,24 +661,10 @@ const TwitchBotTabs: React.FC = () => {
             </div>
           )}
 
-          <TabsContent value="overview" className="space-y-6" activeTab={activeTab}>
+          {/* Tab Content wird direkt basierend auf activeTab gerendert */}
+          <div className="space-y-6">
             {renderTabContent()}
-          </TabsContent>
-          <TabsContent value="settings" className="space-y-6" activeTab={activeTab}>
-            {renderTabContent()}
-          </TabsContent>
-          <TabsContent value="channels" className="space-y-6" activeTab={activeTab}>
-            {renderTabContent()}
-          </TabsContent>
-          <TabsContent value="stream-events" className="space-y-6" activeTab={activeTab}>
-            {renderTabContent()}
-          </TabsContent>
-          <TabsContent value="commands" className="space-y-6" activeTab={activeTab}>
-            {renderTabContent()}
-          </TabsContent>
-          <TabsContent value="moderators" className="space-y-6" activeTab={activeTab}>
-            {renderTabContent()}
-          </TabsContent>
+          </div>
         </Tabs>
       </div>
 
