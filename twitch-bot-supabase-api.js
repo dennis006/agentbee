@@ -59,7 +59,11 @@ async function checkAutoStart() {
                 modCommandsOnly: settings.mod_commands_only || false,
                 globalCooldown: settings.global_cooldown || 3,
                 liveNotificationsEnabled: settings.live_notifications_enabled ?? true,
-                liveMessageCooldown: settings.live_message_cooldown ?? 30
+                liveMessageCooldown: settings.live_message_cooldown ?? 30,
+                // ⚡ NEU: Self-Monitoring Konfiguration
+                selfMonitoringEnabled: settings.self_monitoring_enabled ?? false,
+                twitchClientId: settings.twitch_client_id || process.env.TWITCH_CLIENT_ID,
+                twitchClientSecret: settings.twitch_client_secret || process.env.TWITCH_CLIENT_SECRET
             });
             
             // Channels laden und hinzufügen

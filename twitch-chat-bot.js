@@ -36,6 +36,14 @@ class TwitchChatBot {
         // Channel Health Check Interval
         this.channelHealthInterval = null;
         
+        // ⚡ NEU: Self-Monitoring System
+        this.selfMonitoringEnabled = false;
+        this.selfMonitoringInterval = null;
+        this.twitchAccessToken = null;
+        this.twitchClientId = null;
+        this.twitchClientSecret = null;
+        this.lastStreamStatus = new Map(); // Track live status per channel
+        
         // Built-in Commands deaktiviert - nur Custom Commands aus Supabase verwenden
         // this.initializeCommands();
     }
@@ -52,7 +60,12 @@ class TwitchChatBot {
         this.oauthToken = settings.oauthToken || '';
         this.liveNotificationEnabled = settings.liveNotificationsEnabled !== false;
         
-        console.log(`🤖 Twitch Bot konfiguriert: ${this.botUsername} | Live Messages: ${this.liveNotificationEnabled}`);
+        // ⚡ NEU: Self-Monitoring Konfiguration
+        this.selfMonitoringEnabled = settings.selfMonitoringEnabled || false;
+        this.twitchClientId = settings.twitchClientId || null;
+        this.twitchClientSecret = settings.twitchClientSecret || null;
+        
+        console.log(`🤖 Twitch Bot konfiguriert: ${this.botUsername} | Live Messages: ${this.liveNotificationEnabled} | Self-Monitoring: ${this.selfMonitoringEnabled}`);
     }
 
     // Standard Commands initialisieren
@@ -202,6 +215,14 @@ class TwitchChatBot {
             // Periodische Channel-Überprüfung starten (alle 5 Minuten)
             this.startChannelHealthCheck();
             
+            // ⚡ NEU: Self-Monitoring starten (falls aktiviert)
+            if (this.selfMonitoringEnabled) {
+                console.log('🔍 Self-Monitoring ist aktiviert, starte nach 10 Sekunden...');
+                setTimeout(() => {
+                    this.startSelfMonitoring();
+                }, 10000); // 10 Sekunden nach Bot-Start
+            }
+            
         } catch (error) {
             console.error('❌ Fehler beim Starten des Twitch Bots:', error);
             this.isConnected = false;
@@ -266,6 +287,9 @@ class TwitchChatBot {
         
         // Health Check stoppen
         this.stopChannelHealthCheck();
+        
+        // ⚡ NEU: Self-Monitoring stoppen
+        this.stopSelfMonitoring();
         
         if (this.client) {
             try {
@@ -1330,6 +1354,218 @@ class TwitchChatBot {
             console.error('❌ Fehler beim Triggern der Live-Nachricht:', error);
             return { success: false, error: error.message };
         }
+    }
+    
+    // =============================================
+    // ⚡ SELF-MONITORING SYSTEM
+    // =============================================
+    
+    // Self-Monitoring starten
+    async startSelfMonitoring() {
+        if (!this.selfMonitoringEnabled) {
+            console.log('⏸️ Self-Monitoring deaktiviert');
+            return;
+        }
+        
+        if (!this.twitchClientId || !this.twitchClientSecret) {
+            console.error('❌ Twitch API Credentials fehlen für Self-Monitoring');
+            return;
+        }
+        
+        console.log('🔍 Starte Self-Monitoring System...');
+        
+        // Access Token holen
+        try {
+            await this.getTwitchAccessToken();
+        } catch (error) {
+            console.error('❌ Fehler beim Holen des Twitch Access Tokens:', error);
+            return;
+        }
+        
+        // Self-Monitoring Interval starten (alle 3 Minuten)
+        if (this.selfMonitoringInterval) {
+            clearInterval(this.selfMonitoringInterval);
+        }
+        
+        this.selfMonitoringInterval = setInterval(() => {
+            this.checkOwnChannelsLiveStatus();
+        }, 3 * 60 * 1000); // Alle 3 Minuten
+        
+        // Sofortiger erster Check nach 30 Sekunden
+        setTimeout(() => {
+            this.checkOwnChannelsLiveStatus();
+        }, 30000);
+        
+        console.log('✅ Self-Monitoring System gestartet (alle 3 Minuten)');
+    }
+    
+    // Self-Monitoring stoppen
+    stopSelfMonitoring() {
+        if (this.selfMonitoringInterval) {
+            clearInterval(this.selfMonitoringInterval);
+            this.selfMonitoringInterval = null;
+            console.log('⏹️ Self-Monitoring System gestoppt');
+        }
+    }
+    
+    // Twitch Access Token holen
+    async getTwitchAccessToken() {
+        const url = 'https://id.twitch.tv/oauth2/token';
+        const params = new URLSearchParams({
+            client_id: this.twitchClientId,
+            client_secret: this.twitchClientSecret,
+            grant_type: 'client_credentials'
+        });
+        
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: params
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            this.twitchAccessToken = data.access_token;
+            
+            console.log(`✅ Twitch Access Token erhalten (gültig für ${data.expires_in}s)`);
+            
+            // Token automatisch erneuern (1 Stunde vor Ablauf)
+            setTimeout(() => {
+                this.getTwitchAccessToken();
+            }, (data.expires_in - 3600) * 1000);
+            
+            return this.twitchAccessToken;
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Holen des Twitch Access Tokens:', error);
+            throw error;
+        }
+    }
+    
+    // Eigene Channels auf Live-Status prüfen
+    async checkOwnChannelsLiveStatus() {
+        if (!this.twitchAccessToken || !this.isConnected || this.channels.size === 0) {
+            console.log('⏸️ Self-Monitoring übersprungen: Kein Token, nicht verbunden oder keine Channels');
+            return;
+        }
+        
+        try {
+            console.log(`🔍 Self-Monitoring: Prüfe ${this.channels.size} Channels...`);
+            
+            // Channel-Namen extrahieren (ohne #)
+            const channelNames = Array.from(this.channels.keys()).map(channel => 
+                channel.startsWith('#') ? channel.substring(1) : channel
+            );
+            
+            if (channelNames.length === 0) return;
+            
+            // User IDs holen
+            const userResponse = await fetch(
+                `https://api.twitch.tv/helix/users?${channelNames.map(name => `login=${name}`).join('&')}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.twitchAccessToken}`,
+                        'Client-Id': this.twitchClientId
+                    }
+                }
+            );
+            
+            if (!userResponse.ok) {
+                throw new Error(`User API Error: ${userResponse.status}`);
+            }
+            
+            const userData = await userResponse.json();
+            
+            if (!userData.data || userData.data.length === 0) {
+                console.log('⚠️ Keine User-Daten gefunden');
+                return;
+            }
+            
+            // Stream-Status prüfen
+            const userIds = userData.data.map(user => user.id);
+            const streamResponse = await fetch(
+                `https://api.twitch.tv/helix/streams?${userIds.map(id => `user_id=${id}`).join('&')}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.twitchAccessToken}`,
+                        'Client-Id': this.twitchClientId
+                    }
+                }
+            );
+            
+            if (!streamResponse.ok) {
+                throw new Error(`Stream API Error: ${streamResponse.status}`);
+            }
+            
+            const streamData = await streamResponse.json();
+            
+            // Status für jeden Channel prüfen
+            for (const user of userData.data) {
+                const channelName = user.login;
+                const isCurrentlyLive = streamData.data.some(stream => stream.user_id === user.id);
+                const wasLive = this.lastStreamStatus.get(channelName) || false;
+                
+                // Live-Status Update
+                this.lastStreamStatus.set(channelName, isCurrentlyLive);
+                
+                // Wenn gerade live gegangen → Live Message senden
+                if (isCurrentlyLive && !wasLive) {
+                    console.log(`🔴 ${channelName} ist LIVE gegangen! Sende automatische Message...`);
+                    
+                    // Stream-Details finden
+                    const stream = streamData.data.find(s => s.user_id === user.id);
+                    
+                    const streamerInfo = {
+                        displayName: user.display_name,
+                        gameName: stream?.game_name || 'Gaming',
+                        title: stream?.title || 'Live Stream',
+                        viewerCount: stream?.viewer_count || 0,
+                        startedAt: stream?.started_at || new Date().toISOString()
+                    };
+                    
+                    // Live Message senden
+                    await this.sendLiveMessage(channelName, streamerInfo);
+                    
+                } else if (!isCurrentlyLive && wasLive) {
+                    console.log(`📴 ${channelName} ist offline gegangen`);
+                } else if (isCurrentlyLive) {
+                    console.log(`🔴 ${channelName} ist bereits live (${streamData.data.find(s => s.user_id === user.id)?.viewer_count || 0} Zuschauer)`);
+                } else {
+                    console.log(`⚫ ${channelName} ist offline`);
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ Fehler beim Self-Monitoring:', error);
+            
+            // Bei Token-Fehlern → Token erneuern
+            if (error.message.includes('401') || error.message.includes('403')) {
+                console.log('🔄 Token-Fehler erkannt, erneuere Access Token...');
+                try {
+                    await this.getTwitchAccessToken();
+                } catch (tokenError) {
+                    console.error('❌ Token-Erneuerung fehlgeschlagen:', tokenError);
+                }
+            }
+        }
+    }
+    
+    // Self-Monitoring Status
+    getSelfMonitoringStatus() {
+        return {
+            enabled: this.selfMonitoringEnabled,
+            hasToken: !!this.twitchAccessToken,
+            hasCredentials: !!(this.twitchClientId && this.twitchClientSecret),
+            isRunning: !!this.selfMonitoringInterval,
+            monitoredChannels: this.channels.size,
+            lastStatus: Object.fromEntries(this.lastStreamStatus)
+        };
     }
 }
 
