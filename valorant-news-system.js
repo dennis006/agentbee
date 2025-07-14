@@ -10,8 +10,8 @@ class ValorantNewsSystem {
         this.lastCheckTime = 0;
         this.checkInterval = 30 * 60 * 1000; // 30 Minuten
         
-        // Cutoff-Datum: Nur News ab 24.06.2025 posten (verhindert alte News beim Neustart)
-        this.newsCutoffDate = new Date('2025-06-24T00:00:00.000Z');
+        // Cutoff-Datum: Nur News ab heute posten (verhindert alte News beim Neustart)
+        this.newsCutoffDate = new Date('2025-07-14T00:00:00.000Z');
         
         // Debug-Info für API Key Status
         console.log('📰 ValorantNewsSystem initialisiert:');
@@ -387,32 +387,59 @@ class ValorantNewsSystem {
 
             // EMERGENCY MODE: Wenn Supabase nicht verfügbar, poste trotzdem neue News
             if (!this.supabaseClient) {
-                console.log('⚠️ EMERGENCY MODE: Supabase nicht verfügbar - poste News ohne Duplikat-Check');
+                console.log('⚠️ EMERGENCY MODE: Supabase nicht verfügbar - poste nur NEUESTE News mit erweiterte Duplikat-Prüfung');
                 
-                const recentNews = newsArticles
-                    .filter(article => new Date(article.date) >= this.newsCutoffDate)
-                    .slice(0, 3) // Maximal 3 News
-                    .map(article => ({
-                        ...article,
-                        news_id: this.generateNewsId(article)
-                    }));
+                // Sortiere News nach Datum (neueste zuerst)
+                const sortedNews = newsArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
                 
-                if (recentNews.length > 0) {
-                    const postedCount = await this.postNewsToDiscord(recentNews);
+                // Nimm nur News die neuer sind als das Cutoff-Datum
+                const recentNews = sortedNews.filter(article => {
+                    const articleDate = new Date(article.date);
+                    return articleDate >= this.newsCutoffDate;
+                });
+                
+                console.log(`📋 ${recentNews.length} News nach ${this.newsCutoffDate.toLocaleDateString('de-DE')} gefunden`);
+                
+                if (recentNews.length === 0) {
+                    console.log('✅ Keine neuen News seit dem letzten Update - System funktioniert korrekt');
                     this.lastCheckTime = Date.now();
-                    
                     return {
                         success: true,
                         totalNews: newsArticles.length,
-                        newNews: recentNews.length,
-                        posted: postedCount,
-                        message: `EMERGENCY MODE: ${postedCount} News gepostet (Supabase-Verbindung reparieren für normale Funktion)`
+                        newNews: 0,
+                        posted: 0,
+                        message: 'Keine neuen News gefunden - alle aktuellen News bereits gepostet'
                     };
                 }
                 
+                // Nehme nur die allerneueste News (maximal 1) um Duplikate zu vermeiden
+                const latestNews = recentNews.slice(0, 1).map(article => ({
+                    ...article,
+                    news_id: this.generateNewsId(article)
+                }));
+                
+                console.log('🚨 EMERGENCY MODE: Poste nur die NEUESTE News:');
+                latestNews.forEach(article => {
+                    console.log(`   📰 ${article.title} (${new Date(article.date).toLocaleDateString('de-DE')})`);
+                });
+                
+                const postedCount = await this.postNewsToDiscord(latestNews);
+                this.lastCheckTime = Date.now();
+                
+                if (postedCount > 0) {
+                    // Cutoff-Datum auf die gepostete News aktualisieren
+                    this.newsCutoffDate = new Date(latestNews[0].date);
+                    console.log(`✅ Cutoff-Datum aktualisiert auf: ${this.newsCutoffDate.toLocaleDateString('de-DE')}`);
+                }
+                
                 return {
-                    success: false,
-                    message: 'EMERGENCY MODE: Keine neuen News seit Cutoff-Datum gefunden'
+                    success: true,
+                    totalNews: newsArticles.length,
+                    newNews: latestNews.length,
+                    posted: postedCount,
+                    message: postedCount > 0 
+                        ? `EMERGENCY MODE: ${postedCount} neueste News gepostet (${latestNews[0].title})`
+                        : 'EMERGENCY MODE: News gefunden aber Posting fehlgeschlagen'
                 };
             }
 
