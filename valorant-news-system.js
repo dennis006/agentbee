@@ -385,6 +385,37 @@ class ValorantNewsSystem {
                 };
             }
 
+            // EMERGENCY MODE: Wenn Supabase nicht verfügbar, poste trotzdem neue News
+            if (!this.supabaseClient) {
+                console.log('⚠️ EMERGENCY MODE: Supabase nicht verfügbar - poste News ohne Duplikat-Check');
+                
+                const recentNews = newsArticles
+                    .filter(article => new Date(article.date) >= this.newsCutoffDate)
+                    .slice(0, 3) // Maximal 3 News
+                    .map(article => ({
+                        ...article,
+                        news_id: this.generateNewsId(article)
+                    }));
+                
+                if (recentNews.length > 0) {
+                    const postedCount = await this.postNewsToDiscord(recentNews);
+                    this.lastCheckTime = Date.now();
+                    
+                    return {
+                        success: true,
+                        totalNews: newsArticles.length,
+                        newNews: recentNews.length,
+                        posted: postedCount,
+                        message: `EMERGENCY MODE: ${postedCount} News gepostet (Supabase-Verbindung reparieren für normale Funktion)`
+                    };
+                }
+                
+                return {
+                    success: false,
+                    message: 'EMERGENCY MODE: Keine neuen News seit Cutoff-Datum gefunden'
+                };
+            }
+
             // Nur loggen wenn neue News gefunden wurden
 
             let savedCount = 0;
